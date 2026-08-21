@@ -1,0 +1,595 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plantilla · Reporte de Disponibilidad de Flota — Gravicon</title>
+<style>:root{
+  --navy:#172954; --navy-dark:#0f1c3d; --navy-med:#2a3f6b;
+  --red:#a90707; --ink:#1a2230; --steel:#5b6b82; --soft:#3a4658;
+  --hair:#d9dfe6; --mist:#eef1f4; --green:#1f7a3d;
+  --sans:'Helvetica Neue',Helvetica,Arial,'Segoe UI',Roboto,system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--sans);color:var(--ink);background:#f4f6f8;
+     font-size:15px;line-height:1.55}
+a{color:var(--navy)}
+.wrap{display:flex;align-items:flex-start;max-width:1320px;margin:0 auto;gap:28px;
+      padding:0 24px 80px}
+main{flex:1;min-width:0}
+/* portada */
+.hero{background:var(--navy);color:#fff;padding:34px 0 30px;margin-bottom:26px;
+      border-bottom:5px solid var(--red)}
+.hero-in{max-width:1320px;margin:0 auto;padding:0 24px;display:flex;gap:26px;
+         align-items:center;flex-wrap:wrap}
+.hero img{height:52px;background:#fff;padding:7px 11px;border-radius:4px}
+.hero h1{font-size:26px;margin:0;letter-spacing:.2px}
+.hero p{margin:5px 0 0;color:#c7d0e2;font-size:14px;max-width:720px}
+/* selector de planta */
+.selector{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+.selector button{font:inherit;font-size:13px;font-weight:600;color:#fff;cursor:pointer;
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.28);
+    border-radius:4px;padding:8px 15px;transition:.15s}
+.selector button:hover{background:rgba(255,255,255,.18)}
+.selector button[aria-pressed=true]{background:#fff;color:var(--navy);
+    border-color:#fff}
+.selector small{display:block;font-weight:400;font-size:10.5px;opacity:.75}
+/* índice */
+nav.idx{position:sticky;top:18px;width:212px;flex:0 0 212px;font-size:13.5px}
+nav.idx ol{list-style:none;margin:0;padding:14px 0;background:#fff;border-radius:6px;
+     border:1px solid var(--hair)}
+nav.idx li a{display:block;padding:6px 16px;color:var(--soft);text-decoration:none;
+     border-left:3px solid transparent}
+nav.idx li a:hover{background:var(--mist);color:var(--navy)}
+nav.idx li a.act{border-left-color:var(--red);color:var(--navy);font-weight:600}
+/* secciones */
+section{background:#fff;border:1px solid var(--hair);border-radius:6px;
+        padding:24px 26px 28px;margin-bottom:22px;scroll-margin-top:16px}
+.kicker{font-size:11px;text-transform:uppercase;letter-spacing:1.3px;
+        color:var(--red);font-weight:700;margin-bottom:3px}
+section>h2{font-size:21px;margin:0 0 14px;color:var(--navy);
+     border-bottom:2px solid var(--navy);padding-bottom:8px}
+section p{color:var(--soft);margin:0 0 14px}
+h3.sub{font-size:14px;text-transform:uppercase;letter-spacing:.7px;color:var(--navy);
+       margin:26px 0 10px}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.87em;
+     background:var(--mist);padding:1px 5px;border-radius:3px;color:var(--navy)}
+/* tablas del documento */
+table.doc{width:100%;border-collapse:collapse;font-size:13.5px;margin:6px 0 4px}
+table.doc th{background:var(--navy);color:#fff;text-align:left;padding:8px 10px;
+     font-size:11px;text-transform:uppercase;letter-spacing:.6px}
+table.doc td{padding:9px 10px;border-bottom:1px solid #eceff3;vertical-align:top;
+     color:var(--soft)}
+table.doc tbody tr:nth-child(even){background:#fafbfc}
+table.doc .p-nom{color:var(--navy)}
+table.plantas tr.fila-act td{background:#eef3fb;box-shadow:inset 3px 0 0 var(--red)}
+.si{color:var(--green);font-weight:700}.no{color:var(--steel)}
+table.reglas td:first-child{color:var(--ink);font-weight:600;width:20%}
+table.t-hojas td:first-child{width:18%}
+table.clases td:first-child{width:34%}
+/* avisos */
+.avisos{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;
+        margin-top:16px}
+.av{background:var(--mist);border-left:3px solid var(--navy);padding:11px 14px;
+    font-size:13.5px;color:var(--soft);border-radius:0 4px 4px 0}
+.av.alerta{border-left-color:var(--red);background:#fdf1f1}
+.av b{display:block;color:var(--ink);margin-bottom:2px}
+/* esqueleto de hojas */
+.hojas{display:flex;gap:26px;flex-wrap:wrap;margin:6px 0 4px}
+.hoja{width:206px;border:1px solid var(--hair);border-radius:4px;background:#fff;
+      padding:9px;box-shadow:0 2px 7px rgba(23,41,84,.07)}
+.hoja-h{display:flex;justify-content:space-between;align-items:center;
+        border-bottom:2px solid var(--navy);padding-bottom:6px;margin-bottom:7px}
+.hl{width:52px;height:11px;background:var(--navy);border-radius:2px}
+.hm{font-size:7.5px;color:var(--steel)}
+.hb{font-size:10.5px;color:var(--soft);background:var(--mist);border-radius:3px;
+    padding:5px 7px;margin-bottom:4px;border-left:2px solid var(--navy)}
+.hoja.portada .hb:first-child{border-left-color:var(--red)}
+.hoja-f{font-size:10px;color:var(--steel);border-top:1px solid var(--hair);
+        padding-top:5px;margin-top:6px;text-align:center}
+/* ficha de bloque */
+.bloque{border:1px solid var(--hair);border-radius:5px;margin:0 0 18px;overflow:hidden}
+.bloque h3{margin:0;background:var(--mist);padding:10px 14px;font-size:14px;
+     color:var(--navy);border-bottom:1px solid var(--hair);display:flex;
+     align-items:center;gap:9px}
+.ord{background:var(--navy);color:#fff;width:21px;height:21px;border-radius:50%;
+     display:inline-flex;align-items:center;justify-content:center;font-size:11px;
+     flex:0 0 21px}
+.tag{margin-left:auto;font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;
+     font-weight:700;padding:3px 9px;border-radius:10px}
+.tag-cond{background:#fdeaea;color:var(--red)}
+.meta-b{font-size:13px;color:var(--soft);padding:9px 14px;
+        border-top:1px solid #eceff3;background:#fcfdfd}
+.meta-b b{display:inline-block;min-width:52px;color:var(--navy);font-size:11px;
+     text-transform:uppercase;letter-spacing:.6px;vertical-align:top}
+.meta-b.regla{background:#fff}
+/* la vista previa: CSS real del reporte, a escala */
+.rp{background:#fff;padding:15px 17px;font-size:9.2pt}
+.rp h1{margin:6px 0 5px}
+.rp h2:first-child,.rp h3:first-child{margin-top:0}
+.rp header.marca{margin-bottom:2px}
+.rp footer{position:relative!important;left:0!important;right:0!important;
+    bottom:0!important}
+/* chats */
+.chats{display:flex;gap:18px;flex-wrap:wrap}
+.chat{flex:1;min-width:290px}
+.chat-h{font-size:11px;text-transform:uppercase;letter-spacing:.7px;font-weight:700;
+        color:var(--steel);margin-bottom:7px}
+.burbuja{font-size:13.5px;line-height:1.6;padding:13px 15px;border-radius:10px;
+         color:var(--ink)}
+.chat.tg .burbuja{background:#e8f2fb;border:1px solid #cfe3f5;border-top-left-radius:3px}
+.chat.wa .burbuja{background:#e4f7d9;border:1px solid #cbeab9;border-top-left-radius:3px}
+.wb{display:block;margin-bottom:2px}
+/* trampas */
+.trampas{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:13px}
+.tr{border:1px solid var(--hair);border-top:3px solid var(--red);border-radius:4px;
+    padding:12px 14px;font-size:13.5px;color:var(--soft);background:#fff}
+.tr b{display:block;color:var(--ink);margin-bottom:4px}
+/* flujo */
+.flujo{display:flex;gap:9px;flex-wrap:wrap;align-items:stretch}
+.fp{flex:1;min-width:132px;background:var(--mist);border-radius:4px;padding:10px 12px;
+    border-left:3px solid var(--navy);position:relative}
+.fp code{background:none;padding:0;font-size:12.5px;font-weight:600}
+.fp span{display:block;font-size:11.5px;color:var(--steel);margin-top:2px}
+/* swatches */
+.swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px}
+.sw{display:flex;gap:11px;align-items:flex-start;border:1px solid var(--hair);
+    border-radius:4px;padding:10px 12px}
+.sw i{width:26px;height:26px;border-radius:4px;flex:0 0 26px;margin-top:2px}
+.sw b{display:block;font-size:13.5px}
+.sw code{font-size:11px;background:none;padding:0;color:var(--steel)}
+.sw span{display:block;font-size:11.5px;color:var(--steel);line-height:1.4}
+/* variantes por planta */
+body[data-planta=cuncia] .cond,body[data-planta=acacias] .cond,
+body[data-planta=cuncia] .c-alq,body[data-planta=acacias] .c-alq,
+body[data-planta=cuncia] .lg-alq,body[data-planta=acacias] .lg-alq,
+body[data-planta=cuncia] .kpis>*:nth-child(2),
+body[data-planta=acacias] .kpis>*:nth-child(2),
+body[data-planta=cuncia] .kpis>*:nth-child(6),
+body[data-planta=acacias] .kpis>*:nth-child(6),
+body[data-planta=cuncia] .con-alq,body[data-planta=acacias] .con-alq,
+body[data-planta=concretos] .sin-alq{display:none}
+.pie-doc{max-width:1320px;margin:0 auto;padding:22px 24px 40px;color:var(--steel);
+     font-size:12.5px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+@media print{nav.idx,.selector{display:none}body{background:#fff}
+  section{break-inside:avoid;box-shadow:none}}
+@media(max-width:900px){nav.idx{display:none}.wrap{padding:0 14px 50px}}
+:root{--border: var(--hair); --card: var(--mist); --amber: #b8860b;}
+.rp *{box-sizing: border-box;}
+.rp{margin:0; font-family: var(--sans); color: var(--ink); font-size: 9.2pt;
+       -webkit-print-color-adjust: exact; print-color-adjust: exact;}
+.rp .page{width:210mm; height:297mm; padding:13mm 14mm 16mm; position:relative;
+        display:flex; flex-direction:column; page-break-after:always;}
+.rp .page:last-child{page-break-after:auto;}
+.rp header.marca{display:flex; justify-content:space-between; align-items:flex-start;
+        border-bottom:2.5px solid var(--navy); padding-bottom:7px; margin-bottom:4px;}
+.rp header.marca::after{content:""; position:absolute; left:14mm; right:14mm;
+        top:calc(13mm + 46px); height:2.5px; background:var(--red);
+        width:74px;}
+.rp .logo{height:38px;}
+.rp .meta{text-align:right; font-size:7.4pt; color:var(--steel); line-height:1.45;}
+.rp .meta b{color:var(--ink);}
+.rp h1{font-size:15pt; text-align:center; letter-spacing:.3px; margin:16px 0 6px;
+     color:var(--ink); text-transform:uppercase;}
+.rp .intro{font-size:8.2pt; color:var(--steel); text-align:justify; margin:0 0 12px;
+         line-height:1.5;}
+.rp h2{font-size:9.6pt; text-transform:uppercase; letter-spacing:.6px; color:var(--navy);
+     margin:14px 0 7px; padding-bottom:3px; border-bottom:2px solid var(--navy);}
+.rp h3{font-size:8.6pt; margin:10px 0 5px; color:var(--navy); text-transform:uppercase;
+     letter-spacing:.4px;}
+.rp .kpis{display:flex; gap:7px; margin:4px 0 10px;}
+.rp .kpi{flex:1; background:#fff; border:1px solid var(--border); border-top-width:3px;
+       border-radius:3px; padding:9px 5px 8px; text-align:center;}
+.rp .kpi-v{font-size:19pt; font-weight:700; line-height:1;}
+.rp .kpi-e{font-size:6.4pt; text-transform:uppercase; letter-spacing:.5px;
+         color:var(--ink); margin-top:5px; font-weight:600;}
+.rp .kpi-s{font-size:6.2pt; color:var(--steel); margin-top:1px;}
+.rp .nota{border-left:3px solid var(--navy); background:var(--card); padding:7px 10px;
+        font-size:8pt; color:var(--ink); margin:8px 0; line-height:1.5;}
+.rp .nota.alerta{border-left-color:var(--red);}
+.rp .fila{display:flex; gap:14px; align-items:center;}
+.rp .fila > *{min-width:0;}
+.rp .chart{width:100%; height:auto; display:block;}
+.rp .marco{border:1px solid var(--border); border-radius:3px; padding:8px 10px;
+         background:#fdfdfe;}
+.rp text.ax{font-size:6.6px; fill:#5b6b82; font-family:var(--sans);}
+.rp text.ax.mini{font-size:5.8px; fill:#8d99a9;}
+.rp text.lbl{font-size:8px; font-weight:700; font-family:var(--sans); fill:#172954;}
+.rp text.cat{font-size:7px; font-weight:600; fill:#1a2230; font-family:var(--sans);}
+.rp text.inbar{font-size:7px; font-weight:700; fill:#fff; font-family:var(--sans);}
+.rp text.dona{font-size:26px; font-weight:700; font-family:var(--sans);}
+.rp .leyenda{display:flex; gap:12px; font-size:6.8pt; color:var(--steel);
+           margin-top:4px; flex-wrap:wrap;}
+.rp .leyenda i{width:9px; height:9px; border-radius:2px; display:inline-block;
+             margin-right:3px; vertical-align:-1px;}
+.rp table{width:100%; border-collapse:collapse; font-size:7.6pt;}
+.rp th{background:var(--navy); color:#fff; text-align:left; padding:5px 6px;
+     font-size:6.9pt; text-transform:uppercase; letter-spacing:.4px; font-weight:600;}
+.rp td{padding:4.5px 6px; border-bottom:1px solid #eceff3; vertical-align:top;
+     line-height:1.35;}
+.rp tbody tr:nth-child(even){background:#f7f8fa;}
+.rp tr.alerta td{background:#fdf1f1;}
+.rp tr.alerta td:first-child{box-shadow: inset 3px 0 0 var(--red);}
+.rp .eq{font-weight:700; color:var(--ink);}
+.rp .cod{font-size:6.4pt; color:var(--steel);}
+.rp .pill{display:inline-block; padding:1.5px 7px; border-radius:9px; font-size:6.6pt;
+        font-weight:700; letter-spacing:.3px;}
+.rp .p-rojo{background:#fdeaea; color:var(--red);}
+.rp .p-verde{background:#e9f4ed; color:var(--green);}
+.rp .p-ambar{background:#fbf3e0; color:var(--amber);}
+.rp .p-gris{background:#eef1f4; color:var(--steel);}
+.rp ul.res{margin:6px 0 0; padding-left:0; list-style:none;}
+.rp ul.res li{position:relative; padding:5px 0 5px 15px; font-size:8.4pt;
+            line-height:1.5; border-bottom:1px solid #f0f2f5;}
+.rp ul.res li::before{content:"■"; position:absolute; left:0; top:4px;
+            color:var(--navy); font-size:7pt;}
+.rp .aviso{display:flex; gap:9px; padding:7px 9px; border-radius:3px; margin-bottom:6px;
+         font-size:7.8pt; line-height:1.45; border:1px solid var(--border);}
+.rp .aviso.alto{background:#fdf1f1; border-color:#f0d3d3;}
+.rp .aviso.medio{background:#fbf6e9; border-color:#eee0be;}
+.rp .aviso b{display:block; margin-bottom:1px;}
+.rp .aviso .ico{font-weight:700; color:var(--red);}
+.rp .aviso.medio .ico{color:var(--amber);}
+.rp .vacio{font-size:8pt; color:var(--steel); font-style:italic; padding:8px 0;}
+.rp .marco.alq{display:flex; align-items:center; gap:16px;}
+.rp .alq-cifra{font-size:20pt; font-weight:700; line-height:1; white-space:nowrap;}
+.rp .alq-cifra span{display:block; font-size:6.6pt; color:var(--steel); font-weight:500;
+                  margin-top:3px;}
+.rp .chips{display:flex; flex-wrap:wrap; gap:6px;}
+.rp .chip{display:inline-flex; align-items:center; gap:6px; border:1px solid var(--border);
+        border-radius:3px; padding:4px 8px; font-size:7.4pt; background:#fff;}
+.rp .chip-t{color:var(--steel); font-size:6.6pt;}
+.rp .chip i{width:8px; height:8px; border-radius:50%; display:inline-block;}
+.rp .chips-off{font-size:7.4pt; color:var(--steel); margin-top:5px; padding-left:3px;
+             border-left:3px solid var(--amber); padding:3px 0 3px 8px;}
+.rp footer{position:absolute; left:14mm; right:14mm; bottom:8mm; z-index:1;
+         display:flex; justify-content:space-between; font-size:6.6pt;
+         color:var(--steel); border-top:1px solid var(--border); padding-top:5px;}
+.rp .grow{flex:1 1 auto;}
+.rp .dos{display:flex; gap:12px;}
+.rp .dos > div{flex:1;}</style></head><body data-planta="concretos">
+<div class="hero"><div class="hero-in">
+  <img src="data:image/png;base64,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" alt="Gravicon"/>
+  <div><h1>Plantilla del Reporte de Disponibilidad</h1>
+    <p>El formato que sale todos los días hábiles a las 8:30 para Cuncia, Concretos y
+    Acacías: qué bloque va en cada página, de dónde sale cada cifra y qué regla la
+    gobierna. Las vistas previas usan el mismo código y el mismo CSS que el PDF real,
+    con datos de ejemplo.</p></div>
+  <div class="selector"><button data-k='cuncia' aria-pressed='false'>Cuncia<small>Agregados</small></button><button data-k='concretos' aria-pressed='false'>Concretos<small>Concretos</small></button><button data-k='acacias' aria-pressed='false'>Acacías<small>Agregados</small></button></div>
+</div></div>
+<div class="wrap"><nav class="idx"><ol><li><a href='#ficha'>Una plantilla, tres plantas</a></li><li><a href='#anatomia'>Anatomía del documento</a></li><li><a href='#portada'>Portada — página 1</a></li><li><a href='#detalle'>Detalle — páginas 2 en adelante</a></li><li><a href='#mensaje'>El mensaje que acompaña al PDF</a></li><li><a href='#reglas'>Reglas de cálculo</a></li><li><a href='#datos'>De dónde sale el dato</a></li><li><a href='#visual'>Sistema visual</a></li></ol></nav><main><section id='ficha'><div class='kicker'>Ficha del entregable</div><h2>Una plantilla, tres plantas</h2>
+      <p>El reporte diario de disponibilidad es <b>un solo formato</b> que se emite tres
+      veces, una por operación. Cambian el libro de origen, el código del informe y el
+      grupo de destino; <b>la estructura de páginas, el cálculo y el orden de los
+      bloques son idénticos</b>. La única diferencia de contenido es la flota
+      alquilada: en agregados no se alquila, así que esos bloques no se imprimen —
+      un «0» ahí se leería como un dato que falta.</p>
+      <table class='doc plantas'><thead><tr><th>Planta</th><th>Negocio</th><th>Código del informe</th><th>Libro de OT (AppSheet)</th><th>Alquilados</th><th>Grupo de WhatsApp</th></tr></thead><tbody><tr data-k='cuncia'><td><b class='p-nom'>Cuncia</b></td><td>Agregados</td><td><code>GRV-INF-2026-CUNCIA-DISP</code></td><td><code>Ordenes_Ot_Cuncia</code></td><td><span class='no'>no</span></td><td>Producción Cuncia</td></tr><tr data-k='concretos'><td><b class='p-nom'>Concretos</b></td><td>Concretos</td><td><code>GRV-INF-2026-CONCRETOS-DISP</code></td><td><code>Base de Datos OT - Gravicon Concretos</code></td><td><span class='si'>sí</span></td><td>Operación Concretos Gravicon</td></tr><tr data-k='acacias'><td><b class='p-nom'>Acacías</b></td><td>Agregados</td><td><code>GRV-INF-2026-ACACIAS-DISP</code></td><td><code>Ordenes_Ot_Acacias</code></td><td><span class='no'>no</span></td><td>Acacías Agregados</td></tr></tbody></table>
+      <div class='avisos'>
+        <div class='av'><b>Cuándo sale</b> Todos los días hábiles a las 8:30
+          (<code>com.gravicon.disponibilidad-flota</code> → <code>run.sh</code>).</div>
+        <div class='av'><b>Por dónde</b> Los tres PDF a Telegram como copia de control
+          de la Dirección; además cada planta a su grupo de WhatsApp vía el puente
+          Gravi.</div>
+        <div class='av'><b>Una entrega por planta, canal y día</b> La guarda vive en
+          <code>datos/enviados.json</code>: la clave de Telegram es desnuda
+          (<code>concretos</code>) y la de WhatsApp lleva sufijo
+          (<code>concretos@whatsapp</code>), para que entregar por un canal no deje
+          mudo al otro.</div>
+      </div></section><section id='anatomia'><div class='kicker'>Cómo se arma</div><h2>Anatomía del documento</h2>
+      <p>Página A4 de alto fijo (297&nbsp;mm) con encabezado de marca arriba y pie
+      absoluto abajo. <b>La portada es fija</b>; todo lo que sigue se reparte solo:
+      el empaquetador estima la altura de cada bloque en milímetros y corta donde
+      toca, repitiendo el encabezado de la tabla que quedó partida. Chrome no
+      reflowa dentro de una página de alto fijo — si no empaquetáramos nosotros, el
+      contenido se derramaría encima de la página siguiente.</p>
+      <div class='hojas'>
+        <div class='hoja portada'><div class='hoja-h'><span class='hl'></span><span class='hm'>Corte · código · pág.</span></div><div class='hb'>Encabezado de marca</div><div class='hb'>Título e intro</div><div class='hb'>8 tarjetas KPI</div><div class='hb'>Nota de contexto</div><div class='hb'>Tendencia AM (14 días)</div><div class='hb'>Tipo de equipo · dona · AM vs PM</div><div class='hb'>Flota alquilada</div><div class='hoja-f'>Página 1 — portada</div></div>
+        <div class='hoja '><div class='hoja-h'><span class='hl'></span><span class='hm'>Corte · código · pág.</span></div><div class='hb'>Matriz por categoría</div><div class='hb'>Disponibilidad por planta</div><div class='hb'>Movimientos de taller</div><div class='hb'>Equipos en intervención</div><div class='hb'>Parados sin ingreso a taller</div><div class='hb'>Equipos operativos</div><div class='hb'>Tareas de seguimiento</div><div class='hb'>Cumplimiento por supervisor</div><div class='hb'>Resumen ejecutivo</div><div class='hb'>Control de calidad del dato</div><div class='hoja-f'>Páginas 2…n — detalle</div></div>
+      </div>
+      <div class='avisos'>
+        <div class='av'><b>Alto útil</b> 224&nbsp;mm por página
+          (<code>ALTO_UTIL_MM</code>), ya descontados márgenes, encabezado y pie.</div>
+        <div class='av'><b>Número de páginas</b> No es fijo: depende de cuántos
+          equipos haya en taller y cuántas tareas estén abiertas. Suele ir de 4 a 8.</div>
+      </div></section><section id='portada'><div class='kicker'>Bloque a bloque</div><h2>Portada — página 1</h2><div class='bloque'><h3><span class='ord'>1</span>Encabezado de marca y título</h3><div class='rp'>
+      <header class="marca" style="position:relative">
+        <img class="logo" src="data:image/png;base64,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" alt="Gravicon"/>
+        <div class="meta"><b class="v-titulo">Mantenimiento Concretos Gravicon</b>
+          GRAVAS Y CONCRETOS S.A.<br/>Villavicencio, Meta ·
+          <span class="v-negocio">Concretos</span><br/>
+          Corte: <b>11 de agosto de 2026</b><br/>
+          <b class="v-codigo">GRV-INF-2026-CONCRETOS-DISP</b> · Pág. 1 de 6</div>
+      </header>
+      <h1>Reporte de Disponibilidad de Equipos</h1>
+      <p class="intro">Operatividad de la flota de <span class="v-nombre">Concretos</span>
+      al corte del 11 de agosto de 2026: disponibilidad por tipo de equipo, equipos en
+      intervención con su fecha estimada de salida, seguimiento de tareas de los
+      supervisores y control de calidad del dato capturado. Las cifras se recalculan
+      desde el detalle por placa del módulo de disponibilidad.</p></div><div class='meta-b'><b>Fuente</b>Título, negocio y código salen de <code>config.PLANTAS</code>; el corte es la última fecha con inspección cargada, no la de hoy.</div><div class='meta-b regla'><b>Regla</b>El filete rojo bajo el logo es el único rojo estructural: el resto del rojo se reserva para alertas.</div></div><div class='bloque'><h3><span class='ord'>2</span>Tarjetas KPI</h3><div class='rp'><div class='kpis'><div class="kpi" style="border-top-color:#172954">
+      <div class="kpi-v" style="color:#172954">24</div>
+      <div class="kpi-e">Flota propia</div>
+      <div class="kpi-s">equipos del módulo</div></div><!--ALQ--><div class="kpi" style="border-top-color:#2a3f6b">
+      <div class="kpi-v" style="color:#172954">4</div>
+      <div class="kpi-e">Alquilados</div>
+      <div class="kpi-s">1 fuera de operación</div></div><div class="kpi" style="border-top-color:#1f7a3d">
+      <div class="kpi-v" style="color:#1f7a3d">17,5</div>
+      <div class="kpi-e">Operativos</div>
+      <div class="kpi-s">3 parciales</div></div><div class="kpi" style="border-top-color:#a90707">
+      <div class="kpi-v" style="color:#a90707">5</div>
+      <div class="kpi-e">No operativos</div>
+      <div class="kpi-s">4 en taller</div></div><div class="kpi" style="border-top-color:#b8860b">
+      <div class="kpi-v" style="color:#b8860b">74%</div>
+      <div class="kpi-e">Disponibilidad propia</div>
+      <div class="kpi-s">ronda AM del 11/08</div></div><!--ALQ--><div class="kpi" style="border-top-color:#b8860b">
+      <div class="kpi-v" style="color:#b8860b">76%</div>
+      <div class="kpi-e">Disponible en cancha</div>
+      <div class="kpi-s">21,5 de 28 propios+alq.</div></div><div class="kpi" style="border-top-color:#1f7a3d">
+      <div class="kpi-v" style="color:#1f7a3d">92%</div>
+      <div class="kpi-e">Cobertura</div>
+      <div class="kpi-s">22 de 24 revisados</div></div><div class="kpi" style="border-top-color:#172954">
+      <div class="kpi-v" style="color:#172954">0</div>
+      <div class="kpi-e">Días de rezago</div>
+      <div class="kpi-s">desde la última captura</div></div></div></div><div class='meta-b'><b>Fuente</b>Todas se recalculan desde la pestaña de placas del día de corte.</div><div class='meta-b regla'><b>Regla</b>Dos tarjetas son condicionales: «Alquilados» y «Disponible en cancha» solo se imprimen donde hay flota alquilada medida por placa. «Operativos» lleva decimales porque un parcial vale 0,5.</div></div><div class='bloque'><h3><span class='ord'>3</span>Nota de contexto</h3><div class='rp'>
+      <div class="nota alerta"><b>Este informe describe el 08/08/2026, no el día de
+      hoy.</b> La última inspección cargada tiene 3 días. Mientras no se reponga la
+      captura, la disponibilidad real de la flota es desconocida.</div>
+      <div class="nota">La disponibilidad se calcula sobre los 22 equipos efectivamente
+      inspeccionados. 2 equipo(s) de la flota no se revisaron y quedan fuera del
+      denominador: MIXER 09, VOLQUETA 14.</div></div><div class='meta-b'><b>Fuente</b>Se elige <b>una sola</b> nota, en este orden de prioridad: alquilados sin detalle por placa → rezago mayor a 2 días → equipos sin inspeccionar.</div><div class='meta-b regla'><b>Regla</b>Si no aplica ninguna, el bloque no se imprime. La nota roja existe para que un informe viejo no se lea como el de hoy.</div></div><div class='bloque'><h3><span class='ord'>4</span>Tendencia de disponibilidad — ronda AM, día a día</h3><div class='rp'>
+      <h2>Tendencia de disponibilidad — ronda AM, día a día</h2>
+      <div class="marco"><svg viewBox="0 0 700 210" class="chart"><line x1="44" y1="180.0" x2="684" y2="180.0" stroke="#e8ecf1" stroke-width="1"/><text x="36" y="183.0" text-anchor="end" class="ax">0%</text><line x1="44" y1="139.5" x2="684" y2="139.5" stroke="#e8ecf1" stroke-width="1"/><text x="36" y="142.5" text-anchor="end" class="ax">25%</text><line x1="44" y1="99.0" x2="684" y2="99.0" stroke="#e8ecf1" stroke-width="1"/><text x="36" y="102.0" text-anchor="end" class="ax">50%</text><line x1="44" y1="58.5" x2="684" y2="58.5" stroke="#e8ecf1" stroke-width="1"/><text x="36" y="61.5" text-anchor="end" class="ax">75%</text><line x1="44" y1="18.0" x2="684" y2="18.0" stroke="#e8ecf1" stroke-width="1"/><text x="36" y="21.0" text-anchor="end" class="ax">100%</text><line x1="44" y1="42.3" x2="684" y2="42.3" stroke="#5b6b82" stroke-width="1.2" stroke-dasharray="5 4"/><text x="684" y="37.3" text-anchor="end" class="ax">meta 85%</text><path d="M44.0,105.5 L93.2,105.5 L142.5,95.8 L191.7,86.0 L240.9,81.2 L290.2,90.9 L339.4,100.6 L388.6,105.5 L487.1,71.5 L536.3,65.0 L585.5,69.8 L634.8,60.1 L684.0,52.0 L684.0,180.0 L44.0,180.0 Z" fill="#172954" opacity="0.07"/><path d="M44.0,105.5 L93.2,105.5 L142.5,95.8 L191.7,86.0 L240.9,81.2 L290.2,90.9 L339.4,100.6 L388.6,105.5 L487.1,71.5 L536.3,65.0 L585.5,69.8 L634.8,60.1 L684.0,52.0" fill="none" stroke="#172954" stroke-width="2.2"/><circle cx="44.0" cy="105.5" r="3.4" fill="#172954"/><text x="44.0" y="94.5" text-anchor="middle" class="lbl" fill="#172954">46%</text><text x="44.0" y="200" text-anchor="middle" class="ax">29/07</text><text x="44.0" y="209" text-anchor="middle" class="ax mini">22 eq.</text><circle cx="93.2" cy="105.5" r="3.4" fill="#172954"/><text x="93.2" y="94.5" text-anchor="middle" class="lbl" fill="#172954">46%</text><text x="93.2" y="200" text-anchor="middle" class="ax">30/07</text><text x="93.2" y="209" text-anchor="middle" class="ax mini">23 eq.</text><circle cx="142.5" cy="95.8" r="3.4" fill="#172954"/><text x="142.5" y="84.8" text-anchor="middle" class="lbl" fill="#172954">52%</text><text x="142.5" y="200" text-anchor="middle" class="ax">31/07</text><text x="142.5" y="209" text-anchor="middle" class="ax mini">24 eq.</text><circle cx="191.7" cy="86.0" r="3.4" fill="#172954"/><text x="191.7" y="75.0" text-anchor="middle" class="lbl" fill="#172954">58%</text><text x="191.7" y="200" text-anchor="middle" class="ax">01/08</text><text x="191.7" y="209" text-anchor="middle" class="ax mini">22 eq.</text><circle cx="240.9" cy="81.2" r="3.4" fill="#172954"/><text x="240.9" y="70.2" text-anchor="middle" class="lbl" fill="#172954">61%</text><text x="240.9" y="200" text-anchor="middle" class="ax">02/08</text><text x="240.9" y="209" text-anchor="middle" class="ax mini">23 eq.</text><circle cx="290.2" cy="90.9" r="3.4" fill="#172954"/><text x="290.2" y="79.9" text-anchor="middle" class="lbl" fill="#172954">55%</text><text x="290.2" y="200" text-anchor="middle" class="ax">03/08</text><text x="290.2" y="209" text-anchor="middle" class="ax mini">24 eq.</text><circle cx="339.4" cy="100.6" r="3.4" fill="#172954"/><text x="339.4" y="89.6" text-anchor="middle" class="lbl" fill="#172954">49%</text><text x="339.4" y="200" text-anchor="middle" class="ax">04/08</text><text x="339.4" y="209" text-anchor="middle" class="ax mini">22 eq.</text><circle cx="388.6" cy="105.5" r="3.4" fill="#172954"/><text x="388.6" y="94.5" text-anchor="middle" class="lbl" fill="#172954">46%</text><text x="388.6" y="200" text-anchor="middle" class="ax">05/08</text><text x="388.6" y="209" text-anchor="middle" class="ax mini">23 eq.</text><circle cx="437.8" cy="94.1" r="3.4" fill="#fff" stroke="#c9d1dc" stroke-width="1.8"/><text x="437.8" y="84.1" text-anchor="middle" class="ax mini">captura<tspan x="437.8" dy="7">incompleta</tspan></text><text x="437.8" y="200" text-anchor="middle" class="ax">06/08</text><text x="437.8" y="209" text-anchor="middle" class="ax mini">24 eq.</text><circle cx="487.1" cy="71.5" r="3.4" fill="#172954"/><text x="487.1" y="60.5" text-anchor="middle" class="lbl" fill="#172954">67%</text><text x="487.1" y="200" text-anchor="middle" class="ax">07/08</text><text x="487.1" y="209" text-anchor="middle" class="ax mini">22 eq.</text><circle cx="536.3" cy="65.0" r="3.4" fill="#172954"/><text x="536.3" y="54.0" text-anchor="middle" class="lbl" fill="#172954">71%</text><text x="536.3" y="200" text-anchor="middle" class="ax">08/08</text><text x="536.3" y="209" text-anchor="middle" class="ax mini">23 eq.</text><circle cx="585.5" cy="69.8" r="3.4" fill="#172954"/><text x="585.5" y="58.8" text-anchor="middle" class="lbl" fill="#172954">68%</text><text x="585.5" y="200" text-anchor="middle" class="ax">09/08</text><text x="585.5" y="209" text-anchor="middle" class="ax mini">24 eq.</text><circle cx="634.8" cy="60.1" r="3.4" fill="#172954"/><text x="634.8" y="49.1" text-anchor="middle" class="lbl" fill="#172954">74%</text><text x="634.8" y="200" text-anchor="middle" class="ax">10/08</text><text x="634.8" y="209" text-anchor="middle" class="ax mini">22 eq.</text><circle cx="684.0" cy="52.0" r="4.5" fill="#a90707"/><text x="684.0" y="41.0" text-anchor="middle" class="lbl" fill="#a90707">79%</text><text x="684.0" y="200" text-anchor="middle" class="ax">11/08</text><text x="684.0" y="209" text-anchor="middle" class="ax mini">23 eq.</text></svg></div>
+      <p class="intro" style="margin:5px 0 0">Se compara siempre la misma ronda (AM)
+      contra sí misma. Mezclar la ronda PM de un día con la AM del siguiente produce
+      saltos que no corresponden a cambios en la flota.</p></div><div class='meta-b'><b>Fuente</b>Últimos 14 días con inspección, recalculados placa a placa. <b>Nunca</b> desde la hoja de resumen diario.</div><div class='meta-b regla'><b>Regla</b>La meta punteada es 85%. El último punto firme va en rojo. Los días con la captura a medio hacer salen como punto hueco «captura incompleta» y <b>no forman parte de la línea</b>: su porcentaje describe la captura, no la flota.</div></div><div class='bloque'><h3><span class='ord'>5</span>Disponibilidad por tipo de equipo</h3><div class='rp'>
+      <h2>Disponibilidad por tipo de equipo — 11/08<span class="con-alq"> ·
+        propia + alquilada</span></h2>
+      <div class="fila">
+        <div style="flex:1.9"><div class="con-alq"><svg viewBox="0 0 430 104" class="chart"><text x="124" y="20" text-anchor="end" class="cat">MIXER</text><rect x="132.0" y="9" width="147.0" height="15" fill="#1f7a3d" rx="1.5"/><text x="205.5" y="20.5" text-anchor="middle" class="inbar">7</text><rect x="279.0" y="9" width="21.0" height="15" fill="#2E8B8F" rx="1.5"/><text x="289.5" y="20.5" text-anchor="middle" class="inbar">1</text><rect x="300.0" y="9" width="21.0" height="15" fill="#b8860b" rx="1.5"/><text x="310.5" y="20.5" text-anchor="middle" class="inbar">1</text><rect x="321.0" y="9" width="63.0" height="15" fill="#a90707" rx="1.5"/><text x="352.5" y="20.5" text-anchor="middle" class="inbar">3</text><text x="391.0" y="20.5" class="lbl" fill="#b8860b">71%</text><text x="124" y="42" text-anchor="end" class="cat">VOLQUETA</text><rect x="132.0" y="31" width="126.0" height="15" fill="#1f7a3d" rx="1.5"/><text x="195.0" y="42.5" text-anchor="middle" class="inbar">6</text><rect x="258.0" y="31" width="21.0" height="15" fill="#b8860b" rx="1.5"/><text x="268.5" y="42.5" text-anchor="middle" class="inbar">1</text><rect x="279.0" y="31" width="21.0" height="15" fill="#a90707" rx="1.5"/><text x="289.5" y="42.5" text-anchor="middle" class="inbar">1</text><text x="307.0" y="42.5" class="lbl" fill="#b8860b">81%</text><text x="124" y="64" text-anchor="end" class="cat">AUTOBOMBA</text><rect x="132.0" y="53" width="42.0" height="15" fill="#1f7a3d" rx="1.5"/><text x="153.0" y="64.5" text-anchor="middle" class="inbar">2</text><rect x="174.0" y="53" width="21.0" height="15" fill="#2E8B8F" rx="1.5"/><text x="184.5" y="64.5" text-anchor="middle" class="inbar">1</text><rect x="195.0" y="53" width="21.0" height="15" fill="#a90707" rx="1.5"/><text x="205.5" y="64.5" text-anchor="middle" class="inbar">1</text><text x="223.0" y="64.5" class="lbl" fill="#b8860b">75%</text><text x="124" y="86" text-anchor="end" class="cat">CARGADOR</text><rect x="132.0" y="75" width="21.0" height="15" fill="#1f7a3d" rx="1.5"/><text x="142.5" y="86.5" text-anchor="middle" class="inbar">1</text><rect x="153.0" y="75" width="21.0" height="15" fill="#b8860b" rx="1.5"/><text x="163.5" y="86.5" text-anchor="middle" class="inbar">1</text><rect x="174.0" y="75" width="21.0" height="15" fill="#a90707" rx="1.5"/><text x="184.5" y="86.5" text-anchor="middle" class="inbar">1</text><text x="202.0" y="86.5" class="lbl" fill="#a90707">50%</text></svg></div>
+          <div class="sin-alq"><svg viewBox="0 0 430 104" class="chart"><text x="124" y="20" text-anchor="end" class="cat">MIXER</text><rect x="132.0" y="9" width="160.4" height="15" fill="#1f7a3d" rx="1.5"/><text x="212.2" y="20.5" text-anchor="middle" class="inbar">7</text><rect x="292.4" y="9" width="22.9" height="15" fill="#b8860b" rx="1.5"/><text x="303.8" y="20.5" text-anchor="middle" class="inbar">1</text><rect x="315.3" y="9" width="68.7" height="15" fill="#a90707" rx="1.5"/><text x="349.6" y="20.5" text-anchor="middle" class="inbar">3</text><text x="391.0" y="20.5" class="lbl" fill="#b8860b">68%</text><text x="124" y="42" text-anchor="end" class="cat">VOLQUETA</text><rect x="132.0" y="31" width="137.5" height="15" fill="#1f7a3d" rx="1.5"/><text x="200.7" y="42.5" text-anchor="middle" class="inbar">6</text><rect x="269.5" y="31" width="22.9" height="15" fill="#b8860b" rx="1.5"/><text x="280.9" y="42.5" text-anchor="middle" class="inbar">1</text><rect x="292.4" y="31" width="22.9" height="15" fill="#a90707" rx="1.5"/><text x="303.8" y="42.5" text-anchor="middle" class="inbar">1</text><text x="322.3" y="42.5" class="lbl" fill="#b8860b">81%</text><text x="124" y="64" text-anchor="end" class="cat">AUTOBOMBA</text><rect x="132.0" y="53" width="45.8" height="15" fill="#1f7a3d" rx="1.5"/><text x="154.9" y="64.5" text-anchor="middle" class="inbar">2</text><rect x="177.8" y="53" width="22.9" height="15" fill="#a90707" rx="1.5"/><text x="189.3" y="64.5" text-anchor="middle" class="inbar">1</text><text x="207.7" y="64.5" class="lbl" fill="#b8860b">67%</text><text x="124" y="86" text-anchor="end" class="cat">CARGADOR</text><rect x="132.0" y="75" width="22.9" height="15" fill="#1f7a3d" rx="1.5"/><text x="143.5" y="86.5" text-anchor="middle" class="inbar">1</text><rect x="154.9" y="75" width="22.9" height="15" fill="#b8860b" rx="1.5"/><text x="166.4" y="86.5" text-anchor="middle" class="inbar">1</text><rect x="177.8" y="75" width="22.9" height="15" fill="#a90707" rx="1.5"/><text x="189.3" y="86.5" text-anchor="middle" class="inbar">1</text><text x="207.7" y="86.5" class="lbl" fill="#a90707">50%</text></svg></div><div class='leyenda'><span><i style='background:#1f7a3d'></i>Operativo propio</span><span class='lg-alq'><i style='background:#2E8B8F'></i>Operativo alquilado</span><span><i style='background:#b8860b'></i>Parcial (0,5)</span><span><i style='background:#a90707'></i>No operativo</span></div></div>
+        <div style="flex:0.85"><svg viewBox="0 0 210 210" class="chart"><circle cx="105.0" cy="105.0" r="72" fill="none" stroke="#e6eaf0" stroke-width="22"/><circle cx="105.0" cy="105.0" r="72" fill="none" stroke="#b8860b" stroke-width="22" stroke-dasharray="334.8 452.4" stroke-linecap="butt" transform="rotate(-90 105.0 105.0)"/><text x="105.0" y="109.0" text-anchor="middle" class="dona" fill="#b8860b">74%</text><text x="105.0" y="129.0" text-anchor="middle" class="ax">DISPONIBILIDAD</text><text x="105.0" y="142.0" text-anchor="middle" class="ax">17.5 de 24 equipos</text></svg></div>
+        <div style="flex:1"><svg viewBox="0 0 250 210" class="chart"><line x1="20" y1="170" x2="236" y2="170" stroke="#dbe1e9"/><rect x="52" y="63.4" width="54" height="106.6" fill="#172954" rx="2"/><text x="79" y="56.4" text-anchor="middle" class="lbl">74%</text><text x="79" y="185" text-anchor="middle" class="ax">Ronda AM</text><rect x="144" y="125.4" width="54" height="44.6" fill="#2a3f6b" rx="2"/><text x="171" y="118.4" text-anchor="middle" class="lbl">31%</text><text x="171" y="185" text-anchor="middle" class="ax">Ronda PM</text><text x="125.0" y="203" text-anchor="middle" class="ax mini" fill="#a90707">brecha -43%</text></svg>
+          <div class="leyenda" style="justify-content:center">AM vs PM del mismo
+          día</div></div>
+      </div></div><div class='meta-b'><b>Fuente</b>Categorías = <code>Tipo de Vehiculos</code> de cada placa inspeccionada.</div><div class='meta-b regla'><b>Regla</b>Las tres piezas van juntas en una fila. La comparación AM/PM es del <b>mismo día</b>: la brecha mide cumplimiento de la ronda de la tarde, no una caída de la flota — la PM casi nunca se completa.</div></div><div class='bloque cond Concretos'><h3><span class='ord'>6</span>Flota alquilada<span class='tag tag-cond'>solo Concretos</span></h3><div class='rp'>
+      <h2>Flota alquilada — 11/08</h2>
+      <div class="marco alq">
+        <div class="alq-cifra" style="color:#b8860b">75%
+          <span>3 de 4 operativos</span></div>
+        <div class="chips"><span class='chip'><b>WPT-482</b><span class='chip-t'>AUTOBOMBA</span><i style='background:#1f7a3d'></i></span><span class='chip'><b>SXT-115</b><span class='chip-t'>MIXER</span><i style='background:#1f7a3d'></i></span><span class='chip'><b>TAX-733</b><span class='chip-t'>MIXER</span><i style='background:#b8860b'></i></span><span class='chip'><b>ARS-901</b><span class='chip-t'>AUTOBOMBA</span><i style='background:#a90707'></i></span></div>
+      </div>
+      <div class="chips-off">Fuera de la operación: KJU-220 — 10+ días en cero sin
+        intervención. No cuentan en el denominador.</div></div><div class='meta-b'><b>Fuente</b>Placas cuyo <code>Tipo de Vehiculos</code> empieza por <code>ALQUILADAS - …</code>. El «Área de Trabajo» del resumen <b>no sirve</b> para identificarlas.</div><div class='meta-b regla'><b>Regla</b>Va aparte de la gráfica por categoría para que la serie de flota propia siga siendo comparable. Si hay resúmenes del área «Alquiladas» pero ninguna placa asociada, no se dibuja: se emite la nota roja.</div></div></section><section id='detalle'><h2>Detalle — páginas 2 en adelante</h2><div class='bloque'><h3><span class='ord'>7</span>Matriz de operatividad por categoría</h3><div class='rp'>
+      <h2>Matriz de operatividad por categoría</h2>
+      <table><thead><tr><th>Categoría</th><th>Operativos</th>
+        <th class='c-alq'>de ellos alq.</th><th>Parciales</th><th>No operativos</th>
+        <th>Total</th><th>Disp.</th></tr></thead>
+        <tbody><tr><td><b>MIXER</b></td><td>8</td><td class='c-alq' style='color:#2E8B8F'>1</td><td>1</td><td>3</td><td>12</td><td><b style='color:#b8860b'>71%</b></td></tr><tr><td><b>VOLQUETA</b></td><td>6</td><td class='c-alq' style='color:#2E8B8F'>—</td><td>1</td><td>1</td><td>8</td><td><b style='color:#b8860b'>81%</b></td></tr><tr><td><b>AUTOBOMBA</b></td><td>3</td><td class='c-alq' style='color:#2E8B8F'>1</td><td>0</td><td>1</td><td>4</td><td><b style='color:#b8860b'>75%</b></td></tr><tr><td><b>CARGADOR</b></td><td>1</td><td class='c-alq' style='color:#2E8B8F'>—</td><td>1</td><td>1</td><td>3</td><td><b style='color:#a90707'>50%</b></td></tr><tr><td><b>TOTAL FLOTA</b></td><td><b>19</b></td><td class='c-alq'><b style='color:#2E8B8F'>2</b></td><td><b>3</b></td><td><b>6</b></td><td><b>27</b></td><td><b style='color:#b8860b'>74%</b></td></tr></tbody></table>
+      <p class="intro" style="margin:5px 0 0">Un equipo parcial (0,5) operó parte del
+      día. La disponibilidad pondera esos medios puntos; el conteo de «no operativos»
+      no los incluye.</p></div><div class='meta-b'><b>Fuente</b>Mismo agregado que la gráfica de portada, en cifras.</div><div class='meta-b regla'><b>Regla</b>La columna «de ellos alq.» solo aparece donde hay alquilados. La fila TOTAL FLOTA cierra la tabla.</div></div><div class='bloque'><h3><span class='ord'>8</span>Disponibilidad por planta</h3><div class='rp'>
+      <h2>Disponibilidad por planta</h2>
+      <div class="marco"><svg viewBox="0 0 700 108" class="chart"><text x="142" y="19" text-anchor="end" class="cat">CUNCIA</text><rect x="150" y="7" width="490.0" height="16" fill="#e9edf2" rx="2"/><rect x="150" y="7" width="350.0" height="16" fill="#b8860b" rx="2"/><text x="648.0" y="19" class="lbl" fill="#b8860b">71%</text><text x="682.0" y="19" class="ax">10/14</text><text x="142" y="43" text-anchor="end" class="cat">GUAYURIBA</text><rect x="150" y="31" width="210.0" height="16" fill="#e9edf2" rx="2"/><rect x="150" y="31" width="175.0" height="16" fill="#b8860b" rx="2"/><text x="368.0" y="43" class="lbl" fill="#b8860b">83%</text><text x="402.0" y="43" class="ax">5/6</text><text x="142" y="67" text-anchor="end" class="cat">LÍNEA 3</text><rect x="150" y="55" width="140.0" height="16" fill="#e9edf2" rx="2"/><rect x="150" y="55" width="70.0" height="16" fill="#a90707" rx="2"/><text x="298.0" y="67" class="lbl" fill="#a90707">50%</text><text x="332.0" y="67" class="ax">2/4</text><text x="142" y="91" text-anchor="end" class="cat" fill='#8790A5'>SIN PLANTA IDENTIFICADA</text><rect x="150" y="79" width="105.0" height="16" fill="#e9edf2" rx="2"/><rect x="150" y="79" width="70.0" height="16" fill="#c9d1dc" rx="2"/><text x="263.0" y="91" class="lbl" fill="#5b6b82">67%</text><text x="297.0" y="91" class="ax">2/3</text></svg></div>
+      <p class="intro" style="margin:5px 0 0">La planta <b>no se registra en el módulo
+      de disponibilidad</b>: se infiere de la localización de las órdenes de trabajo de
+      cada equipo. Se identificó la de <b>24 de 27</b> equipos del día; el resto queda
+      agrupado aparte y no se le atribuye disponibilidad a ninguna planta.</p></div><div class='meta-b'><b>Fuente</b>Cruce con <code>Localización</code> de las OT del equipo.</div><div class='meta-b regla'><b>Regla</b>El ancho de la barra es proporcional al tamaño de la flota de cada planta: una planta de 1 equipo no puede leerse igual que una de 20. «SIN PLANTA IDENTIFICADA» va en gris, sin semáforo.</div></div><div class='bloque'><h3><span class='ord'>9</span>Movimientos de taller</h3><div class='rp'>
+      <h2>Movimientos de taller — 08/08 → 11/08</h2>
+      <h3>↓ Ingresaron a taller (2)</h3>
+      <table><thead><tr><th>Equipo</th><th>Tipo</th><th>Actividad / Necesidad</th>
+        <th>Proveedor</th><th>Supervisor</th><th>Días p/ salida</th></tr></thead>
+        <tbody>
+        <tr><td><div class='eq'>MIXER 07</div><div class='cod'>SXT-493</div></td><td>MIXER</td>
+          <td>Cambio de bomba hidráulica</td><td>Hidráulicos del Llano</td>
+          <td>J. Ramírez</td><td><span class='pill p-gris'>3</span></td></tr>
+        <tr><td><div class='eq'>CARGADOR 02</div><div class='cod'>OT-1180</div></td><td>CARGADOR</td>
+          <td>Motor — revisión de turbo</td><td>Taller interno</td>
+          <td>A. Peña</td><td><span class='pill p-ambar'>12</span></td></tr>
+        </tbody></table>
+      <h3>↑ Salieron de taller (1)</h3>
+      <table><thead><tr><th>Equipo</th><th>Tipo</th><th>Actividad / Necesidad</th>
+        <th>Proveedor</th><th>Supervisor</th><th>Días p/ salida</th></tr></thead>
+        <tbody><tr><td><div class='eq'>VOLQUETA 05</div><div class='cod'>TAX-733</div></td><td>VOLQUETA</td>
+          <td>Suspensión</td><td>Serviteca Meta</td><td>J. Ramírez</td>
+          <td><span class='cod'>—</span></td></tr></tbody></table></div><div class='meta-b'><b>Fuente</b>Diferencia entre la inspección del corte y la inspección anterior.</div><div class='meta-b regla'><b>Regla</b>Contesta «qué cambió desde ayer», que es lo que se pregunta en la reunión de la mañana. Si no hay una inspección previa con qué comparar, el bloque entero no se imprime.</div></div><div class='bloque'><h3><span class='ord'>10</span>Equipos en intervención</h3><div class='rp'>
+      <h2>Equipos en intervención (4 en taller)</h2>
+      <table><thead><tr><th>Equipo</th><th>Tipo</th><th>Actividades / Necesidades</th>
+        <th>Proveedor</th><th>Supervisor</th><th>Orden de trabajo</th>
+        <th>Días p/ salida</th></tr></thead><tbody>
+      <tr><td><div class='eq'>MIXER 07</div><div class='cod'>SXT-493</div></td><td>MIXER</td>
+        <td><div>Cambio de bomba hidráulica</div>
+        <div class='cod'>Requiere repuesto importado</div></td>
+        <td>Hidráulicos del Llano</td><td>J. Ramírez</td><td>OT-2214</td>
+        <td><span class='pill p-gris'>3</span></td></tr>
+      <tr><td><div class='eq'>CARGADOR 02</div><div class='cod'>OT-1180</div></td><td>CARGADOR</td>
+        <td><div>Motor — revisión de turbo</div></td><td>Taller interno</td>
+        <td>A. Peña</td><td>OT-2201, OT-2209</td>
+        <td><span class='pill p-ambar'>12</span></td></tr>
+      <tr class='alerta'><td><div class='eq'>AUTOBOMBA 01</div><div class='cod'>ARS-175</div></td>
+        <td>AUTOBOMBA</td><td><div>Sin actividad registrada</div></td><td>—</td>
+        <td>C. Molina</td><td><span class='pill p-rojo'>sin OT</span></td>
+        <td><span class='pill p-rojo'>6 d. vencido</span></td></tr>
+      </tbody></table>
+      <p class="intro" style="margin:5px 0 0">«Días p/ salida» = fecha estimada de
+      salida menos la fecha de corte. En rojo, los equipos sin orden de trabajo abierta
+      que respalde la intervención.</p></div><div class='meta-b'><b>Fuente</b>Placas del corte marcadas <code>¿Vehiculo en Taller?</code> = sí, cruzadas contra las OT abiertas del equipo.</div><div class='meta-b regla'><b>Regla</b>Ordenados por días de permanencia, de mayor a menor. La fila roja significa <b>equipo parado sin OT que lo respalde</b>: es el hallazgo accionable del informe, no un adorno. «6 d. vencido» = la fecha estimada de salida ya pasó.</div></div><div class='bloque'><h3><span class='ord'>11</span>Parados sin ingreso a taller</h3><div class='rp'>
+      <h3>Parados sin ingreso a taller (2)</h3>
+      <p class="intro" style="margin:5px 0 0">Figuran como no operativos pero no están
+      marcados en taller ni tienen intervención asociada: hoy nadie los está
+      atendiendo.</p>
+      <table><thead><tr><th>Equipo</th><th>Tipo</th><th>Supervisor</th>
+        <th>Observación</th></tr></thead><tbody>
+      <tr class='alerta'><td><div class='eq'>MIXER 11</div><div class='cod'>WPT-482</div></td><td>MIXER</td>
+        <td>C. Molina</td><td>—</td></tr>
+      <tr class='alerta'><td><div class='eq'>VOLQUETA 09</div><div class='cod'>KJU-220</div></td>
+        <td>VOLQUETA</td><td>A. Peña</td><td>Sin operador asignado</td></tr>
+      </tbody></table></div><div class='meta-b'><b>Fuente</b><code>Rev_AM = 0</code> y sin marca de taller ni intervención.</div><div class='meta-b regla'><b>Regla</b>Bloque condicional: si no hay ninguno, no se imprime. Todas las filas van en alerta a propósito — un equipo parado que nadie está atendiendo es peor que uno en taller.</div></div><div class='bloque'><h3><span class='ord'>12</span>Equipos operativos</h3><div class='rp'>
+      <h2>Equipos operativos (19)</h2>
+      <table><thead><tr><th>Equipo</th><th>Tipo</th><th>Supervisor</th>
+        <th>Estado AM</th><th>Cambio en PM</th></tr></thead><tbody>
+      <tr><td><div class='eq'>MIXER 03</div><div class='cod'>SXT-115</div></td><td>MIXER</td>
+        <td>J. Ramírez</td><td><span class='pill p-verde'>operativo</span></td>
+        <td><span class='cod'>—</span></td></tr>
+      <tr><td><div class='eq'>MIXER 04</div><div class='cod'>TAX-556</div></td><td>MIXER</td>
+        <td>J. Ramírez</td><td><span class='pill p-ambar'>parcial</span></td>
+        <td><span class='pill p-ambar'>cayó en PM</span></td></tr>
+      <tr><td><div class='eq'>VOLQUETA 02</div><div class='cod'>ARS-901</div></td><td>VOLQUETA</td>
+        <td>A. Peña</td><td><span class='pill p-verde'>operativo</span></td>
+        <td><span class='cod'>—</span></td></tr>
+      </tbody></table></div><div class='meta-b'><b>Fuente</b>Placas con <code>Rev_AM</code> mayor que 0.</div><div class='meta-b regla'><b>Regla</b>«Cambio en PM» solo se marca cuando la tarde <b>empeora</b> respecto a la mañana y hay ronda PM registrada.</div></div><div class='bloque'><h3><span class='ord'>13</span>Tareas de seguimiento abiertas</h3><div class='rp'>
+      <h2>Tareas de seguimiento abiertas (3)</h2>
+      <table><thead><tr><th>Placa</th><th>Actividad</th><th>Responsable</th>
+        <th>Estado</th><th>Registro</th><th>Días abierta</th></tr></thead><tbody>
+      <tr class='alerta'><td>SXT-493</td>
+        <td><div>Cotizar bomba hidráulica</div>
+          <div class='cod'>Proveedor no responde desde el 04/08</div></td>
+        <td>C. Molina</td><td><span class='pill p-rojo'>Pendiente</span></td>
+        <td>28/07</td><td><span class='pill p-ambar'>14</span></td></tr>
+      <tr><td>TAX-733</td><td><div>Programar alineación</div></td><td>A. Peña</td>
+        <td><span class='pill p-ambar'>En proceso</span></td><td>09/08</td>
+        <td><span class='pill p-gris'>2</span></td></tr>
+      </tbody></table></div><div class='meta-b'><b>Fuente</b>Pestaña de tareas del módulo, unida a la inspección por <code>ID_Inspeccion</code>.</div><div class='meta-b regla'><b>Regla</b>Se marcan en alerta las abiertas hace más de 7 días.</div></div><div class='bloque'><h3><span class='ord'>14</span>Cumplimiento diario por supervisor</h3><div class='rp'>
+      <h2>Cumplimiento diario por supervisor</h2>
+      <div class="dos">
+        <div class='marco' style='flex:1'><h3 style='margin-top:0'>10/08/2026 · 7/9 ejecutadas</h3><div style='font-size:15pt;font-weight:700;color:#b8860b;margin-bottom:4px'>78%</div><table><thead><tr><th>Supervisor</th><th>T.</th><th>Ej.</th><th>P.</th><th>%</th></tr></thead><tbody><tr class=''><td>J. Ramírez</td><td>4</td><td><b style='color:#1f7a3d'>4</b></td><td><b style='color:#a90707'>0</b></td><td><b style='color:#1f7a3d'>100%</b></td></tr><tr class=''><td>A. Peña</td><td>5</td><td><b style='color:#1f7a3d'>3</b></td><td><b style='color:#a90707'>2</b></td><td><b style='color:#b8860b'>60%</b></td></tr></tbody></table></div>
+        <div class='marco' style='flex:1'><h3 style='margin-top:0'>11/08/2026 · 5/8 ejecutadas</h3><div style='font-size:15pt;font-weight:700;color:#b8860b;margin-bottom:4px'>62%</div><table><thead><tr><th>Supervisor</th><th>T.</th><th>Ej.</th><th>P.</th><th>%</th></tr></thead><tbody><tr class=''><td>J. Ramírez</td><td>3</td><td><b style='color:#1f7a3d'>2</b></td><td><b style='color:#a90707'>1</b></td><td><b style='color:#b8860b'>67%</b></td></tr><tr class=''><td>C. Molina</td><td>5</td><td><b style='color:#1f7a3d'>3</b></td><td><b style='color:#a90707'>2</b></td><td><b style='color:#b8860b'>60%</b></td></tr></tbody></table></div>
+      </div>
+      <div class="nota alerta"><b>3 tarea(s) se cerraron con 5 días o más de rezago.</b>
+      Cerrar en bloque tareas viejas hace que el indicador de cumplimiento diario marque
+      0% durante días y luego salte a 100%: el promedio resultante no mide
+      seguimiento.</div></div><div class='meta-b'><b>Fuente</b>Tareas registradas y cerradas en cada uno de los dos últimos días con captura.</div><div class='meta-b regla'><b>Regla</b>Dos días lado a lado, no un promedio del mes. La nota de cierres en bloque solo aparece cuando de verdad los hubo.</div></div><div class='bloque'><h3><span class='ord'>15</span>Resumen ejecutivo y control de calidad del dato</h3><div class='rp'>
+      <h2>Resumen ejecutivo</h2>
+      <ul class="res">
+        <li>Disponibilidad de la ronda AM: 74% (17,5 de 24 equipos), 11 puntos por
+          debajo de la meta de 85%.</li>
+        <li>La categoría más crítica es CARGADOR: 50%, con 1 de 3 equipos parados.</li>
+        <li>4 equipos en taller; 1 de ellos sin orden de trabajo que respalde la
+          intervención.</li>
+        <li>2 equipos figuran parados sin ingreso a taller ni intervención asociada.</li>
+      </ul>
+      <h2>Control de calidad del dato</h2>
+      <div class="aviso alto"><span class="ico">!</span><span><b>2 equipos de la flota
+        no se inspeccionaron</b>Salen del denominador, así que la disponibilidad
+        publicada está calculada sobre 22 de 24 equipos.</span></div>
+      <div class="aviso medio"><span class="ico">!</span><span><b>La ronda PM quedó a
+        medias</b>Se registraron 7 de 22 placas. La brecha AM–PM de este informe mide
+        la inspección, no la flota.</span></div></div><div class='meta-b'><b>Fuente</b>Ambos bloques se derivan de lo ya calculado; no leen nada nuevo.</div><div class='meta-b regla'><b>Regla</b>El resumen ejecutivo es <b>generado</b>, no redactado a mano: si una frase no está, es porque la condición no se cumplió. El control de calidad se imprime siempre, aunque sea para decir «sin observaciones».</div></div><div class='bloque'><h3><span class='ord'>16</span>Pie de página</h3><div class='rp'>
+      <footer style="position:relative;left:0;right:0;bottom:0">
+        <span>Informe de Disponibilidad de Flota — Gravicon</span>
+        <span>Generado 11/08/2026 08:31 · GRV-INF-2026-CONCRETOS-DISP</span>
+      </footer></div><div class='meta-b'><b>Fuente</b>Se repite en todas las páginas, con la hora real de generación.</div><div class='meta-b regla'><b>Regla</b>Va en posición absoluta con <code>z-index</code> por encima de las decoraciones, y la página es de alto fijo — si fuera <code>min-height</code>, el pie salta de hoja.</div></div></section><section id='mensaje'><div class='kicker'>Telegram y WhatsApp</div><h2>El mensaje que acompaña al PDF</h2>
+      <p>Casi nadie abre el PDF en el celular: el mensaje tiene que sostenerse solo.
+      Se arma con el mismo contenido en los dos canales y <b>distinto marcado</b> —
+      mandar <code>&lt;b&gt;</code> a WhatsApp no falla, imprime las etiquetas crudas
+      en el grupo.</p>
+      <div class="chats">
+        <div class="chat tg"><div class="chat-h">Telegram · copia de control</div>
+          <div class="burbuja"><b>CONCRETOS · Disponibilidad 74%</b> 🟡<br/>
+            Corte 11/08/2026 · 17,5 de 24 equipos operativos<br/>
+            ▲ +6 pp contra el 10/08 (68%)<br/>
+            🔧 4 en taller · 2 parados sin intervención<br/>
+            🚜 Con 4 alquilados: <b>76%</b> en cancha (21,5 de 28)<br/>
+            Categoría más crítica: <b>CARGADOR</b> 50% (1 de 3 parados)<br/>
+            ⚠️ 2 equipos sin inspeccionar · 1 parados sin OT</div></div>
+        <div class="chat wa"><div class="chat-h">WhatsApp · grupo de la planta</div>
+          <div class="burbuja"><span class="wb">👋 ¡Buenos días, equipo!</span>
+            <b>Disponibilidad de flota</b> · 11/08/2026<br/><br/>
+            <b>CONCRETOS · Disponibilidad 74%</b> 🟡<br/>
+            Corte 11/08/2026 · 17,5 de 24 equipos operativos<br/>
+            ▲ +6 pp contra el 10/08 (68%)<br/>
+            🔧 4 en taller · 2 parados sin intervención<br/><br/>
+            <i>El PDF trae el detalle por placa y las OT abiertas.</i> — Gravi 🤖</div>
+          </div>
+      </div>
+      <div class='avisos'>
+        <div class='av'><b>Semáforo</b> 🟢 ≥85% · 🟡 ≥60% · 🔴 por debajo.</div>
+        <div class='av'><b>La comparación es AM contra AM</b> y salta los días con
+          captura incompleta, para no anunciar recuperaciones que no ocurrieron.</div>
+        <div class='av'><b>WhatsApp encola, no entrega.</b> El puente escribe en
+          <code>outbox/</code>; «encolado» no prueba que el grupo lo haya
+          recibido.</div>
+      </div></section><section id='reglas'><div class='kicker'>El cálculo</div><h2>Reglas de cálculo</h2>
+      <table class='doc reglas'><thead><tr><th>Concepto</th><th>Definición</th><th>Por qué importa</th></tr></thead><tbody><tr><td><code>Rev_AM</code> / <code>Rev_PM</code></td><td><b>1</b> operativo · <b>0,5</b> parcial · <b>0</b> no operativo</td><td>Es la única métrica del informe.</td></tr><tr><td>Disponibilidad</td><td>Σ <code>Rev_AM</code> ÷ placas revisadas ese día</td><td>Verificado contra el PDF original de Cuncia del 06/08/2026: 46%, 11 de 24, categoría por categoría.</td></tr><tr><td>No operativo</td><td><code>Rev_AM = 0</code></td><td>Incluye equipos parados aunque no estén marcados en taller.</td></tr><tr><td>Cobertura</td><td>placas revisadas ÷ flota registrada</td><td>Si una placa deja de inspeccionarse sale del denominador y la disponibilidad <b>sube sola</b>. Por eso se publica al lado.</td></tr><tr><td>Días p/ salida</td><td><code>Fecha_Salida</code> − fecha de corte</td><td>Negativo = fecha estimada ya vencida.</td></tr><tr><td>Meta</td><td>85%</td><td>Línea punteada de la tendencia y umbral del semáforo verde.</td></tr><tr><td>Rezago</td><td>más de 2 días sin captura</td><td>Dispara la nota roja de portada y la alerta del mensaje.</td></tr></tbody></table>
+      <h3 class='sub'>Tres trampas que el formato evita a propósito</h3>
+      <div class='trampas'>
+        <div class='tr'><b>La hoja de resumen diario no se usa</b>
+          <code>Porcentaje_General_Dia</code> y <code>Total_Placas_Revisadas</code>
+          traen filas sueltas por tipo y contadores sin cerrar. El reporte del
+          proveedor las usa para su tendencia mensual y por eso publica cifras que no
+          existen. <b>Todo se recalcula desde la pestaña de placas.</b></div>
+        <div class='tr'><b>AM y PM no se mezclan</b> El original grafica «Ayer PM vs
+          Hoy AM» y dibuja una recuperación de 42 puntos que nunca ocurrió: la ronda
+          de la tarde no se completa y se registra en cero. Aquí AM va contra AM, y la
+          brecha AM–PM se muestra aparte como control de la inspección.</div>
+        <div class='tr'><b>El informe no está desactualizado: la ronda no se hizo</b>
+          Cuando una planta sale con corte de días atrás, casi siempre el origen no
+          tiene inspección de ese día — no es caché ni error. Acacías inspecciona día
+          de por medio; Concretos es el único que cumple a diario.</div>
+      </div></section><section id='datos'><div class='kicker'>Contrato de datos</div><h2>De dónde sale el dato</h2>
+      <p>Cada libro es un AppSheet: cada pestaña es una tabla del modelo relacional y
+      se identifica por <b>la firma de sus columnas</b>, no por el nombre de la
+      pestaña — que cambia sin avisar.</p>
+      <table class='doc t-hojas'><thead><tr><th>Tabla</th><th>Firma de columnas</th><th>Para qué se usa</th></tr></thead><tbody><tr><td><code>placas</code></td><td><code>id_inspeccion</code>, <code>rev_am</code>, <code>rev_pm</code></td><td><b>La fuente de todo.</b> Una fila por placa inspeccionada por día.</td></tr><tr><td><code>disponibilidad</code></td><td><code>id_disponibilidad</code>, <code>total_placas_revisadas</code></td><td>Resumen del día. Solo se usa para leer el «Área de Trabajo»; sus totales <b>no</b> se publican.</td></tr><tr><td><code>tareas</code></td><td><code>id_tarea</code>, <code>id_inspeccion</code>, <code>estado_tarea</code></td><td>Seguimiento y cumplimiento por supervisor.</td></tr><tr><td><code>ot</code></td><td><code>c_orden_ot</code>, <code>estado</code></td><td>Órdenes de trabajo: respaldo de la intervención y planta del equipo.</td></tr></tbody></table>
+      <div class='avisos'>
+        <div class='av alerta'><b>El conector de Drive trunca estos libros.</b>
+          Concretos devolvía 117 de 564 inspecciones y por eso los alquilados no
+          aparecían. La ingesta va por <code>gspread</code> con la cuenta de servicio
+          <code>radar-compras@…</code>.</div>
+        <div class='av'><b>Dos llamadas por libro</b> (metadatos +
+          <code>values_batch_get</code>): una por hoja revienta la cuota de Sheets
+          (60/min → 429). Caché en <code>datos/cache_&lt;planta&gt;.json</code>.</div>
+        <div class='av'><b>El alquilado se marca en el tipo, no en el área:</b>
+          prefijo <code>ALQUILADAS - MIXER/AUTOBOMBA</code> en
+          <code>Tipo de Vehiculos</code>.</div>
+      </div>
+      <h3 class='sub'>La cadena, de punta a punta</h3>
+      <div class='flujo'>
+        <div class='fp'><code>ingesta.py</code><span>lee los 3 libros y cachea</span></div>
+        <div class='fp'><code>metricas.py</code><span>recalcula placa a placa</span></div>
+        <div class='fp'><code>plantilla.py</code><span>HTML + SVG de marca</span></div>
+        <div class='fp'><code>generar.py</code><span>arma y pagina el PDF</span></div>
+        <div class='fp'><code>notificar.py</code><span>Telegram</span></div>
+        <div class='fp'><code>whatsapp.py</code><span>encola al puente</span></div>
+      </div></section><section id='visual'><div class='kicker'>Color, tipografía y clases</div><h2>Sistema visual</h2>
+      <div class='swatches'>
+        <div class='sw'><i style='background:#172954'></i><div><b>Navy</b><code>#172954</code><span>Marca, títulos, encabezados de tabla, línea de serie</span></div></div>
+        <div class='sw'><i style='background:#a90707'></i><div><b>Rojo</b><code>#a90707</code><span>Solo alertas y el dato del día — nunca de fondo</span></div></div>
+        <div class='sw'><i style='background:#1f7a3d'></i><div><b>Verde</b><code>#1f7a3d</code><span>Operativo propio · disponibilidad ≥ 85%</span></div></div>
+        <div class='sw'><i style='background:#b8860b'></i><div><b>Ámbar</b><code>#b8860b</code><span>Parcial (0,5) · disponibilidad ≥ 60%</span></div></div>
+        <div class='sw'><i style='background:#2E8B8F'></i><div><b>Teal</b><code>#2E8B8F</code><span>Operativo alquilado — se distingue del propio</span></div></div>
+        <div class='sw'><i style='background:#c9d1dc'></i><div><b>Gris</b><code>#c9d1dc</code><span>Sin planta identificada · captura incompleta</span></div></div>
+      </div>
+      <div class='avisos'>
+        <div class='av'><b>Semáforo</b> <code>color_disp(p)</code>: verde ≥ 85%,
+          ámbar ≥ 60%, rojo por debajo. Se aplica igual al número, a la barra y a la
+          dona.</div>
+        <div class='av'><b>Tipografía</b> Sans industrial (<code>var(--sans)</code>),
+          cuerpo 9,2 pt, tablas 7,6 pt. Nada de serif: eso es otra marca.</div>
+        <div class='av'><b>Gráficas en SVG inline</b> Chrome headless las imprime sin
+          depender de red ni de librerías externas.</div>
+      </div>
+      <h3 class='sub'>Clases que se repiten</h3>
+      <table class='doc clases'><thead><tr><th>Clase</th><th>Qué es</th></tr></thead><tbody><tr><td><code>.kpi</code></td><td>Tarjeta de cifra grande con filete de color arriba.</td></tr><tr><td><code>.nota</code> / <code>.nota.alerta</code></td><td>Bloque de contexto con barra lateral; la variante alerta va en rojo.</td></tr><tr><td><code>.marco</code></td><td>Caja clara que envuelve una gráfica.</td></tr><tr><td><code>.pill</code> (<code>p-verde</code>, <code>p-ambar</code>, <code>p-rojo</code>, <code>p-gris</code>)</td><td>Etiqueta de estado.</td></tr><tr><td><code>tr.alerta</code></td><td>Fila roja con filete: el hallazgo accionable.</td></tr><tr><td><code>.aviso.alto</code> / <code>.medio</code></td><td>Avisos del control de calidad del dato.</td></tr><tr><td><code>.chip</code></td><td>Placa alquilada con su punto de estado.</td></tr></tbody></table></section></main></div>
+<div class="pie-doc"><span>Gravas y Concretos S.A. · Documento interno de formato</span>
+  <span>Generado desde <code>plantilla.py</code> · 11/08/2026</span></div>
+<script>
+const P={cuncia:{n:'Cuncia',t:'Mantenimiento Cuncia Gravicon',g:'Agregados',
+  c:'GRV-INF-2026-CUNCIA-DISP'},
+ concretos:{n:'Concretos',t:'Mantenimiento Concretos Gravicon',g:'Concretos',
+  c:'GRV-INF-2026-CONCRETOS-DISP'},
+ acacias:{n:'Acacías',t:'Mantenimiento Acacías Gravicon',g:'Agregados',
+  c:'GRV-INF-2026-ACACIAS-DISP'}};
+function pintar(k){const p=P[k];document.body.dataset.planta=k;
+ document.querySelectorAll('.v-titulo').forEach(x=>x.textContent=p.t);
+ document.querySelectorAll('.v-negocio').forEach(x=>x.textContent=p.g);
+ document.querySelectorAll('.v-codigo').forEach(x=>x.textContent=p.c);
+ document.querySelectorAll('.v-nombre').forEach(x=>x.textContent=p.n);
+ document.querySelectorAll('.selector button').forEach(b=>
+   b.setAttribute('aria-pressed', b.dataset.k===k));
+ document.querySelectorAll('table.plantas tbody tr').forEach(tr=>
+   tr.classList.toggle('fila-act', tr.dataset.k===k));}
+document.querySelectorAll('.selector button').forEach(b=>
+  b.addEventListener('click',()=>pintar(b.dataset.k)));
+pintar('concretos');
+const sec=[...document.querySelectorAll('section')],enl=[...document.querySelectorAll('nav.idx a')];
+addEventListener('scroll',()=>{let i=0;sec.forEach((s,j)=>{
+  if(s.getBoundingClientRect().top<160)i=j});
+  enl.forEach((a,j)=>a.classList.toggle('act',j===i))},{passive:true});
+</script></body></html>

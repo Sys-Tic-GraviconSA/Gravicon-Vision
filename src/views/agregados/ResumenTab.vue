@@ -1,0 +1,240 @@
+<template>
+  <div class="root">
+    <div class="kpi-row">
+      <KpiCard label="Total M³" accent="#3B82F6" icon="chart-bar">{{ fmt(kpis.total) }}</KpiCard>
+      <KpiCard v-for="l in config.lines" :key="l.key" :label="l.label" :accent="config.palette[config.lines.indexOf(l)]" icon="layers">{{ fmt(lineTotal(l.key)) }}</KpiCard>
+      <KpiCard label="M³ Proyectado" accent="#EC4899" icon="target">{{ fmt(kpis.proyectado) }}</KpiCard>
+      <KpiCard label="Diferencia" :accent="kpis.diferencia < 0 ? '#EF4444' : '#10B981'" icon="trending-up">{{ kpis.diferencia >= 0 ? '+' : '' }}{{ fmt(kpis.diferencia) }}</KpiCard>
+      <KpiCard label="% Cumplimiento" accent="#06B6D4" icon="check-circle">{{ kpis.cumplimiento }}</KpiCard>
+    </div>
+
+    <div class="charts-grid cols-2">
+      <ChartCard title="M³ Proyectado vs Real" description="Comparación mensual entre producción real y proyectada" :option="proyectadoOpt" />
+      <ChartCard title="% Cumplimiento" description="Porcentaje de cumplimiento mensual de la meta" :option="cumplimientoOpt" />
+    </div>
+
+    <div class="section-divider"></div>
+
+    <div class="charts-grid cols-2">
+      <ChartCard :title="`Producción por ${config.lineLabel}`" :description="`Detalle mensual por ${config.lineLabel.toLowerCase()}`" :option="lineasOpt" />
+      <ChartCard :title="`Distribución por ${config.lineLabel}`" :description="`Participación total por ${config.lineLabel.toLowerCase()}`" :option="totalLineaOpt" />
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed, markRaw } from 'vue'
+import KpiCard from '../../components/dashboard/KpiCard.vue'
+import ChartCard from '../../components/dashboard/ChartCard.vue'
+import { serialToDate } from '../../utils/dates'
+import { useTheme } from '../../composables/useTheme'
+import { fmt } from '../../utils/format'
+
+export interface PlantConfig {
+  plantName: string
+  lineLabel: string
+  lines: { key: string; label: string }[]
+  palette: string[]
+}
+
+const props = defineProps<{
+  config: PlantConfig
+  data: Record<string, unknown>[]
+}>()
+
+const { theme } = useTheme()
+const chartTextColor = computed(() => theme.value === 'light' ? '#475569' : '#94a3b8')
+const labelLine = computed(() => ({
+  show: true,
+  formatter: (p: any) => typeof p.value === 'number' ? p.value.toLocaleString('es-CO') : p.value,
+  fontSize: 11,
+  fontWeight: 600 as const,
+  color: theme.value === 'light' ? '#334155' : '#e2e8f0',
+  backgroundColor: theme.value === 'light' ? 'rgba(255,255,255,.92)' : 'rgba(11,15,26,.88)',
+  padding: [2, 6] as [number, number],
+  borderRadius: 4,
+  overflow: 'breakAll' as const,
+}))
+const baseGrid = { left: 60, right: 30, bottom: 60, top: 50, containLabel: true }
+
+function monthLabel(d: Date): string {
+  return d.toLocaleDateString('es-CO', { month: 'short', year: '2-digit', timeZone: 'UTC' })
+}
+
+const kpis = computed(() => {
+  const r = props.data
+  const total = r.reduce((s, row) => s + (Number(row['Total de M³']) || 0), 0)
+  const proyectado = r.reduce((s, row) => s + (Number(row['M³ Proyectado']) || 0), 0)
+  const diferencia = total - proyectado
+  const cumplPct = proyectado > 0 ? (total / proyectado) * 100 : 0
+  return { total, proyectado, diferencia, cumplimiento: cumplPct.toFixed(1) + '%' }
+})
+
+function lineTotal(key: string): number {
+  return props.data.reduce((s, row) => s + (Number(row[key]) || 0), 0)
+}
+
+const monthlyAgg = computed(() => {
+  const map = new Map<string, { lineData: number[]; total: number; proy: number; first: number }>()
+  for (const r of props.data) {
+    const fecha = Number(r['Fecha'])
+    if (!fecha) continue
+    const key = monthLabel(serialToDate(fecha))
+    const e = map.get(key)
+    const vals = props.config.lines.map(l => Number(r[l.key]) || 0)
+    if (e) {
+      for (let i = 0; i < vals.length; i++) e.lineData[i] += vals[i]
+      e.total += Number(r['Total de M³']) || 0
+      e.proy += Number(r['M³ Proyectado']) || 0
+      if (fecha < e.first) e.first = fecha
+    } else {
+      map.set(key, { lineData: [...vals], total: Number(r['Total de M³']) || 0, proy: Number(r['M³ Proyectado']) || 0, first: fecha })
+    }
+  }
+  const sorted = [...map.entries()].sort((a, b) => a[1].first - b[1].first)
+  const labels: string[] = []
+  const totalArr: number[] = []
+  const proyArr: number[] = []
+  const cumpleArr: number[] = []
+  const lineData: number[][] = props.config.lines.map(() => [])
+  for (const [k, v] of sorted) {
+    labels.push(k)
+    totalArr.push(v.total)
+    proyArr.push(v.proy)
+    cumpleArr.push(v.proy > 0 ? (v.total / v.proy) * 100 : 0)
+    for (let i = 0; i < v.lineData.length; i++) lineData[i].push(v.lineData[i])
+  }
+  return { labels, totalArr, proyArr, cumpleArr, lineData }
+})
+
+const proyectadoOpt = computed(() => {
+  return markRaw({
+    color: [props.config.palette[0], props.config.palette[3]],
+    tooltip: {
+      trigger: 'axis' as const,
+      formatter: (params: any) => {
+        let s = `<b>${params[0].axisValue}</b><br/>`
+        let sumReal = 0, sumProy = 0
+        params.forEach((p: any) => {
+          const v = typeof p.value === 'number' ? p.value.toLocaleString('es-CO') : p.value
+          s += `<span style="color:${p.color}">${p.seriesName}:</span> ${v} m³<br/>`
+          if (p.seriesName === 'Total M³') sumReal += p.value
+          if (p.seriesName === 'M³ Proyectado') sumProy += p.value
+        })
+        if (sumProy > 0) s += `<br/><b>Acumulado:</b> ${(sumReal / sumProy * 100).toFixed(1)}%`
+        return s
+      },
+    },
+    grid: baseGrid,
+  xAxis: { type: 'category' as const, data: monthlyAgg.value.labels, axisLabel: { fontWeight: 600 as const, color: chartTextColor.value, rotate: 45, fontSize: 11 } },
+  yAxis: { type: 'value' as const, axisLabel: { show: false }, splitLine: { show: false } },
+  series: [
+    { name: 'Total M³', type: 'line', smooth: true, data: monthlyAgg.value.totalArr, areaStyle: { opacity: 0.25 }, label: labelLine.value },
+    { name: 'M³ Proyectado', type: 'line', smooth: true, data: monthlyAgg.value.proyArr, areaStyle: { opacity: 0.25 }, label: labelLine.value },
+    ],
+    legend: { bottom: 0, textStyle: { fontWeight: 600, color: chartTextColor.value } },
+  })
+})
+
+const cumplimientoOpt = computed(() => {
+  return markRaw({
+    color: [props.config.palette[1]],
+    tooltip: {
+      trigger: 'axis' as const,
+      formatter: (params: any) => {
+        const p = params[0]
+        const v = typeof p.value === 'number' ? p.value.toFixed(1) : p.value
+        return `<b>${p.axisValue}</b><br/><span style="color:${p.color}">${p.seriesName}:</span> ${v}%`
+      },
+    },
+    grid: baseGrid,
+  xAxis: { type: 'category' as const, data: monthlyAgg.value.labels, axisLabel: { fontWeight: 600 as const, color: chartTextColor.value, rotate: 45, fontSize: 11 } },
+  yAxis: { type: 'value' as const, axisLabel: { show: false }, splitLine: { show: false }, max: 100 },
+    series: [{
+      type: 'line', smooth: true, data: monthlyAgg.value.cumpleArr, areaStyle: { opacity: 0.25 },
+      label: { ...labelLine.value, formatter: (p: any) => p.value.toFixed(1) + '%' },
+    }],
+    legend: { bottom: 0, textStyle: { fontWeight: 600, color: chartTextColor.value } },
+  })
+})
+
+const lineasOpt = computed(() => {
+  const m = monthlyAgg.value
+  const series = props.config.lines.map((l, i) => ({
+    name: l.label,
+    type: 'line' as const,
+    smooth: true,
+    data: m.lineData[i],
+    areaStyle: { opacity: 0.25 },
+    label: labelLine.value,
+  }))
+  return markRaw({
+    color: props.config.palette,
+    tooltip: {
+      trigger: 'axis' as const,
+      formatter: (params: any) => {
+        let s = `<b>${params[0].axisValue}</b><br/>`
+        params.forEach((p: any) => {
+          const v = typeof p.value === 'number' ? p.value.toLocaleString('es-CO') : p.value
+          s += `<span style="color:${p.color}">${p.seriesName}:</span> ${v} m³<br/>`
+        })
+        const sum = params.reduce((a: number, p: any) => a + (typeof p.value === 'number' ? p.value : 0), 0)
+        s += `<b>Total:</b> ${sum.toLocaleString('es-CO')} m³`
+        return s
+      },
+    },
+    grid: baseGrid,
+  xAxis: { type: 'category' as const, data: m.labels, axisLabel: { fontWeight: 600 as const, color: chartTextColor.value, rotate: 45, fontSize: 11 } },
+  yAxis: { type: 'value' as const, axisLabel: { show: false }, splitLine: { show: false } },
+    series,
+    legend: { bottom: 0, textStyle: { fontWeight: 600, color: chartTextColor.value } },
+  })
+})
+
+const totalLineaOpt = computed(() => {
+  const totals = props.config.lines.map(l => lineTotal(l.key))
+  const grandTotal = totals.reduce((a, b) => a + b, 0)
+  const data = props.config.lines.map((l, i) => ({ name: l.label, value: totals[i] }))
+  return markRaw({
+    color: props.config.palette,
+    tooltip: {
+      trigger: 'item' as const,
+      formatter: (p: any) => {
+        const v = typeof p.value === 'number' ? p.value.toLocaleString('es-CO') : p.value
+        return `${p.name}: ${v} m³ (${p.percent}%)`
+      },
+    },
+    legend: { type: 'scroll' as const, orient: 'vertical' as const, right: 10, top: 10, textStyle: { fontWeight: 600 as const, color: chartTextColor.value, fontSize: 11 } },
+    graphic: [{
+      type: 'text' as const, left: '38%', top: '50%', style: { text: grandTotal.toLocaleString('es-CO'), textAlign: 'center', fill: chartTextColor.value, fontWeight: 700, fontSize: 18 },
+    }],
+    series: [{
+      type: 'pie', radius: ['42%', '68%'], center: ['38%', '55%'],
+      avoidLabelOverlap: true,
+      itemStyle: { borderRadius: 4, borderColor: theme.value === 'light' ? '#fff' : '#1e293b', borderWidth: 2 },
+      label: { show: true, formatter: (p: any) => p.percent + '%', fontSize: 10 },
+      data,
+    }],
+  })
+})
+</script>
+
+<style scoped>
+.kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 22px; }
+.charts-grid { display: grid; gap: 22px; margin-top: 16px; min-width: 0; }
+.charts-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+.charts-grid > * { min-width: 0; }
+.kpi-row > * { min-width: 0; }
+.root { min-width: 0; }
+.section-divider { height: 1px; background: var(--card-border); margin: 24px 0; opacity: 0.5; }
+@media (max-width: 1200px) {
+  .kpi-row { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 1024px) {
+  .kpi-row { grid-template-columns: repeat(3, 1fr); }
+  .charts-grid.cols-2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
