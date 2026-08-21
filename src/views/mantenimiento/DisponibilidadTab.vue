@@ -93,13 +93,15 @@
             title="Disponibilidad Operativa por Equipo"
             description="% de días operativos sobre el total del período — semáforo: azul ≥85%, amarillo ≥60%, rojo <60%"
             :option="dispEquipoOpt"
-            :height="420"
+            :expand-option="dispEquipoFullOpt"
+            :height="440"
           />
           <ChartCard
             title="Incidencia de Mantenimiento por Equipo"
             description="% de días en mantenimiento vs. días totales del período"
             :option="incidenciaMantenimientoOpt"
-            :height="420"
+            :expand-option="incidenciaMantenimientoFullOpt"
+            :height="440"
           />
         </div>
 
@@ -178,7 +180,8 @@
             title="Top Equipos con Mayor Inactividad / Días en Taller"
             description="Equipos con mayor permanencia fuera de servicio o pendientes de orden de trabajo"
             :option="topInactivosOpt"
-            :height="280"
+            :expand-option="topInactivosFullOpt"
+            :height="320"
           />
         </div>
       </template>
@@ -1626,11 +1629,15 @@ const plantaOpt = computed(() => {
 })
 
 // 6. Top Equipos con Mayor Inactividad / Días en Taller
-const topInactivosOpt = computed(() => {
+const topInactivosList = computed(() => {
   const records = activePlacasRows.value
+  const targetIso = effectiveCorteIso.value
   const mantMap = new Map<string, number>()
 
   for (const r of records) {
+    const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
+    if (!d) continue
+    if (targetIso && getDateKey(d) !== targetIso) continue
     const info = getInspectionDetails(r)
     if (!info.placa) continue
     if (info.isNoOp || info.esEnTaller) {
@@ -1638,13 +1645,17 @@ const topInactivosOpt = computed(() => {
     }
   }
 
-  const sorted = [...mantMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
-  const equipos = sorted.map(s => s[0])
-  const dias = sorted.map(s => s[1])
+  return [...mantMap.entries()].sort((a, b) => b[1] - a[1])
+})
+
+function buildTopInactivosOption(list: [string, number][], limit?: number) {
+  const sliced = limit ? list.slice(0, limit) : list
+  const equipos = sliced.map(s => s[0])
+  const dias = sliced.map(s => s[1])
 
   return markRaw({
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: '{b}: <strong>{c} días inactivo / en taller</strong>' },
-    grid: { left: '3%', right: '8%', bottom: '3%', top: '10%', containLabel: true },
+    grid: { left: '3%', right: '10%', bottom: '3%', top: '10%', containLabel: true },
     xAxis: {
       type: 'value',
       axisLabel: { formatter: '{value} d', color: textColor.value },
@@ -1652,6 +1663,7 @@ const topInactivosOpt = computed(() => {
     },
     yAxis: {
       type: 'category',
+      inverse: true,
       data: equipos,
       axisLabel: { fontWeight: 'bold', color: titleColor.value, fontSize: 11 },
     },
@@ -1659,7 +1671,7 @@ const topInactivosOpt = computed(() => {
       {
         name: 'Días Inactivo',
         type: 'bar',
-        barWidth: '45%',
+        barMaxWidth: 22,
         data: dias.map(v => ({
           value: v,
           itemStyle: { color: v >= 2 ? '#ef4444' : '#f59e0b', borderRadius: [0, 4, 4, 0] },
@@ -1668,18 +1680,18 @@ const topInactivosOpt = computed(() => {
       },
     ],
   })
-})
+}
+
+const topInactivosOpt = computed(() => buildTopInactivosOption(topInactivosList.value, 15))
+const topInactivosFullOpt = computed(() => buildTopInactivosOption(topInactivosList.value))
 
 // ================= GRÁFICAS EXCLUSIVAS CONCRETOS =================
 
-/**
- * Disponibilidad Operativa por Equipo — barras horizontales con semáforo.
- * Datos calculados en vivo a partir de 'Reporte Placa Disponibilidad'.
- */
-const dispEquipoOpt = computed(() => {
+type EquipoDisp = { placa: string; dispPct: number; diasOp: number; tipo: string; loc: string }
+
+const dispEquipoList = computed<EquipoDisp[]>(() => {
   const records = activePlacasRows.value
   const targetIso = effectiveCorteIso.value
-  type EquipoDisp = { placa: string; dispPct: number; diasOp: number; tipo: string; loc: string }
   const equiposMap = new Map<string, { placa: string; sumScore: number; count: number; tipo: string; loc: string }>()
 
   for (const r of records) {
@@ -1709,7 +1721,11 @@ const dispEquipoOpt = computed(() => {
   }))
 
   equipos.sort((a, b) => b.dispPct - a.dispPct || b.diasOp - a.diasOp)
+  return equipos
+})
 
+function buildDispEquipoOption(equipos: EquipoDisp[], limit?: number) {
+  const list = limit ? equipos.slice(0, limit) : equipos
   return markRaw({
     tooltip: {
       trigger: 'axis',
@@ -1720,7 +1736,7 @@ const dispEquipoOpt = computed(() => {
         return `<strong>${p.name}</strong> ${eq?.tipo ? `(${eq.tipo})` : ''}<br/>Disponibilidad: <strong>${p.value}%</strong><br/>Días op.: <strong>${eq?.diasOp} días</strong>`
       },
     },
-    grid: { left: '2%', right: '14%', bottom: '2%', top: '2%', containLabel: true },
+    grid: { left: '3%', right: '14%', bottom: '3%', top: '3%', containLabel: true },
     xAxis: {
       type: 'value', min: 0, max: 100,
       axisLabel: { formatter: '{value}%', color: textColor.value, fontSize: 10 },
@@ -1728,14 +1744,15 @@ const dispEquipoOpt = computed(() => {
     },
     yAxis: {
       type: 'category',
-      data: [...equipos].reverse().map(e => e.placa),
-      axisLabel: { color: titleColor.value, fontSize: 10, fontWeight: 'bold' },
+      inverse: true,
+      data: list.map(e => e.placa),
+      axisLabel: { color: titleColor.value, fontSize: 11, fontWeight: 'bold' },
     },
     series: [{
       name: 'Disponibilidad',
       type: 'bar',
-      barMaxWidth: 20,
-      data: [...equipos].reverse().map(e => ({
+      barMaxWidth: 22,
+      data: list.map(e => ({
         value: e.dispPct,
         diasOp: e.diasOp,
         tipo: e.tipo,
@@ -1747,20 +1764,20 @@ const dispEquipoOpt = computed(() => {
       label: {
         show: true, position: 'right',
         formatter: (p: any) => `${p.value}% (${p.data.diasOp} d)`,
-        fontSize: 9, fontWeight: 'bold', color: titleColor.value,
+        fontSize: 10, fontWeight: 'bold', color: titleColor.value,
       },
     }],
   })
-})
+}
 
-/**
- * Incidencia de Mantenimiento por Equipo — barras horizontales con semáforo.
- * Datos calculados en vivo a partir de 'Reporte Placa Disponibilidad'.
- */
-const incidenciaMantenimientoOpt = computed(() => {
+const dispEquipoOpt = computed(() => buildDispEquipoOption(dispEquipoList.value, 15))
+const dispEquipoFullOpt = computed(() => buildDispEquipoOption(dispEquipoList.value))
+
+type EquipoMant = { placa: string; mantPct: number; diasMant: number; tipo: string }
+
+const incidenciaMantenimientoList = computed<EquipoMant[]>(() => {
   const records = activePlacasRows.value
   const targetIso = effectiveCorteIso.value
-  type EquipoMant = { placa: string; mantPct: number; diasMant: number; tipo: string }
   const equiposMap = new Map<string, { placa: string; diasMant: number; count: number; tipo: string }>()
 
   for (const r of records) {
@@ -1788,7 +1805,11 @@ const incidenciaMantenimientoOpt = computed(() => {
   }))
 
   equipos.sort((a, b) => b.mantPct - a.mantPct || b.diasMant - a.diasMant)
+  return equipos
+})
 
+function buildIncidenciaOption(equipos: EquipoMant[], limit?: number) {
+  const list = limit ? equipos.slice(0, limit) : equipos
   return markRaw({
     tooltip: {
       trigger: 'axis',
@@ -1799,7 +1820,7 @@ const incidenciaMantenimientoOpt = computed(() => {
         return `<strong>${p.name}</strong> ${eq?.tipo ? `(${eq.tipo})` : ''}<br/>Incidencia mant.: <strong>${p.value}%</strong><br/>Días mant.: <strong>${eq?.diasMant} días</strong>`
       },
     },
-    grid: { left: '2%', right: '14%', bottom: '2%', top: '2%', containLabel: true },
+    grid: { left: '3%', right: '14%', bottom: '3%', top: '3%', containLabel: true },
     xAxis: {
       type: 'value', min: 0, max: 100,
       axisLabel: { formatter: '{value}%', color: textColor.value, fontSize: 10 },
@@ -1807,14 +1828,15 @@ const incidenciaMantenimientoOpt = computed(() => {
     },
     yAxis: {
       type: 'category',
-      data: [...equipos].reverse().map(e => e.placa),
-      axisLabel: { color: titleColor.value, fontSize: 10, fontWeight: 'bold' },
+      inverse: true,
+      data: list.map(e => e.placa),
+      axisLabel: { color: titleColor.value, fontSize: 11, fontWeight: 'bold' },
     },
     series: [{
       name: 'Incidencia Mantenimiento',
       type: 'bar',
-      barMaxWidth: 20,
-      data: [...equipos].reverse().map(e => ({
+      barMaxWidth: 22,
+      data: list.map(e => ({
         value: e.mantPct,
         diasMant: e.diasMant,
         tipo: e.tipo,
@@ -1826,11 +1848,14 @@ const incidenciaMantenimientoOpt = computed(() => {
       label: {
         show: true, position: 'right',
         formatter: (p: any) => `${p.value}% (${p.data.diasMant} d)`,
-        fontSize: 9, fontWeight: 'bold', color: titleColor.value,
+        fontSize: 10, fontWeight: 'bold', color: titleColor.value,
       },
     }],
   })
-})
+}
+
+const incidenciaMantenimientoOpt = computed(() => buildIncidenciaOption(incidenciaMantenimientoList.value, 15))
+const incidenciaMantenimientoFullOpt = computed(() => buildIncidenciaOption(incidenciaMantenimientoList.value))
 
 /**
  * Disponibilidad por Planta y Distribución Diaria / Mensual.
