@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, shallowRef, computed } from 'vue'
+import { ref, computed, shallowRef } from 'vue'
 import { useAuthStore } from './auth'
 import type { SheetData } from './concreto'
 
@@ -199,7 +199,8 @@ export const useClientesStore = defineStore('clientes', () => {
 })
 /** Store: Disponibilidad de Flota (Cuncia, Acacias y Concretos) */
 export const useDisponibilidadStore = defineStore('disponibilidad', () => {
-  const data = shallowRef<{
+  // Usar ref (no shallowRef) para que Vue detecte cambios en arrays internos
+  const data = ref<{
     placas: Record<string, unknown>[]
     tareas: Record<string, unknown>[]
     resumen: Record<string, unknown>[]
@@ -216,7 +217,13 @@ export const useDisponibilidadStore = defineStore('disponibilidad', () => {
     try {
       const p = planta.toLowerCase()
       const d = await fetchApi<any>(`/api/disponibilidad/data?planta=${p}${forceRefresh ? '&force=true' : ''}`)
-      data.value = d
+      // Reasignar con nuevos arrays para garantizar reactividad profunda
+      data.value = {
+        ...d,
+        placas: d?.placas ? [...d.placas] : [],
+        tareas: d?.tareas ? [...d.tareas] : [],
+        resumen: d?.resumen ? [...d.resumen] : [],
+      }
     } catch (e: any) {
       console.error('[disponibilidad-store]', e)
       error.value = e.message

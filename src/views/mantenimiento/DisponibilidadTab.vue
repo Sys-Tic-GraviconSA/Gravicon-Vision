@@ -20,6 +20,23 @@
     <!-- VISTA 1: GRÁFICAS DE DISPONIBILIDAD        -->
     <!-- ========================================== -->
     <template v-if="dispView === 'graficas'">
+      <!-- Banner de carga mientras el store trae los datos de disponibilidad -->
+      <div v-if="dispStore.loading" class="disp-loading-banner">
+        <svg class="disp-spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+        </svg>
+        Cargando datos de disponibilidad — {{ plantaLabel }}...
+      </div>
+      <div v-else-if="dispStore.error" class="disp-error-banner">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Error cargando datos: {{ dispStore.error }}
+        <button class="disp-retry-btn" @click="dispStore.fetchDisponibilidad(plantaKey, true)">Reintentar</button>
+      </div>
+      <div v-else-if="activePlacasRows.length === 0" class="disp-empty-banner">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        No hay datos de disponibilidad para <strong>{{ plantaLabel }}</strong>. Verifique la hoja "Reporte Placa Disponibilidad" en el spreadsheet.
+      </div>
+
       <!-- Tarjetas KPI con el diseño y tamaño estándar de 4 columnas (2 filas) -->
       <div class="kpi-row">
         <KpiCard
@@ -210,313 +227,396 @@
           <span class="icb-tag">Reporte Diario Oficial</span>
           <span class="icb-title">Disponibilidad de Flota — {{ plantaLabel }}</span>
         </div>
-        <div class="icb-actions">
-          <button class="tb-btn primary" @click="imprimirReporte" title="Imprimir o guardar en PDF">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-            Imprimir / Guardar PDF
+        <div class="icb-actions" style="display: flex; gap: 8px; align-items: center;">
+          <button class="tb-btn primary" @click="generarInformePdf" :disabled="generandoPdf" title="Generar y descargar archivo PDF oficial">
+            <svg v-if="!generandoPdf" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span v-if="generandoPdf">Generando PDF...</span>
+            <span v-else>Descargar PDF</span>
           </button>
         </div>
       </div>
 
-      <!-- PORTADA: Encabezado institucional -->
+      <!-- PORTADA Y PÁGINAS DEL REPORTE OFICIAL -->
       <div class="report-paper">
-        <header class="report-header">
-          <div class="report-header-brand">
-            <img src="/Logos/Logo_Gravicon_Azul.png" alt="Gravicon" class="report-logo" />
-            <div class="report-header-text">
-              <h2>Mantenimiento {{ plantaLabel }} Gravicon</h2>
-              <span>GRAVAS Y CONCRETOS S.A. · {{ isConcretosPlanta ? 'Concretos' : 'Agregados' }}</span>
+
+        <!-- ============================================== -->
+        <!-- PÁGINA 1: PORTADA EJECUTIVA Y TENDENCIAS      -->
+        <!-- ============================================== -->
+        <div class="report-page">
+          <header class="report-header">
+            <div class="report-header-brand">
+              <img src="/Logos/Logo_Gravicon_Azul.png" alt="Gravicon" class="report-logo" />
+              <div class="report-header-text">
+                <h2>Mantenimiento {{ plantaLabel }} Gravicon</h2>
+                <span>GRAVAS Y CONCRETOS S.A. · {{ isConcretosPlanta ? 'Concretos' : 'Agregados' }}</span>
+              </div>
+            </div>
+            <div class="report-header-meta">
+              <div class="meta-item"><span>Corte:</span> <strong>{{ informeFechaLabel }}</strong></div>
+              <div class="meta-item"><span>Código:</span> <strong>GRV-INF-2026-{{ plantaKey.toUpperCase() }}-DISP</strong></div>
+              <div class="meta-item page-counter"><span>Pág. 1 de 3</span></div>
+            </div>
+          </header>
+
+          <div class="report-title-section">
+            <h1>Reporte de Disponibilidad de Equipos</h1>
+            <p class="report-intro">
+              Operatividad de la flota de <strong>{{ plantaLabel }}</strong> al corte del <strong>{{ informeFechaLabel }}</strong>:
+              disponibilidad por tipo de equipo, seguimiento de maquinaria operativa, equipos en intervención de taller y control de calidad del dato capturado.
+            </p>
+          </div>
+
+          <!-- 8 Tarjetas KPI Oficiales -->
+          <div class="kpi-row compact-kpi">
+            <KpiCard label="Flota Propia" accent="#1D4ED8" icon="package" :value="String(informeKpis.flotaPropia)" />
+            <KpiCard v-if="tieneAlquilados || isConcretosPlanta" label="Alquilados" accent="#2563EB" icon="truck" :value="String(informeKpis.alquilados)" />
+            <KpiCard label="Operativos" accent="#16A34A" icon="check-circle" :value="informeKpis.operativosFormatted" />
+            <KpiCard label="No Operativos" accent="#DC2626" icon="activity" :value="String(informeKpis.noOperativos)" />
+            <KpiCard
+              label="Disponibilidad Propia"
+              :accent="informeKpis.dispPropiaPct >= 85 ? '#16A34A' : informeKpis.dispPropiaPct >= 60 ? '#F59E0B' : '#DC2626'"
+              meta="Meta: 85%"
+              icon="target"
+              :value="informeKpis.dispPropiaPct + '%'"
+            />
+            <KpiCard
+              v-if="tieneAlquilados || isConcretosPlanta"
+              label="Disponible en Cancha"
+              :accent="informeKpis.dispCanchaPct >= 85 ? '#16A34A' : informeKpis.dispCanchaPct >= 60 ? '#F59E0B' : '#DC2626'"
+              icon="trending-up"
+              :value="informeKpis.dispCanchaPct + '%'"
+            />
+            <KpiCard label="Cobertura" accent="#16A34A" icon="zap" :value="informeKpis.coberturaPct + '%'" />
+            <KpiCard label="Días de Rezago" accent="#1D4ED8" icon="clock" :value="String(informeKpis.diasRezago)" />
+          </div>
+
+          <!-- Nota de Contexto / Alertas -->
+          <div v-if="informeKpis.diasRezago > 2" class="report-nota alerta">
+            <strong>Advertencia de Rezago ({{ informeKpis.diasRezago }} días):</strong>
+            La última inspección cargada para este corte tiene más de 2 días de rezago frente a la fecha actual.
+          </div>
+          <div v-else-if="informeKpis.coberturaPct < 90" class="report-nota">
+            <strong>Nota de Cobertura:</strong> La disponibilidad se calcula sobre los {{ informeKpis.inspeccionados }} equipos efectivamente inspeccionados ({{ informeKpis.coberturaPct }}% del total).
+          </div>
+
+          <!-- Gráfica de Tendencia AM (14 días con meta 85%) -->
+          <div class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Tendencia de disponibilidad — ronda AM, día a día</h3>
+            <div class="marco" v-if="svgTrend">
+              <svg viewBox="0 0 700 210" class="chart-svg">
+                <line x1="44" y1="180.0" x2="684" y2="180.0" stroke="#e8ecf1" stroke-width="1"/>
+                <text x="36" y="183.0" text-anchor="end" class="ax">0%</text>
+                <line x1="44" y1="139.5" x2="684" y2="139.5" stroke="#e8ecf1" stroke-width="1"/>
+                <text x="36" y="142.5" text-anchor="end" class="ax">25%</text>
+                <line x1="44" y1="99.0" x2="684" y2="99.0" stroke="#e8ecf1" stroke-width="1"/>
+                <text x="36" y="102.0" text-anchor="end" class="ax">50%</text>
+                <line x1="44" y1="58.5" x2="684" y2="58.5" stroke="#e8ecf1" stroke-width="1"/>
+                <text x="36" y="61.5" text-anchor="end" class="ax">75%</text>
+                <line x1="44" y1="18.0" x2="684" y2="18.0" stroke="#e8ecf1" stroke-width="1"/>
+                <text x="36" y="21.0" text-anchor="end" class="ax">100%</text>
+                <line x1="44" y1="42.3" x2="684" y2="42.3" stroke="#5b6b82" stroke-width="1.2" stroke-dasharray="5 4"/>
+                <text x="684" y="37.3" text-anchor="end" class="ax">meta 85%</text>
+                <path :d="svgTrend.areaD" fill="#1D4ED8" opacity="0.07"/>
+                <path :d="svgTrend.pathD" fill="none" stroke="#1D4ED8" stroke-width="2.2"/>
+                <g v-for="pt in svgTrend.points" :key="pt.dateLabel">
+                  <circle :cx="pt.x" :cy="pt.y" :r="pt.isLast ? 4.5 : 3.4" :fill="pt.color"/>
+                  <text :x="pt.x" :y="pt.y - 10" text-anchor="middle" class="lbl" :fill="pt.color">{{ pt.pct }}%</text>
+                  <text :x="pt.x" y="200" text-anchor="middle" class="ax">{{ pt.dateLabel }}</text>
+                  <text :x="pt.x" y="209" text-anchor="middle" class="ax mini">{{ pt.totalEq }} eq.</text>
+                </g>
+              </svg>
             </div>
           </div>
-          <div class="report-header-meta">
-            <div class="meta-item"><span>Corte:</span> <strong>{{ informeFechaLabel }}</strong></div>
-            <div class="meta-item"><span>Código:</span> <strong>GRV-INF-2026-{{ plantaKey.toUpperCase() }}-DISP</strong></div>
-          </div>
-        </header>
 
-        <div class="report-title-section">
-          <h1>Reporte de Disponibilidad de Equipos</h1>
-          <p class="report-intro">
-            Operatividad de la flota de <strong>{{ plantaLabel }}</strong> al corte del <strong>{{ informeFechaLabel }}</strong>:
-            disponibilidad por tipo de equipo, seguimiento de maquinaria operativa, equipos en intervención de taller y control de calidad del dato capturado.
-          </p>
-        </div>
-
-        <!-- 8 Tarjetas KPI Oficiales -->
-        <div class="kpi-row" style="margin: 12px 0 16px;">
-          <KpiCard label="Flota Propia" accent="#172954" icon="package" :value="String(informeKpis.flotaPropia)" />
-          <KpiCard v-if="tieneAlquilados || isConcretosPlanta" label="Alquilados" accent="#2a3f6b" icon="truck" :value="String(informeKpis.alquilados)" />
-          <KpiCard label="Operativos" accent="#1f7a3d" icon="check-circle" :value="informeKpis.operativosFormatted" />
-          <KpiCard label="No Operativos" accent="#a90707" icon="activity" :value="String(informeKpis.noOperativos)" />
-          <KpiCard
-            label="Disponibilidad Propia"
-            :accent="informeKpis.dispPropiaPct >= 85 ? '#1f7a3d' : informeKpis.dispPropiaPct >= 60 ? '#b8860b' : '#a90707'"
-            meta="Meta: 85%"
-            icon="target"
-            :value="informeKpis.dispPropiaPct + '%'"
-          />
-          <KpiCard
-            v-if="tieneAlquilados || isConcretosPlanta"
-            label="Disponible en Cancha"
-            :accent="informeKpis.dispCanchaPct >= 85 ? '#1f7a3d' : informeKpis.dispCanchaPct >= 60 ? '#b8860b' : '#a90707'"
-            icon="trending-up"
-            :value="informeKpis.dispCanchaPct + '%'"
-          />
-          <KpiCard label="Cobertura" accent="#1f7a3d" icon="zap" :value="informeKpis.coberturaPct + '%'" />
-          <KpiCard label="Días de Rezago" accent="#172954" icon="clock" :value="String(informeKpis.diasRezago)" />
-        </div>
-
-        <!-- Nota de Contexto / Alertas -->
-        <div v-if="informeKpis.diasRezago > 2" class="report-nota alerta">
-          <strong>Advertencia de Rezago ({{ informeKpis.diasRezago }} días):</strong>
-          La última inspección cargada para este corte tiene más de 2 días de rezago frente a la fecha actual.
-        </div>
-        <div v-else-if="informeKpis.coberturaPct < 90" class="report-nota">
-          <strong>Nota de Cobertura:</strong> La disponibilidad se calcula sobre los {{ informeKpis.inspeccionados }} equipos efectivamente inspeccionados ({{ informeKpis.coberturaPct }}% del total).
-        </div>
-
-        <!-- Gráfica de Tendencia AM (14 días con meta 85%) -->
-        <div class="report-section-block">
-          <h3 class="report-block-title"><span class="title-bar"></span>Tendencia de Disponibilidad — Ronda AM, Día a Día</h3>
-          <div class="charts-grid cols-1">
-            <ChartCard
-              title="Evolución Histórica Ronda AM"
-              description="Comparativa diaria de la ronda de la mañana frente a la meta institucional (85%)"
-              :option="amVsPmTrendOpt"
-              :height="280"
-            />
-          </div>
-        </div>
-
-        <!-- Bloque Fila: Tipo de Equipo + Comparativo AM vs PM + Dona Global -->
-        <div class="report-section-block">
-          <h3 class="report-block-title"><span class="title-bar"></span>Operatividad por Tipo de Equipo y Comparativo AM vs PM</h3>
-          <div class="charts-grid cols-2">
-            <ChartCard
-              title="Disponibilidad por Categoría de Equipo"
-              description="Desglose por tipo de vehículo en el corte seleccionado"
-              :option="tipoEquipoOpt"
-              :height="300"
-            />
-            <ChartCard
-              title="Comparativo Ronda AM vs Ronda PM"
-              description="% global operativo en la ronda de la mañana (AM) vs la ronda de la tarde (PM) para el corte seleccionado"
-              :option="amVsPmDiaOpt"
-              :height="300"
-            />
-          </div>
-          <div class="charts-grid cols-1" style="margin-top: 12px;">
-            <ChartCard
-              title="Operatividad Global — Distribución de Flota"
-              description="Distribución porcentual de operatividad sobre la flota total del módulo"
-              :option="donaOpt"
-              :height="260"
-            />
-          </div>
-        </div>
-
-        <!-- Flota Alquilada (Solo si aplica) -->
-        <div v-if="(tieneAlquilados || isConcretosPlanta) && informeFlotaAlquilada.total > 0" class="report-section-block">
-          <h3 class="report-block-title"><span class="title-bar"></span>Flota Alquilada — Detalle por Placa</h3>
-          <div class="data-card alq-card">
-            <div class="alq-summary">
-              <div class="alq-cifra" :style="{ color: informeFlotaAlquilada.dispPct >= 85 ? '#1f7a3d' : informeFlotaAlquilada.dispPct >= 60 ? '#b8860b' : '#a90707' }">
-                {{ informeFlotaAlquilada.dispPct }}%
-                <span>{{ informeFlotaAlquilada.op }} de {{ informeFlotaAlquilada.total }} operativos</span>
+          <!-- Bloque Fila: Tipo de Equipo + Dona Global + Comparativo AM vs PM -->
+          <div class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Disponibilidad por tipo de equipo — {{ informeFechaLabel }}</h3>
+            <div class="fila-charts">
+              <!-- Barras Horizontales por Categoría -->
+              <div class="chart-box" style="flex: 1.9;">
+                <svg viewBox="0 0 430 115" class="chart-svg">
+                  <g v-for="cat in svgCategorias" :key="cat.tipo">
+                    <text x="124" :y="cat.textY" text-anchor="end" class="cat">{{ cat.tipo }}</text>
+                    <rect v-if="cat.wProp > 0" :x="cat.xProp" :y="cat.y" :width="cat.wProp" height="15" fill="#16A34A" rx="1.5"/>
+                    <text v-if="cat.opProp > 0 && cat.wProp >= 14" :x="cat.xProp + cat.wProp / 2" :y="cat.textY + 0.5" text-anchor="middle" class="inbar">{{ cat.opProp }}</text>
+                    <rect v-if="cat.wAlq > 0" :x="cat.xAlq" :y="cat.y" :width="cat.wAlq" height="15" fill="#06B6D4" rx="1.5"/>
+                    <text v-if="cat.opAlq > 0 && cat.wAlq >= 14" :x="cat.xAlq + cat.wAlq / 2" :y="cat.textY + 0.5" text-anchor="middle" class="inbar">{{ cat.opAlq }}</text>
+                    <rect v-if="cat.wParcial > 0" :x="cat.xParcial" :y="cat.y" :width="cat.wParcial" height="15" fill="#F59E0B" rx="1.5"/>
+                    <text v-if="cat.parcial > 0 && cat.wParcial >= 14" :x="cat.xParcial + cat.wParcial / 2" :y="cat.textY + 0.5" text-anchor="middle" class="inbar">{{ cat.parcial }}</text>
+                    <rect v-if="cat.wNoOp > 0" :x="cat.xNoOp" :y="cat.y" :width="cat.wNoOp" height="15" fill="#DC2626" rx="1.5"/>
+                    <text v-if="cat.noOp > 0 && cat.wNoOp >= 14" :x="cat.xNoOp + cat.wNoOp / 2" :y="cat.textY + 0.5" text-anchor="middle" class="inbar">{{ cat.noOp }}</text>
+                    <text :x="cat.endX + 6" :y="cat.textY + 0.5" class="lbl" :fill="cat.color">{{ cat.disp }}%</text>
+                  </g>
+                </svg>
+                <div class="leyenda">
+                  <span><i style="background:#16A34A"></i>Operativo propio</span>
+                  <span v-if="tieneAlquilados || isConcretosPlanta"><i style="background:#06B6D4"></i>Operativo alq.</span>
+                  <span><i style="background:#F59E0B"></i>Parcial (0,5)</span>
+                  <span><i style="background:#DC2626"></i>No op.</span>
+                </div>
               </div>
-              <div class="alq-chips">
-                <div v-for="chip in informeFlotaAlquilada.chips" :key="chip.placa" class="alq-chip">
-                  <span class="chip-dot" :style="{ background: chip.color }"></span>
-                  <strong>{{ chip.placa }}</strong>
-                  <span class="chip-tipo">{{ chip.tipo }}</span>
+
+              <!-- Dona de Disponibilidad -->
+              <div class="chart-box" style="flex: 0.9;" v-if="svgDona">
+                <svg viewBox="0 0 210 210" class="chart-svg">
+                  <circle cx="105.0" cy="105.0" r="72" fill="none" stroke="#e6eaf0" stroke-width="22"/>
+                  <circle cx="105.0" cy="105.0" r="72" fill="none" :stroke="svgDona.color" stroke-width="22" :stroke-dasharray="svgDona.strokeDasharray" stroke-linecap="butt" transform="rotate(-90 105.0 105.0)"/>
+                  <text x="105.0" y="109.0" text-anchor="middle" class="dona" :fill="svgDona.color">{{ svgDona.pct }}%</text>
+                  <text x="105.0" y="129.0" text-anchor="middle" class="ax">DISPONIBILIDAD</text>
+                  <text x="105.0" y="142.0" text-anchor="middle" class="ax">{{ svgDona.operativosFormatted }} de {{ svgDona.flotaTotal }} equipos</text>
+                </svg>
+              </div>
+
+              <!-- Ronda AM vs PM -->
+              <div class="chart-box" style="flex: 1;" v-if="svgAmPm">
+                <svg viewBox="0 0 250 210" class="chart-svg">
+                  <line x1="20" y1="170" x2="236" y2="170" stroke="#dbe1e9"/>
+                  <rect x="52" :y="svgAmPm.amY" width="54" :height="svgAmPm.amH" fill="#1D4ED8" rx="2"/>
+                  <text x="79" :y="svgAmPm.amY - 7" text-anchor="middle" class="lbl">{{ svgAmPm.amPct }}%</text>
+                  <text x="79" y="185" text-anchor="middle" class="ax">Ronda AM</text>
+
+                  <rect x="144" :y="svgAmPm.pmY" width="54" :height="svgAmPm.pmH" fill="#2563EB" rx="2"/>
+                  <text x="171" :y="svgAmPm.pmY - 7" text-anchor="middle" class="lbl">{{ svgAmPm.pmPct }}%</text>
+                  <text x="171" y="185" text-anchor="middle" class="ax">Ronda PM</text>
+                  <text x="125.0" y="203" text-anchor="middle" class="ax mini" :fill="svgAmPm.brecha < 0 ? '#DC2626' : '#16A34A'">
+                    brecha {{ svgAmPm.brecha > 0 ? '+' : '' }}{{ svgAmPm.brecha }}%
+                  </text>
+                </svg>
+                <div class="leyenda" style="justify-content:center">AM vs PM del mismo día</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Flota Alquilada (Solo si aplica) -->
+          <div v-if="(tieneAlquilados || isConcretosPlanta) && informeFlotaAlquilada.total > 0" class="report-section-block" style="margin-top: 4px;">
+            <div class="data-card alq-card" style="padding: 6px 12px;">
+              <div class="alq-summary">
+                <div class="alq-cifra" :style="{ color: informeFlotaAlquilada.dispPct >= 85 ? '#16A34A' : informeFlotaAlquilada.dispPct >= 60 ? '#F59E0B' : '#DC2626' }">
+                  {{ informeFlotaAlquilada.dispPct }}%
+                  <span>{{ informeFlotaAlquilada.op }} de {{ informeFlotaAlquilada.total }} alquilados op.</span>
+                </div>
+                <div class="alq-chips">
+                  <div v-for="chip in informeFlotaAlquilada.chips" :key="chip.placa" class="alq-chip">
+                    <span class="chip-dot" :style="{ background: chip.color }"></span>
+                    <strong>{{ chip.placa }}</strong>
+                    <span class="chip-tipo">{{ chip.tipo }}</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+
+          <footer class="report-footer">
+            <span>Informe de Disponibilidad de Flota — Gravicon</span>
+            <span>Documento Oficial | Página 1 de 3</span>
+          </footer>
         </div>
 
-        <!-- Matriz de Operatividad por Categoría -->
-        <div class="report-section-block">
-          <h3 class="report-block-title"><span class="title-bar"></span>Matriz de Operatividad por Categoría</h3>
-          <div class="data-card">
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Categoría</th>
-                    <th class="r">Operativos Propios</th>
-                    <th class="r" v-if="tieneAlquilados || isConcretosPlanta">De ellos Alq.</th>
-                    <th class="r">Parciales (0,5)</th>
-                    <th class="r">No Operativos</th>
-                    <th class="r">Total Flota</th>
-                    <th class="r">Disponibilidad</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="cat in matrizCategoriaData.rows" :key="cat.tipo">
-                    <td class="bold accent-text">{{ cat.tipo }}</td>
-                    <td class="r green">{{ cat.opProp }}</td>
-                    <td class="r" v-if="tieneAlquilados || isConcretosPlanta" style="color: #06b6d4">{{ cat.opAlq || '—' }}</td>
-                    <td class="r yellow">{{ cat.parcial || '—' }}</td>
-                    <td class="r" :class="cat.noOp > 0 ? 'red' : ''">{{ cat.noOp }}</td>
-                    <td class="r bold">{{ cat.total }}</td>
-                    <td class="r bold" :class="cat.disp >= 85 ? 'green' : cat.disp >= 60 ? 'yellow' : 'red'">{{ cat.disp }}%</td>
-                  </tr>
-                  <tr class="table-total-row">
-                    <td class="bold">TOTAL FLOTA</td>
-                    <td class="r bold green">{{ matrizCategoriaData.totales.opProp }}</td>
-                    <td class="r bold" v-if="tieneAlquilados || isConcretosPlanta" style="color: #06b6d4">{{ matrizCategoriaData.totales.opAlq }}</td>
-                    <td class="r bold yellow">{{ matrizCategoriaData.totales.parcial }}</td>
-                    <td class="r bold red">{{ matrizCategoriaData.totales.noOp }}</td>
-                    <td class="r bold">{{ matrizCategoriaData.totales.total }}</td>
-                    <td class="r bold" :class="matrizCategoriaData.totales.disp >= 85 ? 'green' : matrizCategoriaData.totales.disp >= 60 ? 'yellow' : 'red'">
-                      {{ matrizCategoriaData.totales.disp }}%
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+        <!-- ==================================================== -->
+        <!-- PÁGINA 2: MATRIZ POR CATEGORÍA, FRENTE Y MOVIMIENTOS -->
+        <!-- ==================================================== -->
+        <div class="report-page">
+          <div class="report-salto-superior"></div>
 
-        <!-- Movimientos de Taller (Comparativo con corte anterior) -->
-        <div v-if="movimientosTaller.hasPrev" class="report-section-block">
-          <h3 class="report-block-title"><span class="title-bar"></span>Movimientos de Taller — {{ movimientosTaller.prevLabel }} → {{ informeFechaLabel }}</h3>
-          <div class="charts-grid cols-2">
+          <!-- Matriz de Operatividad por Categoría -->
+          <div class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Matriz de Operatividad por Categoría</h3>
             <div class="data-card">
-              <div class="card-head" style="color: #ef4444;">
-                ↓ Ingresaron a Taller ({{ movimientosTaller.ingresaron.length }})
-              </div>
-              <div v-if="movimientosTaller.ingresaron.length === 0" class="empty-table" style="padding: 16px;">
-                Sin nuevos ingresos a taller
-              </div>
-              <div v-else class="table-wrap">
+              <div class="table-wrap">
                 <table>
-                  <thead><tr><th>Equipo</th><th>Tipo</th><th>Actividad / Necesidad</th><th>Proveedor</th><th>Supervisor</th><th class="r">Días P/</th></tr></thead>
-                  <tbody>
-                    <tr v-for="eq in movimientosTaller.ingresaron" :key="eq.placa">
-                      <td class="bold accent-text">{{ eq.placa }}</td>
-                      <td>{{ eq.tipo }}</td>
-                      <td>{{ eq.actividad || '—' }}</td>
-                      <td>{{ eq.proveedor || '—' }}</td>
-                      <td>{{ eq.supervisor }}</td>
-                      <td class="r bold" :class="eq.diasPendientes > 5 ? 'red' : eq.diasPendientes > 2 ? 'yellow' : ''">{{ eq.diasPendientes > 0 ? eq.diasPendientes + ' d' : '—' }}</td>
+                  <thead>
+                    <tr>
+                      <th>Categoría</th>
+                      <th class="r">Operativos Propios</th>
+                      <th class="r" v-if="tieneAlquilados || isConcretosPlanta">De ellos Alq.</th>
+                      <th class="r">Parciales (0,5)</th>
+                      <th class="r">No Operativos</th>
+                      <th class="r">Total Flota</th>
+                      <th class="r">Disponibilidad</th>
                     </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div class="data-card">
-              <div class="card-head" style="color: #10b981;">
-                ↑ Salieron de Taller ({{ movimientosTaller.salieron.length }})
-              </div>
-              <div v-if="movimientosTaller.salieron.length === 0" class="empty-table" style="padding: 16px;">
-                Sin salidas de taller registradas
-              </div>
-              <div v-else class="table-wrap">
-                <table>
-                  <thead><tr><th>Equipo</th><th>Tipo</th><th>Actividad / Necesidad</th><th>Proveedor</th><th>Supervisor</th><th class="r">Días P/</th></tr></thead>
+                  </thead>
                   <tbody>
-                    <tr v-for="eq in movimientosTaller.salieron" :key="eq.placa">
-                      <td class="bold accent-text">{{ eq.placa }}</td>
-                      <td>{{ eq.tipo }}</td>
-                      <td>{{ eq.actividad || '—' }}</td>
-                      <td>{{ eq.proveedor || '—' }}</td>
-                      <td>{{ eq.supervisor }}</td>
-                      <td class="r bold">{{ eq.diasPendientes > 0 ? eq.diasPendientes + ' d' : '—' }}</td>
+                    <tr v-for="cat in matrizCategoriaData.rows" :key="cat.tipo">
+                      <td class="bold accent-text">{{ cat.tipo }}</td>
+                      <td class="r green">{{ cat.opProp }}</td>
+                      <td class="r" v-if="tieneAlquilados || isConcretosPlanta" style="color: #06b6d4">{{ cat.opAlq || '—' }}</td>
+                      <td class="r yellow">{{ cat.parcial || '—' }}</td>
+                      <td class="r" :class="cat.noOp > 0 ? 'red' : ''">{{ cat.noOp }}</td>
+                      <td class="r bold">{{ cat.total }}</td>
+                      <td class="r bold" :class="cat.disp >= 85 ? 'green' : cat.disp >= 60 ? 'yellow' : 'red'">{{ cat.disp }}%</td>
+                    </tr>
+                    <tr class="table-total-row">
+                      <td class="bold">TOTAL FLOTA</td>
+                      <td class="r bold green">{{ matrizCategoriaData.totales.opProp }}</td>
+                      <td class="r bold" v-if="tieneAlquilados || isConcretosPlanta" style="color: #06b6d4">{{ matrizCategoriaData.totales.opAlq }}</td>
+                      <td class="r bold yellow">{{ matrizCategoriaData.totales.parcial }}</td>
+                      <td class="r bold red">{{ matrizCategoriaData.totales.noOp }}</td>
+                      <td class="r bold">{{ matrizCategoriaData.totales.total }}</td>
+                      <td class="r bold" :class="matrizCategoriaData.totales.disp >= 85 ? 'green' : matrizCategoriaData.totales.disp >= 60 ? 'yellow' : 'red'">
+                        {{ matrizCategoriaData.totales.disp }}%
+                      </td>
                     </tr>
                   </tbody>
                 </table>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Disponibilidad por Planta / Frente -->
-        <div class="report-section-block">
-          <h3 class="report-block-title"><span class="title-bar"></span>{{ isConcretosPlanta ? 'Disponibilidad por Sede / Planta' : 'Disponibilidad por Frente de Trabajo / Maquinaria' }}</h3>
-          <div class="charts-grid cols-1">
-            <ChartCard
-              :title="isConcretosPlanta ? 'Disponibilidad por Sede' : 'Disponibilidad por Frente'"
-              :description="isConcretosPlanta ? 'Porcentaje operativo por sede de planta concretera (Villavicencio, Acacias, Restrepo, Logística)' : 'Porcentaje operativo por frente de extracción o beneficio de maquinaria'"
-              :option="plantaOpt"
-              :height="260"
-            />
-          </div>
-        </div>
-
-        <!-- Equipos en Intervención / Fuera de Servicio -->
-        <div class="report-section-block">
-          <h3 class="report-block-title"><span class="title-bar"></span>Equipos Fuera de Servicio / En Taller</h3>
-          <div class="data-card">
-            <div v-if="informeEquiposEnTaller.length === 0" class="empty-table">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-              Todos los equipos se encuentran operativos en este corte
-            </div>
-            <div v-else class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Placa</th>
-                    <th>Tipo</th>
-                    <th>Localización</th>
-                    <th>Supervisor</th>
-                    <th>Actividad / Diagnóstico</th>
-                    <th class="r">Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(eq, i) in informeEquiposEnTaller" :key="eq.placa">
-                    <td class="idx">{{ i + 1 }}</td>
-                    <td class="bold accent-text">{{ eq.placa }}</td>
-                    <td>{{ eq.tipo }}</td>
-                    <td>{{ eq.loc }}</td>
-                    <td>{{ eq.supervisor }}</td>
-                    <td style="font-size: 12px; color: var(--text-secondary);">{{ eq.motivo }}</td>
-                    <td class="r red">{{ eq.revAm }}</td>
-                  </tr>
-                </tbody>
-              </table>
+          <!-- Disponibilidad por Planta / Frente -->
+          <div class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>{{ isConcretosPlanta ? 'Disponibilidad por sede' : 'Disponibilidad por frente de trabajo' }}</h3>
+            <div class="marco" v-if="svgSedes.length > 0">
+              <svg :viewBox="`0 0 700 ${svgSedes.length * 26 + 10}`" class="chart-svg">
+                <g v-for="sede in svgSedes" :key="sede.nombre">
+                  <text x="142" :y="sede.textY" text-anchor="end" class="cat">{{ sede.nombre }}</text>
+                  <rect x="150" :y="sede.y" :width="sede.totalW" height="16" fill="#e9edf2" rx="2"/>
+                  <rect x="150" :y="sede.y" :width="sede.filledW" height="16" :fill="sede.color" rx="2"/>
+                  <text :x="150 + sede.totalW + 8" :y="sede.textY" class="lbl" :fill="sede.color">{{ sede.disp }}%</text>
+                  <text :x="150 + sede.totalW + 44" :y="sede.textY" class="ax">{{ sede.opFormatted }}/{{ sede.n }}</text>
+                </g>
+              </svg>
             </div>
           </div>
-        </div>
 
-        <!-- Equipos Operativos -->
-        <div class="report-section-block">
-          <h3 class="report-block-title"><span class="title-bar"></span>Equipos Operativos en Cancha</h3>
-          <div class="data-card">
-            <div v-if="informeEquiposOperativos.length === 0" class="empty-table">
-              Sin equipos registrados como operativos
-            </div>
-            <div v-else class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Placa</th>
-                    <th>Tipo</th>
-                    <th>Localización</th>
-                    <th>Supervisor</th>
-                    <th class="r">Estado AM</th>
-                    <th class="r">Ronda PM</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(eq, i) in informeEquiposOperativos" :key="eq.placa">
-                    <td class="idx">{{ i + 1 }}</td>
-                    <td class="bold accent-text">{{ eq.placa }}</td>
-                    <td>{{ eq.tipo }}</td>
-                    <td>{{ eq.loc }}</td>
-                    <td>{{ eq.supervisor }}</td>
-                    <td class="r bold" :class="eq.revAm.includes('En taller') ? 'red' : eq.revAm.includes('Parcial') ? 'yellow' : 'green'">{{ eq.revAm }}</td>
-                    <td class="r bold" :class="eq.revPm.includes('Cayó') ? 'red' : eq.revPm.includes('Parcial') ? 'yellow' : 'green'">{{ eq.revPm }}</td>
-                  </tr>
-                </tbody>
-              </table>
+          <!-- Movimientos de Taller -->
+          <div v-if="movimientosTaller.hasPrev" class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Movimientos de Taller — {{ movimientosTaller.prevLabel }} → {{ informeFechaLabel }}</h3>
+            <div class="charts-grid cols-2">
+              <div class="data-card">
+                <div class="card-head" style="color: #ef4444;">
+                  ↓ Ingresaron a Taller ({{ movimientosTaller.ingresaron.length }})
+                </div>
+                <div v-if="movimientosTaller.ingresaron.length === 0" class="empty-table" style="padding: 12px;">
+                  Sin nuevos ingresos a taller
+                </div>
+                <div v-else class="table-wrap">
+                  <table>
+                    <thead><tr><th>Equipo</th><th>Tipo</th><th>Actividad / Necesidad</th><th>Proveedor</th><th>Supervisor</th><th class="r">Días P/</th></tr></thead>
+                    <tbody>
+                      <tr v-for="eq in movimientosTaller.ingresaron" :key="eq.placa">
+                        <td class="bold accent-text">{{ eq.placa }}</td>
+                        <td>{{ eq.tipo }}</td>
+                        <td>{{ eq.actividad || '—' }}</td>
+                        <td>{{ eq.proveedor || '—' }}</td>
+                        <td>{{ eq.supervisor }}</td>
+                        <td class="r bold" :class="eq.diasPendientes > 5 ? 'red' : eq.diasPendientes > 2 ? 'yellow' : ''">{{ eq.diasPendientes > 0 ? eq.diasPendientes + ' d' : '—' }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="data-card">
+                <div class="card-head" style="color: #10b981;">
+                  ↑ Salieron de Taller ({{ movimientosTaller.salieron.length }})
+                </div>
+                <div v-if="movimientosTaller.salieron.length === 0" class="empty-table" style="padding: 12px;">
+                  Sin salidas de taller registradas
+                </div>
+                <div v-else class="table-wrap">
+                  <table>
+                    <thead><tr><th>Equipo</th><th>Tipo</th><th>Actividad / Necesidad</th><th>Proveedor</th><th>Supervisor</th><th class="r">Días P/</th></tr></thead>
+                    <tbody>
+                      <tr v-for="eq in movimientosTaller.salieron" :key="eq.placa">
+                        <td class="bold accent-text">{{ eq.placa }}</td>
+                        <td>{{ eq.tipo }}</td>
+                        <td>{{ eq.actividad || '—' }}</td>
+                        <td>{{ eq.proveedor || '—' }}</td>
+                        <td>{{ eq.supervisor }}</td>
+                        <td class="r bold">{{ eq.diasPendientes > 0 ? eq.diasPendientes + ' d' : '—' }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
+
+        </div>
+
+        <!-- ============================================== -->
+        <!-- PÁGINA 3: SEGUIMIENTO DE EQUIPOS EN TALLER    -->
+        <!-- ============================================== -->
+        <div class="report-page">
+          <div class="report-salto-superior"></div>
+
+          <!-- Equipos en Intervención / Fuera de Servicio -->
+          <div class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Equipos Fuera de Servicio / En Taller ({{ informeEquiposEnTaller.length }})</h3>
+            <div class="data-card">
+              <div v-if="informeEquiposEnTaller.length === 0" class="empty-table">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                Todos los equipos se encuentran operativos en este corte
+              </div>
+              <div v-else class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Placa</th>
+                      <th>Tipo</th>
+                      <th>Localización</th>
+                      <th>Supervisor</th>
+                      <th>Actividad / Diagnóstico</th>
+                      <th class="r">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(eq, i) in informeEquiposEnTaller" :key="eq.placa">
+                      <td class="idx">{{ i + 1 }}</td>
+                      <td class="bold accent-text">{{ eq.placa }}</td>
+                      <td>{{ eq.tipo }}</td>
+                      <td>{{ eq.loc }}</td>
+                      <td>{{ eq.supervisor }}</td>
+                      <td style="font-size: 12px; color: var(--text-secondary);">{{ eq.motivo }}</td>
+                      <td class="r red">{{ eq.revAm }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Equipos Operativos -->
+          <div class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Equipos Operativos en Cancha ({{ informeEquiposOperativos.length }})</h3>
+            <div class="data-card">
+              <div v-if="informeEquiposOperativos.length === 0" class="empty-table">
+                Sin equipos registrados como operativos
+              </div>
+              <div v-else class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Placa</th>
+                      <th>Tipo</th>
+                      <th>Localización</th>
+                      <th>Supervisor</th>
+                      <th class="r">Estado AM</th>
+                      <th class="r">Ronda PM</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(eq, i) in informeEquiposOperativos" :key="eq.placa">
+                      <td class="idx">{{ i + 1 }}</td>
+                      <td class="bold accent-text">{{ eq.placa }}</td>
+                      <td>{{ eq.tipo }}</td>
+                      <td>{{ eq.loc }}</td>
+                      <td>{{ eq.supervisor }}</td>
+                      <td class="r bold" :class="eq.revAm.includes('En taller') ? 'red' : eq.revAm.includes('Parcial') ? 'yellow' : 'green'">{{ eq.revAm }}</td>
+                      <td class="r bold" :class="eq.revPm.includes('Cayó') ? 'red' : eq.revPm.includes('Parcial') ? 'yellow' : 'green'">{{ eq.revPm }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <footer class="report-footer">
+            <span>Informe de Disponibilidad de Flota — Gravicon</span>
+            <span>Documento Oficial | Página 3 de 3</span>
+          </footer>
         </div>
 
       </div>
@@ -571,6 +671,16 @@ watch(() => props.planta, () => {
   dispStore.fetchDisponibilidad(plantaKey.value)
 })
 
+// Recargar también cuando cambia la fecha (para sincronizar con el filtro principal)
+watch([() => props.fechaInicio, () => props.fechaFin], () => {
+  // Solo recarga si el store no tiene datos para la planta actual, o si los datos son de otra planta
+  const currentPlanta = plantaKey.value
+  const storeData = dispStore.data
+  if (!storeData || storeData.planta !== currentPlanta || storeData.placas.length === 0) {
+    dispStore.fetchDisponibilidad(currentPlanta)
+  }
+})
+
 // Fechas y formateo
 function parseSerialDate(val: unknown): Date | null {
   if (!val) return null
@@ -591,9 +701,11 @@ function getDateKey(d: Date): string {
 }
 
 // Filas activas: todas las inspecciones de disponibilidad cargadas en el store o props
+// Solo usa datos del store si corresponden a la planta activa para evitar mostrar datos incorrectos
 const activePlacasRows = computed(() => {
-  if (dispStore.data?.placas && dispStore.data.placas.length > 0) {
-    return dispStore.data.placas
+  const storeData = dispStore.data
+  if (storeData?.placas && storeData.placas.length > 0 && storeData.planta === plantaKey.value) {
+    return storeData.placas
   }
   return props.data || []
 })
@@ -951,14 +1063,14 @@ const informeFlotaAlquilada = computed(() => {
     seen.add(info.placa)
 
     let estado = 'No Operativo'
-    let color = '#a90707'
+    let color = '#DC2626'
     if (info.isOperativo) {
       estado = 'Operativo (1.0)'
-      color = '#1f7a3d'
+      color = '#16A34A'
       opCount += 1
     } else if (info.isParcial) {
       estado = 'Parcial (0.5)'
-      color = '#b8860b'
+      color = '#F59E0B'
       opCount += 0.5
     }
 
@@ -1066,8 +1178,338 @@ const movimientosTaller = computed(() => {
   }
 })
 
-function imprimirReporte() {
-  window.print()
+const svgTrend = computed(() => {
+  const records = activePlacasRows.value
+  if (!records || records.length === 0) return null
+
+  const dateMap = new Map<string, { date: Date; total: number; scoreSum: number }>()
+  for (const r of records) {
+    const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
+    if (!d) continue
+    const key = getDateKey(d)
+    const info = getInspectionDetails(r)
+    if (!dateMap.has(key)) {
+      dateMap.set(key, { date: d, total: 0, scoreSum: 0 })
+    }
+    const item = dateMap.get(key)!
+    item.total++
+    const amScore = !isNaN(info.revAm) ? info.revAm : info.score
+    item.scoreSum += amScore
+  }
+
+  const sortedKeys = Array.from(dateMap.keys()).sort()
+  const last14Keys = sortedKeys.slice(-14)
+  if (last14Keys.length === 0) return null
+
+  const points = last14Keys.map((k, i) => {
+    const item = dateMap.get(k)!
+    const disp = item.total > 0 ? item.scoreSum / item.total : 0
+    const pct = Math.round(disp * 100)
+    const n = last14Keys.length
+    const x = n > 1 ? 44 + i * (640 / (n - 1)) : 364
+    const y = 180 - disp * 162
+    const d = item.date
+    const dia = String(d.getUTCDate()).padStart(2, '0')
+    const mes = String(d.getUTCMonth() + 1).padStart(2, '0')
+    const dateLabel = `${dia}/${mes}`
+    const isLast = i === last14Keys.length - 1
+    return {
+      x,
+      y,
+      pct,
+      dateLabel,
+      totalEq: item.total,
+      isLast,
+      color: isLast ? (pct >= 85 ? '#16A34A' : pct >= 60 ? '#F59E0B' : '#DC2626') : '#1D4ED8',
+    }
+  })
+
+  const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
+  const areaD = points.length > 0
+    ? `${pathD} L${points[points.length - 1].x.toFixed(1)},180.0 L${points[0].x.toFixed(1)},180.0 Z`
+    : ''
+
+  return {
+    points,
+    pathD,
+    areaD,
+  }
+})
+
+const svgCategorias = computed(() => {
+  const matriz = matrizCategoriaData.value
+  if (!matriz || matriz.rows.length === 0) return []
+
+  const rows = matriz.rows.slice(0, 5)
+  const maxTotal = Math.max(...rows.map(r => r.total), 1)
+  const maxBarWidth = 240
+
+  return rows.map((cat, idx) => {
+    const y = 9 + idx * 22
+    const textY = 20 + idx * 22
+
+    const scale = maxBarWidth / maxTotal
+    const wProp = cat.opProp * scale
+    const wAlq = (cat.opAlq || 0) * scale
+    const wParcial = cat.parcial * scale
+    const wNoOp = cat.noOp * scale
+
+    const xProp = 132
+    const xAlq = xProp + wProp
+    const xParcial = xAlq + wAlq
+    const xNoOp = xParcial + wParcial
+    const endX = xNoOp + wNoOp
+
+    const color = cat.disp >= 85 ? '#16A34A' : cat.disp >= 60 ? '#F59E0B' : '#DC2626'
+
+    return {
+      tipo: cat.tipo,
+      y,
+      textY,
+      opProp: cat.opProp,
+      opAlq: cat.opAlq,
+      parcial: cat.parcial,
+      noOp: cat.noOp,
+      total: cat.total,
+      disp: cat.disp,
+      color,
+      wProp,
+      wAlq,
+      wParcial,
+      wNoOp,
+      xProp,
+      xAlq,
+      xParcial,
+      xNoOp,
+      endX,
+    }
+  })
+})
+
+const svgDona = computed(() => {
+  const kpis = informeKpis.value
+  const pct = kpis.dispPropiaPct
+  const circumference = 452.4
+  const dashLength = (pct / 100) * circumference
+  const strokeDasharray = `${dashLength.toFixed(1)} ${circumference}`
+  const color = pct >= 85 ? '#16A34A' : pct >= 60 ? '#F59E0B' : '#DC2626'
+  return {
+    pct,
+    strokeDasharray,
+    color,
+    operativosFormatted: kpis.operativosFormatted,
+    flotaTotal: kpis.flotaTotal,
+  }
+})
+
+const svgAmPm = computed(() => {
+  const records = activePlacasRows.value
+  const targetIso = effectiveCorteIso.value
+  let amSum = 0, amCount = 0
+  let pmSum = 0, pmCount = 0
+
+  for (const r of records) {
+    const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
+    if (!d) continue
+    if (targetIso && getDateKey(d) !== targetIso) continue
+
+    const revAm = Number(r['Rev_AM'] ?? r['rev_am'] ?? NaN)
+    const revPm = Number(r['Rev_PM'] ?? r['rev_pm'] ?? NaN)
+
+    if (!isNaN(revAm)) {
+      amSum += revAm
+      amCount++
+    }
+    if (!isNaN(revPm)) {
+      pmSum += revPm
+      pmCount++
+    }
+  }
+
+  const amPct = amCount > 0 ? Math.round((amSum / amCount) * 100) : informeKpis.value.dispPropiaPct
+  const pmPct = pmCount > 0 ? Math.round((pmSum / pmCount) * 100) : 0
+  const brecha = pmPct - amPct
+
+  const amH = Math.max(4, (amPct / 100) * 125)
+  const amY = 170 - amH
+
+  const pmH = Math.max(4, (pmPct / 100) * 125)
+  const pmY = 170 - pmH
+
+  return {
+    amPct,
+    pmPct,
+    brecha,
+    amH,
+    amY,
+    pmH,
+    pmY,
+  }
+})
+
+const svgSedes = computed(() => {
+  const records = activePlacasRows.value
+  const targetIso = effectiveCorteIso.value
+  const map = new Map<string, { n: number; scoreSum: number }>()
+
+  for (const r of records) {
+    const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
+    if (!d) continue
+    if (targetIso && getDateKey(d) !== targetIso) continue
+
+    const info = getInspectionDetails(r)
+    const loc = info.loc || 'Planta'
+    if (!map.has(loc)) map.set(loc, { n: 0, scoreSum: 0 })
+    const item = map.get(loc)!
+    item.n++
+    item.scoreSum += info.score
+  }
+
+  const list = Array.from(map.entries()).map(([nombre, v]) => {
+    const disp = v.n > 0 ? Math.round((v.scoreSum / v.n) * 100) : 0
+    return { nombre, n: v.n, disp, scoreSum: v.scoreSum }
+  })
+  list.sort((a, b) => b.n - a.n)
+
+  const maxN = Math.max(...list.map(s => s.n), 1)
+  const maxBarWidth = 460
+
+  return list.map((s, idx) => {
+    const y = 7 + idx * 24
+    const textY = 19 + idx * 24
+    const totalW = (s.n / maxN) * maxBarWidth
+    const filledW = (s.disp / 100) * totalW
+    const color = s.disp >= 85 ? '#16A34A' : s.disp >= 60 ? '#F59E0B' : '#DC2626'
+
+    return {
+      nombre: s.nombre.toUpperCase(),
+      n: s.n,
+      disp: s.disp,
+      color,
+      y,
+      textY,
+      totalW,
+      filledW,
+      opFormatted: Math.round(s.scoreSum),
+    }
+  })
+})
+
+const generandoPdf = ref(false)
+
+/** Genera el PDF del informe oficial y lo descarga directamente */
+async function generarInformePdf() {
+  if (generandoPdf.value) return
+  generandoPdf.value = true
+  try {
+    const elemento = document.querySelector('.report-paper') as HTMLElement
+    if (!elemento) {
+      console.error('No se encontró el contenedor del reporte (.report-paper)')
+      return
+    }
+    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+      import('html2canvas'),
+      import('jspdf'),
+    ])
+
+    // Forzar tema claro temporalmente para que los colores del PDF salgan vivos
+    const root = document.documentElement
+    const temaPrevio = root.getAttribute('data-theme')
+    root.setAttribute('data-theme', 'light')
+    root.classList.add('light')
+    root.classList.remove('dark')
+
+    // Esperar un frame para que el navegador aplique los estilos
+    await new Promise(r => requestAnimationFrame(() => r(null)))
+
+    try {
+      // Dimensiones A4 en mm
+      const pageW = 210
+      const pageH = 297
+      const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
+
+      // Función auxiliar: añadir un canvas al PDF respetando la proporción
+      // y dividendo en múltiples páginas A4 si el contenido es más alto
+      function addCanvasToPdf(canvas: HTMLCanvasElement, isFirst: boolean) {
+        const imgW = pageW
+        const imgH = (canvas.height * imgW) / canvas.width
+        const imgData = canvas.toDataURL('image/png')
+
+        if (imgH <= pageH) {
+          // Cabe en una sola página
+          if (!isFirst) pdf.addPage()
+          pdf.addImage(imgData, 'PNG', 0, 0, imgW, imgH, undefined, 'FAST')
+        } else {
+          // El contenido es más alto que una página A4: dividir en rebanadas
+          const pxPerMm = canvas.width / imgW
+          const pageHeightPx = Math.floor(pageH * pxPerMm)
+          let yOffset = 0
+          let firstSlice = isFirst
+
+          while (yOffset < canvas.height) {
+            const sliceHeight = Math.min(pageHeightPx, canvas.height - yOffset)
+            const sliceCanvas = document.createElement('canvas')
+            sliceCanvas.width = canvas.width
+            sliceCanvas.height = sliceHeight
+            const ctx = sliceCanvas.getContext('2d')!
+            ctx.fillStyle = '#ffffff'
+            ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height)
+            ctx.drawImage(canvas, 0, yOffset, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight)
+
+            if (!firstSlice) pdf.addPage()
+            const sliceData = sliceCanvas.toDataURL('image/png')
+            const sliceHm = (sliceHeight * imgW) / canvas.width
+            pdf.addImage(sliceData, 'PNG', 0, 0, imgW, sliceHm, undefined, 'FAST')
+
+            yOffset += sliceHeight
+            firstSlice = false
+          }
+        }
+      }
+
+      // Capturar cada .report-page individualmente para mayor nitidez
+      const pages = elemento.querySelectorAll<HTMLElement>('.report-page')
+      if (pages.length === 0) {
+        const canvas = await html2canvas(elemento, {
+          scale: 3,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+        })
+        addCanvasToPdf(canvas, true)
+      } else {
+        let first = true
+        for (let i = 0; i < pages.length; i++) {
+          const pageCanvas = await html2canvas(pages[i], {
+            scale: 3,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            logging: false,
+            width: pages[i].scrollWidth,
+            height: pages[i].scrollHeight,
+            windowWidth: pages[i].scrollWidth,
+            windowHeight: pages[i].scrollHeight,
+          })
+          addCanvasToPdf(pageCanvas, first)
+          first = false
+        }
+      }
+      const fechaLimpia = (informeFechaLabel.value || 'reporte')
+        .replace(/[^\wáéíóúÁÉÍÓÚñÑ -]/g, '').replace(/\s+/g, '_').trim()
+      pdf.save(`Disponibilidad_${plantaLabel.value}_${fechaLimpia}.pdf`)
+    } finally {
+      // Restaurar el tema original
+      if (temaPrevio === 'dark') {
+        root.setAttribute('data-theme', 'dark')
+        root.classList.add('dark')
+        root.classList.remove('light')
+      }
+    }
+  } catch (err) {
+    console.error('Error generando PDF:', err)
+  } finally {
+    generandoPdf.value = false
+  }
 }
 
 const tieneAlquilados = computed(() => {
@@ -1406,86 +1848,7 @@ const donaOpt = computed(() => {
   })
 })
 
-// 3b. Comparativo AM vs PM del día de corte por tipo de equipo (barras agrupadas)
-// 3b. Comparativo AM vs PM global del día de corte (dos barras simples)
-const amVsPmDiaOpt = computed(() => {
-  const records = activePlacasRows.value
-  const targetIso = effectiveCorteIso.value
-  let amSum = 0, pmSum = 0, amCount = 0, pmCount = 0
 
-  for (const r of records) {
-    const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
-    if (!d) continue
-    if (targetIso && getDateKey(d) !== targetIso) continue
-    const info = getInspectionDetails(r)
-    if (!isNaN(info.revAm)) { amSum += info.revAm; amCount++ }
-    if (!isNaN(info.revPm)) { pmSum += info.revPm; pmCount++ }
-  }
-
-  const pctAM = amCount > 0 ? Math.round((amSum / amCount) * 100) : 0
-  const pctPM = pmCount > 0 ? Math.round((pmSum / pmCount) * 100) : 0
-  const brecha = pctPM - pctAM
-  const brechaColor = brecha >= 0 ? '#10b981' : '#ef4444'
-
-  return markRaw({
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      formatter: () => {
-        return `Ronda AM: <strong>${pctAM}%</strong><br/>Ronda PM: <strong>${pctPM}%</strong><br/><span style="color:${brechaColor}">Brecha: ${brecha >= 0 ? '+' : ''}${brecha} pp</span>`
-      },
-    },
-    grid: { left: '6%', right: '12%', bottom: '8%', top: '12%', containLabel: true },
-    xAxis: {
-      type: 'value',
-      max: 100,
-      axisLabel: { formatter: '{value}%', color: textColor.value },
-      splitLine: { lineStyle: { color: splitLineColor.value } },
-    },
-    yAxis: {
-      type: 'category',
-      data: ['Ronda PM', 'Ronda AM'],
-      axisLabel: { fontWeight: 'bold', color: titleColor.value, fontSize: 13 },
-    },
-    series: [
-      {
-        name: 'Ronda',
-        type: 'bar',
-        barWidth: 40,
-        data: [
-          {
-            value: pctPM,
-            itemStyle: {
-              color: pctPM >= 85 ? '#f59e0b' : pctPM >= 60 ? '#fbbf24' : '#ef4444',
-              borderRadius: [0, 6, 6, 0],
-            },
-          },
-          {
-            value: pctAM,
-            itemStyle: {
-              color: pctAM >= 85 ? '#3b82f6' : pctAM >= 60 ? '#60a5fa' : '#ef4444',
-              borderRadius: [0, 6, 6, 0],
-            },
-          },
-        ],
-        label: {
-          show: true,
-          position: 'right',
-          formatter: (p: any) => `${p.value}%`,
-          fontWeight: 'bold',
-          fontSize: 14,
-          color: titleColor.value,
-        },
-        markLine: {
-          silent: true,
-          data: [{ xAxis: 85, name: 'Meta 85%' }],
-          lineStyle: { color: '#10b981', type: 'dashed', width: 2 },
-          label: { formatter: 'Meta 85%', color: '#10b981', fontWeight: 'bold', position: 'end' },
-        },
-      },
-    ],
-  })
-})
 
 // 4. Brecha Diaria AM vs PM
 const brechaDiariaOpt = computed(() => {
@@ -2069,6 +2432,62 @@ const diasPromTipoOpt = computed(() => {
   padding: 4px 0;
 }
 
+/* Banners de estado de disponibilidad */
+.disp-loading-banner,
+.disp-error-banner,
+.disp-empty-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.disp-loading-banner {
+  background: var(--card-bg, #f0f4ff);
+  border: 1px solid var(--card-border, #dbeafe);
+  color: var(--navy, #172954);
+}
+
+.disp-error-banner {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
+.disp-empty-banner {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+
+.disp-retry-btn {
+  margin-left: auto;
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid #b91c1c;
+  background: transparent;
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.disp-retry-btn:hover {
+  background: #b91c1c;
+  color: white;
+}
+
+@keyframes disp-spin {
+  to { transform: rotate(360deg); }
+}
+.disp-spinner {
+  animation: disp-spin 0.9s linear infinite;
+  flex-shrink: 0;
+}
+
 .almacen-view-toggle {
   display: flex;
   gap: 8px;
@@ -2078,8 +2497,8 @@ const diasPromTipoOpt = computed(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
-  font-size: 13px;
+  padding: 12px 16px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary, #6b7280);
   background: var(--card-bg, #ffffff);
@@ -2118,7 +2537,7 @@ const diasPromTipoOpt = computed(() => {
   gap: 10px;
   padding: 12px 16px;
   border-radius: var(--radius-md, 10px);
-  font-size: 13.5px;
+  font-size: 12px;
   line-height: 1.5;
   border: 1px solid transparent;
 }
@@ -2152,34 +2571,38 @@ const diasPromTipoOpt = computed(() => {
   background: var(--card-bg-hover, #f9fafb);
   border-bottom: 1px solid var(--card-border);
 }
-.table-wrap { overflow-x: auto; }
+.table-wrap { overflow-x: hidden; }
 .table-wrap table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 12px;
+  font-family: inherit;
+  table-layout: auto;
 }
 .table-wrap thead tr { background: var(--card-bg-hover, #f9fafb); }
 .table-wrap th {
-  padding: 9px 12px;
+  padding: 8px 10px;
   text-align: left;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   color: var(--text-secondary);
   border-bottom: 1px solid var(--card-border);
   white-space: nowrap;
 }
 .table-wrap th.r, .table-wrap td.r { text-align: right; }
 .table-wrap td {
-  padding: 9px 12px;
+  padding: 8px 10px;
   border-bottom: 1px solid var(--card-border);
   color: var(--text-primary);
   vertical-align: middle;
+  font-size: 12px;
+  word-break: break-word;
 }
 .table-wrap tbody tr:last-child td { border-bottom: none; }
 .table-wrap tbody tr:hover { background: var(--card-bg-hover, #f9fafb); }
-.table-wrap .idx { color: var(--text-secondary); font-size: 11px; width: 28px; }
+.table-wrap .idx { color: var(--text-secondary); font-size: 12px; width: 28px; }
 .table-wrap .bold { font-weight: 700; }
 .table-wrap .accent-text { color: var(--navy, #172954); }
 .table-wrap .red { color: #ef4444; font-weight: 700; }
@@ -2193,7 +2616,7 @@ const diasPromTipoOpt = computed(() => {
   gap: 10px;
   padding: 24px 20px;
   color: var(--text-secondary);
-  font-size: 13.5px;
+  font-size: 12px;
 }
 
 /* Alerts grid — section de estado operativo */
@@ -2218,7 +2641,7 @@ const diasPromTipoOpt = computed(() => {
 .alert-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
 .alert-value { font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-top: 4px; }
 .alert-sub { font-size: 12px; color: var(--text-secondary); }
-.alert-detail { font-size: 11.5px; color: var(--text-secondary); margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--card-border); }
+.alert-detail { font-size: 12px; color: var(--text-secondary); margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--card-border); }
 
 .sev-ok { border-top: 3px solid #10b981; }
 .sev-warn { border-top: 3px solid #f59e0b; }
@@ -2235,7 +2658,7 @@ const diasPromTipoOpt = computed(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
@@ -2249,7 +2672,7 @@ const diasPromTipoOpt = computed(() => {
   flex-shrink: 0;
 }
 .section-sub {
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--text-secondary);
   margin: 0;
 }
@@ -2273,14 +2696,14 @@ const diasPromTipoOpt = computed(() => {
   gap: 2px;
 }
 .icb-tag {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.8px;
   color: var(--navy, #172954);
 }
 .icb-title {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-primary);
 }
@@ -2290,16 +2713,39 @@ const diasPromTipoOpt = computed(() => {
   gap: 8px;
 }
 
-/* Hoja / Papel de Reporte Oficial */
+/* Hoja / Papel de Reporte Oficial estructurado por páginas A4 */
 .report-paper {
-  background: var(--card-bg, #ffffff);
-  border: 1px solid var(--card-border, #e2e8f0);
-  border-radius: var(--radius-md, 10px);
-  padding: 24px 28px;
-  box-shadow: var(--shadow-sm);
+  background: transparent;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
+  align-items: center;
+  width: 100%;
+}
+
+.report-page {
+  width: 100%;
+  min-height: 297mm;
+  padding: 12mm 14mm 14mm 14mm;
+  background: #ffffff;
+  color: #1a1a2e;
+  border: 1px solid var(--card-border, #e2e8f0);
+  border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.07);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
+  page-break-after: always;
+  break-after: page;
+  font-family: 'Lato', 'Segoe UI', Arial, sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.report-salto-superior {
+  height: 8mm;
+  flex-shrink: 0;
 }
 
 .report-header {
@@ -2307,7 +2753,7 @@ const diasPromTipoOpt = computed(() => {
   justify-content: space-between;
   align-items: flex-start;
   border-bottom: 2.5px solid var(--navy, #172954);
-  padding-bottom: 12px;
+  padding-bottom: 10px;
   position: relative;
   flex-wrap: wrap;
   gap: 12px;
@@ -2321,63 +2767,92 @@ const diasPromTipoOpt = computed(() => {
   height: 2.5px;
   background: #a90707;
 }
+.report-header.mini {
+  padding-bottom: 8px;
+  margin-bottom: 2px;
+  border-bottom: 1.5px solid var(--navy, #172954);
+}
+.report-header.mini::after {
+  display: none;
+}
 .report-header-brand {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
 }
 .report-logo {
-  height: 42px;
+  height: 38px;
+  object-fit: contain;
+}
+.report-logo-mini {
+  height: 24px;
   object-fit: contain;
 }
 .report-header-text h2 {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--navy, #172954);
   margin: 0;
 }
 .report-header-text span {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--text-secondary);
 }
 .report-header-meta {
   text-align: right;
   font-size: 12px;
   color: var(--text-secondary);
-  line-height: 1.45;
+  line-height: 1.4;
 }
 .report-header-meta strong {
   color: var(--text-primary);
 }
+.page-counter {
+  font-weight: 700;
+  color: var(--navy, #172954);
+}
 
 .report-title-section {
   text-align: center;
-  margin: 4px 0;
+  margin: 2px 0 6px;
 }
 .report-title-section h1 {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-primary);
-  margin: 0 0 6px;
+  margin: 0 0 4px;
 }
 .report-intro {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-secondary);
-  max-width: 800px;
+  max-width: 760px;
   margin: 0 auto;
-  line-height: 1.5;
+  line-height: 1.45;
+}
+
+.compact-kpi {
+  margin: 2px 0 6px !important;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.compact-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
 }
 
 .report-nota {
   border-left: 3px solid var(--navy, #172954);
   background: var(--card-bg-hover, #f8fafc);
-  padding: 10px 14px;
-  font-size: 13px;
+  padding: 8px 12px;
+  font-size: 12px;
   color: var(--text-primary);
   border-radius: 0 6px 6px 0;
-  line-height: 1.45;
+  line-height: 1.4;
 }
 .report-nota.alerta {
   border-left-color: #a90707;
@@ -2388,18 +2863,29 @@ const diasPromTipoOpt = computed(() => {
 .report-section-block {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 .report-block-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
+  gap: 6px;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   color: var(--navy, #172954);
   margin: 0;
+}
+
+.report-footer {
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--card-border, #e2e8f0);
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+  font-weight: 500;
 }
 
 .table-total-row {
@@ -2409,75 +2895,184 @@ const diasPromTipoOpt = computed(() => {
 
 /* Flota Alquilada */
 .alq-card {
-  padding: 16px 20px;
+  padding: 8px 14px;
 }
 .alq-summary {
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: 20px;
   flex-wrap: wrap;
 }
 .alq-cifra {
-  font-size: 28px;
+  font-size: 20px;
   font-weight: 800;
   line-height: 1;
 }
 .alq-cifra span {
   display: block;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary);
-  margin-top: 4px;
+  margin-top: 2px;
 }
 .alq-chips {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
   flex: 1;
 }
 .alq-chip {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 6px 12px;
+  gap: 6px;
+  padding: 4px 10px;
   background: var(--bg, #f8fafc);
   border: 1px solid var(--card-border, #e2e8f0);
   border-radius: var(--radius-sm, 6px);
-  font-size: 12.5px;
+  font-size: 12px;
 }
 .chip-dot {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 .chip-tipo {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-secondary);
+}
+
+/* Gráficos vectoriales SVG nítidos */
+.marco {
+  border: 1px solid var(--card-border, #e2e8f0);
+  border-radius: 3px;
+  padding: 6px 8px;
+  background: #fdfdfe;
+}
+.chart-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.fila-charts {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.fila-charts > * {
+  min-width: 0;
+}
+.chart-box {
+  background: #fdfdfe;
+  border: 1px solid var(--card-border, #e2e8f0);
+  border-radius: 3px;
+  padding: 6px 8px;
+}
+
+text.ax {
+  font-size: 6.6px;
+  fill: #5b6b82;
+  font-family: inherit;
+}
+text.ax.mini {
+  font-size: 5.8px;
+  fill: #8d99a9;
+}
+text.lbl {
+  font-size: 8px;
+  font-weight: 700;
+  font-family: inherit;
+  fill: #172954;
+  paint-order: stroke;
+  stroke: #ffffff;
+  stroke-width: 2px;
+  stroke-linejoin: round;
+}
+text.cat {
+  font-size: 7px;
+  font-weight: 600;
+  fill: #1a2230;
+  font-family: inherit;
+}
+text.inbar {
+  font-size: 7px;
+  font-weight: 700;
+  fill: #fff;
+  font-family: inherit;
+}
+text.dona {
+  font-size: 26px;
+  font-weight: 700;
+  font-family: inherit;
+}
+
+.leyenda {
+  display: flex;
+  gap: 10px;
+  font-size: 7.2pt;
+  color: #5b6b82;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+.leyenda span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.leyenda i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* Ocultar botones de acciones en el reporte oficial */
+.report-paper :deep(.chart-actions) {
+  display: none !important;
 }
 
 /* Estilos de Impresión / Guardar PDF */
 @media print {
-  body {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+  html, body {
     background: #ffffff !important;
-    color: #000000 !important;
+    color: #1a1a2e !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
   .almacen-view-toggle,
   .informe-control-bar,
   .sidebar,
   .navbar,
-  .nav-header {
+  .nav-header,
+  .mobile-header,
+  .chart-actions {
     display: none !important;
   }
   .report-paper {
-    border: none !important;
-    box-shadow: none !important;
+    background: transparent !important;
     padding: 0 !important;
+    margin: 0 !important;
+    gap: 0 !important;
+    width: 100% !important;
   }
-  .report-section-block {
-    break-inside: avoid;
-    page-break-inside: avoid;
+  .report-page {
+    width: 210mm !important;
+    height: 297mm !important;
+    min-height: 297mm !important;
+    max-height: 297mm !important;
+    padding: 12mm 14mm 14mm 14mm !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    overflow: hidden !important;
   }
 }
-
 </style>

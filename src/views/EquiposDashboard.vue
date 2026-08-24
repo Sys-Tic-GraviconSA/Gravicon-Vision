@@ -283,10 +283,15 @@
     <template v-if="dashboardView === 'informe'">
     <div class="informe-section">
       <div class="informe-bar">
-        <div class="informe-controls">
-          <button class="action-btn" @click="generarInformePdf" :disabled="!informeDesde || !informeHasta">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-            Generar PDF
+        <div class="informe-controls" style="display: flex; gap: 8px; align-items: center;">
+          <button class="action-btn" @click="generarInformePdf" :disabled="!informeDesde || !informeHasta || generandoPdf">
+            <svg v-if="!generandoPdf" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            <span v-if="generandoPdf">Generando PDF...</span>
+            <span v-else>Generar PDF</span>
+          </button>
+          <button class="action-btn" @click="imprimirInforme" :disabled="!informeRows.length" title="Imprimir directamente desde el navegador">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Imprimir
           </button>
         </div>
         <div class="informe-stats" v-if="informeRows.length">
@@ -2247,7 +2252,13 @@ const repLectura = computed(() => {
   return list
 })
 
-/** Genera el PDF del informe con html2pdf (html2canvas + jsPDF) capturando el div .reporte-doc. */
+const generandoPdf = ref(false)
+
+function imprimirInforme() {
+  window.print()
+}
+
+/** Genera el PDF del informe con html2pdf (html2canvas + jsPDF) capturando el div .reporte-doc sin cortes erróneos. */
 async function generarInformePdf() {
   if (!informeDesde.value || !informeHasta.value) return
   if (informeHasta.value < informeDesde.value) {
@@ -2257,28 +2268,46 @@ async function generarInformePdf() {
   const el = document.querySelector<HTMLElement>('.reporte-doc')
   if (!el) return
 
-  /* Fijar ancho del documento a proporción A4 para captura consistente */
+  generandoPdf.value = true
+
+  /* Guardar estilos originales */
   const origW = el.style.width
   const origMW = el.style.maxWidth
   const origP = el.style.padding
+  const origBoxShadow = el.style.boxShadow
+  const origBorder = el.style.border
+  const origRadius = el.style.borderRadius
+
+  /* Fijar ancho y formato A4 óptimo para html2canvas sin cortes laterales ni sombras cortadas */
   el.style.width = '760px'
   el.style.maxWidth = '760px'
-  el.style.padding = '24px 28px'
-
-  /* Forzar fondo blanco y colores sólidos para html2canvas */
+  el.style.padding = '20px 24px'
+  el.style.boxShadow = 'none'
+  el.style.border = 'none'
+  el.style.borderRadius = '0'
   el.style.background = '#ffffff'
 
   try {
     const { default: html2pdf } = await import('html2pdf.js')
     const opt = {
-      margin: [20, 14, 22, 14],
+      margin: [16, 12, 18, 12],
       filename: `Informe_Gestion_Mantenimiento_${plantaLabel.value}_${informeDesde.value}_al_${informeHasta.value}.pdf`,
-      image: { type: 'jpeg' as const, quality: 0.95 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, windowWidth: 788, letterRendering: true },
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: 760,
+        letterRendering: true,
+      },
       jsPDF: { unit: 'pt' as const, format: 'a4' as const, orientation: 'portrait' as const },
       pagebreak: {
         mode: ['css', 'legacy'] as any,
         avoid: [
+          'tr',
           '.kpi-table',
           '.note-bar',
           '.doc-header',
@@ -2286,19 +2315,26 @@ async function generarInformePdf() {
           '.doc-title-wrap',
           '.chart-row',
           '.chart-donut-wrap',
-          '.gp-table',
           '.exec-box',
           '.rank-bar',
           '.stack-track',
+          '.page-header-mini',
+          '.section-title',
         ],
       },
     }
     await html2pdf().set(opt as any).from(el).save()
+  } catch (err) {
+    console.error('[generarInformePdf]', err)
   } finally {
     el.style.width = origW
     el.style.maxWidth = origMW
     el.style.padding = origP
+    el.style.boxShadow = origBoxShadow
+    el.style.border = origBorder
+    el.style.borderRadius = origRadius
     el.style.background = ''
+    generandoPdf.value = false
   }
 }
 
@@ -4837,18 +4873,32 @@ const sistemasExpandOpt = computed(() => markRaw(buildCountBarColorOpt(sistemasR
    ═══════════════════════════════════════════════════ */
 .reporte-doc .section-title { page-break-after: avoid; break-after: avoid; }
 .reporte-doc .doc-header,
+.reporte-doc .doc-header-static,
 .reporte-doc .doc-title-wrap,
 .reporte-doc .note-bar,
 .reporte-doc .kpi-table,
 .reporte-doc .chart-row,
 .reporte-doc .exec-box,
 .reporte-doc .footer,
-.reporte-doc .page-header-mini,
-.reporte-doc .gp-table { page-break-inside: avoid; break-inside: avoid; }
+.reporte-doc .page-header-mini { page-break-inside: avoid; break-inside: avoid; }
 .reporte-doc tr { page-break-inside: avoid; break-inside: avoid; }
+.reporte-doc table { border-collapse: collapse; }
 /* Responsive: allow horizontal scroll on small screens */
 .informe-section { overflow-x: auto; }
 @media print {
-  @page { size: A4; margin: 8mm 10mm 8mm 10mm; }
+  @page { size: A4 portrait; margin: 8mm 10mm 8mm 10mm; }
+  .informe-bar,
+  .ots-bar,
+  .almacen-view-toggle,
+  .informe-controls { display: none !important; }
+  .informe-section { overflow: visible !important; }
+  .reporte-doc {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    background: #ffffff !important;
+    color: #1a1a2e !important;
+  }
 }
 </style>

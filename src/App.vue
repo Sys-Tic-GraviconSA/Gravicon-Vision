@@ -435,4 +435,25 @@ async function handleLogout() {
     margin-left: 0 !important;
   }
 }
+
+@media print {
+  .sidebar,
+  .mobile-header,
+  .sidebar-overlay,
+  .collapse-btn,
+  .almacen-view-toggle,
+  .informe-control-bar,
+  .informe-bar {
+    display: none !important;
+  }
+  .main {
+    margin-left: 0 !important;
+    margin-top: 0 !important;
+    padding: 0 !important;
+    min-height: auto !important;
+  }
+  .app-layout {
+    display: block !important;
+  }
+}
 </style>
