@@ -2966,8 +2966,8 @@ function onClearFilters() {
 }
 
 function isInterno(r: Record<string, unknown>): boolean {
-  const prov = String(r['PROVEEDOR'] ?? '').trim().toUpperCase()
-  return prov.includes('GRAVICON INTERNO')
+  const id = String(r['PROVEEDOR_ID'] ?? '').trim().toUpperCase()
+  return id === 'PROV-001'
 }
 function isAcpm(r: Record<string, unknown>): boolean {
   return String(r['Observaciones'] ?? '').trim().toUpperCase().includes('ACPM')
