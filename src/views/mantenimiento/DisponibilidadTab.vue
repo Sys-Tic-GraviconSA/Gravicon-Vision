@@ -254,7 +254,7 @@
             <h1>Reporte de Disponibilidad de Equipos</h1>
             <p class="report-intro">
               Operatividad de la flota de <strong>{{ plantaLabel }}</strong> al corte del <strong>{{ informeFechaLabel }}</strong>:
-              disponibilidad por tipo de equipo, seguimiento de maquinaria operativa, equipos en intervención de taller y control de calidad del dato capturado.
+              disponibilidad por tipo de equipo, seguimiento de maquinaria operativa y equipos en intervención de taller.
             </p>
           </div>
 
@@ -655,30 +655,6 @@
               <div v-if="resumenEjecutivo.notasCierre" class="report-nota" style="margin-top: 8px;">
                 <strong>Notas de Cierre:</strong> {{ resumenEjecutivo.notasCierre }}
               </div>
-            </div>
-          </div>
-
-          <!-- ============================================ -->
-          <!-- CONTROL DE CALIDAD DEL DATO                  -->
-          <!-- ============================================ -->
-          <div class="report-section-block">
-            <h3 class="report-block-title"><span class="title-bar"></span>Control de Calidad del Dato</h3>
-            <div v-if="controlCalidadDato.sinPlaca > 0 || controlCalidadDato.sinSupervisor > 0 || controlCalidadDato.sinRevAm > 0" style="display: flex; flex-direction: column; gap: 6px;">
-              <div v-if="controlCalidadDato.sinPlaca > 0" class="aviso alto">
-                <span class="ico">!</span>
-                <span><strong>{{ controlCalidadDato.sinPlaca }} equipo(s) sin placa identificada</strong> — Salen del denominador; la disponibilidad publicada puede estar calculada sobre menos equipos.</span>
-              </div>
-              <div v-if="controlCalidadDato.sinSupervisor > 0" class="aviso medio">
-                <span class="ico">!</span>
-                <span><strong>{{ controlCalidadDato.sinSupervisor }} registro(s) sin supervisor asignado</strong> — No se puede asignar cumplimiento por responsable.</span>
-              </div>
-              <div v-if="controlCalidadDato.sinRevAm > 0" class="aviso medio">
-                <span class="ico">!</span>
-                <span><strong>{{ controlCalidadDato.sinRevAm }} registro(s) sin revisión AM</strong> — La ronda de la mañana quedó incompleta.</span>
-              </div>
-            </div>
-            <div v-else class="data-card" style="padding: 10px 16px; font-size: 12px; color: var(--text-secondary);">
-              Sin observaciones — completitud del dato: <strong style="color: #16A34A;">{{ controlCalidadDato.completitud }}%</strong>
             </div>
           </div>
 
@@ -1324,35 +1300,6 @@ const resumenEjecutivo = computed(() => {
     notasCierre,
     areasCount,
   }
-})
-
-// Control de calidad del dato
-const controlCalidadDato = computed(() => {
-  const records = activePlacasRows.value
-  const targetIso = effectiveCorteIso.value
-  if (!targetIso) return { total: 0, sinFecha: 0, sinPlaca: 0, sinSupervisor: 0, sinRevAm: 0, completitud: 0 }
-
-  let total = 0
-  let sinFecha = 0
-  let sinPlaca = 0
-  let sinSupervisor = 0
-  let sinRevAm = 0
-
-  for (const r of records) {
-    const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
-    if (!d) continue
-    if (getDateKey(d) !== targetIso) continue
-
-    total++
-    const info = getInspectionDetails(r)
-    if (!info.placa) sinPlaca++
-    if (info.supervisor === '—' || !info.supervisor) sinSupervisor++
-    if (isNaN(info.revAm)) sinRevAm++
-  }
-
-  const completitud = total > 0 ? Math.round(((total - sinPlaca - sinSupervisor - sinRevAm) / (total * 3)) * 100) : 0
-
-  return { total, sinFecha, sinPlaca, sinSupervisor, sinRevAm, completitud }
 })
 
 // Flota alquilada detallada con chips para el informe
