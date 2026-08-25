@@ -28,22 +28,22 @@
 
     <template v-else>
       <!-- ========== KPIs ========== -->
-      <div class="kpi-grid">
+      <div class="kpi-row">
         <div class="kpi-card">
           <div class="kpi-label">Total Tareas</div>
           <div class="kpi-value">{{ kpis.total }}</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Pendientes</div>
-          <div class="kpi-value kpi-alert">{{ kpis.pendientes }}</div>
+          <div class="kpi-value" style="color: #a90707;">{{ kpis.pendientes }}</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">En Proceso</div>
-          <div class="kpi-value kpi-warn">{{ kpis.enProceso }}</div>
+          <div class="kpi-value" style="color: #b8860b;">{{ kpis.enProceso }}</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Completadas</div>
-          <div class="kpi-value kpi-ok">{{ kpis.completadas }}</div>
+          <div class="kpi-value" style="color: #1f7a3d;">{{ kpis.completadas }}</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Días Prom. Abierta</div>
@@ -53,8 +53,8 @@
 
       <!-- ========== GRÁFICAS ========== -->
       <template v-if="tareasView === 'graficas'">
-        <div class="charts-grid">
-          <!-- Donut: Por Estado -->
+        <!-- Fila 1: Donut estado + Antigüedad -->
+        <div class="charts-grid cols-2">
           <div class="chart-card">
             <h3 class="chart-title">Tareas por Estado</h3>
             <div class="chart-body">
@@ -79,7 +79,6 @@
             </div>
           </div>
 
-          <!-- Barras: Por Antigüedad -->
           <div class="chart-card">
             <h3 class="chart-title">Tareas por Antigüedad (días)</h3>
             <div class="chart-body">
@@ -94,8 +93,10 @@
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- Barras: Por Tipo de Vehículo -->
+        <!-- Fila 2: Tipo vehículo + Responsable -->
+        <div class="charts-grid cols-2">
           <div class="chart-card">
             <h3 class="chart-title">Tareas por Tipo de Vehículo</h3>
             <div class="chart-body">
@@ -103,7 +104,7 @@
                 <div v-for="item in porTipo" :key="item.tipo" class="hbar-row">
                   <span class="hbar-label">{{ item.tipo }}</span>
                   <div class="hbar-track">
-                    <div class="hbar-fill" :style="{ width: item.pct + '%', background: '#4a90d9' }"></div>
+                    <div class="hbar-fill" :style="{ width: item.pct + '%', background: 'var(--navy, #172954)' }"></div>
                   </div>
                   <span class="hbar-val">{{ item.count }}</span>
                 </div>
@@ -111,7 +112,6 @@
             </div>
           </div>
 
-          <!-- Barras: Por Responsable -->
           <div class="chart-card">
             <h3 class="chart-title">Tareas por Responsable</h3>
             <div class="chart-body">
@@ -119,7 +119,7 @@
                 <div v-for="item in porResponsable.slice(0, 10)" :key="item.responsable" class="hbar-row">
                   <span class="hbar-label">{{ item.responsable }}</span>
                   <div class="hbar-track">
-                    <div class="hbar-fill" :style="{ width: item.pct + '%', background: '#6bbd7b' }"></div>
+                    <div class="hbar-fill" :style="{ width: item.pct + '%', background: '#1f7a3d' }"></div>
                   </div>
                   <span class="hbar-val">{{ item.count }}</span>
                 </div>
@@ -132,7 +132,10 @@
       <!-- ========== TABLA ========== -->
       <template v-if="tareasView === 'tabla'">
         <div class="data-card">
-          <div v-if="allTareas.length === 0" class="empty-table">Sin tareas registradas</div>
+          <div v-if="allTareas.length === 0" class="empty-table">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            Sin tareas registradas
+          </div>
           <div v-else class="table-wrap">
             <table>
               <thead>
@@ -166,7 +169,7 @@
 
       <!-- ========== INFORME ========== -->
       <template v-if="tareasView === 'informe'">
-        <div class="data-card informe-card">
+        <div class="data-card" style="padding: 20px;">
           <h3 class="report-block-title"><span class="title-bar"></span>Informe de Tareas — {{ plantaLabel }}</h3>
           <div class="informe-grid">
             <div class="informe-col">
@@ -186,7 +189,7 @@
                   <strong>{{ t.placa }}</strong> — {{ t.actividad }} ({{ t.dias }} días)
                 </li>
               </ul>
-              <p v-else>No hay tareas críticas</p>
+              <p v-else style="font-size:12px; color: var(--text-secondary);">No hay tareas críticas</p>
             </div>
           </div>
         </div>
@@ -295,15 +298,15 @@ const porEstado = computed(() => {
     map.set(e, (map.get(e) || 0) + 1)
   }
   const colors: Record<string, string> = {
-    'Pendiente': '#e74c3c',
-    'En Proceso': '#f39c12',
-    'En proceso': '#f39c12',
-    'Completada': '#27ae60',
-    'Cerrada': '#27ae60',
-    'Cancelada': '#95a5a6',
+    'Pendiente': '#a90707',
+    'En Proceso': '#b8860b',
+    'En proceso': '#b8860b',
+    'Completada': '#1f7a3d',
+    'Cerrada': '#1f7a3d',
+    'Cancelada': '#6b7280',
   }
   return Array.from(map.entries())
-    .map(([estado, count]) => ({ estado, count, color: colors[estado] || '#4a90d9' }))
+    .map(([estado, count]) => ({ estado, count, color: colors[estado] || '#172954' }))
     .sort((a, b) => b.count - a.count)
 })
 
@@ -320,11 +323,11 @@ const donutEstado = computed(() => {
 
 const porAntiguedad = computed(() => {
   const ranges = [
-    { label: '1-3 días', min: 1, max: 3, color: '#27ae60' },
-    { label: '4-7 días', min: 4, max: 7, color: '#f39c12' },
+    { label: '1-3 días', min: 1, max: 3, color: '#1f7a3d' },
+    { label: '4-7 días', min: 4, max: 7, color: '#b8860b' },
     { label: '8-14 días', min: 8, max: 14, color: '#e67e22' },
-    { label: '15-30 días', min: 15, max: 30, color: '#e74c3c' },
-    { label: '> 30 días', min: 31, max: Infinity, color: '#c0392b' },
+    { label: '15-30 días', min: 15, max: 30, color: '#a90707' },
+    { label: '> 30 días', min: 31, max: Infinity, color: '#7f1d1d' },
   ]
   const counts = ranges.map(r => ({
     rango: r.label,
@@ -382,42 +385,131 @@ watch(() => props.planta, () => {
 </script>
 
 <style scoped>
-.tareas-tab { padding: 0; }
+.tareas-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 4px 0;
+}
 
-.kpi-grid {
+/* ===== Toggle de vistas ===== */
+.almacen-view-toggle {
+  display: flex;
+  gap: 8px;
+}
+.av-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #6b7280);
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--card-border, #e5e7eb);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.av-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--accent, #3b82f6);
+}
+.av-btn.active {
+  color: #ffffff;
+  background: var(--navy, #172954);
+  border-color: var(--navy, #172954);
+}
+
+/* ===== Banners de estado ===== */
+.disp-loading-banner,
+.disp-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.disp-loading-banner {
+  background: var(--card-bg, #f0f4ff);
+  border: 1px solid var(--card-border, #dbeafe);
+  color: var(--navy, #172954);
+}
+.disp-error-banner {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+@keyframes disp-spin {
+  to { transform: rotate(360deg); }
+}
+.disp-spinner {
+  animation: disp-spin 0.9s linear infinite;
+  flex-shrink: 0;
+}
+
+/* ===== KPIs ===== */
+.kpi-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
-  margin-bottom: 16px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
 }
 .kpi-card {
   background: var(--card-bg, #fff);
-  border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: 8px;
+  border: 1px solid var(--card-border, #e2e8f0);
+  border-radius: var(--radius-md, 10px);
   padding: 14px 16px;
   text-align: center;
+  box-shadow: var(--shadow-sm);
 }
-.kpi-label { font-size: 11px; color: var(--text-secondary, #64748b); text-transform: uppercase; letter-spacing: 0.5px; }
-.kpi-value { font-size: 28px; font-weight: 700; margin-top: 4px; color: var(--text-primary, #1e293b); }
-.kpi-alert { color: #e74c3c; }
-.kpi-warn { color: #f39c12; }
-.kpi-ok { color: #27ae60; }
+.kpi-label {
+  font-size: 10px;
+  color: var(--text-secondary, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+.kpi-value {
+  font-size: 24px;
+  font-weight: 700;
+  margin-top: 4px;
+  color: var(--text-primary, #1e293b);
+}
 
+/* ===== Gráficas ===== */
 .charts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   gap: 16px;
   margin-bottom: 16px;
 }
+.charts-grid.cols-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+.charts-grid.cols-1 {
+  grid-template-columns: 1fr;
+}
 .chart-card {
   background: var(--card-bg, #fff);
-  border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: 8px;
-  padding: 16px;
+  border: 1px solid var(--card-border, #e2e8f0);
+  border-radius: var(--radius-md, 10px);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
 }
-.chart-title { font-size: 13px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary, #1e293b); }
-.chart-body { min-height: 180px; display: flex; align-items: center; justify-content: center; }
-
+.chart-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text-primary, #1e293b);
+  letter-spacing: -0.2px;
+}
+.chart-body {
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 .chart-svg-donut { width: 160px; height: 160px; }
 .dona-text { font-size: 26px; font-weight: 700; fill: var(--text-primary, #1e293b); }
 .dona-label { font-size: 10px; fill: var(--text-secondary, #64748b); text-transform: uppercase; }
@@ -432,45 +524,108 @@ watch(() => props.planta, () => {
 .hbar-track { flex: 1; height: 14px; background: #e6eaf0; border-radius: 4px; overflow: hidden; }
 .hbar-fill { height: 100%; border-radius: 4px; transition: width 0.3s ease; }
 .hbar-val { font-size: 11px; font-weight: 600; color: var(--text-primary, #1e293b); min-width: 24px; }
-
 .empty-chart { color: var(--text-secondary, #64748b); font-size: 13px; }
 
+/* ===== Tabla ===== */
 .data-card {
-  background: var(--card-bg, #fff);
-  border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: 8px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md, 10px);
   overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
-.table-wrap { overflow-x: auto; }
-.table-wrap table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.table-wrap th, .table-wrap td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border-color, #e2e8f0); }
-.table-wrap th { background: var(--header-bg, #f8fafc); font-weight: 600; color: var(--text-secondary, #64748b); text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; position: sticky; top: 0; }
-.idx { color: var(--text-secondary, #94a3b8); }
-.idx-col { width: 32px; }
-.bold { font-weight: 600; }
-.accent-text { color: var(--accent, #4a90d9); }
-.r { text-align: right; }
-.alerta { background: #fef3cd; }
+.table-wrap { overflow-x: hidden; }
+.table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-family: inherit;
+  table-layout: auto;
+}
+.table-wrap thead tr { background: var(--card-bg-hover, #f9fafb); }
+.table-wrap th {
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--card-border);
+  white-space: nowrap;
+}
+.table-wrap th.r, .table-wrap td.r { text-align: right; }
+.table-wrap td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--card-border);
+  color: var(--text-primary);
+  vertical-align: middle;
+  font-size: 12px;
+  word-break: break-word;
+}
+.table-wrap tbody tr:last-child td { border-bottom: none; }
+.table-wrap tbody tr:hover { background: var(--card-bg-hover, #f9fafb); }
+.table-wrap .idx { color: var(--text-secondary); font-size: 12px; width: 28px; white-space: nowrap; }
+.table-wrap .idx-col { width: 28px; white-space: nowrap; }
+.table-wrap .bold { font-weight: 700; }
+.table-wrap .accent-text { color: var(--navy, #172954); }
+.table-wrap .red { color: #ef4444; font-weight: 700; }
+.table-wrap .yellow { color: #f59e0b; font-weight: 600; }
+.table-wrap .green { color: #10b981; font-weight: 700; }
+.table-wrap tr.alerta td { background: #fdf1f1; }
+.table-wrap tr.alerta td:first-child { box-shadow: inset 3px 0 0 #a90707; }
 
-.pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
-.p-rojo { background: #fde8e8; color: #c0392b; }
-.p-ambar { background: #fef3cd; color: #b8860b; }
-.p-verde { background: #d5f5e3; color: #1e8449; }
-.p-gris { background: #e9ecef; color: #6c757d; }
+.empty-table {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 20px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  justify-content: center;
+}
 
-.empty-table { padding: 40px; text-align: center; color: var(--text-secondary, #64748b); }
+/* ===== Pills ===== */
+.pill {
+  display: inline-block;
+  padding: 1.5px 7px;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+.p-rojo { background: #fdeaea; color: #a90707; }
+.p-verde { background: #e9f4ed; color: #1f7a3d; }
+.p-ambar { background: #fbf3e0; color: #b8860b; }
+.p-gris { background: #eef1f4; color: #5b6b82; }
 
-.disp-loading-banner { display: flex; align-items: center; gap: 8px; padding: 16px; color: var(--text-secondary, #64748b); font-size: 13px; }
-.disp-spinner { animation: spin 1s linear infinite; }
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-.disp-error-banner { padding: 16px; color: #e74c3c; background: #fde8e8; border-radius: 8px; margin-bottom: 12px; font-size: 13px; }
-
-.informe-card { padding: 20px; }
-.report-block-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-.title-bar { width: 4px; height: 18px; background: var(--accent, #4a90d9); border-radius: 2px; }
+/* ===== Informe ===== */
+.report-block-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.title-bar {
+  width: 3px;
+  height: 16px;
+  background: var(--navy, #172954);
+  border-radius: 2px;
+}
 .informe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .informe-col h4 { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-primary, #1e293b); }
 .informe-col ul { list-style: none; padding: 0; margin: 0; }
 .informe-col li { font-size: 12px; color: var(--text-secondary, #475569); margin-bottom: 4px; }
-.informe-col p { font-size: 12px; color: var(--text-secondary, #64748b); }
+
+/* ===== Responsive ===== */
+@media (max-width: 1200px) {
+  .charts-grid.cols-2 { grid-template-columns: 1fr; }
+  .kpi-row { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 768px) {
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .informe-grid { grid-template-columns: 1fr; }
+}
 </style>
