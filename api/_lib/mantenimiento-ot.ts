@@ -225,6 +225,7 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
       'Fuente_Novedad': String(ot['Fuente_Novedad'] ?? ''),
       'PROVEEDOR': String(ot['Responsable_Proveedor'] ?? ''),
       'PROVEEDOR_ID': String(ot['Responsable_Proveedor'] ?? '').trim(),
+      'Jornada': String(ot['Jornada'] ?? ''),
       'Personal': String(ot['Personal_Intervención_Texto'] ?? ''),
       'Duración (horas)': typeof ot['Duración_Estimada'] === 'number' ? Math.round(ot['Duración_Estimada'] * 24 * 100) / 100 : null,
       'Tipo Trabajo': String(ot['Tipo_de_Trabajo'] ?? ''),

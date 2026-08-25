@@ -276,7 +276,7 @@
         </div>
       </div>
 
-      <DataTable title="Órdenes de Trabajo — haz clic en una fila para ver su detalle" :data="otTableRows" :page-size="20" :columnWidths="otColWidths" :excludeFields="['_ot', '_rowKey']" :badgeFields="['Estado']" :defaultVisible="['Nº Orden de Trabajo', 'Fecha y Hora', 'Estado', 'PLANTA', 'PROVEEDOR', 'Tipo de Vehículo', 'Placa del Vehículo', 'Costo Total', 'Duración (horas)', 'Motivo No Ejecución', 'Observaciones']" small selectColumns exportColumns clickable :on-export="exportOtXlsx" @row-click="openOtDetail" />
+      <DataTable title="Órdenes de Trabajo — haz clic en una fila para ver su detalle" :data="otTableRows" :page-size="20" :columnWidths="otColWidths" :excludeFields="['_ot', '_rowKey']" :badgeFields="['Estado']" :defaultVisible="['Nº Orden de Trabajo', 'Fecha y Hora', 'Estado', 'Jornada', 'PLANTA', 'PROVEEDOR', 'Tipo de Vehículo', 'Placa del Vehículo', 'Costo Total', 'Duración (horas)', 'Motivo No Ejecución', 'Observaciones']" small selectColumns exportColumns clickable :on-export="exportOtXlsx" @row-click="openOtDetail" />
     </div>
     </template>
 
@@ -1449,6 +1449,7 @@ const otTableRows = computed<Record<string, unknown>[]>(() => ordenesMostradas.v
   'Nº Orden de Trabajo': r['Nº Orden de Trabajo'] ?? '',
   'Fecha y Hora': otDateTime(r),
   'Estado': r['Estado'] ?? '',
+  'Jornada': r['Jornada'] ?? '',
   'PLANTA': r['PLANTA'] ?? '',
   'PROVEEDOR': r['PROVEEDOR'] ?? '',
   'Tipo de Vehículo': r['Tipo de Vehículo'] ?? '',
@@ -2159,6 +2160,7 @@ const otColWidths: Record<string, string> = {
   'Nº Orden de Trabajo': '110px',
   'Fecha y Hora': '140px',
   'Estado': '110px',
+  'Jornada': '90px',
   'PLANTA': '90px',
   'PROVEEDOR': '220px',
   'Tipo de Vehículo': '170px',
