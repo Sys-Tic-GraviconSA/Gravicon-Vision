@@ -32,6 +32,18 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
     personalInternoSheet = await getSheetData(maestroKey, 'GRAVICON_INTERNO_OT', forceRefresh)
   } catch { /* hoja no disponible aún */ }
 
+  let solicitantesSheet = { rows: [] as Record<string, unknown>[] }
+  try {
+    solicitantesSheet = await getSheetData(otKey, 'SOLICITANTES_OT', forceRefresh)
+  } catch { /* hoja no disponible aún */ }
+
+  const solicitantesMap = new Map<string, string>()
+  for (const r of solicitantesSheet.rows) {
+    const id = String(r['ID'] ?? '').trim()
+    const nombre = String(r['Nombre'] ?? '').trim()
+    if (id && nombre) solicitantesMap.set(id, nombre)
+  }
+
   const personalInternoMap = new Map<string, { nombre: string; cargo: string; precio: number }>()
   const personalInternoByName = new Map<string, { nombre: string; cargo: string; precio: number }>()
   for (const r of personalInternoSheet.rows) {
@@ -230,7 +242,7 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
       'Posición Llanta': String(ot['POSICIÓN_LLANTA'] ?? ''),
       'Requiere Pedido': String(ot['¿REQUIERE SOLICITUD DE PEDIDO/ALMACEN?'] ?? ''),
       'Motivo No Ejecución': String(ot['Motivo de No Ejecución'] ?? ''),
-      'Responsable Cierre': String(ot['Responsable_Cierre_Texto'] ?? ''),
+      'Responsable Cierre': solicitantesMap.get(String(ot['Responsable_Cierre'] ?? '').trim()) || String(ot['Responsable_Cierre_Texto'] ?? ''),
       'Fecha Generación': ot['Fecha_Generacion'],
       'Enlace PDF': String(ot['Enlace_PDF'] ?? ''),
       'Observaciones': obsParts.join(' | '),
