@@ -326,12 +326,14 @@
             </p>
           </div>
 
-          <!-- 8 Tarjetas KPI Oficiales -->
+          <!-- 10 Tarjetas KPI Oficiales -->
           <div class="kpi-row compact-kpi">
             <KpiCard label="OT Abiertas" accent="#DC2626" icon="activity" :value="String(repAbiertas)" />
             <KpiCard label="OT Cerradas" accent="#16A34A" icon="check-circle" :value="String(repCerradas)" />
             <KpiCard label="Cerradas Mes" accent="#2563EB" icon="check" :value="String(repCerradasMes)" />
             <KpiCard label="Costo Acumulado" accent="#1D4ED8" icon="dollar" :value="$$short(repCostoTotal)" />
+            <KpiCard label="Costo Servicios" accent="#0EA5E9" icon="dollar" :value="$$short(repCostoServTotal)" />
+            <KpiCard label="Costo Insumos" accent="#F97316" icon="package" :value="$$short(repCostoInsumosTotal)" />
             <KpiCard
               label="% Cierre"
               :accent="repPctCierre >= 85 ? '#16A34A' : repPctCierre >= 60 ? '#F59E0B' : '#DC2626'"
@@ -2239,18 +2241,13 @@ const repSectionLabelVehiculo = computed(() => isPlanta.value ? 'Equipo Planta' 
 
 const repAbiertas = computed(() => repRows.value.filter(r => estadoClass(String(r['Estado'] ?? '')) === 'warn').length)
 const repCerradas = computed(() => repRows.value.filter(r => estadoClass(String(r['Estado'] ?? '')) === 'ok').length)
-/** OTs cerradas cuya fecha de cierre cae dentro del rango del informe. */
+/** OTs cerradas dentro del rango del informe. */
 const repCerradasMes = computed(() => {
-  if (!informeMaxSerial.value) return repCerradas.value
-  let n = 0
-  for (const r of repRows.value) {
-    if (estadoClass(String(r['Estado'] ?? '')) !== 'ok') continue
-    const c = Number(r['Fecha Cierre'])
-    if (c && c === informeMaxSerial.value) n++
-  }
-  return n || repCerradas.value
+  return repRows.value.filter(r => estadoClass(String(r['Estado'] ?? '')) === 'ok').length
 })
 const repCostoTotal = computed(() => repRows.value.reduce((s, r) => s + rowServicios(r) + rowInsumos(r), 0))
+const repCostoServTotal = computed(() => repRows.value.reduce((s, r) => s + rowServicios(r), 0))
+const repCostoInsumosTotal = computed(() => repRows.value.reduce((s, r) => s + rowInsumos(r), 0))
 const repPctCierre = computed(() => {
   const total = repAbiertas.value + repCerradas.value
   return total > 0 ? Math.round((repCerradas.value / total) * 100) : 0
