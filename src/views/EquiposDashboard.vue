@@ -688,7 +688,7 @@
 
           <!-- Personal Interno de Intervención -->
           <div class="report-section-block">
-            <h3 class="report-block-title"><span class="title-bar"></span>Personal Interno de Intervención — Costo Servicio y Duración Estimada</h3>
+            <h3 class="report-block-title"><span class="title-bar"></span>Personal de Intervención (Interno)</h3>
             <div class="data-card">
               <div class="table-wrap">
                 <table>
