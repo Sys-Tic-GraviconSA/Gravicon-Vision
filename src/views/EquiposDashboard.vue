@@ -686,30 +686,30 @@
             </div>
           </div>
 
-          <!-- Ranking por Persona -->
+          <!-- Personal Interno de Intervención -->
           <div class="report-section-block">
-            <h3 class="report-block-title"><span class="title-bar"></span>Ranking por Persona — OTs Realizadas y Costo Acumulado</h3>
+            <h3 class="report-block-title"><span class="title-bar"></span>Personal Interno de Intervención — Costo Servicio y Duración Estimada</h3>
             <div class="data-card">
               <div class="table-wrap">
                 <table>
                   <thead>
                     <tr>
                       <th style="width: 24px">#</th>
-                      <th>Persona Responsable / Técnico</th>
+                      <th>Técnico / Personal Interno</th>
                       <th class="r" style="width: 65px">OTs</th>
-                      <th class="r" style="width: 130px">Costo Acumulado</th>
-                      <th class="r" style="width: 70px">Particip.</th>
+                      <th class="r" style="width: 130px">Costo Servicios</th>
+                      <th class="r" style="width: 100px">Duración (horas)</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(p, i) in repRankPersonas.slice(0, 6)" :key="p.label">
+                    <tr v-for="(p, i) in repPersonalInterno" :key="p.label">
                       <td class="idx">{{ i + 1 }}</td>
                       <td class="bold accent-text">{{ p.label }}</td>
                       <td class="r bold">{{ p.n }}</td>
-                      <td class="r bold">{{ $$(p.costo) }}</td>
-                      <td class="r">{{ repPct(p.costo) }}%</td>
+                      <td class="r bold">{{ $$(p.costoServ) }}</td>
+                      <td class="r bold">{{ fmtDuracion(p.horas) }}</td>
                     </tr>
-                    <tr v-if="!repRankPersonas.length"><td colspan="5" class="empty-table">Sin datos en el período</td></tr>
+                    <tr v-if="!repPersonalInterno.length"><td colspan="5" class="empty-table">Sin datos en el período</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -2390,6 +2390,26 @@ const repRankPersonas = computed(() => {
     }
   }
   return [...map.entries()].map(([label, e]) => ({ label, ...e })).sort((a, b) => b.costo - a.costo).slice(0, 10)
+})
+
+/** Personal interno de intervención: costo servicios y duración estimada. */
+const repPersonalInterno = computed(() => {
+  const map = new Map<string, { n: number; costoServ: number; horas: number }>()
+  for (const r of repRows.value.filter(isInterno)) {
+    const raw = String(r['Personal'] ?? '').trim() || String(r['Responsable Cierre'] ?? '').trim()
+    const personas = raw.split(/[,;]/).map(s => s.trim()).filter(Boolean)
+    const costoServ = Number(r['Costo servicios']) || 0
+    const horas = Number(r['Duración (horas)']) || 0
+    const n = personas.length || 1
+    for (const label of personas) {
+      const e = map.get(label) || { n: 0, costoServ: 0, horas: 0 }
+      e.n++
+      e.costoServ += costoServ / n
+      e.horas += horas / n
+      map.set(label, e)
+    }
+  }
+  return [...map.entries()].map(([label, e]) => ({ label, ...e })).sort((a, b) => b.costoServ - a.costoServ).slice(0, 10)
 })
 
 /** Distribución del mantenimiento correctivo / preventivo (Clase de Mantenimiento). */
