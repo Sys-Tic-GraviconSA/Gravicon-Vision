@@ -39,7 +39,7 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
 
   let proveedoresSheet = { rows: [] as Record<string, unknown>[] }
   try {
-    proveedoresSheet = await getSheetData(otKey, 'PROVEEDORES_OT', forceRefresh)
+    proveedoresSheet = await getSheetData(maestroKey, 'PROVEEDORES_OT', forceRefresh)
   } catch { /* hoja no disponible aún */ }
 
   const solicitantesMap = new Map<string, string>()
