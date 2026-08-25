@@ -3019,7 +3019,7 @@ function onClearFilters() {
 
 function isInterno(r: Record<string, unknown>): boolean {
   const id = String(r['PROVEEDOR_ID'] ?? '').trim().toUpperCase()
-  const expected = props.planta?.toLowerCase() === 'acacias' ? 'PROV-002' : 'PROV-001'
+  const expected = tipoTab.value === 'maquinaria' ? 'PROV-002' : 'PROV-001'
   return id === expected
 }
 function isAcpm(r: Record<string, unknown>): boolean {
