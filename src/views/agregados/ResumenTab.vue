@@ -254,7 +254,7 @@ const cumplimientoMetaOpt = computed(() => {
     },
     grid: baseGrid,
   xAxis: { type: 'category' as const, data: monthlyAgg.value.labels, axisLabel: { fontWeight: 600 as const, color: chartTextColor.value, rotate: 45, fontSize: 11 } },
-  yAxis: { type: 'value' as const, axisLabel: { show: false }, splitLine: { show: false }, max: 100 },
+  yAxis: { type: 'value' as const, axisLabel: { show: false }, splitLine: { show: false } },
     series: [{
       name: '% Cumpl. Meta',
       type: 'line', smooth: true, data: monthlyAgg.value.cumpleMetaArr, areaStyle: { opacity: 0.25 },
@@ -277,7 +277,7 @@ const cumplimientoProyOpt = computed(() => {
     },
     grid: baseGrid,
   xAxis: { type: 'category' as const, data: monthlyAgg.value.labels, axisLabel: { fontWeight: 600 as const, color: chartTextColor.value, rotate: 45, fontSize: 11 } },
-  yAxis: { type: 'value' as const, axisLabel: { show: false }, splitLine: { show: false }, max: 100 },
+  yAxis: { type: 'value' as const, axisLabel: { show: false }, splitLine: { show: false } },
     series: [{
       name: '% Cumpl. Proy.',
       type: 'line', smooth: true, data: monthlyAgg.value.cumpleProyArr, areaStyle: { opacity: 0.25 },
