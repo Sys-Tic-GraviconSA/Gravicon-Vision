@@ -330,7 +330,7 @@
           <div class="kpi-row compact-kpi">
             <KpiCard label="OT Abiertas" accent="#DC2626" icon="activity" :value="String(repAbiertas)" />
             <KpiCard label="OT Cerradas" accent="#16A34A" icon="check-circle" :value="String(repCerradas)" />
-            <KpiCard label="Cerradas Mes" accent="#2563EB" icon="check" :value="String(repCerradasMes)" />
+            <KpiCard label="Cerradas Mes" accent="#2563EB" icon="check-circle" :value="String(repCerradasMes)" />
             <KpiCard label="Costo Acumulado" accent="#1D4ED8" icon="dollar" :value="$$short(repCostoTotal)" />
             <KpiCard label="Costo Servicios" accent="#0EA5E9" icon="dollar" :value="$$short(repCostoServTotal)" />
             <KpiCard label="Costo Insumos" accent="#F97316" icon="package" :value="$$short(repCostoInsumosTotal)" />
@@ -343,7 +343,7 @@
             />
             <KpiCard label="Duración Promedio" accent="#8B5CF6" icon="clock" :value="otDuracionEstimadaProm + ' h'" />
             <KpiCard label="Gasto Interno" accent="#2563EB" icon="package" :value="$$short(repCostosProv.interno)" />
-            <KpiCard label="Gasto Externo" accent="#F59E0B" icon="user" :value="$$short(repCostosProv.externo)" />
+            <KpiCard label="Gasto Externo" accent="#F59E0B" icon="users" :value="$$short(repCostosProv.externo)" />
           </div>
 
           <!-- Análisis Operativo Directivo estilo Zoho -->
