@@ -2418,22 +2418,6 @@ const repJornada = computed(() => {
   return [...map.entries()].map(([label, v]) => ({ label, ...v })).sort((a, b) => b.n - a.n)
 })
 
-/** Ranking por persona: OTs realizadas y acumulado $. */
-const repRankPersonas = computed(() => {
-  const map = new Map<string, { n: number; costo: number }>()
-  for (const r of repRows.value) {
-    const raw = String(r['Personal'] ?? '').trim() || String(r['Responsable Cierre'] ?? '').trim() || String(r['Solicitante'] ?? '').trim()
-    for (const part of raw.split(/[,;]/)) {
-      const label = part.trim()
-      if (!label) continue
-      const e = map.get(label) ?? { n: 0, costo: 0 }
-      e.n++
-      e.costo += rowServicios(r) + rowInsumos(r)
-      map.set(label, e)
-    }
-  }
-  return [...map.entries()].map(([label, e]) => ({ label, ...e })).sort((a, b) => b.costo - a.costo).slice(0, 10)
-})
 
 /** Personal interno de intervención: costo servicios y duración estimada. */
 const repPersonalInterno = computed(() => {
@@ -2834,7 +2818,10 @@ function normalizeLocalizacion(loc: string): string {
 }
 
 /** Nombres de columnas de líneas en datos de producción (excluye metadatos) */
-const PROD_META_KEYS = ['Fecha', 'Total de M³', 'M³ Proyectado', 'PROVEEDOR', '% Cumplimiento', 'ID_Registro']
+const PROD_META_KEYS = [
+  'Fecha', 'Total de M³', 'M³ Proyectado', 'Meta Mensual M³',
+  'PROVEEDOR', '% Cumplimiento', 'ID_Registro', 'agregados', 'Cant. Concreto'
+]
 const prodLineNames = computed(() => {
   const first = prodRows.value[0]
   if (!first) return [] as string[]
@@ -2895,26 +2882,32 @@ const procesoDisponibles = computed(() => {
   return [...set].sort()
 })
 
-/** Producción filtrada por fecha (usa rango del informe si no hay filtro manual) */
+/** Producción filtrada por fecha */
 const prodFilteredByDate = computed(() => {
-  const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : (informeMinSerial.value ?? -Infinity)
-  const until = fechaFin.value ? dateToSerial(fechaFin.value) : (informeMaxSerial.value ?? Infinity)
+  const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
+  const until = fechaFin.value ? dateToSerial(fechaFin.value) : Infinity
   return prodRows.value.filter(r => {
     const v = Number(r['Fecha'])
     return typeof v === 'number' && !isNaN(v) && v >= since && v <= until
   })
 })
 
-/** Producción filtrada por fecha + línea (suma solo columnas seleccionadas) */
+/** Producción filtrada por fecha + línea (suma solo columnas seleccionadas si hay filtro parcial) */
 const prodFiltered = computed(() => {
   const rows = prodFilteredByDate.value
   if (isConcretos.value) return rows
-  const hasFilter = selectedLineas.value.size > 0 && selectedLineas.value.size !== prodLineNames.value.length
-  if (!hasFilter || !prodLineNames.value.length) return rows
+  const lines = prodLineNames.value
+  if (!lines.length) return rows
+
+  const activeProdLines = lines.filter(ln => selectedLineas.value.has(ln))
+  if (activeProdLines.length === 0 || activeProdLines.length === lines.length) {
+    return rows
+  }
+
   return rows.map(r => {
     let total = 0
-    for (const ln of prodLineNames.value) {
-      if (selectedLineas.value.has(ln)) total += Number(r[ln]) || 0
+    for (const ln of activeProdLines) {
+      total += Number(r[ln]) || 0
     }
     return { ...r, 'Total de M³': total }
   })
