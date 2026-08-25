@@ -3535,7 +3535,6 @@ const sistemasOpt = computed(() => {
 const localizacionOpt = computed(() => {
   const entries = localizacionRanking.value
   const data = entries.slice(0, 8).map(([name, value]) => ({ name, value }))
-  const total = data.reduce((s, d) => s + d.value, 0)
   return markRaw({
     color: palette,
     tooltip: {
@@ -3550,9 +3549,6 @@ const localizacionOpt = computed(() => {
       },
     },
     legend: { type: 'scroll' as const, orient: 'vertical' as const, right: 10, top: 10, textStyle: { fontWeight: 600 as const, color: chartTextColor.value, fontSize: 11 } },
-    graphic: [{
-      type: 'text' as const, left: '38%', top: '50%', style: { text: String(total), textAlign: 'center', fill: chartTextColor.value, fontWeight: 700, fontSize: 18 },
-    }],
     series: [{
       type: 'pie',
       radius: ['42%', '68%'],
