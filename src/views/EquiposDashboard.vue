@@ -2303,12 +2303,9 @@ const repIndiceCierre = computed(() => groupCount(repRows.value, r =>
     ? String(r['Responsable Cierre'] ?? '').trim() || String(r['Personal'] ?? '').trim()
     : '', 8))
 
-/** Solo NORA LLANOS y LAURA VELEZ en índice de cierre para informe. */
+/** Índice de cierre filtrado (top 8). */
 const repIndiceCierreFiltrado = computed(() =>
-  repIndiceCierre.value.filter(c => {
-    const name = c.label.toUpperCase()
-    return name.includes('NORA') || name.includes('LAURA')
-  })
+  repIndiceCierre.value.filter(c => c.label)
 )
 
 /** Índice de apertura: OTs agrupadas por la persona que las abrió (solicitante). */
