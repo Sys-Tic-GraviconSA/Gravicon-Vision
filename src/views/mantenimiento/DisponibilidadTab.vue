@@ -100,9 +100,8 @@
       </div>
 
       <!-- ======================================================= -->
-      <!-- CONCRETOS: Gráficas de Disponibilidad                     -->
+      <!-- GRÁFICAS DE DISPONIBILIDAD (todas las plantas)           -->
       <!-- ======================================================= -->
-      <template v-if="isConcretosPlanta">
 
         <!-- Gráficas: Disponibilidad por Equipo + Incidencia de Mantenimiento (ref: foto 1) -->
         <div class="charts-grid cols-2">
@@ -125,8 +124,8 @@
         <!-- Gráfica: Disponibilidad por Planta y Distribución Mensual (ref: foto 2) -->
         <div class="charts-grid cols-1">
           <ChartCard
-            title="Disponibilidad por Planta y Distribución de Días Operativos vs. Mantenimiento"
-            description="Evolución mensual por planta (Acacias, Restrepo, Villavicencio) con línea de promedio de mantenimiento"
+            :title="isConcretosPlanta ? 'Disponibilidad por Planta y Distribución de Días Operativos vs. Mantenimiento' : 'Disponibilidad por Frente de Trabajo y Distribución de Días Operativos vs. Mantenimiento'"
+            description="Evolución mensual por sede con línea de promedio de mantenimiento"
             :option="dispMensualPlantaOpt"
             :height="360"
           />
@@ -141,12 +140,6 @@
             :height="320"
           />
         </div>
-      </template>
-
-      <!-- ======================================================= -->
-      <!-- AGREGADOS: Gráficas originales de disponibilidad         -->
-      <!-- ======================================================= -->
-      <template v-else>
         <!-- Gráfica 1: Comparativo y Variación Diaria Ronda AM vs Ronda PM (Líneas) -->
         <div class="charts-grid cols-1">
           <ChartCard
@@ -201,7 +194,6 @@
             :height="320"
           />
         </div>
-      </template>
     </template>
 
     <!-- ========================================== -->
