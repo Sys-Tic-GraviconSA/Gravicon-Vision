@@ -26,7 +26,13 @@
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
               {{ loading ? 'Cargando...' : 'Actualizar' }}
             </button>
-            <button v-if="hasActiveFilters" class="action-btn clear" @click="onClearFilters">
+            <button
+              class="action-btn clear"
+              :class="{ 'is-hidden': !hasActiveFilters }"
+              :disabled="!hasActiveFilters"
+              :aria-hidden="!hasActiveFilters"
+              @click="onClearFilters"
+            >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               Limpiar
             </button>
@@ -2850,13 +2856,14 @@ const lineasDisponibles = computed(() => {
   if (!isConcretos.value) {
     for (const ln of prodLineNames.value) set.add(ln)
   }
-  return [...set].sort()
+  return [...set].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
 })
 
 const selectedTipoCompra = ref<Set<string>>(new Set())
+/** Opciones fijas desde allData (no dependen del rango de fechas ni de otros filtros). */
 const tipoCompraDisponibles = computed(() => {
   const set = new Set<string>()
-  for (const r of filteredData.value) {
+  for (const r of allData.value) {
     const sops = r['_sopled']
     if (!Array.isArray(sops)) continue
     for (const sop of sops) {
@@ -2864,12 +2871,12 @@ const tipoCompraDisponibles = computed(() => {
       if (v) set.add(v)
     }
   }
-  return [...set].sort()
+  return [...set].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
 })
 const selectedCentroCosto = ref<Set<string>>(new Set())
 const centroCostoDisponibles = computed(() => {
   const set = new Set<string>()
-  for (const r of filteredData.value) {
+  for (const r of allData.value) {
     const sops = r['_sopled']
     if (!Array.isArray(sops)) continue
     for (const sop of sops) {
@@ -2877,12 +2884,12 @@ const centroCostoDisponibles = computed(() => {
       if (v) set.add(v)
     }
   }
-  return [...set].sort()
+  return [...set].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
 })
 const selectedProceso = ref<Set<string>>(new Set())
 const procesoDisponibles = computed(() => {
   const set = new Set<string>()
-  for (const r of filteredData.value) {
+  for (const r of allData.value) {
     const sops = r['_sopled']
     if (!Array.isArray(sops)) continue
     for (const sop of sops) {
@@ -2890,7 +2897,7 @@ const procesoDisponibles = computed(() => {
       if (v) set.add(v)
     }
   }
-  return [...set].sort()
+  return [...set].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
 })
 
 /** Producción filtrada por fecha */
@@ -2933,33 +2940,34 @@ const filteredData = computed(() => {
   })
 })
 
+/** Listas fijas: no se recalculan al filtrar, así el menú no salta ni pierde opciones. */
 const vehiculosDisponibles = computed(() => {
   const map = new Set<string>()
-  for (const r of filteredData.value) {
+  for (const r of allData.value) {
     const t = isConcretos.value
       ? String(r['Tipo Vehículo'] ?? '').trim()
       : String(r['Placa del Vehículo'] ?? '').trim()
     if (t) map.add(t)
   }
-  return [...map].sort()
+  return [...map].sort((a, b) => a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' }))
 })
 
 const proveedoresDisponibles = computed(() => {
   const map = new Set<string>()
-  for (const r of filteredData.value) {
+  for (const r of allData.value) {
     const p = String(r['PROVEEDOR'] ?? '').trim()
     if (p) map.add(p)
   }
-  return [...map].sort()
+  return [...map].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
 })
 
 const estadosDisponibles = computed(() => {
   const map = new Set<string>()
-  for (const r of filteredData.value) {
+  for (const r of allData.value) {
     const e = String(r['Estado'] ?? '').trim()
     if (e) map.add(e)
   }
-  return [...map].sort()
+  return [...map].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
 })
 
 const personalInternoOptions = ['Todos', 'Interno', 'Externo']
@@ -3796,6 +3804,11 @@ const sistemasExpandOpt = computed(() => markRaw(buildCountBarColorOpt(sistemasR
 .action-btn.clear:hover {
   background: var(--bg-alt);
   color: var(--text-primary);
+}
+/* Reserva espacio fijo para que el header no salte al activar/desactivar Limpiar */
+.action-btn.clear.is-hidden {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 @media (max-width: 1024px) {

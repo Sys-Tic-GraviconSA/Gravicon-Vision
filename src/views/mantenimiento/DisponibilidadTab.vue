@@ -804,14 +804,28 @@ function getDateKey(d: Date): string {
   return `${y}-${m}-${day}`
 }
 
-// Filas activas: todas las inspecciones de disponibilidad cargadas en el store o props
-// Solo usa datos del store si corresponden a la planta activa para evitar mostrar datos incorrectos
+// Filas activas: inspecciones de disponibilidad del store filtradas por rango de fechas
 const activePlacasRows = computed(() => {
   const storeData = dispStore.data
+  let rows: Record<string, unknown>[] = []
   if (storeData?.placas && storeData.placas.length > 0 && storeData.planta === plantaKey.value) {
-    return storeData.placas
+    rows = storeData.placas
+  } else {
+    rows = props.data || []
   }
-  return props.data || []
+
+  const desde = props.fechaInicio || ''
+  const hasta = props.fechaFin || ''
+  if (!desde && !hasta) return rows
+
+  return rows.filter(r => {
+    const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
+    if (!d) return false
+    const key = getDateKey(d)
+    if (desde && key < desde) return false
+    if (hasta && key > hasta) return false
+    return true
+  })
 })
 
 // Fechas con registros de inspección ordenadas cronológicamente

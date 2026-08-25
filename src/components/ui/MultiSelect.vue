@@ -10,8 +10,14 @@
       <span class="badge">{{ modelValue.size }}/{{ options.length }}</span>
       <svg class="chevron" :class="{ open: isOpen }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
     </button>
-    <transition name="fade">
-      <div v-if="isOpen" class="dropdown-menu" :class="{ 'align-right': alignRight }">
+    <Teleport to="body">
+      <div
+        v-if="isOpen"
+        class="dropdown-menu"
+        :class="{ 'align-right': alignRight }"
+        :style="menuStyle"
+        @click.stop
+      >
         <label class="dropdown-all" @click.prevent="toggleAll">
           <input type="checkbox" :checked="modelValue.size === options.length" :indeterminate="modelValue.size > 0 && modelValue.size < options.length" />
           <span>Todos</span>
@@ -21,7 +27,7 @@
           <span>{{ opt }}</span>
         </label>
       </div>
-    </transition>
+    </Teleport>
   </div>
 </template>
 
@@ -30,8 +36,10 @@
  * Dropdown multi-selección con checkboxes.
  * Usa v-model con Set<string> para manejar selección, permite seleccionar
  * "Todos" o elementos individuales, y cierra al hacer clic fuera.
+ * El menú se renderiza con position:fixed para que no salte al cambiar
+ * el layout del header (badge / botón Limpiar).
  */
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 
 const props = withDefaults(defineProps<{
   modelValue: Set<string>
@@ -47,15 +55,40 @@ const emit = defineEmits<{
 const isOpen = ref(false)
 const alignRight = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
+const menuPos = ref({ top: 0, left: 0, right: 0 })
 
-/** Evita que el menú se salga del viewport en pantallas angostas: si no cabe a la derecha del botón, lo alinea por la derecha. */
+const menuStyle = computed(() => {
+  const style: Record<string, string> = {
+    position: 'fixed',
+    top: `${menuPos.value.top}px`,
+    zIndex: '2000',
+  }
+  if (alignRight.value) {
+    style.right = `${menuPos.value.right}px`
+    style.left = 'auto'
+  } else {
+    style.left = `${menuPos.value.left}px`
+    style.right = 'auto'
+  }
+  return style
+})
+
+function updateMenuPosition() {
+  const rect = dropdownRef.value?.getBoundingClientRect()
+  if (!rect) return
+  menuPos.value = {
+    top: rect.bottom + 6,
+    left: rect.left,
+    right: window.innerWidth - rect.right,
+  }
+  alignRight.value = rect.left + 220 > window.innerWidth
+}
+
 async function toggleOpen() {
   isOpen.value = !isOpen.value
   if (!isOpen.value) return
   await nextTick()
-  const rect = dropdownRef.value?.getBoundingClientRect()
-  if (!rect) return
-  alignRight.value = rect.left + 220 > window.innerWidth
+  updateMenuPosition()
 }
 
 function toggle(opt: string) {
@@ -66,6 +99,8 @@ function toggle(opt: string) {
     next.add(opt)
   }
   emit('update:modelValue', next)
+  // Mantener posición fija tras el reflow del header
+  nextTick(() => updateMenuPosition())
 }
 
 function toggleAll() {
@@ -73,16 +108,34 @@ function toggleAll() {
     ? new Set(props.options.length > 0 ? [props.options[0]] : [])
     : new Set(props.options)
   emit('update:modelValue', next)
+  nextTick(() => updateMenuPosition())
 }
 
 function handleClickOutside(e: MouseEvent) {
-  if (dropdownRef.value && !dropdownRef.value.contains(e.target as Node)) {
-    isOpen.value = false
+  if (!isOpen.value) return
+  const target = e.target as Node
+  if (dropdownRef.value?.contains(target)) return
+  const menus = document.querySelectorAll('.dropdown-menu')
+  for (const m of menus) {
+    if (m.contains(target)) return
   }
+  isOpen.value = false
 }
 
-onMounted(() => document.addEventListener('click', handleClickOutside))
-onUnmounted(() => document.removeEventListener('click', handleClickOutside))
+function handleReposition() {
+  if (isOpen.value) updateMenuPosition()
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+  window.addEventListener('scroll', handleReposition, true)
+  window.addEventListener('resize', handleReposition)
+})
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+  window.removeEventListener('scroll', handleReposition, true)
+  window.removeEventListener('resize', handleReposition)
+})
 </script>
 
 <style scoped>
@@ -120,8 +173,9 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
   padding: 1px 6px;
   background: var(--bg);
   border-radius: 10px;
-  min-width: 20px;
+  min-width: 36px;
   text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .chevron {
@@ -130,59 +184,55 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
 }
 .chevron.open { transform: rotate(180deg); }
 
+@media (max-width: 768px) {
+  .dropdown-toggle { padding: 5px 8px; font-size: 12px; }
+  .badge { display: none; }
+}
+</style>
+
+<style>
+/* Menú teletransportado al body: estilos globales acotados */
 .dropdown-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
   min-width: 200px;
   max-width: calc(100vw - 24px);
-  background: var(--bg-elevated);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-xl);
+  background: var(--bg-elevated, #fff);
+  border: 1px solid var(--card-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: var(--shadow-xl, 0 12px 40px rgba(0,0,0,.12));
   padding: 4px;
-  z-index: 1000;
   max-height: 280px;
   overflow-y: auto;
 }
-.dropdown-menu.align-right {
-  left: auto;
-  right: 0;
-}
-
-.dropdown-all,
-.dropdown-item {
+.dropdown-menu .dropdown-all,
+.dropdown-menu .dropdown-item {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-sm, 6px);
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
-  color: var(--text-primary);
-  transition: background var(--transition-fast);
+  color: var(--text-primary, #1e293b);
+  transition: background 0.15s;
   user-select: none;
 }
-.dropdown-all:hover,
-.dropdown-item:hover { background: var(--accent-light); }
-.dropdown-all input,
-.dropdown-item input {
-  accent-color: var(--accent);
+.dropdown-menu .dropdown-all:hover,
+.dropdown-menu .dropdown-item:hover { background: var(--accent-light, #eff6ff); }
+.dropdown-menu .dropdown-all input,
+.dropdown-menu .dropdown-item input {
+  accent-color: var(--accent, #3b82f6);
   width: 16px;
   height: 16px;
   cursor: pointer;
 }
-.dropdown-all {
-  border-bottom: 1px solid var(--card-border);
+.dropdown-menu .dropdown-all {
+  border-bottom: 1px solid var(--card-border, #e2e8f0);
   margin-bottom: 2px;
   padding-bottom: 9px;
   font-weight: 600;
 }
-
 @media (max-width: 768px) {
-  .dropdown-toggle { padding: 5px 8px; font-size: 12px; }
-  .badge { display: none; }
   .dropdown-menu { min-width: 180px; }
 }
 </style>
