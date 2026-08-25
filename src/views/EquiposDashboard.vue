@@ -2390,17 +2390,35 @@ const repRankPersonas = computed(() => {
 const repPersonalInterno = computed(() => {
   const map = new Map<string, { n: number; costoServ: number; horas: number }>()
   for (const r of repRows.value.filter(isInterno)) {
-    const raw = String(r['Personal'] ?? '').trim() || String(r['Responsable Cierre'] ?? '').trim()
-    const personas = raw.split(/[,;]/).map(s => s.trim()).filter(Boolean)
-    const costoServ = Number(r['Costo servicios']) || 0
-    const horas = Number(r['Duración (horas)']) || 0
-    const n = personas.length || 1
-    for (const label of personas) {
-      const e = map.get(label) || { n: 0, costoServ: 0, horas: 0 }
-      e.n++
-      e.costoServ += costoServ / n
-      e.horas += horas / n
-      map.set(label, e)
+    const rec = Number(r['Fecha Recepción']) || 0
+    const cie = Number(r['Fecha Cierre']) || 0
+    const horas = (rec && cie && cie > rec) ? (cie - rec) * 24 : (Number(r['Duración (horas)']) || 0)
+
+    const personalDetalles = r['_personalDetalles']
+    if (Array.isArray(personalDetalles) && personalDetalles.length > 0) {
+      const nPersonas = personalDetalles.length
+      for (const p of personalDetalles) {
+        const label = String(p.nombre || '').trim()
+        if (!label) continue
+        const e = map.get(label) || { n: 0, costoServ: 0, horas: 0 }
+        e.n++
+        e.horas += nPersonas > 0 ? horas / nPersonas : horas
+        e.costoServ += Number(p.costo) || 0
+        map.set(label, e)
+      }
+    } else {
+      const raw = String(r['Personal'] ?? '').trim()
+      if (!raw) continue
+      const personas = raw.split(',').map(s => s.trim()).filter(Boolean)
+      const costoServ = Number(r['Costo servicios']) || 0
+      const nPersonas = personas.length || 1
+      for (const label of personas) {
+        const e = map.get(label) || { n: 0, costoServ: 0, horas: 0 }
+        e.n++
+        e.horas += horas / nPersonas
+        e.costoServ += costoServ / nPersonas
+        map.set(label, e)
+      }
     }
   }
   return [...map.entries()].map(([label, e]) => ({ label, ...e })).sort((a, b) => b.costoServ - a.costoServ).slice(0, 10)
