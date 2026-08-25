@@ -37,11 +37,23 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
     solicitantesSheet = await getSheetData(otKey, 'SOLICITANTES_OT', forceRefresh)
   } catch { /* hoja no disponible aún */ }
 
+  let proveedoresSheet = { rows: [] as Record<string, unknown>[] }
+  try {
+    proveedoresSheet = await getSheetData(otKey, 'PROVEEDORES_OT', forceRefresh)
+  } catch { /* hoja no disponible aún */ }
+
   const solicitantesMap = new Map<string, string>()
   for (const r of solicitantesSheet.rows) {
     const id = String(r['ID'] ?? '').trim()
     const nombre = String(r['Nombre'] ?? '').trim()
     if (id && nombre) solicitantesMap.set(id, nombre)
+  }
+
+  const proveedoresMap = new Map<string, string>()
+  for (const r of proveedoresSheet.rows) {
+    const id = String(r['Id_Registro'] ?? '').trim()
+    const nombre = String(r['Nombre_Proveedor'] ?? '').trim()
+    if (id && nombre) proveedoresMap.set(id, nombre)
   }
 
   const personalInternoMap = new Map<string, { nombre: string; cargo: string; precio: number }>()
@@ -223,8 +235,8 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
       'Prioridad': String(ot['Prioridad'] ?? ''),
       'Solicitante': String(ot['Solicitante_Texto'] ?? ''),
       'Fuente_Novedad': String(ot['Fuente_Novedad'] ?? ''),
-      'PROVEEDOR': String(ot['Responsable_Proveedor'] ?? ''),
       'PROVEEDOR_ID': String(ot['Responsable_Proveedor'] ?? '').trim(),
+      'PROVEEDOR': proveedoresMap.get(String(ot['Responsable_Proveedor'] ?? '').trim()) || String(ot['Responsable_Proveedor'] ?? ''),
       'Jornada': String(ot['Jornada'] ?? ''),
       'Personal': String(ot['Personal_Intervención_Texto'] ?? ''),
       'Duración (horas)': typeof ot['Duración_Estimada'] === 'number' ? Math.round(ot['Duración_Estimada'] * 24 * 100) / 100 : null,
