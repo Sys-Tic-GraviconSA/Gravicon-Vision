@@ -65,6 +65,15 @@
                 <input v-model="otFilterInput" class="ots-search" placeholder="Buscar..." />
               </div>
             </div>
+            <div class="month-nav">
+              <button class="month-nav-btn" :disabled="currentMonthIdx <= 0" @click="prevMonth">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <span class="month-label">{{ availableMonths[currentMonthIdx]?.label ?? '' }}</span>
+              <button class="month-nav-btn" :disabled="currentMonthIdx >= availableMonths.length - 1" @click="nextMonth">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
             <DataTable title="Producción Acacias — Detalle Diario" :data="filteredTableData" :page-size="31" :percentFields="['% Cumplimiento']" :semaphoreFields="['% Cumplimiento']" small selectColumns exportColumns />
           </div>
         </div>
@@ -157,8 +166,47 @@ const filteredDiario = computed(() => {
   })
 })
 
+const availableMonths = computed(() => {
+  const map = new Map<string, { label: string; first: number }>()
+  for (const r of filteredDiario.value) {
+    const fecha = Number(r['Fecha'])
+    if (!fecha) continue
+    const d = serialToDate(fecha)
+    const key = d.toLocaleDateString('es-CO', { year: 'numeric', month: '2-digit', timeZone: 'UTC' })
+    if (!map.has(key)) {
+      map.set(key, {
+        label: d.toLocaleDateString('es-CO', { month: 'long', year: 'numeric', timeZone: 'UTC' }),
+        first: fecha,
+      })
+    }
+  }
+  return [...map.entries()].sort((a, b) => a[1].first - b[1].first).map(([k, v]) => ({ key: k, ...v }))
+})
+
+const currentMonthIdx = ref(0)
+
+watch(availableMonths, () => {
+  currentMonthIdx.value = Math.max(0, availableMonths.value.length - 1)
+}, { immediate: true })
+
+function prevMonth() {
+  if (currentMonthIdx.value > 0) currentMonthIdx.value--
+}
+
+function nextMonth() {
+  if (currentMonthIdx.value < availableMonths.value.length - 1) currentMonthIdx.value++
+}
+
 const tableData = computed(() => {
-  return filteredDiario.value.map(r => {
+  const month = availableMonths.value[currentMonthIdx.value]
+  if (!month) return []
+  return filteredDiario.value.filter(r => {
+    const fecha = Number(r['Fecha'])
+    if (!fecha) return false
+    const d = serialToDate(fecha)
+    const key = d.toLocaleDateString('es-CO', { year: 'numeric', month: '2-digit', timeZone: 'UTC' })
+    return key === month.key
+  }).map(r => {
     const serial = Number(r['Fecha'])
     const dateStr = serial ? serialToDate(serial).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) : ''
     const total = Number(r['Total de M³']) || 0
@@ -355,6 +403,35 @@ function loadData() {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.month-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.month-nav-btn:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
+.month-nav-btn:disabled { opacity: 0.3; cursor: default; }
+.month-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: capitalize;
+  min-width: 180px;
+  text-align: center;
 }
 .ots-search {
   padding: 8px 12px 8px 32px;
