@@ -778,7 +778,12 @@ function parseSerialDate(val: unknown): Date | null {
     const utcDays = Math.floor(num - 25569)
     return new Date(utcDays * 86400 * 1000)
   }
-  const d = new Date(String(val))
+  const s = String(val).trim()
+  const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (isoMatch) {
+    return new Date(Date.UTC(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3])))
+  }
+  const d = new Date(s)
   return isNaN(d.getTime()) ? null : d
 }
 
@@ -810,20 +815,14 @@ const fechasEncontradas = computed(() => {
   return dates
 })
 
-// Fecha de corte efectiva: si el filtro principal tiene fecha, toma la inspección más cercana (<= fecha);
-// En informe: última fecha disponible ANTES de hoy. En disponibilidad: hoy si tiene datos, si no la última.
+function getTodayUtcKey(): string {
+  const now = new Date()
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`
+}
+
 const effectiveCorteDate = computed<Date | null>(() => {
   const dates = fechasEncontradas.value
   if (dates.length === 0) return null
-
-  // Informe: última fecha ANTES de hoy (no incluye hoy)
-  if (dispView.value === 'informe') {
-    const today = new Date()
-    const todayKey = getDateKey(today)
-    const pastDates = dates.filter(d => getDateKey(d) < todayKey)
-    if (pastDates.length > 0) return pastDates[pastDates.length - 1]
-    return dates[dates.length - 1]
-  }
 
   const filterDateStr = props.fechaFin || props.fechaInicio
   if (filterDateStr) {
@@ -837,14 +836,17 @@ const effectiveCorteDate = computed<Date | null>(() => {
     }
   }
 
-  // Disponibilidad: hoy si tiene datos, si no la última disponible
-  const today = new Date()
-  const todayKey = getDateKey(today)
+  const todayKey = getTodayUtcKey()
   const todayMatch = dates.find(d => getDateKey(d) === todayKey)
   if (todayMatch) return todayMatch
 
-  const todayTime = today.getTime()
-  const pastDates = dates.filter(d => d.getTime() <= todayTime)
+  const nowUtc = new Date(Date.UTC(
+    new Date().getUTCFullYear(),
+    new Date().getUTCMonth(),
+    new Date().getUTCDate(),
+    23, 59, 59, 999
+  ))
+  const pastDates = dates.filter(d => d.getTime() <= nowUtc.getTime())
   if (pastDates.length > 0) return pastDates[pastDates.length - 1]
 
   return dates[dates.length - 1]
@@ -1967,6 +1969,7 @@ function renderAllCharts() {
 }
 
 watch([effectiveCorteIso, () => dispStore.data], () => { nextTick(renderAllCharts) }, { deep: true })
+watch(dispView, () => { nextTick(renderAllCharts) })
 onMounted(() => { nextTick(renderAllCharts) })
 
 const generandoPdf = ref(false)

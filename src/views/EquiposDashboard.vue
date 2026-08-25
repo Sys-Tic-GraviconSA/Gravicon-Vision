@@ -2097,7 +2097,7 @@ const almacenDiario = computed(() => {
       if (sop?.fecha == null) continue
       const d = new Date((Number(sop.fecha) - 25569) * 86400 * 1000)
       if (isNaN(d.getTime())) continue
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
       map.set(key, (map.get(key) ?? 0) + 1)
     }
   }
@@ -2679,8 +2679,11 @@ async function loadData(forceRefresh = false) {
     const serials = data.map(r => Number(r['FECHA'])).filter(v => typeof v === 'number' && !isNaN(v) && v > 0)
     if (serials.length) {
       const maxD = serialToDate(Math.max(...serials))
-      const hace7 = new Date(maxD)
-      hace7.setDate(hace7.getDate() - 7)
+      const hace7 = new Date(Date.UTC(
+        maxD.getUTCFullYear(),
+        maxD.getUTCMonth(),
+        maxD.getUTCDate() - 7
+      ))
       fechaInicio.value = hace7.toISOString().slice(0, 10)
       fechaFin.value = maxD.toISOString().slice(0, 10)
     }

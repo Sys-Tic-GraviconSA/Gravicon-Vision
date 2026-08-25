@@ -209,18 +209,31 @@ const allRows = computed(() => {
   return parseRows(props.sheetData).filter(r => !r.isAgg)
 })
 
-// Get today/yesterday dates (reactive, local time)
+// Get today/yesterday dates (UTC, to match fmtDate which uses getUTC*)
 const todayKey = computed(() => {
   const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
 })
 const yesterdayKey = computed(() => {
-  const d = new Date()
-  d.setDate(d.getDate() - 1)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const d = new Date(Date.UTC(
+    new Date().getUTCFullYear(),
+    new Date().getUTCMonth(),
+    new Date().getUTCDate() - 1
+  ))
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
 })
-const todayLabel = new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'short' })
-const yesterdayLabel = new Date(new Date().setDate(new Date().getDate() - 1)).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'short' })
+const todayLabel = computed(() => {
+  const d = new Date()
+  return d.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'America/Bogota' })
+})
+const yesterdayLabel = computed(() => {
+  const d = new Date(Date.UTC(
+    new Date().getUTCFullYear(),
+    new Date().getUTCMonth(),
+    new Date().getUTCDate() - 1
+  ))
+  return d.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'America/Bogota' })
+})
 
 const dayColor = computed(() => selectedDay.value === 'hoy' ? '#E8913A' : '#3B82F6')
 

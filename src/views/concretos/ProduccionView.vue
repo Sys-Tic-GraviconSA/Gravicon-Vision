@@ -110,8 +110,8 @@ watch(() => store.data, (d) => {
     if (serials.length) {
       const minD = serialToDate(Math.min(...serials))
       const maxD = serialToDate(Math.max(...serials))
-      fechaInicio.value = minD.toISOString().slice(0, 10)
-      fechaFin.value = maxD.toISOString().slice(0, 10)
+      fechaInicio.value = `${minD.getUTCFullYear()}-${String(minD.getUTCMonth() + 1).padStart(2, '0')}-${String(minD.getUTCDate()).padStart(2, '0')}`
+      fechaFin.value = `${maxD.getUTCFullYear()}-${String(maxD.getUTCMonth() + 1).padStart(2, '0')}-${String(maxD.getUTCDate()).padStart(2, '0')}`
     }
     selectedPlants.value = new Set(plants.value)
     selectedComerciales.value = new Set(comerciales.value)
@@ -158,7 +158,7 @@ function onDateRangeFilter(range: { from: string | null; to: string | null }) {
 
 function todayBogotaKey(): string {
   const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
 }
 
 function daysBetween(from: string, to: string): number {
