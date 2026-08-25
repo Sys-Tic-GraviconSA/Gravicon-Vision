@@ -47,7 +47,6 @@
         />
 
         <KpiCard
-          v-if="tieneAlquilados || isConcretosPlanta"
           label="Alquilados"
           accent="#2a3f6b"
           icon="truck"
@@ -77,7 +76,6 @@
         />
 
         <KpiCard
-          v-if="tieneAlquilados || isConcretosPlanta"
           label="Disponible en Cancha"
           :accent="kpis.dispCanchaPct >= 85 ? '#10B981' : kpis.dispCanchaPct >= 60 ? '#F59E0B' : '#EF4444'"
           icon="trending-up"
@@ -124,7 +122,7 @@
         <!-- Gráfica: Disponibilidad por Planta y Distribución Mensual (ref: foto 2) -->
         <div class="charts-grid cols-1">
           <ChartCard
-            :title="isConcretosPlanta ? 'Disponibilidad por Planta y Distribución de Días Operativos vs. Mantenimiento' : 'Disponibilidad por Frente de Trabajo y Distribución de Días Operativos vs. Mantenimiento'"
+            title="Disponibilidad por Planta y Distribución de Días Operativos vs. Mantenimiento"
             description="Evolución mensual por sede con línea de promedio de mantenimiento"
             :option="dispMensualPlantaOpt"
             :height="360"
@@ -306,7 +304,7 @@
           <!-- 8 Tarjetas KPI Oficiales -->
           <div class="kpi-row compact-kpi">
             <KpiCard label="Flota Propia" accent="#1D4ED8" icon="package" :value="String(informeKpis.flotaPropia)" />
-            <KpiCard v-if="tieneAlquilados || isConcretosPlanta" label="Alquilados" accent="#2563EB" icon="truck" :value="String(informeKpis.alquilados)" />
+            <KpiCard label="Alquilados" accent="#2563EB" icon="truck" :value="String(informeKpis.alquilados)" />
             <KpiCard label="Operativos" accent="#16A34A" icon="check-circle" :value="informeKpis.operativosFormatted" />
             <KpiCard label="No Operativos" accent="#DC2626" icon="activity" :value="String(informeKpis.noOperativos)" />
             <KpiCard
@@ -317,7 +315,6 @@
               :value="informeKpis.dispPropiaPct + '%'"
             />
             <KpiCard
-              v-if="tieneAlquilados || isConcretosPlanta"
               label="Disponible en Cancha"
               :accent="informeKpis.dispCanchaPct >= 85 ? '#16A34A' : informeKpis.dispCanchaPct >= 60 ? '#F59E0B' : '#DC2626'"
               icon="trending-up"
@@ -363,7 +360,7 @@
           </div>
 
           <!-- Flota Alquilada (Solo si aplica) -->
-          <div v-if="(tieneAlquilados || isConcretosPlanta) && informeFlotaAlquilada.total > 0" class="report-section-block" style="margin-top: 4px;">
+          <div v-if="informeFlotaAlquilada.total > 0" class="report-section-block" style="margin-top: 4px;">
             <div class="data-card alq-card" style="padding: 6px 12px;">
               <div class="alq-summary">
                 <div class="alq-cifra" :style="{ color: informeFlotaAlquilada.dispPct >= 85 ? '#16A34A' : informeFlotaAlquilada.dispPct >= 60 ? '#F59E0B' : '#DC2626' }">
@@ -403,7 +400,7 @@
                     <tr>
                       <th>Categoría</th>
                       <th class="r">Operativos Propios</th>
-                      <th class="r" v-if="tieneAlquilados || isConcretosPlanta">De ellos Alq.</th>
+                       <th class="r">De ellos Alq.</th>
                       <th class="r">Parciales (0,5)</th>
                       <th class="r">No Operativos</th>
                       <th class="r">Total Flota</th>
@@ -414,7 +411,7 @@
                     <tr v-for="cat in matrizCategoriaData.rows" :key="cat.tipo">
                       <td class="bold accent-text">{{ cat.tipo }}</td>
                       <td class="r green">{{ cat.opProp }}</td>
-                      <td class="r" v-if="tieneAlquilados || isConcretosPlanta" style="color: #06b6d4">{{ cat.opAlq || '—' }}</td>
+                       <td class="r" style="color: #06b6d4">{{ cat.opAlq || '—' }}</td>
                       <td class="r yellow">{{ cat.parcial || '—' }}</td>
                       <td class="r" :class="cat.noOp > 0 ? 'red' : ''">{{ cat.noOp }}</td>
                       <td class="r bold">{{ cat.total }}</td>
@@ -423,7 +420,7 @@
                     <tr class="table-total-row">
                       <td class="bold">TOTAL FLOTA</td>
                       <td class="r bold green">{{ matrizCategoriaData.totales.opProp }}</td>
-                      <td class="r bold" v-if="tieneAlquilados || isConcretosPlanta" style="color: #06b6d4">{{ matrizCategoriaData.totales.opAlq }}</td>
+                       <td class="r bold" style="color: #06b6d4">{{ matrizCategoriaData.totales.opAlq }}</td>
                       <td class="r bold yellow">{{ matrizCategoriaData.totales.parcial }}</td>
                       <td class="r bold red">{{ matrizCategoriaData.totales.noOp }}</td>
                       <td class="r bold">{{ matrizCategoriaData.totales.total }}</td>
@@ -439,7 +436,7 @@
 
           <!-- Disponibilidad por Planta / Frente -->
           <div class="report-section-block">
-            <h3 class="report-block-title"><span class="title-bar"></span>{{ isConcretosPlanta ? 'Disponibilidad por sede' : 'Disponibilidad por frente de trabajo' }}</h3>
+            <h3 class="report-block-title"><span class="title-bar"></span>Disponibilidad por sede</h3>
             <div ref="chartSedeRef" style="width:100%;height:280px;"></div>
           </div>
 
@@ -1680,7 +1677,6 @@ const tendenciaSedesAmPm = computed(() => {
       const amPct = v.amN > 0 ? Math.round((v.amSum / v.amN) * 100) : 0
       return { nombre: nombre.toUpperCase(), pmPct, amPct, color: colors[i % colors.length] }
     })
-    .filter(s => esPlanta(s.nombre))
 
   list.sort((a, b) => b.nombre.localeCompare(a.nombre))
   return list
@@ -1811,7 +1807,7 @@ function renderAllCharts() {
           else item.op++
         }
       }
-      const sedes = Array.from(sedeMap.keys()).filter(s => esPlanta(s))
+      const sedes = Array.from(sedeMap.keys())
       const dataOp = sedes.map(s => sedeMap.get(s)!.op)
       const dataAlq = sedes.map(s => sedeMap.get(s)!.alq)
       const dataParc = sedes.map(s => sedeMap.get(s)!.parc)
@@ -2792,60 +2788,57 @@ const incidenciaMantenimientoFullOpt = computed(() => buildIncidenciaOption(inci
 const dispMensualPlantaOpt = computed(() => {
   const records = activePlacasRows.value
 
-  const datesMap = new Map<string, {
-    dateKey: string
-    acaciasSum: number; acaciasCount: number
-    restrepoSum: number; restrepoCount: number
-    villaSum: number; villaCount: number
-    opTotal: number; mantTotal: number; total: number
-  }>()
+  const dateLocMap = new Map<string, Map<string, { sum: number; count: number }>>()
+  const dateMeta = new Map<string, { opTotal: number; mantTotal: number; total: number }>()
+  const allLocs = new Set<string>()
 
   for (const r of records) {
     const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
     if (!d) continue
     const dateKey = `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}`
-    if (!datesMap.has(dateKey)) {
-      datesMap.set(dateKey, {
-        dateKey,
-        acaciasSum: 0, acaciasCount: 0,
-        restrepoSum: 0, restrepoCount: 0,
-        villaSum: 0, villaCount: 0,
-        opTotal: 0, mantTotal: 0, total: 0,
-      })
+    if (!dateLocMap.has(dateKey)) {
+      dateLocMap.set(dateKey, new Map())
+      dateMeta.set(dateKey, { opTotal: 0, mantTotal: 0, total: 0 })
     }
-    const dm = datesMap.get(dateKey)!
     const info = getInspectionDetails(r)
     const val = info.score
-    const loc = info.loc.toUpperCase()
+    const loc = (info.loc || 'Sin Localización').toUpperCase()
+    allLocs.add(loc)
 
-    if (loc.includes('ACACIA')) {
-      dm.acaciasSum += val
-      dm.acaciasCount++
-    } else if (loc.includes('RESTREPO')) {
-      dm.restrepoSum += val
-      dm.restrepoCount++
-    } else {
-      dm.villaSum += val
-      dm.villaCount++
-    }
+    const locMap = dateLocMap.get(dateKey)!
+    if (!locMap.has(loc)) locMap.set(loc, { sum: 0, count: 0 })
+    const lm = locMap.get(loc)!
+    lm.sum += val
+    lm.count++
 
+    const dm = dateMeta.get(dateKey)!
     if (info.isOperativo || info.isParcial) dm.opTotal += val
     if (info.isNoOp || info.esEnTaller) dm.mantTotal++
     dm.total++
   }
 
-  const entries = [...datesMap.values()]
-  const dates = entries.map(e => e.dateKey)
-  const acacias = entries.map(e => e.acaciasCount > 0 ? Math.round((e.acaciasSum / e.acaciasCount) * 100) : 0)
-  const restrepo = entries.map(e => e.restrepoCount > 0 ? Math.round((e.restrepoSum / e.restrepoCount) * 100) : 0)
-  const villa = entries.map(e => e.villaCount > 0 ? Math.round((e.villaSum / e.villaCount) * 100) : 0)
-  const promOp = entries.map(e => +e.opTotal.toFixed(1))
-  const promMant = entries.map(e => +e.mantTotal.toFixed(1))
+  const locArr = [...allLocs].sort()
+  const dates = [...dateLocMap.keys()].sort()
+  const colors = ['#3b82f6', '#e11d48', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ea580c', '#64748b']
+
+  const series = locArr.map((loc, i) => ({
+    name: loc,
+    type: 'bar' as const,
+    data: dates.map(d => {
+      const lm = dateLocMap.get(d)?.get(loc)
+      return lm && lm.count > 0 ? Math.round((lm.sum / lm.count) * 100) : 0
+    }),
+    itemStyle: { color: colors[i % colors.length], borderRadius: [3, 3, 0, 0] },
+    label: { show: true, position: 'top' as const, fontSize: 9, fontWeight: 'bold' as const, color: textColor.value, formatter: '{c}%' },
+  }))
+
+  const promOp = dates.map(d => +(dateMeta.get(d)?.opTotal ?? 0).toFixed(1))
+  const promMant = dates.map(d => +(dateMeta.get(d)?.mantTotal ?? 0).toFixed(1))
 
   return markRaw({
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
     legend: {
-      data: ['Acacías', 'Restrepo', 'Villavicencio', 'Días Operativos', 'Días en Mantenimiento'],
+      data: [...locArr, 'Días Operativos', 'Días en Mantenimiento'],
       top: 0,
       textStyle: { color: textColor.value, fontSize: 11 },
     },
@@ -2869,24 +2862,7 @@ const dispMensualPlantaOpt = computed(() => {
       },
     ],
     series: [
-      {
-        name: 'Acacías', type: 'bar',
-        data: acacias,
-        itemStyle: { color: '#3b82f6', borderRadius: [3, 3, 0, 0] },
-        label: { show: true, position: 'top', fontSize: 9, fontWeight: 'bold', color: textColor.value, formatter: '{c}%' },
-      },
-      {
-        name: 'Restrepo', type: 'bar',
-        data: restrepo,
-        itemStyle: { color: '#e11d48', borderRadius: [3, 3, 0, 0] },
-        label: { show: true, position: 'top', fontSize: 9, fontWeight: 'bold', color: textColor.value, formatter: '{c}%' },
-      },
-      {
-        name: 'Villavicencio', type: 'bar',
-        data: villa,
-        itemStyle: { color: '#10b981', borderRadius: [3, 3, 0, 0] },
-        label: { show: true, position: 'top', fontSize: 9, fontWeight: 'bold', color: textColor.value, formatter: '{c}%' },
-      },
+      ...series,
       {
         name: 'Días Operativos', type: 'line', yAxisIndex: 1,
         data: promOp, smooth: true, symbolSize: 8,
