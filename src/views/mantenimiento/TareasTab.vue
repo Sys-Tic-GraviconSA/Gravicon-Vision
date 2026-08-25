@@ -24,39 +24,29 @@
     </div>
     <div v-else-if="dispStore.error" class="disp-error-banner">
       {{ dispStore.error }}
+      <button class="disp-retry-btn" @click="dispStore.fetchDisponibilidad(plantaKey, true)">Reintentar</button>
     </div>
 
     <template v-else>
       <!-- ========== KPIs ========== -->
       <div class="kpi-row">
-        <div class="kpi-card">
-          <div class="kpi-label">Total Tareas</div>
-          <div class="kpi-value">{{ kpis.total }}</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-label">Pendientes</div>
-          <div class="kpi-value" style="color: #a90707;">{{ kpis.pendientes }}</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-label">En Proceso</div>
-          <div class="kpi-value" style="color: #b8860b;">{{ kpis.enProceso }}</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-label">Completadas</div>
-          <div class="kpi-value" style="color: #1f7a3d;">{{ kpis.completadas }}</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-label">Días Prom. Abierta</div>
-          <div class="kpi-value">{{ kpis.diasPromedio }}</div>
-        </div>
+        <KpiCard label="Total Tareas" accent="#15223c" icon="layers" :value="String(kpis.total)" />
+        <KpiCard label="Pendientes" accent="#EF4444" icon="alert-circle" :value="String(kpis.pendientes)" />
+        <KpiCard label="En Proceso" accent="#F59E0B" icon="clock" :value="String(kpis.enProceso)" />
+        <KpiCard label="Completadas" accent="#10B981" icon="check-circle" :value="String(kpis.completadas)" />
+        <KpiCard label="Días Prom. Abierta" accent="#8B5CF6" icon="calendar" :value="String(kpis.diasPromedio)" />
       </div>
 
       <!-- ========== GRÁFICAS ========== -->
       <template v-if="tareasView === 'graficas'">
-        <!-- Fila 1: Donut estado + Antigüedad -->
         <div class="charts-grid cols-2">
           <div class="chart-card">
-            <h3 class="chart-title">Tareas por Estado</h3>
+            <div class="chart-header">
+              <div class="chart-header-text">
+                <h3 class="chart-title">Tareas por Estado</h3>
+                <p class="chart-desc">Distribución de tareas según su estado actual</p>
+              </div>
+            </div>
             <div class="chart-body">
               <svg v-if="porEstado.length > 0" viewBox="0 0 210 210" class="chart-svg-donut">
                 <circle cx="105" cy="105" r="72" fill="none" stroke="#e6eaf0" stroke-width="22"/>
@@ -80,7 +70,12 @@
           </div>
 
           <div class="chart-card">
-            <h3 class="chart-title">Tareas por Antigüedad (días)</h3>
+            <div class="chart-header">
+              <div class="chart-header-text">
+                <h3 class="chart-title">Tareas por Antigüedad</h3>
+                <p class="chart-desc">Cantidad de tareas agrupadas por días abiertos</p>
+              </div>
+            </div>
             <div class="chart-body">
               <div class="hbar-list">
                 <div v-for="item in porAntiguedad" :key="item.rango" class="hbar-row">
@@ -95,10 +90,14 @@
           </div>
         </div>
 
-        <!-- Fila 2: Tipo vehículo + Responsable -->
         <div class="charts-grid cols-2">
           <div class="chart-card">
-            <h3 class="chart-title">Tareas por Tipo de Vehículo</h3>
+            <div class="chart-header">
+              <div class="chart-header-text">
+                <h3 class="chart-title">Tareas por Tipo de Vehículo</h3>
+                <p class="chart-desc">Desglose de tareas según categoría de equipo</p>
+              </div>
+            </div>
             <div class="chart-body">
               <div class="hbar-list">
                 <div v-for="item in porTipo" :key="item.tipo" class="hbar-row">
@@ -113,13 +112,18 @@
           </div>
 
           <div class="chart-card">
-            <h3 class="chart-title">Tareas por Responsable</h3>
+            <div class="chart-header">
+              <div class="chart-header-text">
+                <h3 class="chart-title">Tareas por Responsable</h3>
+                <p class="chart-desc">Top responsables con más tareas asignadas</p>
+              </div>
+            </div>
             <div class="chart-body">
               <div class="hbar-list">
                 <div v-for="item in porResponsable.slice(0, 10)" :key="item.responsable" class="hbar-row">
                   <span class="hbar-label">{{ item.responsable }}</span>
                   <div class="hbar-track">
-                    <div class="hbar-fill" :style="{ width: item.pct + '%', background: '#1f7a3d' }"></div>
+                    <div class="hbar-fill" :style="{ width: item.pct + '%', background: '#10B981' }"></div>
                   </div>
                   <span class="hbar-val">{{ item.count }}</span>
                 </div>
@@ -169,27 +173,100 @@
 
       <!-- ========== INFORME ========== -->
       <template v-if="tareasView === 'informe'">
-        <div class="data-card" style="padding: 20px;">
-          <h3 class="report-block-title"><span class="title-bar"></span>Informe de Tareas — {{ plantaLabel }}</h3>
-          <div class="informe-grid">
-            <div class="informe-col">
-              <h4>Resumen</h4>
-              <ul>
-                <li><strong>Total:</strong> {{ kpis.total }}</li>
-                <li><strong>Pendientes:</strong> {{ kpis.pendientes }}</li>
-                <li><strong>En Proceso:</strong> {{ kpis.enProceso }}</li>
-                <li><strong>Completadas:</strong> {{ kpis.completadas }}</li>
-                <li><strong>Días promedio abierta:</strong> {{ kpis.diasPromedio }}</li>
-              </ul>
+        <div class="informe-control-bar">
+          <div class="icb-info">
+            <span class="icb-tag">Informe</span>
+            <span class="icb-title">Tareas de Seguimiento — {{ plantaLabel }}</span>
+          </div>
+        </div>
+
+        <div class="report-section-block">
+          <h3 class="report-block-title"><span class="title-bar"></span>Resumen de Tareas</h3>
+          <div class="data-card">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Métrica</th>
+                    <th class="r">Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td class="bold">Total Tareas</td><td class="r">{{ kpis.total }}</td></tr>
+                  <tr><td class="bold">Pendientes</td><td class="r"><span class="pill p-rojo">{{ kpis.pendientes }}</span></td></tr>
+                  <tr><td class="bold">En Proceso</td><td class="r"><span class="pill p-ambar">{{ kpis.enProceso }}</span></td></tr>
+                  <tr><td class="bold">Completadas</td><td class="r"><span class="pill p-verde">{{ kpis.completadas }}</span></td></tr>
+                  <tr><td class="bold">Días Promedio Abierta</td><td class="r">{{ kpis.diasPromedio }}</td></tr>
+                </tbody>
+              </table>
             </div>
-            <div class="informe-col">
-              <h4>Tareas con más de 7 días abiertas</h4>
-              <ul v-if="tareasCriticas.length > 0">
-                <li v-for="t in tareasCriticas" :key="t.id">
-                  <strong>{{ t.placa }}</strong> — {{ t.actividad }} ({{ t.dias }} días)
-                </li>
-              </ul>
-              <p v-else style="font-size:12px; color: var(--text-secondary);">No hay tareas críticas</p>
+          </div>
+        </div>
+
+        <div class="report-section-block">
+          <h3 class="report-block-title"><span class="title-bar"></span>Tareas con más de 7 días abiertas ({{ tareasCriticas.length }})</h3>
+          <div class="data-card">
+            <div v-if="tareasCriticas.length === 0" class="empty-table">No hay tareas críticas</div>
+            <div v-else class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="idx-col">#</th>
+                    <th>Placa</th>
+                    <th>Actividad</th>
+                    <th>Responsable</th>
+                    <th>Estado</th>
+                    <th>Registro</th>
+                    <th class="r">Días</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(t, i) in tareasCriticas" :key="t.id" class="alerta">
+                    <td class="idx">{{ i + 1 }}</td>
+                    <td class="bold accent-text">{{ t.placa }}</td>
+                    <td style="font-size: 12px; color: var(--text-secondary);">{{ t.actividad }}</td>
+                    <td>{{ t.responsable }}</td>
+                    <td><span class="pill" :class="pillClass(t.estado)">{{ t.estado }}</span></td>
+                    <td>{{ t.fecha }}</td>
+                    <td class="r"><span class="pill p-ambar">{{ t.dias }}</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="report-section-block">
+          <h3 class="report-block-title"><span class="title-bar"></span>Todas las Tareas ({{ allTareas.length }})</h3>
+          <div class="data-card">
+            <div v-if="allTareas.length === 0" class="empty-table">Sin tareas registradas</div>
+            <div v-else class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="idx-col">#</th>
+                    <th>Placa</th>
+                    <th>Tipo</th>
+                    <th>Actividad</th>
+                    <th>Responsable</th>
+                    <th>Estado</th>
+                    <th>Registro</th>
+                    <th class="r">Días</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(t, i) in allTareas" :key="t.id" :class="t.dias > 7 ? 'alerta' : ''">
+                    <td class="idx">{{ i + 1 }}</td>
+                    <td class="bold accent-text">{{ t.placa }}</td>
+                    <td>{{ t.tipo }}</td>
+                    <td style="font-size: 12px; color: var(--text-secondary);">{{ t.actividad }}</td>
+                    <td>{{ t.responsable }}</td>
+                    <td><span class="pill" :class="pillClass(t.estado)">{{ t.estado }}</span></td>
+                    <td>{{ t.fecha }}</td>
+                    <td class="r"><span class="pill" :class="t.dias > 7 ? 'p-ambar' : 'p-gris'">{{ t.dias }}</span></td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -201,6 +278,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useDisponibilidadStore } from '../../stores'
+import KpiCard from '../../components/dashboard/KpiCard.vue'
 
 const props = defineProps<{
   data: Record<string, unknown>[]
@@ -298,15 +376,15 @@ const porEstado = computed(() => {
     map.set(e, (map.get(e) || 0) + 1)
   }
   const colors: Record<string, string> = {
-    'Pendiente': '#a90707',
-    'En Proceso': '#b8860b',
-    'En proceso': '#b8860b',
-    'Completada': '#1f7a3d',
-    'Cerrada': '#1f7a3d',
-    'Cancelada': '#6b7280',
+    'Pendiente': '#EF4444',
+    'En Proceso': '#F59E0B',
+    'En proceso': '#F59E0B',
+    'Completada': '#10B981',
+    'Cerrada': '#10B981',
+    'Cancelada': '#6B7280',
   }
   return Array.from(map.entries())
-    .map(([estado, count]) => ({ estado, count, color: colors[estado] || '#172954' }))
+    .map(([estado, count]) => ({ estado, count, color: colors[estado] || '#3B82F6' }))
     .sort((a, b) => b.count - a.count)
 })
 
@@ -323,11 +401,11 @@ const donutEstado = computed(() => {
 
 const porAntiguedad = computed(() => {
   const ranges = [
-    { label: '1-3 días', min: 1, max: 3, color: '#1f7a3d' },
-    { label: '4-7 días', min: 4, max: 7, color: '#b8860b' },
-    { label: '8-14 días', min: 8, max: 14, color: '#e67e22' },
-    { label: '15-30 días', min: 15, max: 30, color: '#a90707' },
-    { label: '> 30 días', min: 31, max: Infinity, color: '#7f1d1d' },
+    { label: '1-3 días', min: 1, max: 3, color: '#10B981' },
+    { label: '4-7 días', min: 4, max: 7, color: '#F59E0B' },
+    { label: '8-14 días', min: 8, max: 14, color: '#F97316' },
+    { label: '15-30 días', min: 15, max: 30, color: '#EF4444' },
+    { label: '> 30 días', min: 31, max: Infinity, color: '#991B1B' },
   ]
   const counts = ranges.map(r => ({
     rango: r.label,
@@ -392,35 +470,33 @@ watch(() => props.planta, () => {
   padding: 4px 0;
 }
 
-/* ===== Toggle de vistas (estilo Maquinaria/Planta) ===== */
+/* ===== Toggle de vistas (mismo estilo que DisponibilidadTab) ===== */
 .almacen-view-toggle {
   display: flex;
-  gap: 6px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
+  gap: 8px;
 }
 .av-btn {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 9px 18px;
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius-md);
-  background: var(--bg-alt);
-  color: var(--text-secondary);
-  font-size: 13px;
+  gap: 6px;
+  padding: 12px 16px;
+  font-size: 12px;
   font-weight: 600;
+  color: var(--text-secondary, #6b7280);
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--card-border, #e5e7eb);
+  border-radius: 8px;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.2s ease;
 }
 .av-btn:hover {
-  border-color: var(--card-border-hover);
   color: var(--text-primary);
+  border-color: var(--accent, #3b82f6);
 }
 .av-btn.active {
-  background: var(--accent-light);
-  border-color: var(--accent);
-  color: var(--accent);
+  color: #ffffff;
+  background: var(--navy, #172954);
+  border-color: var(--navy, #172954);
 }
 
 /* ===== Banners de estado ===== */
@@ -444,6 +520,22 @@ watch(() => props.planta, () => {
   border: 1px solid #fecaca;
   color: #b91c1c;
 }
+.disp-retry-btn {
+  margin-left: auto;
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid #b91c1c;
+  background: transparent;
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.disp-retry-btn:hover {
+  background: #b91c1c;
+  color: white;
+}
 @keyframes disp-spin {
   to { transform: rotate(360deg); }
 }
@@ -452,62 +544,15 @@ watch(() => props.planta, () => {
   flex-shrink: 0;
 }
 
-/* ===== KPIs ===== */
+/* ===== KPIs (usa componente KpiCard — estilos en KpiCard.vue) ===== */
 .kpi-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 14px;
   margin-bottom: 24px;
 }
-.kpi-card {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius-lg);
-  padding: 18px 20px;
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  position: relative;
-  overflow: hidden;
-  transition: transform var(--transition-base), box-shadow var(--transition-base),
-              border-color var(--transition-base);
-  backdrop-filter: blur(8px);
-  min-height: 110px;
-}
-.kpi-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-  background: var(--accent);
-  opacity: 0.6;
-}
-.kpi-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-glass);
-  border-color: var(--card-border-hover);
-  background: var(--card-bg-hover);
-}
-.kpi-label {
-  font-size: 10px;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  font-weight: 600;
-}
-.kpi-value {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1.15;
-  letter-spacing: -0.4px;
-  font-variant-numeric: tabular-nums;
-}
 
-/* ===== Gráficas ===== */
+/* ===== Gráficas (mismo estilo que DisponibilidadTab) ===== */
 .charts-grid {
   display: grid;
   gap: 16px;
@@ -522,23 +567,27 @@ watch(() => props.planta, () => {
 .chart-card {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md, 10px);
   padding: 20px;
-  transition: transform var(--transition-base), box-shadow var(--transition-base),
-              border-color var(--transition-base);
-  position: relative;
-  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-sm);
 }
-.chart-card:hover {
-  box-shadow: var(--shadow-glass);
-  border-color: var(--card-border-hover);
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
 }
 .chart-title {
   font-size: 14px;
   font-weight: 600;
-  margin-bottom: 12px;
   color: var(--text-primary);
   letter-spacing: -0.2px;
+}
+.chart-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 4px 0 0;
+  line-height: 1.4;
 }
 .chart-body {
   min-height: 180px;
@@ -549,11 +598,9 @@ watch(() => props.planta, () => {
 .chart-svg-donut { width: 160px; height: 160px; }
 .dona-text { font-size: 26px; font-weight: 700; fill: var(--text-primary, #1e293b); }
 .dona-label { font-size: 10px; fill: var(--text-secondary, #64748b); text-transform: uppercase; }
-
 .legend-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; justify-content: center; }
 .legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-secondary, #64748b); }
 .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
-
 .hbar-list { width: 100%; }
 .hbar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .hbar-label { font-size: 11px; color: var(--text-secondary, #64748b); min-width: 90px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -562,21 +609,15 @@ watch(() => props.planta, () => {
 .hbar-val { font-size: 11px; font-weight: 600; color: var(--text-primary, #1e293b); min-width: 24px; }
 .empty-chart { color: var(--text-secondary, #64748b); font-size: 13px; }
 
-/* ===== Tabla ===== */
+/* ===== Data Card (mismo estilo que DisponibilidadTab) ===== */
 .data-card {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md, 10px);
   overflow: hidden;
   box-shadow: var(--shadow-sm);
 }
-.table-wrap {
-  width: 100%;
-  overflow-x: auto;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--card-border);
-  background: var(--card-bg);
-}
+.table-wrap { overflow-x: hidden; }
 .table-wrap table {
   width: 100%;
   border-collapse: collapse;
@@ -584,56 +625,54 @@ watch(() => props.planta, () => {
   font-family: inherit;
   table-layout: auto;
 }
-.table-wrap thead tr { background: var(--bg-alt); }
+.table-wrap thead tr { background: var(--card-bg-hover, #f9fafb); }
 .table-wrap th {
   padding: 8px 10px;
   text-align: left;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-tertiary);
+  letter-spacing: 0.3px;
+  color: var(--text-secondary);
   border-bottom: 1px solid var(--card-border);
   white-space: nowrap;
 }
 .table-wrap th.r, .table-wrap td.r { text-align: right; }
 .table-wrap td {
-  padding: 6px 10px;
+  padding: 8px 10px;
   border-bottom: 1px solid var(--card-border);
   color: var(--text-primary);
   vertical-align: middle;
   font-size: 12px;
   word-break: break-word;
 }
-.table-wrap tbody tr { transition: background var(--transition-fast); }
 .table-wrap tbody tr:last-child td { border-bottom: none; }
-.table-wrap tbody tr:hover { background: var(--card-bg-hover); }
+.table-wrap tbody tr:hover { background: var(--card-bg-hover, #f9fafb); }
 .table-wrap .idx { color: var(--text-secondary); font-size: 12px; width: 28px; white-space: nowrap; }
 .table-wrap .idx-col { width: 28px; white-space: nowrap; }
 .table-wrap .bold { font-weight: 700; }
 .table-wrap .accent-text { color: var(--navy, #172954); }
-.table-wrap .red { color: #dc2626; }
-.table-wrap .green { color: #16a34a; }
-.table-wrap .yellow { color: #b8860b; }
+.table-wrap .red { color: #ef4444; font-weight: 700; }
+.table-wrap .yellow { color: #f59e0b; font-weight: 600; }
+.table-wrap .green { color: #10b981; font-weight: 700; }
 .table-wrap tr.alerta td { background: #fdf1f1; }
 .table-wrap tr.alerta td:first-child { box-shadow: inset 3px 0 0 #a90707; }
-
 .empty-table {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 24px 20px;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 12px;
   justify-content: center;
 }
 
-/* ===== Pills ===== */
+/* ===== Pills (mismo estilo que DisponibilidadTab) ===== */
 .pill {
   display: inline-block;
-  padding: 1.5px 6px;
-  border-radius: 8px;
-  font-size: 10px;
+  padding: 1.5px 7px;
+  border-radius: 9px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.3px;
 }
@@ -642,7 +681,41 @@ watch(() => props.planta, () => {
 .p-ambar { background: #fbf3e0; color: #b8860b; }
 .p-gris { background: #eef1f4; color: #5b6b82; }
 
-/* ===== Informe ===== */
+/* ===== Informe (mismo estilo que DisponibilidadTab) ===== */
+.informe-control-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--card-border, #e5e7eb);
+  border-radius: var(--radius-md, 10px);
+  padding: 12px 18px;
+  box-shadow: var(--shadow-sm);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.icb-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.icb-tag {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--navy, #172954);
+}
+.icb-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.report-section-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 .report-block-title {
   display: flex;
   align-items: center;
@@ -656,15 +729,12 @@ watch(() => props.planta, () => {
 }
 .title-bar {
   display: inline-block;
-  width: 4px;
-  height: 14px;
-  background: var(--accent);
+  width: 3px;
+  height: 16px;
   border-radius: 2px;
+  background: var(--navy, #172954);
+  flex-shrink: 0;
 }
-.informe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.informe-col h4 { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-primary, #1e293b); }
-.informe-col ul { list-style: none; padding: 0; margin: 0; }
-.informe-col li { font-size: 12px; color: var(--text-secondary, #475569); margin-bottom: 4px; }
 
 /* ===== Responsive ===== */
 @media (max-width: 1200px) {
@@ -673,12 +743,6 @@ watch(() => props.planta, () => {
 }
 @media (max-width: 768px) {
   .kpi-row { grid-template-columns: repeat(2, 1fr); }
-  .informe-grid { grid-template-columns: 1fr; }
-  .almacen-view-toggle { flex-direction: column; }
-  .av-btn { justify-content: center; }
-}
-@media (max-width: 480px) {
-  .almacen-view-toggle { display: grid; grid-template-columns: 1fr; }
-  .av-btn { justify-content: center; }
+  .almacen-view-toggle { flex-wrap: wrap; }
 }
 </style>
