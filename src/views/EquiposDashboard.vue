@@ -2297,18 +2297,12 @@ function vehTypeLabel(text: string): string {
   return cut.trim() || t || 'SIN TIPO'
 }
 
-/** Índice de cierre: OTs cerradas agrupadas por la persona responsable del cierre. */
-const repIndiceCierre = computed(() => groupCount(repRows.value, r =>
-  estadoClass(String(r['Estado'] ?? '')) === 'ok'
-    ? String(r['Responsable Cierre'] ?? '').trim() || String(r['Personal'] ?? '').trim()
-    : '', 8))
+/** Índice de cierre: OTs agrupadas por responsable de cierre. */
+const repIndiceCierre = computed(() => rankBy(repRows.value, 'Responsable Cierre', 8).map(([label, n]) => ({ label, n })))
 
-/** Índice de cierre filtrado (solo SOL-012 y SOL-024). */
+/** Índice de cierre filtrado (sin filtro adicional). */
 const repIndiceCierreFiltrado = computed(() =>
-  repIndiceCierre.value.filter(c => {
-    const name = c.label.toUpperCase()
-    return name.includes('SOL-012') || name.includes('SOL-024')
-  })
+  repIndiceCierre.value.filter(c => c.label)
 )
 
 /** Índice de apertura: OTs agrupadas por la persona que las abrió (solicitante). */
