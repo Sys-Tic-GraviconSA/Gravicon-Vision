@@ -282,261 +282,456 @@
 
     <template v-if="dashboardView === 'informe'">
     <div class="informe-section">
-      <div class="informe-bar">
-        <div class="informe-controls" style="display: flex; gap: 8px; align-items: center;">
-          <button class="action-btn" @click="generarInformePdf" :disabled="!informeDesde || !informeHasta || generandoPdf">
-            <svg v-if="!generandoPdf" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-            <span v-if="generandoPdf">Generando PDF...</span>
-            <span v-else>Generar PDF</span>
-          </button>
-          <button class="action-btn" @click="imprimirInforme" :disabled="!informeRows.length" title="Imprimir directamente desde el navegador">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-            Imprimir
-          </button>
+      <!-- Barra superior oficial del informe de OT -->
+      <div class="informe-control-bar">
+        <div class="icb-info">
+          <span class="icb-tag">Reporte Oficial de Mantenimiento</span>
+          <span class="icb-title">Gestión de Órdenes de Trabajo (OT) — {{ plantaLabel }}</span>
         </div>
-        <div class="informe-stats" v-if="informeRows.length">
-          <span><strong>{{ repRows.length }}</strong> OT</span>
-          <span class="ots-dot"></span>
-          <span class="stat-abiertas"><strong>{{ repAbiertas }}</strong> abiertas</span>
-          <span class="ots-dot"></span>
-          <span class="stat-cerradas"><strong>{{ repCerradas }}</strong> cerradas</span>
+        <div class="icb-actions" style="display: flex; gap: 8px; align-items: center;">
+          <button class="tb-btn primary" @click="generarInformePdf" :disabled="!informeRows.length || generandoPdf" title="Generar y descargar archivo PDF oficial">
+            <svg v-if="!generandoPdf" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span v-if="generandoPdf">Generando PDF...</span>
+            <span v-else>Descargar PDF</span>
+          </button>
         </div>
       </div>
 
-      <div class="reporte-doc" v-if="informeRows.length">
-        <p class="doc-header-static">GRV-INF-{{ repReferencia }} — {{ repTipoLabel }} — Período: {{ informeDesde }} al {{ informeHasta }}</p>
-        <div class="doc-title">INFORME DE MANTENIMIENTO</div>
-        <div class="doc-subtitle">Informe Ejecutivo de Gestión de Mantenimiento — Análisis consolidado de costos, volumen, consumo por {{ repSectionLabelVehiculo.toLowerCase() }}, proveedores, personal y almacén, y distribución del mantenimiento correctivo y preventivo.</div>
+      <!-- PORTADA Y PÁGINAS DEL REPORTE OFICIAL DE OT -->
+      <div class="report-paper" v-if="informeRows.length">
 
-        <table class="kpi-table"><tbody><tr>
-          <td class="kpi-cell orange">
-            <span class="kpi-value">{{ repAbiertas }}</span>
-            <span class="kpi-label">OT Abiertas</span>
-            <span class="kpi-sub">en curso en el período</span>
-          </td>
-          <td class="kpi-cell green">
-            <span class="kpi-value">{{ repCerradas }}</span>
-            <span class="kpi-label">OT Cerradas</span>
-            <span class="kpi-sub">ejecutadas en el período</span>
-          </td>
-          <td class="kpi-cell blue">
-            <span class="kpi-value">{{ repCerradasMes }}</span>
-            <span class="kpi-label">Cerradas en el Mes</span>
-            <span class="kpi-sub">con cierre en el rango</span>
-          </td>
-          <td class="kpi-cell blue">
-            <span class="kpi-value" :title="$$(repCostoTotal)">{{ $$short(repCostoTotal) }}</span>
-            <span class="kpi-label">Costo Acumulado</span>
-            <span class="kpi-sub">{{ $$(repCostoTotal) }}</span>
-          </td>
-          <td class="kpi-cell green">
-            <span class="kpi-value">{{ repPctCierre }}%</span>
-            <span class="kpi-label">Índice de Cierre</span>
-            <span class="kpi-sub">cerradas / total de OT</span>
-          </td>
-        </tr></tbody></table>
+        <!-- ============================================== -->
+        <!-- PÁGINA 1: PORTADA EJECUTIVA, KPIS Y PERSONAL   -->
+        <!-- ============================================== -->
+        <div class="report-page">
+          <header class="report-header">
+            <div class="report-header-brand">
+              <img src="/Logos/Logo_Gravicon_Azul.png" alt="Gravicon" class="report-logo" />
+              <div class="report-header-text">
+                <h2>Mantenimiento {{ plantaLabel }} Gravicon</h2>
+                <span>GRAVAS Y CONCRETOS S.A. · {{ isConcretos ? 'Concretos' : 'Agregados' }} · {{ repTipoLabel }}</span>
+              </div>
+            </div>
+            <div class="report-header-meta">
+              <div class="meta-item"><span>Período:</span> <strong>{{ informeDesde }} al {{ informeHasta }}</strong></div>
+              <div class="meta-item"><span>Código:</span> <strong>GRV-INF-{{ repReferencia }}-{{ repTipoLabel.toUpperCase() }}</strong></div>
+              <div class="meta-item page-counter"><span>Pág. 1 de 3</span></div>
+            </div>
+          </header>
 
-        <div class="note-bar">
-          <strong>Total de OT en el período: {{ repRows.length }}</strong>. Se presentan los índices de apertura y cierre por persona, la distribución de costos y los principales rankings de gestión.
+          <div class="report-title-section">
+            <h1>Informe Ejecutivo de Órdenes de Trabajo</h1>
+            <p class="report-intro">
+              Análisis consolidado de costos, volumen de atención, intervenciones por {{ repSectionLabelVehiculo.toLowerCase() }}, desempeño de proveedores y distribución del mantenimiento correctivo vs. preventivo para <strong>{{ plantaLabel }}</strong>.
+            </p>
+          </div>
+
+          <!-- 8 Tarjetas KPI Oficiales -->
+          <div class="kpi-row compact-kpi">
+            <KpiCard label="OT Abiertas" accent="#DC2626" icon="activity" :value="String(repAbiertas)" />
+            <KpiCard label="OT Cerradas" accent="#16A34A" icon="check-circle" :value="String(repCerradas)" />
+            <KpiCard label="Cerradas Mes" accent="#2563EB" icon="check" :value="String(repCerradasMes)" />
+            <KpiCard label="Costo Acumulado" accent="#1D4ED8" icon="dollar" :value="$$short(repCostoTotal)" />
+            <KpiCard
+              label="% Cierre"
+              :accent="repPctCierre >= 85 ? '#16A34A' : repPctCierre >= 60 ? '#F59E0B' : '#DC2626'"
+              meta="Meta: 85%"
+              icon="target"
+              :value="repPctCierre + '%'"
+            />
+            <KpiCard label="Duración Promedio" accent="#8B5CF6" icon="clock" :value="otDuracionEstimadaProm + ' h'" />
+            <KpiCard label="Gasto Interno" accent="#2563EB" icon="package" :value="$$short(repCostosProv.interno)" />
+            <KpiCard label="Gasto Externo" accent="#F59E0B" icon="user" :value="$$short(repCostosProv.externo)" />
+          </div>
+
+          <!-- Análisis Operativo Directivo estilo Zoho -->
+          <div class="report-section-block">
+            <div class="zoho-analysis-box">
+              <div class="zoho-analysis-label">Análisis Operativo Directivo — Gestión de Órdenes de Trabajo</div>
+              <div class="zoho-analysis-text" v-html="informeAnalisisTexto"></div>
+            </div>
+          </div>
+
+          <!-- Nota de Estado / Alertas -->
+          <div v-if="repAbiertas > 0" class="report-nota alerta">
+            <strong>Atención a Órdenes Abiertas ({{ repAbiertas }} OT):</strong>
+            Se registran órdenes de trabajo en proceso o pendientes de cierre administrativo en el corte seleccionado.
+          </div>
+          <div v-else class="report-nota">
+            <strong>Estado de Cierre:</strong> El 100% de las órdenes de trabajo del corte seleccionado se encuentran cerradas y liquidadas.
+          </div>
+
+          <!-- Índice de Cierre y Apertura por Persona -->
+          <div class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Índice de Cierre y Apertura por Persona</h3>
+            <div class="charts-grid cols-2">
+              <div class="data-card" style="padding: 10px 14px;">
+                <div class="card-head" style="font-size: 11px; font-weight: 700; color: var(--navy); margin-bottom: 8px; text-transform: uppercase;">
+                  OT Cerradas por Persona
+                </div>
+                <div v-for="c in repIndiceCierreFiltrado" :key="c.label" class="rank-bar">
+                  <span class="rank-label" :title="c.label">{{ c.label }}</span>
+                  <div class="rank-track"><div class="rank-fill" :style="{ width: ((c.n / (repIndiceCierreFiltrado[0]?.n || 1)) * 100) + '%' }"></div></div>
+                  <span class="rank-val">{{ c.n }}</span>
+                </div>
+                <div v-if="!repIndiceCierreFiltrado.length" class="empty-table" style="padding: 8px;">Sin cierres registrados</div>
+              </div>
+
+              <div class="data-card" style="padding: 10px 14px;">
+                <div class="card-head" style="font-size: 11px; font-weight: 700; color: var(--navy); margin-bottom: 8px; text-transform: uppercase;">
+                  OT Abiertas por Persona
+                </div>
+                <div v-for="c in repIndiceApertura" :key="c.label" class="rank-bar">
+                  <span class="rank-label" :title="c.label">{{ c.label }}</span>
+                  <div class="rank-track"><div class="rank-fill" :style="{ width: ((c.n / (repIndiceApertura[0]?.n || 1)) * 100) + '%' }"></div></div>
+                  <span class="rank-val">{{ c.n }}</span>
+                </div>
+                <div v-if="!repIndiceApertura.length" class="empty-table" style="padding: 8px;">Sin aperturas registradas</div>
+              </div>
+            </div>
+          </div>
+
+          <footer class="report-footer">
+            <span>Informe de Órdenes de Trabajo — Gravicon</span>
+            <span>Documento Oficial | Página 1 de 3</span>
+          </footer>
         </div>
 
-        <div class="section-title">Índice de Cierre y Apertura por Persona</div>
-        <table class="chart-row"><tbody><tr>
-          <td class="split-col" style="width:50%">
-            <div class="mini-title">OT Cerradas por Persona</div>
-            <div v-for="c in repIndiceCierreFiltrado" :key="c.label" class="rank-bar">
-              <span class="rank-label" :title="c.label">{{ c.label }}</span>
-              <div class="rank-track"><div class="rank-fill" :style="{ width: ((c.n / (repIndiceCierreFiltrado[0]?.n || 1)) * 100) + '%' }"></div></div>
-              <span class="rank-val">{{ c.n }}</span>
-            </div>
-            <div v-if="!repIndiceCierreFiltrado.length" style="font-size:8pt;color:#888;text-align:center;padding:8px 0">Sin cierres registrados en el período</div>
-          </td>
-          <td class="split-col" style="width:50%">
-            <div class="mini-title">OT Abiertas por Persona</div>
-            <div v-for="c in repIndiceApertura" :key="c.label" class="rank-bar">
-              <span class="rank-label" :title="c.label">{{ c.label }}</span>
-              <div class="rank-track"><div class="rank-fill" :style="{ width: ((c.n / repIndiceApertura[0].n) * 100) + '%' }"></div></div>
-              <span class="rank-val">{{ c.n }}</span>
-            </div>
-            <div v-if="!repIndiceApertura.length" style="font-size:8pt;color:#888;text-align:center;padding:8px 0">Sin aperturas registradas en el período</div>
-          </td>
-        </tr></tbody></table>
+        <!-- ============================================== -->
+        <!-- PÁGINA 2: COSTOS, EQUIPOS Y PROVEEDORES        -->
+        <!-- ============================================== -->
+        <div class="report-page">
+          <div class="report-salto-superior"></div>
 
-        <div class="html2pdf__page-break"></div>
-        <div class="page-header-mini">
-          <span class="mini-ref">GRV-INF-{{ repReferencia }} — {{ repTipoLabel }} — Período: {{ informeDesde }} al {{ informeHasta }}</span>
+          <!-- Costo Acumulado por Planta y Maquinaria -->
+          <div class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Costo Acumulado por {{ repSectionLabelPlanta }} y {{ repSectionLabelMaquinaria }}</h3>
+            <div class="data-card">
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width: 26%">{{ repSectionLabelPlanta }}</th>
+                      <th>{{ repSectionLabelMaquinaria }}</th>
+                      <th class="r" style="width: 60px">OTs</th>
+                      <th class="r" style="width: 130px">Costo Acumulado</th>
+                      <th class="r" style="width: 70px">Particip.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="m in repCostoPlanta" :key="m.planta + '-' + m.maquina">
+                      <td class="bold">{{ m.planta }}</td>
+                      <td class="accent-text">{{ m.maquina }}</td>
+                      <td class="r bold">{{ m.n }}</td>
+                      <td class="r bold">{{ $$(m.costo) }}</td>
+                      <td class="r">{{ repPct(m.costo) }}%</td>
+                    </tr>
+                    <tr v-if="!repCostoPlanta.length"><td colspan="5" class="empty-table">Sin datos en el período</td></tr>
+                    <tr class="table-total-row">
+                      <td colspan="2" class="bold">TOTAL</td>
+                      <td class="r bold">{{ repRows.length }}</td>
+                      <td class="r bold">{{ $$(repCostoTotal) }}</td>
+                      <td class="r bold">100%</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Costo por Tipo de Vehículo + Top 5 Vehículos Mayor Consumo -->
+          <div class="report-section-block">
+            <div class="charts-grid cols-2">
+              <!-- Columna 1: Costo por Vehículo -->
+              <div class="data-card">
+                <div class="card-head" style="font-size: 11px; font-weight: 700; color: var(--navy); margin-bottom: 6px; text-transform: uppercase;">
+                  Costo Acumulado por {{ repSectionLabelVehiculo }}
+                </div>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>{{ repSectionLabelVehiculo }}</th>
+                        <th class="r" style="width: 45px">OTs</th>
+                        <th class="r" style="width: 100px">Costo</th>
+                        <th class="r" style="width: 55px">Part.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="t in repCostoTipoVeh.slice(0, 6)" :key="t.label">
+                        <td class="bold accent-text">{{ t.label }}</td>
+                        <td class="r">{{ t.n }}</td>
+                        <td class="r bold">{{ $$(t.costo) }}</td>
+                        <td class="r">{{ repPct(t.costo) }}%</td>
+                      </tr>
+                      <tr v-if="!repCostoTipoVeh.length"><td colspan="4" class="empty-table">Sin datos</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Columna 2: Top 5 Vehículos con Mayor Consumo -->
+              <div class="data-card">
+                <div class="card-head" style="font-size: 11px; font-weight: 700; color: var(--navy); margin-bottom: 6px; text-transform: uppercase;">
+                  Top 5 {{ repSectionLabelVehiculo }}s con Mayor Consumo
+                </div>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th style="width: 24px">#</th>
+                        <th>{{ repSectionLabelVehiculo }}</th>
+                        <th class="r" style="width: 40px">OTs</th>
+                        <th class="r" style="width: 95px">Costo</th>
+                        <th class="r" style="width: 70px">Taller</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(v, i) in repTopVehiculos" :key="v.placa">
+                        <td class="idx">{{ i + 1 }}</td>
+                        <td class="bold accent-text">{{ v.placa }}</td>
+                        <td class="r">{{ v.n }}</td>
+                        <td class="r bold" style="color: #dc2626;">{{ $$(v.costo) }}</td>
+                        <td class="r">{{ fmtDuracion(v.dias) || '—' }}</td>
+                      </tr>
+                      <tr v-if="!repTopVehiculos.length"><td colspan="5" class="empty-table">Sin datos</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Costos por Proveedores Internos y Externos -->
+          <div class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Costos por Proveedores Internos y Externos</h3>
+            <div class="charts-grid cols-2">
+              <div class="data-card">
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Tipo Proveedor</th>
+                        <th class="r" style="width: 50px">OTs</th>
+                        <th class="r" style="width: 110px">Costo</th>
+                        <th class="r" style="width: 60px">Part.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="bold"><span class="pill p-rojo" style="margin-right: 4px;">■</span> Internos (Gravicon)</td>
+                        <td class="r">{{ repCostosProv.nInt }}</td>
+                        <td class="r bold">{{ $$(repCostosProv.interno) }}</td>
+                        <td class="r bold" style="color: #dc2626;">{{ repCostosProv.pctInt }}%</td>
+                      </tr>
+                      <tr>
+                        <td class="bold"><span class="pill p-verde" style="margin-right: 4px;">■</span> Externos</td>
+                        <td class="r">{{ repCostosProv.nExt }}</td>
+                        <td class="r bold">{{ $$(repCostosProv.externo) }}</td>
+                        <td class="r bold" style="color: #16a34a;">{{ repCostosProv.pctExt }}%</td>
+                      </tr>
+                      <tr class="table-total-row">
+                        <td class="bold">TOTAL</td>
+                        <td class="r bold">{{ repCostosProv.nInt + repCostosProv.nExt }}</td>
+                        <td class="r bold">{{ $$(repCostosProv.total) }}</td>
+                        <td class="r bold">100%</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="data-card" style="padding: 12px 16px; display: flex; flex-direction: column; justify-content: center;">
+                <div class="stack-track">
+                  <div class="stack-seg seg-cor" :style="{ width: repCostosProv.pctInt + '%' }">{{ repCostosProv.pctInt ? repCostosProv.pctInt + '%' : '' }}</div>
+                  <div class="stack-seg seg-prev" :style="{ width: repCostosProv.pctExt + '%' }">{{ repCostosProv.pctExt ? repCostosProv.pctExt + '%' : '' }}</div>
+                </div>
+                <div class="pv-legend" style="margin-top: 8px;">
+                  <span style="color:#dc2626;font-weight:700;">■</span> <b>Internos</b> — {{ repCostosProv.pctInt }}% del costo ({{ $$(repCostosProv.interno) }})<br>
+                  <span style="color:#16a34a;font-weight:700;">■</span> <b>Externos</b> — {{ repCostosProv.pctExt }}% del costo ({{ $$(repCostosProv.externo) }})
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ranking de Proveedores con Mayor Uso -->
+          <div class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Ranking de Proveedores con Mayor Uso</h3>
+            <div class="data-card">
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width: 24px">#</th>
+                      <th>Proveedor</th>
+                      <th class="r" style="width: 65px">N.º de OT</th>
+                      <th class="r" style="width: 130px">Costo Acumulado</th>
+                      <th class="r" style="width: 70px">Particip.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(p, i) in repRankProveedores.slice(0, 6)" :key="p.label">
+                      <td class="idx">{{ i + 1 }}</td>
+                      <td class="bold accent-text">{{ p.label }}</td>
+                      <td class="r bold">{{ p.n }}</td>
+                      <td class="r bold">{{ $$(p.costo) }}</td>
+                      <td class="r">{{ repPct(p.costo) }}%</td>
+                    </tr>
+                    <tr v-if="!repRankProveedores.length"><td colspan="5" class="empty-table">Sin datos en el período</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <footer class="report-footer">
+            <span>Informe de Órdenes de Trabajo — Gravicon</span>
+            <span>Documento Oficial | Página 2 de 3</span>
+          </footer>
         </div>
 
-        <div class="section-title">Costo Acumulado por {{ repSectionLabelPlanta }} y {{ repSectionLabelMaquinaria }}</div>
-        <table class="gp-table">
-          <thead><tr><th style="width:22%">{{ repSectionLabelPlanta }}</th><th>{{ repSectionLabelMaquinaria }}</th><th style="width:55px" class="tright">OTs</th><th style="width:120px" class="tright">Costo Acumulado</th></tr></thead>
-          <tbody>
-            <tr v-for="m in repCostoPlanta" :key="m.planta + '-' + m.maquina">
-              <td>{{ m.planta }}</td>
-              <td>{{ m.maquina }}</td>
-              <td class="tright">{{ m.n }}</td>
-              <td class="tright">{{ $$(m.costo) }}</td>
-            </tr>
-            <tr v-if="!repCostoPlanta.length"><td colspan="4" style="text-align:center">Sin datos en el período</td></tr>
-            <tr class="total-row"><td colspan="2">TOTAL</td><td class="tright">{{ repRows.length }}</td><td class="tright">{{ $$(repCostoTotal) }}</td></tr>
-          </tbody>
-        </table>
+        <!-- ============================================== -->
+        <!-- PÁGINA 3: CLASIFICACIÓN, SISTEMAS Y GESTIÓN    -->
+        <!-- ============================================== -->
+        <div class="report-page">
+          <div class="report-salto-superior"></div>
 
-        <div class="section-title">Costo Acumulado por {{ repSectionLabelVehiculo }}</div>
-        <table class="gp-table">
-          <thead><tr><th>{{ repSectionLabelVehiculo }}</th><th style="width:55px" class="tright">OTs</th><th style="width:120px" class="tright">Costo Acumulado</th><th style="width:65px" class="tright">Particip.</th></tr></thead>
-          <tbody>
-            <tr v-for="t in repCostoTipoVeh" :key="t.label">
-              <td>{{ t.label }}</td>
-              <td class="tright">{{ t.n }}</td>
-              <td class="tright">{{ $$(t.costo) }}</td>
-              <td class="tright">{{ repPct(t.costo) }}%</td>
-            </tr>
-            <tr v-if="!repCostoTipoVeh.length"><td colspan="4" style="text-align:center">Sin datos en el período</td></tr>
-          </tbody>
-        </table>
+          <!-- Distribución del Mantenimiento Correctivo y Preventivo -->
+          <div class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Distribución del Mantenimiento Correctivo y Preventivo</h3>
+            <div class="charts-grid cols-2">
+              <div class="data-card" style="display: flex; align-items: center; justify-content: center; padding: 10px;">
+                <svg viewBox="0 0 200 200" style="width: 130px; height: 130px;">
+                  <circle cx="100" cy="100" r="70" fill="none" stroke="#f1f5f9" stroke-width="20"/>
+                  <circle cx="100" cy="100" r="70" fill="none" stroke="#16a34a" stroke-width="20"
+                    :stroke-dasharray="`${(repClaseMant.pctPrev / 100) * 439.82} 439.82`"
+                    stroke-linecap="round" transform="rotate(-90 100 100)"/>
+                  <text x="100" y="96" text-anchor="middle" fill="#16a34a" style="font-size:24px;font-weight:900;">{{ repClaseMant.pctPrev }}%</text>
+                  <text x="100" y="116" text-anchor="middle" fill="#64748b" style="font-size:10px;font-weight:700;">PREVENTIVO</text>
+                  <text x="100" y="130" text-anchor="middle" fill="#94a3b8" style="font-size:9px;">{{ repClaseMant.preventivo }} de {{ repClaseMant.total }} OT</text>
+                </svg>
+              </div>
 
-        <div class="section-title">Ranking de 5 {{ repSectionLabelVehiculo }}s con Mayor Consumo y Horas en Taller</div>
-        <table class="gp-table">
-          <thead><tr><th style="width:26px">#</th><th>{{ repSectionLabelVehiculo }}</th><th style="width:50px" class="tright">OTs</th><th style="width:120px" class="tright">Costo</th><th style="width:80px" class="tright">Horas en Taller</th></tr></thead>
-          <tbody>
-            <tr v-for="(v, i) in repTopVehiculos" :key="v.placa">
-              <td>{{ i + 1 }}</td>
-              <td><strong>{{ v.placa }}</strong></td>
-              <td class="tright">{{ v.n }}</td>
-              <td class="tright">{{ $$(v.costo) }}</td>
-              <td class="tright">{{ fmtDuracion(v.dias) || '—' }}</td>
-            </tr>
-            <tr v-if="!repTopVehiculos.length"><td colspan="5" style="text-align:center">Sin datos en el período</td></tr>
-          </tbody>
-        </table>
+              <div class="data-card" style="padding: 12px 16px; display: flex; flex-direction: column; justify-content: center;">
+                <div class="stack-track">
+                  <div class="stack-seg seg-cor" :style="{ width: repClaseMant.pctCor + '%' }">{{ repClaseMant.pctCor ? repClaseMant.pctCor + '%' : '' }}</div>
+                  <div class="stack-seg seg-prev" :style="{ width: repClaseMant.pctPrev + '%' }">{{ repClaseMant.pctPrev ? repClaseMant.pctPrev + '%' : '' }}</div>
+                  <div class="stack-seg seg-otro" :style="{ width: repClaseMant.pctOtro + '%' }">{{ repClaseMant.pctOtro ? repClaseMant.pctOtro + '%' : '' }}</div>
+                </div>
+                <div class="pv-legend" style="margin-top: 8px;">
+                  <span style="color:#dc2626;font-weight:700;">■</span> <b>Correctivo</b> — {{ repClaseMant.correctivo }} OT ({{ repClaseMant.pctCor }}%)<br>
+                  <span style="color:#16a34a;font-weight:700;">■</span> <b>Preventivo</b> — {{ repClaseMant.preventivo }} OT ({{ repClaseMant.pctPrev }}%)<br>
+                  <span style="color:#8b8b8b;font-weight:700;">■</span> <b>Otras / Sin clasificar</b> — {{ repClaseMant.otros }} OT ({{ repClaseMant.pctOtro }}%)
+                </div>
+              </div>
+            </div>
+          </div>
 
-        <div class="html2pdf__page-break"></div>
-        <div class="page-header-mini">
-          <span class="mini-ref">GRV-INF-{{ repReferencia }} — {{ repTipoLabel }} — Período: {{ informeDesde }} al {{ informeHasta }}</span>
+          <!-- Ranking de Sistemas y Ranking de Almacén en 2 columnas -->
+          <div class="report-section-block">
+            <div class="charts-grid cols-2">
+              <!-- Sistemas Intervenidos -->
+              <div class="data-card">
+                <div class="card-head" style="font-size: 11px; font-weight: 700; color: var(--navy); margin-bottom: 6px; text-transform: uppercase;">
+                  Sistemas con Mayor Intervención
+                </div>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th style="width: 24px">#</th>
+                        <th>Sistema Intervenido</th>
+                        <th class="r" style="width: 60px">Interv.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(s, i) in repRankSistemas.slice(0, 6)" :key="s.label">
+                        <td class="idx">{{ i + 1 }}</td>
+                        <td class="bold accent-text">{{ s.label }}</td>
+                        <td class="r bold">{{ s.n }}</td>
+                      </tr>
+                      <tr v-if="!repRankSistemas.length"><td colspan="3" class="empty-table">Sin intervenciones</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Elementos de Almacén -->
+              <div class="data-card">
+                <div class="card-head" style="font-size: 11px; font-weight: 700; color: var(--navy); margin-bottom: 6px; text-transform: uppercase;">
+                  Elementos y Repuestos Solicitados
+                </div>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th style="width: 24px">#</th>
+                        <th>Elemento</th>
+                        <th style="width: 45px">Und</th>
+                        <th class="r" style="width: 45px">Cant.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(a, i) in repRankAlmacen.slice(0, 6)" :key="a.label">
+                        <td class="idx">{{ i + 1 }}</td>
+                        <td class="bold accent-text">{{ a.label }}</td>
+                        <td>{{ a.und || 'UND' }}</td>
+                        <td class="r bold">{{ a.n }}</td>
+                      </tr>
+                      <tr v-if="!repRankAlmacen.length"><td colspan="4" class="empty-table">Sin solicitudes</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ranking por Persona -->
+          <div class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Ranking por Persona — OTs Realizadas y Costo Acumulado</h3>
+            <div class="data-card">
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width: 24px">#</th>
+                      <th>Persona Responsable / Técnico</th>
+                      <th class="r" style="width: 65px">OTs</th>
+                      <th class="r" style="width: 130px">Costo Acumulado</th>
+                      <th class="r" style="width: 70px">Particip.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(p, i) in repRankPersonas.slice(0, 6)" :key="p.label">
+                      <td class="idx">{{ i + 1 }}</td>
+                      <td class="bold accent-text">{{ p.label }}</td>
+                      <td class="r bold">{{ p.n }}</td>
+                      <td class="r bold">{{ $$(p.costo) }}</td>
+                      <td class="r">{{ repPct(p.costo) }}%</td>
+                    </tr>
+                    <tr v-if="!repRankPersonas.length"><td colspan="5" class="empty-table">Sin datos en el período</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Resumen Ejecutivo y Conclusiones de Gestión -->
+          <div class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Conclusiones y Resumen Ejecutivo</h3>
+            <div class="data-card" style="padding: 10px 14px;">
+              <ul class="res">
+                <li v-for="(l, i) in repLectura" :key="i">{{ l }}</li>
+              </ul>
+            </div>
+          </div>
+
+          <footer class="report-footer">
+            <span>Informe de Órdenes de Trabajo — Gravicon</span>
+            <span>Documento Oficial | Página 3 de 3</span>
+          </footer>
         </div>
 
-        <div class="section-title">Costos por Proveedores Internos y Externos</div>
-        <table class="chart-row"><tbody><tr>
-          <td class="split-col" style="width:58%">
-            <table class="gp-table">
-              <thead><tr><th>Tipo de Proveedor</th><th style="width:55px" class="tright">OTs</th><th style="width:120px" class="tright">Costo</th><th style="width:65px" class="tright">Particip.</th></tr></thead>
-              <tbody>
-                <tr><td>Internos (Gravicon)</td><td class="tright">{{ repCostosProv.nInt }}</td><td class="tright">{{ $$(repCostosProv.interno) }}</td><td class="tright">{{ repCostosProv.pctInt }}%</td></tr>
-                <tr><td>Externos</td><td class="tright">{{ repCostosProv.nExt }}</td><td class="tright">{{ $$(repCostosProv.externo) }}</td><td class="tright">{{ repCostosProv.pctExt }}%</td></tr>
-                <tr class="total-row"><td>TOTAL</td><td class="tright">{{ repCostosProv.nInt + repCostosProv.nExt }}</td><td class="tright">{{ $$(repCostosProv.total) }}</td><td class="tright">100%</td></tr>
-              </tbody>
-            </table>
-          </td>
-          <td class="split-col" style="width:42%">
-            <div class="stack-track">
-              <div class="stack-seg seg-cor" :style="{ width: repCostosProv.pctInt + '%' }">{{ repCostosProv.pctInt ? repCostosProv.pctInt + '%' : '' }}</div>
-              <div class="stack-seg seg-prev" :style="{ width: repCostosProv.pctExt + '%' }">{{ repCostosProv.pctExt ? repCostosProv.pctExt + '%' : '' }}</div>
-            </div>
-            <div class="pv-legend">
-              <span style="color:#dc2626;font-weight:700;">■</span> <b>Internos</b> — {{ repCostosProv.pctInt }}% del costo<br>
-              <span style="color:#16a34a;font-weight:700;">■</span> <b>Externos</b> — {{ repCostosProv.pctExt }}% del costo
-            </div>
-          </td>
-        </tr></tbody></table>
-
-        <div class="section-title">Ranking de Proveedores con Mayor Uso</div>
-        <table class="gp-table">
-          <thead><tr><th style="width:26px">#</th><th>Proveedor</th><th style="width:60px" class="tright">N.º de OT</th><th style="width:120px" class="tright">Costo Acumulado</th></tr></thead>
-          <tbody>
-            <tr v-for="(p, i) in repRankProveedores" :key="p.label">
-              <td>{{ i + 1 }}</td>
-              <td><strong>{{ p.label }}</strong></td>
-              <td class="tright">{{ p.n }}</td>
-              <td class="tright">{{ $$(p.costo) }}</td>
-            </tr>
-            <tr v-if="!repRankProveedores.length"><td colspan="4" style="text-align:center">Sin datos en el período</td></tr>
-          </tbody>
-        </table>
-
-        <div class="section-title">Ranking por Persona — OTs Realizadas y Costo Acumulado</div>
-        <table class="gp-table">
-          <thead><tr><th style="width:26px">#</th><th>Persona</th><th style="width:60px" class="tright">OTs</th><th style="width:120px" class="tright">Costo Acumulado</th></tr></thead>
-          <tbody>
-            <tr v-for="(p, i) in repRankPersonas" :key="p.label">
-              <td>{{ i + 1 }}</td>
-              <td><strong>{{ p.label }}</strong></td>
-              <td class="tright">{{ p.n }}</td>
-              <td class="tright">{{ $$(p.costo) }}</td>
-            </tr>
-            <tr v-if="!repRankPersonas.length"><td colspan="4" style="text-align:center">Sin datos en el período</td></tr>
-          </tbody>
-        </table>
-
-        <div class="html2pdf__page-break"></div>
-        <div class="page-header-mini">
-          <span class="mini-ref">GRV-INF-{{ repReferencia }} — {{ repTipoLabel }} — Período: {{ informeDesde }} al {{ informeHasta }}</span>
-        </div>
-
-        <div class="section-title">Distribución del Mantenimiento Correctivo y Preventivo</div>
-        <table class="chart-row"><tbody><tr>
-          <td class="chart-donut-wrap" style="width:34%">
-            <svg class="donut" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="38" fill="none" stroke="#e0d8ec" stroke-width="15" />
-              <circle cx="50" cy="50" r="38" fill="none" stroke="#16a34a" stroke-width="15" stroke-linecap="round"
-                :stroke-dasharray="(repClaseMant.pctPrev * 2.3876) + ' ' + (238.76)" transform="rotate(-90 50 50)" />
-              <text x="50" y="46" text-anchor="middle" fill="#16a34a" style="font-size:20px;font-weight:900;">{{ repClaseMant.pctPrev }}%</text>
-              <text x="50" y="64" text-anchor="middle" fill="#666" style="font-size:6px;font-weight:bold;">PREVENTIVO</text>
-              <text x="50" y="74" text-anchor="middle" fill="#666" style="font-size:5px;font-weight:bold;">{{ repClaseMant.preventivo }} de {{ repClaseMant.total }} OT</text>
-            </svg>
-          </td>
-          <td class="split-col" style="width:66%">
-            <div class="stack-track">
-              <div class="stack-seg seg-cor" :style="{ width: repClaseMant.pctCor + '%' }">{{ repClaseMant.pctCor ? repClaseMant.pctCor + '%' : '' }}</div>
-              <div class="stack-seg seg-prev" :style="{ width: repClaseMant.pctPrev + '%' }">{{ repClaseMant.pctPrev ? repClaseMant.pctPrev + '%' : '' }}</div>
-              <div class="stack-seg seg-otro" :style="{ width: repClaseMant.pctOtro + '%' }">{{ repClaseMant.pctOtro ? repClaseMant.pctOtro + '%' : '' }}</div>
-            </div>
-            <div class="pv-legend">
-              <span style="color:#dc2626;font-weight:700;">■</span> <b>Correctivo</b> — {{ repClaseMant.correctivo }} OT ({{ repClaseMant.pctCor }}%)<br>
-              <span style="color:#16a34a;font-weight:700;">■</span> <b>Preventivo</b> — {{ repClaseMant.preventivo }} OT ({{ repClaseMant.pctPrev }}%)<br>
-              <span style="color:#8b8b8b;font-weight:700;">■</span> <b>Otras / Sin clasificar</b> — {{ repClaseMant.otros }} OT ({{ repClaseMant.pctOtro }}%)
-            </div>
-          </td>
-        </tr></tbody></table>
-
-        <div class="section-title">Ranking de Sistemas con Mayor Intervención</div>
-        <table class="gp-table">
-          <thead><tr><th style="width:26px">#</th><th>Sistema Intervenido</th><th style="width:90px" class="tright">N.º de Intervenciones</th></tr></thead>
-          <tbody>
-            <tr v-for="(s, i) in repRankSistemas" :key="s.label">
-              <td>{{ i + 1 }}</td>
-              <td><strong>{{ s.label }}</strong></td>
-              <td class="tright">{{ s.n }}</td>
-            </tr>
-            <tr v-if="!repRankSistemas.length"><td colspan="3" style="text-align:center">Sin intervenciones registradas en el período</td></tr>
-          </tbody>
-        </table>
-
-        <div class="section-title">Ranking de Elementos de Almacén</div>
-        <table class="gp-table">
-          <thead><tr><th style="width:26px">#</th><th>Elemento</th><th style="width:70px">Unidad</th><th style="width:80px" class="tright">Cantidad</th></tr></thead>
-          <tbody>
-            <tr v-for="(a, i) in repRankAlmacen" :key="a.label">
-              <td>{{ i + 1 }}</td>
-              <td><strong>{{ a.label }}</strong></td>
-              <td>{{ a.und || '—' }}</td>
-              <td class="tright">{{ a.n }}</td>
-            </tr>
-            <tr v-if="!repRankAlmacen.length"><td colspan="4" style="text-align:center">Sin solicitudes de almacén en el período</td></tr>
-          </tbody>
-        </table>
-
-        <div class="section-title">Resumen Ejecutivo de la Gestión</div>
-        <div class="exec-box">
-          <ul class="exec-list">
-            <li v-for="(l, i) in repLectura" :key="i" class="exec-item">{{ l }}</li>
-          </ul>
-        </div>
-
-        <div class="footer">
-          <div>Informe Automatizado de Gestión de Mantenimiento — Gravicon</div>
-          <div>Documento Generado en la Aplicación | {{ repReferencia }}</div>
-        </div>
       </div>
 
       <div v-else class="informe-empty">
@@ -2007,20 +2202,31 @@ const selectedProveedores = ref<Set<string>>(new Set())
 const selectedEstados = ref<Set<string>>(new Set())
 const selectedPersonalInterno = ref<Set<string>>(new Set())
 
-/* ── INFORME (vista previa + PDF por impresión, todo en el cliente) ── */
-const informeDesde = computed(() => fechaInicio.value)
-const informeHasta = computed(() => fechaFin.value)
+/* ── INFORME OFICIAL DE GESTIÓN DE OT (Vista previa + PDF nítido en el cliente) ── */
+const informeMinSerial = computed(() => {
+  const all = dataFilteredMain.value
+  if (!all.length) return null
+  const serials = all.map(r => Number(r['FECHA'])).filter(v => typeof v === 'number' && !isNaN(v) && v > 0)
+  return serials.length ? Math.min(...serials) : null
+})
+const informeMaxSerial = computed(() => {
+  const all = dataFilteredMain.value
+  if (!all.length) return null
+  const serials = all.map(r => Number(r['FECHA'])).filter(v => typeof v === 'number' && !isNaN(v) && v > 0)
+  return serials.length ? Math.max(...serials) : null
+})
+const informeDesde = computed(() => {
+  if (fechaInicio.value) return fechaInicio.value
+  if (informeMinSerial.value) return serialToDate(informeMinSerial.value).toISOString().slice(0, 10)
+  return ''
+})
+const informeHasta = computed(() => {
+  if (fechaFin.value) return fechaFin.value
+  if (informeMaxSerial.value) return serialToDate(informeMaxSerial.value).toISOString().slice(0, 10)
+  return informeDesde.value
+})
 const informeRows = computed(() => {
-  if (!informeDesde.value || !informeHasta.value) return []
-  const from = dateToSerial(informeDesde.value)
-  const to = dateToSerial(informeHasta.value) + 1
-  return dataFilteredMain.value
-    .filter(r => {
-      const f = Number(r['FECHA'])
-      if (!f) return false
-      return f >= from && f < to
-    })
-    .sort((a, b) => Number(a['FECHA']) - Number(b['FECHA']))
+  return [...dataFilteredMain.value].sort((a, b) => Number(a['FECHA']) - Number(b['FECHA']))
 })
 const repRows = informeRows
 const repReferencia = computed(() => `${new Date().getFullYear()}-${plantaLabel.value.toUpperCase()}`)
@@ -2033,16 +2239,14 @@ const repSectionLabelVehiculo = computed(() => isPlanta.value ? 'Equipo Planta' 
 
 const repAbiertas = computed(() => repRows.value.filter(r => estadoClass(String(r['Estado'] ?? '')) === 'warn').length)
 const repCerradas = computed(() => repRows.value.filter(r => estadoClass(String(r['Estado'] ?? '')) === 'ok').length)
-/** OTs cerradas cuya fecha de cierre cae dentro del rango seleccionado. */
+/** OTs cerradas cuya fecha de cierre cae dentro del rango del informe. */
 const repCerradasMes = computed(() => {
-  if (!informeDesde.value || !informeHasta.value) return repCerradas.value
-  const from = dateToSerial(informeDesde.value)
-  const to = dateToSerial(informeHasta.value) + 1
+  if (!informeMaxSerial.value) return repCerradas.value
   let n = 0
   for (const r of repRows.value) {
     if (estadoClass(String(r['Estado'] ?? '')) !== 'ok') continue
     const c = Number(r['Fecha Cierre'])
-    if (c && c >= from && c < to) n++
+    if (c && c === informeMaxSerial.value) n++
   }
   return n || repCerradas.value
 })
@@ -2247,93 +2451,146 @@ const repLectura = computed(() => {
   if (repClaseMant.value.total > 0) list.push(`La ejecución se distribuyó en ${repClaseMant.value.pctCor}% correctivo, ${repClaseMant.value.pctPrev}% preventivo y ${repClaseMant.value.pctOtro}% de otras clasificaciones.`)
   const top = repTopVehiculos.value[0]
   if (top) list.push(`El ${repSectionLabelVehiculo.value.toLowerCase()} con mayor consumo fue ${top.placa} con ${$$(top.costo)} y ${fmtDuracion(top.dias) || '—'} en taller.`)
-  if (repAbiertas.value > 0) list.push(`Existen ${repAbiertas.value} OT abiertas; se recomienda dar seguimiento prioritario a su cierre.`)
+  if (repAbiertas.value > 0) list.push(`Existen ${repAbiertas.value} OT abiertas; se recomienda dar seguimiento prioritario a su cierre administrativo u operativo.`)
   else list.push('No hay OT abiertas en el período: el cierre de las órdenes se mantiene al día.')
   return list
 })
 
+const informeAnalisisTexto = computed(() => {
+  const total = repRows.value.length
+  const desde = informeDesde.value
+  const hasta = informeHasta.value
+  const costo = $$(repCostoTotal.value)
+  const pctCierre = repPctCierre.value
+  const abiertas = repAbiertas.value
+  const cerradas = repCerradas.value
+  const top = repTopVehiculos.value[0]
+
+  let texto = `Consolidado de Mantenimiento <strong>${plantaLabel.value}</strong>: Evaluación ejecutiva de órdenes de trabajo para el período del <strong>${desde}</strong> al <strong>${hasta}</strong>. `
+  texto += `Volumen total intervenido: <strong>${total} órdenes de trabajo</strong> (${cerradas} cerradas y ${abiertas} abiertas), logrando una tasa de efectividad de cierre del <strong>${pctCierre}%</strong>. `
+  texto += `Inversión acumulada: <strong>${costo}</strong>, ejecutada en ${$$(repCostosProv.value.interno)} (${repCostosProv.value.pctInt}%) mediante recursos internos de Gravicon y ${$$(repCostosProv.value.externo)} (${repCostosProv.value.pctExt}%) en proveedores externos especializados. `
+  if (repClaseMant.value.total > 0) {
+    texto += `Distribución operativa: <strong>${repClaseMant.value.pctPrev}% Preventivo</strong> frente a un <strong>${repClaseMant.value.pctCor}% Correctivo</strong>. `
+  }
+  if (top) {
+    texto += `Mayor concentración de costo y permanencia en taller: <strong>${top.placa}</strong> (${$$(top.costo)}${top.dias > 0 ? ` · ${fmtDuracion(top.dias)}` : ''}). `
+  }
+  if (abiertas > 0) {
+    texto += `<br><strong>Seguimiento Prioritario:</strong> Se registran ${abiertas} orden(es) abierta(s) en proceso de atención o cierre administrativo.`
+  } else {
+    texto += `<br><strong>Gestión al Día:</strong> No se evidencian órdenes abiertas en el período consultado.`
+  }
+  return texto
+})
+
 const generandoPdf = ref(false)
 
-function imprimirInforme() {
-  window.print()
-}
-
-/** Genera el PDF del informe con html2pdf (html2canvas + jsPDF) capturando el div .reporte-doc sin cortes erróneos. */
+/** Genera el PDF del informe oficial de OT con captura nítida por página (html2canvas + jsPDF) */
 async function generarInformePdf() {
-  if (!informeDesde.value || !informeHasta.value) return
-  if (informeHasta.value < informeDesde.value) {
-    alert('La fecha "Hasta" no puede ser anterior a "Desde".')
-    return
-  }
-  const el = document.querySelector<HTMLElement>('.reporte-doc')
-  if (!el) return
-
+  if (generandoPdf.value || !informeRows.value.length) return
   generandoPdf.value = true
-
-  /* Guardar estilos originales */
-  const origW = el.style.width
-  const origMW = el.style.maxWidth
-  const origP = el.style.padding
-  const origBoxShadow = el.style.boxShadow
-  const origBorder = el.style.border
-  const origRadius = el.style.borderRadius
-
-  /* Fijar ancho y formato A4 óptimo para html2canvas sin cortes laterales ni sombras cortadas */
-  el.style.width = '760px'
-  el.style.maxWidth = '760px'
-  el.style.padding = '20px 24px'
-  el.style.boxShadow = 'none'
-  el.style.border = 'none'
-  el.style.borderRadius = '0'
-  el.style.background = '#ffffff'
-
   try {
-    const { default: html2pdf } = await import('html2pdf.js')
-    const opt = {
-      margin: [16, 12, 18, 12],
-      filename: `Informe_Gestion_Mantenimiento_${plantaLabel.value}_${informeDesde.value}_al_${informeHasta.value}.pdf`,
-      image: { type: 'jpeg' as const, quality: 0.98 },
-      html2canvas: {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: 760,
-        letterRendering: true,
-      },
-      jsPDF: { unit: 'pt' as const, format: 'a4' as const, orientation: 'portrait' as const },
-      pagebreak: {
-        mode: ['css', 'legacy'] as any,
-        avoid: [
-          'tr',
-          '.kpi-table',
-          '.note-bar',
-          '.doc-header',
-          '.doc-header-static',
-          '.doc-title-wrap',
-          '.chart-row',
-          '.chart-donut-wrap',
-          '.exec-box',
-          '.rank-bar',
-          '.stack-track',
-          '.page-header-mini',
-          '.section-title',
-        ],
-      },
+    await nextTick()
+    await new Promise(r => setTimeout(r, 400))
+    const elemento = document.querySelector('.report-paper') as HTMLElement
+    if (!elemento) {
+      console.error('No se encontró el contenedor del reporte (.report-paper)')
+      return
     }
-    await html2pdf().set(opt as any).from(el).save()
+    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+      import('html2canvas'),
+      import('jspdf'),
+    ])
+
+    // Forzar tema claro temporalmente para que los colores del PDF salgan vivos y nítidos
+    const root = document.documentElement
+    const temaPrevio = root.getAttribute('data-theme')
+    root.setAttribute('data-theme', 'light')
+    root.classList.add('light')
+    root.classList.remove('dark')
+
+    await new Promise(r => requestAnimationFrame(() => r(null)))
+
+    try {
+      const pageW = 210
+      const pageH = 297
+      const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
+
+      function addCanvasToPdf(canvas: HTMLCanvasElement, isFirst: boolean) {
+        const imgW = pageW
+        const imgH = (canvas.height * imgW) / canvas.width
+        const imgData = canvas.toDataURL('image/png')
+
+        if (imgH <= pageH) {
+          if (!isFirst) pdf.addPage()
+          pdf.addImage(imgData, 'PNG', 0, 0, imgW, imgH, undefined, 'FAST')
+        } else {
+          const pxPerMm = canvas.width / imgW
+          const pageHeightPx = Math.floor(pageH * pxPerMm)
+          let yOffset = 0
+          let firstSlice = isFirst
+
+          while (yOffset < canvas.height) {
+            const sliceHeight = Math.min(pageHeightPx, canvas.height - yOffset)
+            const sliceCanvas = document.createElement('canvas')
+            sliceCanvas.width = canvas.width
+            sliceCanvas.height = sliceHeight
+            const ctx = sliceCanvas.getContext('2d')!
+            ctx.fillStyle = '#ffffff'
+            ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height)
+            ctx.drawImage(canvas, 0, yOffset, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight)
+
+            if (!firstSlice) pdf.addPage()
+            const sliceData = sliceCanvas.toDataURL('image/png')
+            const sliceHm = (sliceHeight * imgW) / canvas.width
+            pdf.addImage(sliceData, 'PNG', 0, 0, imgW, sliceHm, undefined, 'FAST')
+
+            yOffset += sliceHeight
+            firstSlice = false
+          }
+        }
+      }
+
+      const pages = elemento.querySelectorAll<HTMLElement>('.report-page')
+      if (pages.length === 0) {
+        const canvas = await html2canvas(elemento, {
+          scale: 3,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+        })
+        addCanvasToPdf(canvas, true)
+      } else {
+        let first = true
+        for (let i = 0; i < pages.length; i++) {
+          const pageCanvas = await html2canvas(pages[i], {
+            scale: 3,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            logging: false,
+            width: pages[i].scrollWidth,
+            height: pages[i].scrollHeight,
+            windowWidth: pages[i].scrollWidth,
+            windowHeight: pages[i].scrollHeight,
+          })
+          addCanvasToPdf(pageCanvas, first)
+          first = false
+        }
+      }
+      const filename = `Informe_Gestion_OT_${plantaLabel.value}_${informeDesde.value || 'reporte'}_al_${informeHasta.value || 'corte'}.pdf`
+      pdf.save(filename)
+    } finally {
+      if (temaPrevio) {
+        root.setAttribute('data-theme', temaPrevio)
+        if (temaPrevio === 'dark') {
+          root.classList.add('dark')
+          root.classList.remove('light')
+        }
+      }
+    }
   } catch (err) {
     console.error('[generarInformePdf]', err)
   } finally {
-    el.style.width = origW
-    el.style.maxWidth = origMW
-    el.style.padding = origP
-    el.style.boxShadow = origBoxShadow
-    el.style.border = origBorder
-    el.style.borderRadius = origRadius
-    el.style.background = ''
     generandoPdf.value = false
   }
 }
@@ -3708,43 +3965,86 @@ const sistemasExpandOpt = computed(() => markRaw(buildCountBarColorOpt(sistemasR
 
 .ots-section { margin-top: 8px; }
 
-.informe-section { margin-top: 8px; }
-.informe-bar {
+.informe-section {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Barra superior oficial del informe de OT */
+.informe-control-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--card-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  padding: 12px 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   flex-wrap: wrap;
   gap: 12px;
-  margin-bottom: 16px;
 }
-.informe-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.informe-field {
+.icb-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  gap: 2px;
 }
-.informe-field .ots-search {
-  min-width: 150px;
-  padding: 8px 12px;
-  background: var(--bg);
+.icb-tag {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--navy, #172954);
 }
-.informe-stats {
+.icb-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.icb-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  color: var(--text-secondary);
+  gap: 8px;
 }
-.informe-stats strong { color: var(--text-primary); font-weight: 700; }
-.stat-costo { color: #3827f5; }
+
+.tb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.tb-btn:hover {
+  border-color: #93c5fd;
+  background: #f0f7ff;
+  color: #1d4ed8;
+}
+.tb-btn:active {
+  transform: scale(0.97);
+}
+.tb-btn.primary {
+  background: var(--navy, #172954);
+  color: #ffffff;
+  border-color: var(--navy, #172954);
+}
+.tb-btn.primary:hover {
+  background: #1e3a8a;
+  border-color: #1e3a8a;
+}
+.tb-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .informe-empty {
   display: flex;
   flex-direction: column;
@@ -3757,174 +4057,409 @@ const sistemasExpandOpt = computed(() => markRaw(buildCountBarColorOpt(sistemasR
   text-align: center;
 }
 
-/* ── Informe: réplica del diseño del PDF generado por la API ── */
-.reporte-doc {
-  max-width: 960px;
-  margin: 0 auto;
-  background: #fff;
+/* Hoja / Papel de Reporte Oficial estructurado por páginas A4 */
+.report-paper {
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: center;
+  width: 100%;
+}
+
+.report-page {
+  width: 100%;
+  min-height: 297mm;
+  padding: 12mm 14mm 14mm 14mm;
+  background: #ffffff;
   color: #1a1a2e;
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 9.5pt;
-  line-height: 1.35;
-  padding: 28px 36px;
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .06);
+  border: 1px solid var(--card-border, #e2e8f0);
+  border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.07);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
+  page-break-after: always;
+  break-after: page;
+  font-family: 'Lato', 'Segoe UI', Arial, sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.report-salto-superior {
+  height: 8mm;
+  flex-shrink: 0;
+}
+
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 2.5px solid var(--navy, #172954);
+  padding-bottom: 10px;
+  position: relative;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.report-header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2.5px;
+  width: 74px;
+  height: 2.5px;
+  background: #a90707;
+}
+.report-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.report-logo {
+  height: 38px;
+  object-fit: contain;
+}
+.report-header-text h2 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy, #172954);
+  margin: 0;
+}
+.report-header-text span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.report-header-meta {
+  text-align: right;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+.report-header-meta strong {
+  color: var(--text-primary);
+}
+.page-counter {
+  font-weight: 700;
+  color: var(--navy, #172954);
+}
+
+.report-title-section {
+  text-align: center;
+  margin: 2px 0 6px;
+}
+.report-title-section h1 {
+  font-size: 16px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+}
+.report-intro {
+  font-size: 12px;
+  color: var(--text-secondary);
+  max-width: 760px;
+  margin: 0 auto;
+  line-height: 1.45;
+}
+
+.compact-kpi {
+  margin: 2px 0 6px !important;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.report-nota {
+  border-left: 3px solid var(--navy, #172954);
+  background: var(--card-bg-hover, #f8fafc);
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text-primary);
+  border-radius: 0 6px 6px 0;
+  line-height: 1.4;
+}
+.report-nota.alerta {
+  border-left-color: #a90707;
+  background: #fdf1f1;
+  color: #7f1d1d;
+}
+
+.report-section-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.report-block-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--navy, #172954);
+  margin: 0;
+}
+.title-bar {
+  display: inline-block;
+  width: 4px;
+  height: 14px;
+  background: #2563eb;
+  border-radius: 2px;
+}
+
+.zoho-analysis-box {
+  background-color: var(--card-bg-hover, #f8fafc);
+  padding: 12px 16px;
+  border-radius: 6px;
+  border-left: 3px solid var(--navy, #172954);
+}
+.zoho-analysis-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary, #64748b);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  letter-spacing: 0.5px;
+}
+.zoho-analysis-text {
+  font-size: 12px;
+  color: var(--text-primary, #475569);
+  line-height: 1.6;
+}
+
+.data-card {
+  background: #ffffff;
+  border: 1px solid var(--card-border, #e2e8f0);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.card-head {
+  padding: 6px 10px;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--card-border, #e2e8f0);
+}
+
+.table-wrap {
+  width: 100%;
   overflow-x: auto;
 }
-.reporte-doc .doc-header {
+.table-wrap table {
   width: 100%;
-  border-bottom: 2pt solid #2b2256;
-  padding-bottom: 6pt;
-  margin-bottom: 6pt;
+  border-collapse: collapse;
+  font-size: 11.5px;
 }
-.reporte-doc .doc-header-static {
-  font-size: 8.5pt;
-  font-weight: 600;
-  color: #2b2256;
-  text-align: right;
-  border-bottom: 1.5pt solid #2b2256;
-  padding-bottom: 4pt;
-  margin-bottom: 8pt;
-}
-.reporte-doc .doc-header-top { width: 100%; border-collapse: collapse; }
-.reporte-doc .doc-header-logo { width: 35%; vertical-align: middle; }
-.reporte-doc .doc-header-logo img { height: 44px; display: block; }
-.reporte-doc .doc-header-info { vertical-align: middle; text-align: right; font-size: 7.5pt; color: #555; line-height: 1.4; }
-.reporte-doc .doc-header-info strong { color: #2b2256; font-weight: 700; }
-.reporte-doc .doc-title-wrap { text-align: center; margin: 4pt 0 6pt 0; }
-.reporte-doc .doc-title { font-size: 11.5pt; font-weight: 700; color: #2b2256; text-transform: uppercase; letter-spacing: .5px; }
-.reporte-doc .doc-subtitle { font-size: 7.8pt; color: #555; margin-top: 4pt; line-height: 1.3; text-align: justify; }
-
-.reporte-doc .kpi-table { width: 100%; border-collapse: separate; border-spacing: 5pt 0; margin-bottom: 6pt; table-layout: auto; page-break-inside: avoid; break-inside: avoid; min-width: 520px; }
-.reporte-doc .kpi-cell {
-  text-align: center;
-  vertical-align: middle;
-  padding: 7pt 4pt 5pt;
-  border: 1.5pt solid #e0e7ef;
-  border-top-width: 5pt;
-  border-radius: 4pt;
-  background: #f8faff;
-  white-space: normal;
-  word-break: break-word;
-}
-.reporte-doc .kpi-cell.blue { border-top-color: #473f66; }
-.reporte-doc .kpi-cell.green { border-top-color: #16a34a; }
-.reporte-doc .kpi-cell.orange { border-top-color: #e8a020; }
-.reporte-doc .kpi-cell.red { border-top-color: #dc2626; }
-.reporte-doc .kpi-value {
-  font-size: 18pt;
-  font-weight: 900;
-  line-height: 1.1;
-  display: block;
-  margin-bottom: 2pt;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  white-space: normal;
-}
-.reporte-doc .kpi-cell.blue .kpi-value { color: #473f66; }
-.reporte-doc .kpi-cell.green .kpi-value { color: #16a34a; }
-.reporte-doc .kpi-cell.orange .kpi-value { color: #e8a020; }
-.reporte-doc .kpi-cell.red .kpi-value { color: #dc2626; }
-.reporte-doc .kpi-label { font-size: 7pt; font-weight: 700; color: #444; text-transform: uppercase; letter-spacing: .4px; display: block; }
-.reporte-doc .kpi-sub { font-size: 6.5pt; color: #555; display: block; margin-top: 2pt; word-break: break-word; overflow-wrap: anywhere; font-weight: 600; }
-
-.reporte-doc .note-bar { background: #f0edf7; border-left: 3.5pt solid #473f66; padding: 4pt 8pt; font-size: 8pt; color: #2b2256; margin-bottom: 6pt; border-radius: 0 3pt 3pt 0; }
-
-.reporte-doc .section-title {
-  font-size: 9.5pt;
+.table-wrap th {
+  background: #f8fafc;
+  color: var(--navy, #172954);
+  font-size: 10.5px;
   font-weight: 700;
-  color: #2b2256;
-  padding: 0 0 2pt;
-  margin-bottom: 6pt;
-  margin-top: 8pt;
   text-transform: uppercase;
-  letter-spacing: .4px;
-  border-bottom: 1.2pt solid #2b2256;
+  letter-spacing: 0.4px;
+  padding: 6px 10px;
+  border-bottom: 1.5px solid var(--card-border, #e2e8f0);
+  text-align: left;
+}
+.table-wrap td {
+  padding: 5.5px 10px;
+  border-bottom: 1px solid var(--card-border, #f1f5f9);
+  vertical-align: middle;
+}
+.table-wrap tr:hover td {
+  background: #f8fafc;
+}
+.table-wrap th.r, .table-wrap td.r {
+  text-align: right;
+}
+.idx-col, .idx {
+  width: 24px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+.bold {
+  font-weight: 700;
+}
+.accent-text {
+  color: var(--navy, #172954);
+}
+.red { color: #dc2626; }
+.green { color: #16a34a; }
+.yellow { color: #b8860b; }
+
+.table-total-row td {
+  background: #f1f5f9 !important;
+  font-weight: 700 !important;
+  border-top: 2px solid var(--card-border, #cbd5e1) !important;
 }
 
-.reporte-doc .chart-row { width: 100%; border-collapse: collapse; margin-bottom: 10pt; }
-.reporte-doc .chart-row td { vertical-align: top; }
-.reporte-doc .chart-tipo-wrap { width: 62%; padding-right: 4pt; }
-.reporte-doc .chart-donut-wrap { width: 38%; text-align: center; vertical-align: middle; }
-.reporte-doc .donut { width: 200px; height: 200px; margin: 0 auto; display: block; }
-.reporte-doc .bar-chart { width: 100%; }
-.reporte-doc .bar-item { display: flex; align-items: center; gap: 6pt; margin-bottom: 7pt; }
-.reporte-doc .bar-label { width: 110pt; font-size: 8pt; font-weight: 700; color: #2b2256; text-align: right; }
-.reporte-doc .bar-track { flex: 1; display: flex; height: 16px; background: #eef0f5; border-radius: 3px; overflow: hidden; }
-.reporte-doc .bar-seg { height: 100%; color: #fff; font-size: 8px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
-.reporte-doc .bar-op { background: #16a34a; }
-.reporte-doc .bar-alq { background: #473f66; }
-.reporte-doc .bar-no { background: #dc2626; }
-.reporte-doc .bar-pct { width: 34pt; font-size: 8.5pt; font-weight: 700; color: #2b2256; text-align: right; }
-.reporte-doc .chart-legend { font-size: 7.5pt; color: #555; margin-top: 2pt; }
+.empty-table {
+  text-align: center;
+  padding: 12px;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+}
 
-.reporte-doc .matrix-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin-bottom: 10pt; }
-.reporte-doc .matrix-table thead th { background: #473f66; color: #fff; padding: 5pt 7pt; text-align: center; font-weight: 700; font-size: 8pt; text-transform: uppercase; }
-.reporte-doc .matrix-table thead th:first-child { text-align: left; }
-.reporte-doc .matrix-table tbody td { padding: 4.5pt 7pt; border-bottom: 1pt solid #e0e7ef; text-align: center; }
-.reporte-doc .matrix-table tbody td:first-child { text-align: left; font-weight: 700; color: #2b2256; }
-.reporte-doc .matrix-table tbody tr:nth-child(even) td { background: #f0edf7; }
-.reporte-doc .matrix-table tbody tr.total-row td { font-weight: 700; background: #e5e0ef; border-top: 2pt solid #2b2256; }
-.reporte-doc .disp-high { color: #16a34a; font-weight: 700; }
-.reporte-doc .disp-mid { color: #e8a020; font-weight: 700; }
-.reporte-doc .disp-low { color: #dc2626; font-weight: 700; }
+.rank-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.rank-label {
+  width: 110px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--navy, #172954);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rank-track {
+  flex: 1;
+  height: 12px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.rank-fill {
+  height: 100%;
+  background: var(--navy, #172954);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+.rank-val {
+  width: 28px;
+  text-align: right;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--navy, #172954);
+}
 
-.reporte-doc .interv-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin-bottom: 10pt; }
-.reporte-doc .interv-table thead th { background: #473f66; color: #fff; padding: 5.5pt 8pt; text-align: left; font-weight: 700; font-size: 8pt; }
-.reporte-doc .interv-table tbody td { padding: 4.5pt 8pt; border-bottom: 1pt solid #e0e7ef; vertical-align: middle; }
-.reporte-doc .interv-table tbody tr:nth-child(even) td { background: #f0edf7; }
-.reporte-doc .badge { display: inline-block; padding: 2pt 6pt; border-radius: 8pt; font-size: 7.5pt; font-weight: 700; }
-.reporte-doc .badge-correctivo { background: #fef3c7; color: #92400e; border: 1pt solid #f0d070; }
-.reporte-doc .badge-emergencia { background: #fee2e2; color: #991b1b; border: 1pt solid #f0a0a0; }
-.reporte-doc .badge-preventivo { background: #d1fae5; color: #065f46; border: 1pt solid #80d8b0; }
-.reporte-doc .badge-media { background: #fef3c7; color: #92400e; border: 1pt solid #f0d070; }
-.reporte-doc .badge-alta { background: #fee2e2; color: #991b1b; border: 1pt solid #f0a0a0; }
-.reporte-doc .badge-baja { background: #d1fae5; color: #065f46; border: 1pt solid #80d8b0; }
-
-.reporte-doc .exec-box { background: #f8faff; border: 1pt solid #d8d2e8; border-left: 3pt solid #2b2256; border-radius: 4pt; padding: 8pt 10pt; margin-bottom: 10pt; }
-.reporte-doc .exec-list { margin: 0; padding: 0; list-style: none; }
-.reporte-doc .exec-item { padding: 3pt 0 3pt 12pt; font-size: 8.5pt; line-height: 1.4; color: #1a1a2e; position: relative; border-bottom: .5pt solid #e0e7ef; }
-.reporte-doc .exec-item:last-child { border-bottom: none; }
-.reporte-doc .exec-item::before { content: ''; position: absolute; left: 0; top: 7pt; width: 5pt; height: 5pt; border-radius: 50%; background: #2b2256; }
-
-.reporte-doc .footer { margin-top: 14pt; padding-top: 4pt; display: flex; justify-content: space-between; font-size: 7.5pt; color: #888; border-top: 1px solid #d8d2e8; }
-
-/* ── Mini header repetido en páginas posteriores del PDF ── */
-.reporte-doc .page-header-mini {
+.stack-track {
+  display: flex;
+  height: 20px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #e2e8f0;
+  margin: 4px 0;
+}
+.stack-seg {
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-bottom: 1.5pt solid #2b2256;
-  padding-bottom: 5pt;
-  margin-bottom: 12pt;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 700;
 }
-.reporte-doc .page-header-mini .mini-ref { font-size: 7pt; color: #777; letter-spacing: .3px; font-weight: 600; }
+.seg-cor { background: #dc2626; }
+.seg-prev { background: #16a34a; }
+.seg-otro { background: #8b8b8b; }
+.pv-legend {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.pv-legend b {
+  color: var(--navy, #172954);
+}
 
-/* ── html2pdf page-break divider ── */
-.html2pdf__page-break { display: block; height: 0; page-break-before: always; clear: both; }
+.pill {
+  display: inline-block;
+  padding: 1.5px 6px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+.p-rojo { background: #fdeaea; color: #a90707; }
+.p-verde { background: #e9f4ed; color: #1f7a3d; }
+.p-ambar { background: #fbf3e0; color: #b8860b; }
+.p-gris { background: #eef1f4; color: #5b6b82; }
 
-/* ── Informe: secciones de gestión de OT (rankings, costos, correctivo/preventivo) ── */
-.reporte-doc .mini-title { font-size: 8.5pt; font-weight: 700; color: #2b2256; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 6pt; }
-.reporte-doc .split-col { vertical-align: top; padding: 0 4pt; }
-.reporte-doc .rank-bar { display: flex; align-items: center; gap: 6pt; margin-bottom: 6pt; }
-.reporte-doc .rank-label { width: 96pt; font-size: 8pt; font-weight: 700; color: #2b2256; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.reporte-doc .rank-track { flex: 1; height: 14px; background: #eef0f5; border-radius: 3px; overflow: hidden; }
-.reporte-doc .rank-fill { height: 100%; background: #473f66; border-radius: 3px; }
-.reporte-doc .rank-val { width: 30pt; text-align: right; font-size: 8.5pt; font-weight: 700; color: #2b2256; }
-.reporte-doc .tright { text-align: right; }
-.reporte-doc .gp-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin-bottom: 10pt; }
-.reporte-doc .gp-table thead th { background: #473f66; color: #fff; padding: 5.5pt 8pt; text-align: left; font-weight: 700; font-size: 8pt; text-transform: uppercase; }
-.reporte-doc .gp-table tbody td { padding: 4.5pt 8pt; border-bottom: 1pt solid #e0e7ef; vertical-align: middle; }
-.reporte-doc .gp-table tbody tr:nth-child(even) td { background: #f0edf7; }
-.reporte-doc .gp-table tbody tr.total-row td { font-weight: 700; background: #e5e0ef; border-top: 2pt solid #2b2256; }
-.reporte-doc .stack-track { display: flex; height: 22px; border-radius: 4px; overflow: hidden; background: #eef0f5; margin: 6pt 0; }
-.reporte-doc .stack-seg { height: 100%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 8px; font-weight: 700; }
-.reporte-doc .seg-cor { background: #dc2626; }
-.reporte-doc .seg-prev { background: #16a34a; }
-.reporte-doc .seg-otro { background: #8b8b8b; }
-.reporte-doc .pv-legend { font-size: 8pt; color: #444; line-height: 1.7; }
-.reporte-doc .pv-legend b { color: #2b2256; }
+ul.res {
+  margin: 4px 0 0;
+  padding-left: 0;
+  list-style: none;
+}
+ul.res li {
+  position: relative;
+  padding-left: 14px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+ul.res li::before {
+  content: "•";
+  position: absolute;
+  left: 2px;
+  color: var(--navy, #172954);
+  font-weight: 800;
+}
+
+.report-footer {
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--card-border, #e2e8f0);
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-secondary, #64748b);
+  font-weight: 500;
+}
+
+/* Estilos de Impresión / Guardar PDF */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+  html, body {
+    background: #ffffff !important;
+    color: #1a1a2e !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .almacen-view-toggle,
+  .informe-control-bar,
+  .sidebar,
+  .navbar,
+  .nav-header,
+  .mobile-header,
+  .tab-bar,
+  .sub-tab-bar,
+  .header-actions,
+  .filter-group,
+  .sticky-top,
+  .chart-actions {
+    display: none !important;
+  }
+  .report-paper {
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    gap: 0 !important;
+    width: 100% !important;
+  }
+  .report-page {
+    width: 210mm !important;
+    height: 297mm !important;
+    min-height: 297mm !important;
+    max-height: 297mm !important;
+    padding: 12mm 14mm 14mm 14mm !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    overflow: hidden !important;
+  }
+}
 
 .ots-bar {
   display: flex;
