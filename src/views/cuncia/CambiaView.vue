@@ -164,7 +164,6 @@ const tableData = computed(() => {
     const dateStr = serial ? serialToDate(serial).toLocaleDateString('es-CO', { timeZone: 'UTC' }) : ''
     const total = Number(r['Total de M³']) || 0
     const proyectado = Number(r['M³ Proyectado']) || 0
-    const metaMensual = Number(r['Meta Mensual M³']) || 0
     const diferencia = total - proyectado
     return {
       Fecha: dateStr,
@@ -173,7 +172,6 @@ const tableData = computed(() => {
       'Línea 3': Number(r['Linea 3']) || 0,
       'Total de M³': total,
       'M³ Proyectado': proyectado,
-      'Meta Mensual M³': metaMensual,
       'Diferencia': diferencia,
       '% Cumplimiento': r['% Cumplimiento'] ?? '',
     }
@@ -253,19 +251,20 @@ function loadData() {
 .sub-tab-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.06); }
 .sub-tab-btn.active { color: var(--accent); background: rgba(255,255,255,0.1); font-weight: 600; }
 .tab-btn {
-  padding: 6px 16px;
+  padding: 10px 20px;
   border: none;
   background: transparent;
   color: var(--text-tertiary);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  border-radius: var(--radius-sm);
+  border-bottom: 2px solid transparent;
   transition: all var(--transition-fast);
   white-space: nowrap;
+  border-radius: var(--radius-sm);
 }
-.tab-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.06); }
-.tab-btn.active { color: var(--accent); background: rgba(255,255,255,0.1); font-weight: 600; }
+.tab-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.08); }
+.tab-btn.active { color: var(--accent); font-weight: 600; border-bottom-color: var(--accent); background: rgba(255,255,255,0.12); }
 
 .filter-group {
   display: flex;
