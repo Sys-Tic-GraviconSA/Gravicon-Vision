@@ -2303,9 +2303,12 @@ const repIndiceCierre = computed(() => groupCount(repRows.value, r =>
     ? String(r['Responsable Cierre'] ?? '').trim() || String(r['Personal'] ?? '').trim()
     : '', 8))
 
-/** Índice de cierre filtrado (top 8). */
+/** Índice de cierre filtrado (solo SOL-012 y SOL-024). */
 const repIndiceCierreFiltrado = computed(() =>
-  repIndiceCierre.value.filter(c => c.label)
+  repIndiceCierre.value.filter(c => {
+    const name = c.label.toUpperCase()
+    return name.includes('SOL-012') || name.includes('SOL-024')
+  })
 )
 
 /** Índice de apertura: OTs agrupadas por la persona que las abrió (solicitante). */
