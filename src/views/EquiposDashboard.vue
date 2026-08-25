@@ -47,6 +47,16 @@
         />
       </template>
 
+      <!-- Tareas: vista propia al nivel de Planta/Maquinaria -->
+      <template v-else-if="tipoTab === 'tareas'">
+        <TareasTab
+          :data="dataFilteredMain"
+          :planta="planta"
+          :fecha-inicio="fechaInicio"
+          :fecha-fin="fechaFin"
+        />
+      </template>
+
       <template v-else>
       <nav class="sub-tab-bar">
         <button class="sub-tab-btn" :class="{ active: subTab === 'dashboard' }" @click="subTab = 'dashboard'">Órdenes de Trabajo</button>
@@ -1221,6 +1231,7 @@ import { useMantenimientoStore, useProduccionStore } from '../stores'
 import { useConcretoStore } from '../stores/concreto'
 import ChartCard from '../components/dashboard/ChartCard.vue'
 import DisponibilidadTab from './mantenimiento/DisponibilidadTab.vue'
+import TareasTab from './mantenimiento/TareasTab.vue'
 import DataTable from '../components/dashboard/DataTable.vue'
 import FilterBar from '../components/dashboard/FilterBar.vue'
 import MultiSelect from '../components/ui/MultiSelect.vue'
@@ -2704,6 +2715,7 @@ async function loadData(forceRefresh = false) {
     { id: 'planta', label: 'Planta', count: countTipo(raw, 'PLANTA') },
     { id: 'maquinaria', label: 'Maquinaria', count: countTipo(raw, 'MAQUINARIA') },
     { id: 'disponibilidad', label: 'Disponibilidad', count: raw.length },
+    { id: 'tareas', label: 'Tareas', count: (isConcretos.value ? (mant.concretosData?.tareas?.length ?? 0) : isAcacias.value ? (mant.acaciasData?.tareas?.length ?? 0) : (mant.cunciaData?.tareas?.length ?? 0)) },
   ]
 }
 
