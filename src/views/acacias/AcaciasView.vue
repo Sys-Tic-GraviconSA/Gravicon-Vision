@@ -65,7 +65,7 @@
                 <input v-model="otFilterInput" class="ots-search" placeholder="Buscar..." />
               </div>
             </div>
-            <DataTable title="Producción Acacias — Detalle Diario" :data="filteredTableData" :page-size="20" :percentFields="['% Cumplimiento']" :semaphoreFields="['% Cumplimiento']" small selectColumns exportColumns />
+            <DataTable title="Producción Acacias — Detalle Diario" :data="filteredTableData" :page-size="31" :percentFields="['% Cumplimiento']" :semaphoreFields="['% Cumplimiento']" small selectColumns exportColumns />
           </div>
         </div>
       </template>
