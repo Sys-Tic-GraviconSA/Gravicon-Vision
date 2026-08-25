@@ -556,6 +556,43 @@
             </div>
           </div>
 
+          <!-- Distribución por Jornada -->
+          <div class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Distribución por Jornada</h3>
+            <div class="charts-grid cols-2">
+              <div class="data-card">
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Jornada</th>
+                        <th class="r" style="width: 50px">OTs</th>
+                        <th class="r" style="width: 110px">Costo</th>
+                        <th class="r" style="width: 60px">Part.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="j in repJornada" :key="j.label">
+                        <td class="bold accent-text">{{ j.label }}</td>
+                        <td class="r bold">{{ j.n }}</td>
+                        <td class="r bold">{{ $$(j.costo) }}</td>
+                        <td class="r bold">{{ repPct(j.costo) }}%</td>
+                      </tr>
+                      <tr v-if="!repJornada.length"><td colspan="4" class="empty-table">Sin datos</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="data-card" style="padding: 12px 16px; display: flex; flex-direction: column; justify-content: center;">
+                <div class="pv-legend">
+                  <template v-for="j in repJornada" :key="'leg-' + j.label">
+                    <span style="font-weight:700;">{{ j.label }}</span> — {{ repPct(j.costo) }}% del costo ({{ $$(j.costo) }}) · {{ j.n }} OTs<br>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Ranking de Proveedores con Mayor Uso -->
           <div class="report-section-block">
             <h3 class="report-block-title"><span class="title-bar"></span>Ranking de Proveedores con Mayor Uso</h3>
@@ -2367,6 +2404,19 @@ const repCostosProv = computed(() => {
 
 /** Ranking de proveedores con mayor uso (nº de OT y acumulado $). */
 const repRankProveedores = computed(() => groupCosto(repRows.value, 'PROVEEDOR', 10))
+
+/** Distribución por Jornada (Noche / Dia). */
+const repJornada = computed(() => {
+  const map = new Map<string, { n: number; costo: number }>()
+  for (const r of repRows.value) {
+    const j = String(r['Jornada'] ?? '').trim() || 'Sin jornada'
+    const e = map.get(j) ?? { n: 0, costo: 0 }
+    e.n++
+    e.costo += rowServicios(r) + rowInsumos(r)
+    map.set(j, e)
+  }
+  return [...map.entries()].map(([label, v]) => ({ label, ...v })).sort((a, b) => b.n - a.n)
+})
 
 /** Ranking por persona: OTs realizadas y acumulado $. */
 const repRankPersonas = computed(() => {
