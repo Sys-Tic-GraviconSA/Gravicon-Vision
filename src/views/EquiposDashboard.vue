@@ -124,6 +124,9 @@
         <ChartCard title="Personal de Intervención (Interno)" description="Técnicos de Gravicon con más intervenciones" :option="personalInternoOpt" :expand-option="personalInternoExpandOpt" :height="300" />
         <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesOpt" :expand-option="solicitantesExpandOpt" :height="300" />
       </div>
+      <div class="charts-grid cols-2" style="margin-bottom:22px">
+        <ChartCard title="Jornada" description="Distribución de órdenes por jornada (Día / Noche)" :option="jornadaOpt" :height="300" />
+      </div>
 
     <div class="charts-grid cols-1" style="margin-bottom:22px">
       <ChartCard title="Órdenes Diarias" description="Abiertas y cerradas con sus costos" :option="ordenesDiariasOpt" :height="300" />
@@ -185,6 +188,9 @@
       <div class="charts-grid cols-2" style="margin-bottom:22px">
         <ChartCard title="Responsables de Cierre con Más Órdenes" description="Quienes más cierran órdenes de trabajo" :option="responsablesCierreIntOpt" :height="300" />
         <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasIntOpt" :height="300" />
+      </div>
+      <div class="charts-grid cols-2" style="margin-bottom:22px">
+        <ChartCard title="Jornada" description="Distribución de órdenes internas por jornada (Día / Noche)" :option="jornadaIntOpt" :height="300" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
         <ChartCard title="Personal de Intervención" description="Técnicos de Gravicon con más intervenciones" :option="personalIntOpt" :height="300" />
@@ -251,6 +257,7 @@
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
         <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesExtOpt" :height="300" />
+        <ChartCard title="Jornada" description="Distribución de órdenes externas por jornada (Día / Noche)" :option="jornadaExtOpt" :height="300" />
       </div>
 
     <div class="charts-grid cols-1" style="margin-bottom:22px">
@@ -1571,6 +1578,7 @@ const otTiempoRealProm = computed(() => {
 const localizacionRanking = computed(() => rankBy(dataFilteredMain.value, 'Localización', 12))
 const prioridadRanking = computed(() => rankBy(dataFilteredMain.value, 'Prioridad', 6))
 const fuenteNovedadRanking = computed(() => rankBy(dataFilteredMain.value, 'Fuente_Novedad', 10))
+const jornadaRanking = computed(() => rankBy(dataFilteredMain.value, 'Jornada', 6))
 const otConSopledPct = computed(() => {
   const n = dataFilteredMain.value.length
   if (!n) return '0.0'
@@ -2001,15 +2009,11 @@ function buildPieOpt(entries: [string, number][], _title: string, sum: number, m
 /** Torta de conteos (solicitudes/aprobaciones) con un color distinto por segmento. */
 function buildCountPieOpt(entries: [string, number][], withTotal = true) {
   const data = entries.slice(0, 8).map(([name, value]) => ({ name, value }))
-  const total = data.reduce((s, d) => s + d.value, 0)
   void withTotal
   return {
     color: palette,
     tooltip: { trigger: 'item' as const, formatter: (p: any) => `${p.name}: ${Number(p.value).toLocaleString('es-CO')} (${p.percent}%)` },
     legend: { type: 'scroll' as const, orient: 'vertical' as const, right: 10, top: 10, textStyle: { fontWeight: 600 as const, color: chartTextColor.value, fontSize: 11 } },
-    graphic: [{
-      type: 'text' as const, left: '38%', top: '50%', style: { text: String(total), textAlign: 'center', fill: chartTextColor.value, fontWeight: 700, fontSize: 18 },
-    }],
     series: [{
       type: 'pie',
       radius: ['42%', '68%'],
@@ -3300,6 +3304,7 @@ const motivosNoEjecucionIntRanking = computed(() => rankBy(intRows.value.filter(
 const personalIntRanking = computed(() => rankByMultiValue(intRows.value, 'Personal', 10))
 const solicitantesIntRanking = computed(() => rankBy(intRows.value, 'Solicitante', 10))
 const responsablesCierreIntRanking = computed(() => rankBy(intRows.value, 'Responsable Cierre', 10))
+const jornadaIntRanking = computed(() => rankBy(intRows.value, 'Jornada', 6))
 
 const costM3Int = computed(() => aggMonthly(intRows.value, prodMapByMonth.value, true))
 const costosM3IntOpt = computed(() => markRaw({
@@ -3396,6 +3401,7 @@ const claseMantenimientoExtRanking = computed(() => rankBy(extRows.value, 'Clase
 const motivosNoEjecucionExtRanking = computed(() => rankBy(extRows.value.filter(r => String(r['Motivo No Ejecución'] ?? '').trim()), 'Motivo No Ejecución', 10))
 const solicitantesExtRanking = computed(() => rankBy(extRows.value, 'Solicitante', 10))
 const responsablesCierreExtRanking = computed(() => rankBy(extRows.value, 'Responsable Cierre', 10))
+const jornadaExtRanking = computed(() => rankBy(extRows.value, 'Jornada', 6))
 
 const costM3Ext = computed(() => aggMonthly(extRows.value, prodMapByMonth.value, true))
 const costosM3ExtOpt = computed(() => markRaw({
@@ -3565,6 +3571,7 @@ const responsablesCierreOpt = computed(() => markRaw(buildCountPieOpt(responsabl
 const tiposTrabajoOpt = computed(() => markRaw(buildCountPieOpt(tiposTrabajoRanking.value, false)))
 const claseMantenimientoOpt = computed(() => markRaw(buildCountPieOpt(claseMantenimientoRanking.value, false)))
 const motivosNoEjecucionOpt = computed(() => markRaw(buildCountPieOpt(motivosNoEjecucionRanking.value, false)))
+const jornadaOpt = computed(() => markRaw(buildCountPieOpt(jornadaRanking.value, false)))
 const personalInternoOpt = computed(() => {
   const items = personalInternoRanking.value
   const labels = items.map(e => e.label)
@@ -3615,6 +3622,7 @@ const motivosNoEjecucionIntOpt = computed(() => markRaw(buildCountPieOpt(motivos
 const personalIntOpt = computed(() => markRaw(buildCountBarColorOpt(personalIntRanking.value, 'Órdenes')))
 const solicitantesIntOpt = computed(() => markRaw(buildCountBarColorOpt(solicitantesIntRanking.value, 'Órdenes')))
 const responsablesCierreIntOpt = computed(() => markRaw(buildCountPieOpt(responsablesCierreIntRanking.value, false)))
+const jornadaIntOpt = computed(() => markRaw(buildCountPieOpt(jornadaIntRanking.value, false)))
 
 const sistemasExtOpt = computed(() => markRaw(buildCountBarColorOpt(sistemasExtRanking.value, 'Intervenciones')))
 const localizacionExtOpt = computed(() => markRaw(buildCountPieOpt(localizacionExtRanking.value, false)))
@@ -3625,6 +3633,7 @@ const claseMantenimientoExtOpt = computed(() => markRaw(buildCountPieOpt(claseMa
 const motivosNoEjecucionExtOpt = computed(() => markRaw(buildCountPieOpt(motivosNoEjecucionExtRanking.value, false)))
 const solicitantesExtOpt = computed(() => markRaw(buildCountBarColorOpt(solicitantesExtRanking.value, 'Órdenes')))
 const responsablesCierreExtOpt = computed(() => markRaw(buildCountPieOpt(responsablesCierreExtRanking.value, false)))
+const jornadaExtOpt = computed(() => markRaw(buildCountPieOpt(jornadaExtRanking.value, false)))
 
 /* ── Expand: opciones sin límite para el modal ── */
 const vehiculoGenExpandOpt = computed(() => markRaw(buildBarOpt(dataFilteredNoAcpm.value, 'Placa del Vehículo', Infinity)))
