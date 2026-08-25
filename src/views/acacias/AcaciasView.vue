@@ -62,6 +62,9 @@
                 <span>Producción total <strong>{{ fmt(filteredDiario.reduce((s, r) => s + (Number(r['Total de M³']) || 0), 0)) }} m³</strong></span>
               </div>
               <div class="ots-actions">
+                <select v-if="months.length > 1" v-model="selectedMonth" class="month-select">
+                  <option v-for="m in months" :key="m.value" :value="m.value">{{ m.label }}</option>
+                </select>
                 <input v-model="otFilterInput" class="ots-search" placeholder="Buscar..." />
               </div>
             </div>
@@ -148,6 +151,26 @@ watch(diario, () => {
   fechaFin.value = ''
 }, { immediate: true })
 
+const months = computed(() => {
+  const map = new Map<string, string>()
+  for (const r of diario.value) {
+    const fecha = Number(r['Fecha'])
+    if (!fecha) continue
+    const d = serialToDate(fecha)
+    const key = d.toLocaleDateString('es-CO', { year: 'numeric', month: '2-digit', timeZone: 'UTC' })
+    if (!map.has(key)) {
+      map.set(key, d.toLocaleDateString('es-CO', { month: 'long', year: 'numeric', timeZone: 'UTC' }))
+    }
+  }
+  return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0])).map(([k, v]) => ({ value: k, label: v }))
+})
+
+const selectedMonth = ref('')
+
+watch(months, (m) => {
+  if (m.length && !selectedMonth.value) selectedMonth.value = m[0].value
+}, { immediate: true })
+
 const filteredDiario = computed(() => {
   const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
   const until = fechaFin.value ? dateToSerial(fechaFin.value) : Infinity
@@ -158,9 +181,16 @@ const filteredDiario = computed(() => {
 })
 
 const tableData = computed(() => {
-  return filteredDiario.value.map(r => {
+  return filteredDiario.value.filter(r => {
+    if (!selectedMonth.value) return true
+    const fecha = Number(r['Fecha'])
+    if (!fecha) return false
+    const d = serialToDate(fecha)
+    const key = d.toLocaleDateString('es-CO', { year: 'numeric', month: '2-digit', timeZone: 'UTC' })
+    return key === selectedMonth.value
+  }).map(r => {
     const serial = Number(r['Fecha'])
-    const dateStr = serial ? serialToDate(serial).toLocaleDateString('es-CO', { timeZone: 'UTC' }) : ''
+    const dateStr = serial ? serialToDate(serial).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) : ''
     const total = Number(r['Total de M³']) || 0
     const proyectado = Number(r['M³ Proyectado']) || 0
     const diferencia = total - proyectado
@@ -372,6 +402,20 @@ function loadData() {
 }
 .ots-search:focus { border-color: var(--accent); }
 .ots-search::placeholder { color: var(--text-tertiary); }
+
+.month-select {
+  padding: 8px 12px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+.month-select:focus { border-color: var(--accent); }
+.month-select option { background: var(--bg); color: var(--text-primary); }
 
 .page-state {
   display: flex;
