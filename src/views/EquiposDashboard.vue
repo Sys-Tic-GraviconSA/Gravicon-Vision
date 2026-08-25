@@ -2299,16 +2299,6 @@ function repPct(part: number): number {
   return repCostoTotal.value > 0 ? Math.round((part / repCostoTotal.value) * 100) : 0
 }
 
-/** Cuenta por categoría según una llave calculada por fila. */
-function groupCount(rows: Record<string, unknown>[], keyFn: (r: Record<string, unknown>) => string, limit = 8): { label: string; n: number }[] {
-  const map = new Map<string, number>()
-  for (const r of rows) {
-    const label = keyFn(r)
-    if (!label) continue
-    map.set(label, (map.get(label) || 0) + 1)
-  }
-  return [...map.entries()].map(([label, n]) => ({ label, n })).sort((a, b) => b.n - a.n).slice(0, limit)
-}
 
 /** Agrupa por campo acumulando nº de OTs y costo (servicios + insumos). */
 function groupCosto(rows: Record<string, unknown>[], field: string, limit = 12, multi = false): { label: string; n: number; costo: number }[] {
@@ -2337,16 +2327,16 @@ function vehTypeLabel(text: string): string {
   return cut.trim() || t || 'SIN TIPO'
 }
 
-/** Índice de cierre: OTs agrupadas por responsable de cierre. */
-const repIndiceCierre = computed(() => rankBy(repRows.value, 'Responsable Cierre', 8).map(([label, n]) => ({ label, n })))
+/** Índice de cierre: OTs agrupadas por responsable de cierre (soporta múltiples personas separadas por coma). */
+const repIndiceCierre = computed(() => rankByMultiValue(repRows.value, 'Responsable Cierre', 8).map(([label, n]) => ({ label, n })))
 
 /** Índice de cierre filtrado (sin filtro adicional). */
 const repIndiceCierreFiltrado = computed(() =>
   repIndiceCierre.value.filter(c => c.label)
 )
 
-/** Índice de apertura: OTs agrupadas por la persona que las abrió (solicitante). */
-const repIndiceApertura = computed(() => groupCount(repRows.value, r => String(r['Solicitante'] ?? '').trim(), 8))
+/** Índice de apertura: OTs agrupadas por la persona que las abrió (soporta múltiples personas separadas por coma). */
+const repIndiceApertura = computed(() => rankByMultiValue(repRows.value, 'Solicitante', 8).map(([label, n]) => ({ label, n })))
 
 /** Costo acumulado por planta (Localización) y maquinaria (tipo de vehículo). */
 const repCostoPlanta = computed(() => {
