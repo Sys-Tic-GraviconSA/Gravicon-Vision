@@ -197,14 +197,59 @@
     </template>
 
     <!-- ========================================== -->
-    <!-- VISTA 2: DETALLES (VACÍO POR AHORA)        -->
+    <!-- VISTA 2: DETALLES                          -->
     <!-- ========================================== -->
     <template v-else-if="dispView === 'detalles'">
-      <div class="detalle-empty-wrapper">
-        <EmptyState
-          title="Detalle de Disponibilidad"
-          description="Esta sección de detalle se encuentra en preparación."
-        />
+      <div class="ots-section">
+        <div class="ots-bar">
+          <div class="ots-stats">
+            <span><strong>{{ activePlacasRows.length }}</strong> registros</span>
+            <span class="ots-dot"></span>
+            <span class="stat-op"><strong>{{ kpis.operativos }}</strong> operativos</span>
+            <span class="ots-dot"></span>
+            <span class="stat-noop"><strong>{{ kpis.noOperativos }}</strong> no operativos</span>
+            <span class="ots-dot"></span>
+            <span class="stat-warn"><strong>{{ kpis.parciales }}</strong> parciales</span>
+          </div>
+        </div>
+
+        <div class="data-card">
+          <div v-if="activePlacasRows.length === 0" class="empty-table">Sin datos de disponibilidad para este corte</div>
+          <div v-else class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th class="idx-col">#</th>
+                  <th>Placa</th>
+                  <th>Tipo</th>
+                  <th>Supervisor</th>
+                  <th>Localización</th>
+                  <th class="r">Rev. AM</th>
+                  <th class="r">Rev. PM</th>
+                  <th class="r">Score</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(r, i) in activePlacasRows" :key="i">
+                  <td class="idx">{{ i + 1 }}</td>
+                  <td class="bold accent-text">{{ r['Placa_Texto'] ?? r['Placa'] ?? '—' }}</td>
+                  <td>{{ r['Tipo de Vehiculos'] ?? r['Clase de Mantenimiento'] ?? '—' }}</td>
+                  <td>{{ r['Supervisor_Texto'] ?? r['Supervisor'] ?? '—' }}</td>
+                  <td>{{ r['Localizacion'] ?? r['Localización'] ?? r['Area de Trabajo'] ?? '—' }}</td>
+                  <td class="r" :class="Number(r['Rev_AM'] ?? NaN) === 0 ? 'red' : Number(r['Rev_AM'] ?? NaN) >= 0.9 ? 'green' : 'yellow'">{{ r['Rev_AM'] ?? '—' }}</td>
+                  <td class="r" :class="Number(r['Rev_PM'] ?? NaN) === 0 ? 'red' : Number(r['Rev_PM'] ?? NaN) >= 0.9 ? 'green' : 'yellow'">{{ r['Rev_PM'] ?? '—' }}</td>
+                  <td class="r bold" :class="(Number(r['Porcentaje_Placa'] ?? NaN) >= 85) ? 'green' : (Number(r['Porcentaje_Placa'] ?? NaN) >= 60) ? 'yellow' : 'red'">{{ r['Porcentaje_Placa'] ?? '—' }}</td>
+                  <td>
+                    <span v-if="Number(r['Porcentaje_Placa'] ?? NaN) >= 0.9" class="pill p-verde">Operativo</span>
+                    <span v-else-if="Number(r['Porcentaje_Placa'] ?? NaN) >= 0.1" class="pill p-ambar">Parcial</span>
+                    <span v-else class="pill p-rojo">No Op.</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </template>
 
@@ -3010,33 +3055,35 @@ const diasPromTipoOpt = computed(() => {
 
 .almacen-view-toggle {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
 .av-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 12px 16px;
-  font-size: 12px;
+  gap: 7px;
+  padding: 9px 18px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--text-secondary, #6b7280);
-  background: var(--card-bg, #ffffff);
-  border: 1px solid var(--card-border, #e5e7eb);
-  border-radius: 8px;
+  color: var(--text-secondary);
+  background: var(--bg-alt);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
 }
 
 .av-btn:hover {
+  border-color: var(--card-border-hover);
   color: var(--text-primary);
-  border-color: var(--accent, #3b82f6);
 }
 
 .av-btn.active {
-  color: #ffffff;
-  background: var(--navy, #172954);
-  border-color: var(--navy, #172954);
+  background: var(--accent-light);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 /* Vista Detalle vacía */
@@ -3085,6 +3132,37 @@ const diasPromTipoOpt = computed(() => {
   background: #f8fafc;
   border-bottom: 1px solid var(--card-border, #e2e8f0);
 }
+
+/* ===== ots-bar / stats bar (estilo Maquinaria) ===== */
+.ots-section { margin-top: 8px; }
+.ots-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.ots-stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.ots-stats strong { color: var(--text-primary); font-weight: 700; }
+.ots-dot {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  opacity: .4;
+}
+.stat-op { color: #10b981; }
+.stat-op strong { color: #10b981; }
+.stat-noop { color: #ef4444; }
+.stat-noop strong { color: #ef4444; }
+.stat-warn { color: #f59e0b; }
+.stat-warn strong { color: #f59e0b; }
 
 .table-wrap {
   width: 100%;

@@ -34,7 +34,7 @@
         </header>
       </div>
       <nav class="tab-bar">
-        <button v-for="t in tipoTabs" :key="t.id" class="tab-btn" :class="{ active: tipoTab === t.id }" @click="tipoTab = t.id">{{ t.label }} ({{ t.count }})</button>
+        <button v-for="t in tipoTabs" :key="t.id" class="tab-btn" :class="{ active: tipoTab === t.id }" @click="tipoTab = t.id">{{ t.label }}<template v-if="t.count > 0"> ({{ t.count }})</template></button>
       </nav>
 
       <!-- Disponibilidad: vista propia al nivel de Planta/Maquinaria -->
@@ -1227,7 +1227,7 @@
  */
 <script setup lang="ts">
 import { computed, markRaw, nextTick, onMounted, ref, watch } from 'vue'
-import { useMantenimientoStore, useProduccionStore } from '../stores'
+import { useMantenimientoStore, useProduccionStore, useDisponibilidadStore } from '../stores'
 import { useConcretoStore } from '../stores/concreto'
 import ChartCard from '../components/dashboard/ChartCard.vue'
 import DisponibilidadTab from './mantenimiento/DisponibilidadTab.vue'
@@ -2247,6 +2247,7 @@ const labelLineCurrency = computed(() => ({
 const mant = useMantenimientoStore()
 const prod = useProduccionStore()
 const concretoStore = useConcretoStore()
+const disp = useDisponibilidadStore()
 
 const loading = computed(() => mant.loading || prod.loading || concretoStore.loading)
 const error = computed(() => mant.error || prod.error)
@@ -2677,12 +2678,13 @@ async function loadData(forceRefresh = false) {
   selectedCentroCosto.value = new Set()
   selectedProceso.value = new Set()
 
+  const plantaKey = isConcretos.value ? 'concretos' : isAcacias.value ? 'acacias' : 'cuncia'
   if (isConcretos.value) {
-    await Promise.all([mant.fetchConcretos(forceRefresh), concretoStore.fetchData()])
+    await Promise.all([mant.fetchConcretos(forceRefresh), concretoStore.fetchData(), disp.fetchDisponibilidad(plantaKey, forceRefresh)])
   } else if (isAcacias.value) {
-    await Promise.all([mant.fetchAcacias(forceRefresh), prod.fetchAcacias()])
+    await Promise.all([mant.fetchAcacias(forceRefresh), prod.fetchAcacias(), disp.fetchDisponibilidad(plantaKey, forceRefresh)])
   } else {
-    await Promise.all([mant.fetchCuncia(forceRefresh), prod.fetchCuncia()])
+    await Promise.all([mant.fetchCuncia(forceRefresh), prod.fetchCuncia(), disp.fetchDisponibilidad(plantaKey, forceRefresh)])
   }
 
   const data = allData.value
@@ -2714,7 +2716,7 @@ async function loadData(forceRefresh = false) {
   tipoTabs.value = [
     { id: 'planta', label: 'Planta', count: countTipo(raw, 'PLANTA') },
     { id: 'maquinaria', label: 'Maquinaria', count: countTipo(raw, 'MAQUINARIA') },
-    { id: 'disponibilidad', label: 'Disponibilidad', count: raw.length },
+    { id: 'disponibilidad', label: 'Disponibilidad', count: 0 },
     { id: 'tareas', label: 'Tareas', count: (isConcretos.value ? (mant.concretosData?.tareas?.length ?? 0) : isAcacias.value ? (mant.acaciasData?.tareas?.length ?? 0) : (mant.cunciaData?.tareas?.length ?? 0)) },
   ]
 }

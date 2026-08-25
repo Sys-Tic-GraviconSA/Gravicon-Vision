@@ -135,38 +135,49 @@
 
       <!-- ========== TABLA ========== -->
       <template v-if="tareasView === 'tabla'">
-        <div class="data-card">
-          <div v-if="allTareas.length === 0" class="empty-table">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            Sin tareas registradas
+        <div class="ots-section">
+          <div class="ots-bar">
+            <div class="ots-stats">
+              <span><strong>{{ allTareas.length }}</strong> tareas</span>
+              <span class="ots-dot"></span>
+              <span class="stat-abiertas"><strong>{{ kpis.pendientes }}</strong> pendientes</span>
+              <span class="ots-dot"></span>
+              <span class="stat-cerradas"><strong>{{ kpis.completadas }}</strong> completadas</span>
+              <span class="ots-dot"></span>
+              <span><strong>{{ kpis.diasPromedio }}</strong> días prom. abierta</span>
+            </div>
           </div>
-          <div v-else class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th class="idx-col">#</th>
-                  <th>Placa</th>
-                  <th>Tipo</th>
-                  <th>Actividad</th>
-                  <th>Responsable</th>
-                  <th>Estado</th>
-                  <th>Registro</th>
-                  <th class="r">Días Abierta</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(t, i) in allTareas" :key="t.id" :class="t.dias > 7 ? 'alerta' : ''">
-                  <td class="idx">{{ i + 1 }}</td>
-                  <td class="bold accent-text">{{ t.placa }}</td>
-                  <td>{{ t.tipo }}</td>
-                  <td style="font-size: 12px; color: var(--text-secondary);">{{ t.actividad }}<br>{{ t.observaciones }}</td>
-                  <td>{{ t.responsable }}</td>
-                  <td><span class="pill" :class="pillClass(t.estado)">{{ t.estado }}</span></td>
-                  <td>{{ t.fecha }}</td>
-                  <td class="r"><span class="pill" :class="t.dias > 7 ? 'p-ambar' : 'p-gris'">{{ t.dias }}</span></td>
-                </tr>
-              </tbody>
-            </table>
+
+          <div class="data-card">
+            <div v-if="allTareas.length === 0" class="empty-table">Sin tareas registradas</div>
+            <div v-else class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="idx-col">#</th>
+                    <th>Placa</th>
+                    <th>Tipo</th>
+                    <th>Actividad</th>
+                    <th>Responsable</th>
+                    <th>Estado</th>
+                    <th>Registro</th>
+                    <th class="r">Días Abierta</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(t, i) in allTareas" :key="t.id" :class="t.dias > 7 ? 'alerta' : ''">
+                    <td class="idx">{{ i + 1 }}</td>
+                    <td class="bold accent-text">{{ t.placa }}</td>
+                    <td>{{ t.tipo }}</td>
+                    <td style="font-size: 12px; color: var(--text-secondary);">{{ t.actividad }}<br>{{ t.observaciones }}</td>
+                    <td>{{ t.responsable }}</td>
+                    <td><span class="pill" :class="pillClass(t.estado)">{{ t.estado }}</span></td>
+                    <td>{{ t.fecha }}</td>
+                    <td class="r"><span class="pill" :class="t.dias > 7 ? 'p-ambar' : 'p-gris'">{{ t.dias }}</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </template>
@@ -177,6 +188,25 @@
           <div class="icb-info">
             <span class="icb-tag">Informe</span>
             <span class="icb-title">Tareas de Seguimiento — {{ plantaLabel }}</span>
+          </div>
+        </div>
+
+        <div class="report-section-block">
+          <div class="zoho-analysis-box">
+            <div class="zoho-analysis-label">Análisis de Tareas</div>
+            <div class="zoho-analysis-text" v-if="allTareas.length > 0">
+              Se registran <strong>{{ allTareas.length }} tareas</strong> en total,
+              de las cuales <strong>{{ kpis.pendientes }}</strong> se encuentran pendientes,
+              <strong>{{ kpis.enProceso }}</strong> en proceso y <strong>{{ kpis.completadas }}</strong> completadas.
+              El tiempo promedio de apertura es de <strong>{{ kpis.diasPromedio }} días</strong>.
+              <template v-if="tareasCriticas.length > 0">
+                Hay <strong style="color:#ef4444;">{{ tareasCriticas.length }} tareas</strong> con más de 7 días abiertas, lo que requiere atención inmediata.
+              </template>
+              <template v-else>
+                No existen tareas críticas con más de 7 días de apertura.
+              </template>
+            </div>
+            <div class="zoho-analysis-text" v-else>No hay tareas registradas para esta planta en el corte seleccionado.</div>
           </div>
         </div>
 
@@ -473,30 +503,32 @@ watch(() => props.planta, () => {
 /* ===== Toggle de vistas (mismo estilo que DisponibilidadTab) ===== */
 .almacen-view-toggle {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 .av-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 12px 16px;
-  font-size: 12px;
+  gap: 7px;
+  padding: 9px 18px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--text-secondary, #6b7280);
-  background: var(--card-bg, #ffffff);
-  border: 1px solid var(--card-border, #e5e7eb);
-  border-radius: 8px;
+  color: var(--text-secondary);
+  background: var(--bg-alt);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
 }
 .av-btn:hover {
+  border-color: var(--card-border-hover);
   color: var(--text-primary);
-  border-color: var(--accent, #3b82f6);
 }
 .av-btn.active {
-  color: #ffffff;
-  background: var(--navy, #172954);
-  border-color: var(--navy, #172954);
+  background: var(--accent-light);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 /* ===== Banners de estado ===== */
@@ -737,6 +769,56 @@ watch(() => props.planta, () => {
   height: 14px;
   background: #2563eb;
   border-radius: 2px;
+}
+
+/* ===== ots-bar / stats bar (estilo Maquinaria) ===== */
+.ots-section { margin-top: 8px; }
+.ots-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.ots-stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.ots-stats strong { color: var(--text-primary); font-weight: 700; }
+.ots-dot {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  opacity: .4;
+}
+.stat-abiertas { color: #ef4444; }
+.stat-abiertas strong { color: #ef4444; }
+.stat-cerradas { color: #10b981; }
+.stat-cerradas strong { color: #10b981; }
+
+/* ===== zoho-analysis-box (estilo EquiposDashboard informe) ===== */
+.zoho-analysis-box {
+  background-color: var(--card-bg-hover, #f8fafc);
+  padding: 14px 18px;
+  border-radius: 6px;
+  border-left: 3px solid var(--navy, #172954);
+}
+.zoho-analysis-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary, #64748b);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  letter-spacing: 0.5px;
+}
+.zoho-analysis-text {
+  font-size: 12px;
+  color: var(--text-primary, #475569);
+  line-height: 1.6;
 }
 
 /* ===== Responsive ===== */
