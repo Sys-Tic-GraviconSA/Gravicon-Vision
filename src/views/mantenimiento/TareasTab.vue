@@ -609,70 +609,74 @@ watch(() => props.planta, () => {
 .hbar-val { font-size: 11px; font-weight: 600; color: var(--text-primary, #1e293b); min-width: 24px; }
 .empty-chart { color: var(--text-secondary, #64748b); font-size: 13px; }
 
-/* ===== Data Card (mismo estilo que DisponibilidadTab) ===== */
+/* ===== Data Card (mismo estilo que EquiposDashboard Maquinaria) ===== */
 .data-card {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius-md, 10px);
+  background: #ffffff;
+  border: 1px solid var(--card-border, #e2e8f0);
+  border-radius: 4px;
   overflow: hidden;
-  box-shadow: var(--shadow-sm);
 }
-.table-wrap { overflow-x: hidden; }
+.card-head {
+  padding: 6px 10px;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--card-border, #e2e8f0);
+}
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
 .table-wrap table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
-  font-family: inherit;
-  table-layout: auto;
+  font-size: 11.5px;
 }
-.table-wrap thead tr { background: var(--card-bg-hover, #f9fafb); }
 .table-wrap th {
-  padding: 8px 10px;
-  text-align: left;
-  font-size: 12px;
+  background: #f8fafc;
+  color: var(--navy, #172954);
+  font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
-  color: var(--text-secondary);
-  border-bottom: 1px solid var(--card-border);
-  white-space: nowrap;
+  letter-spacing: 0.4px;
+  padding: 6px 10px;
+  border-bottom: 1.5px solid var(--card-border, #e2e8f0);
+  text-align: left;
 }
-.table-wrap th.r, .table-wrap td.r { text-align: right; }
 .table-wrap td {
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--card-border);
-  color: var(--text-primary);
+  padding: 5.5px 10px;
+  border-bottom: 1px solid var(--card-border, #f1f5f9);
   vertical-align: middle;
-  font-size: 12px;
-  word-break: break-word;
 }
-.table-wrap tbody tr:last-child td { border-bottom: none; }
-.table-wrap tbody tr:hover { background: var(--card-bg-hover, #f9fafb); }
-.table-wrap .idx { color: var(--text-secondary); font-size: 12px; width: 28px; white-space: nowrap; }
-.table-wrap .idx-col { width: 28px; white-space: nowrap; }
-.table-wrap .bold { font-weight: 700; }
-.table-wrap .accent-text { color: var(--navy, #172954); }
-.table-wrap .red { color: #ef4444; font-weight: 700; }
-.table-wrap .yellow { color: #f59e0b; font-weight: 600; }
-.table-wrap .green { color: #10b981; font-weight: 700; }
-.table-wrap tr.alerta td { background: #fdf1f1; }
-.table-wrap tr.alerta td:first-child { box-shadow: inset 3px 0 0 #a90707; }
-.empty-table {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 24px 20px;
-  color: var(--text-secondary);
-  font-size: 12px;
-  justify-content: center;
+.table-wrap tr:hover td { background: #f8fafc; }
+.table-wrap th.r, .table-wrap td.r { text-align: right; }
+.idx-col, .idx { width: 24px; text-align: center; color: var(--text-secondary); }
+.bold { font-weight: 700; }
+.accent-text { color: var(--navy, #172954); }
+.red { color: #dc2626; }
+.green { color: #16a34a; }
+.yellow { color: #b8860b; }
+
+.table-total-row td {
+  background: #f1f5f9 !important;
+  font-weight: 700 !important;
+  border-top: 2px solid var(--card-border, #cbd5e1) !important;
 }
 
-/* ===== Pills (mismo estilo que DisponibilidadTab) ===== */
+.table-wrap tr.alerta td { background: #fdf1f1; }
+.table-wrap tr.alerta td:first-child { box-shadow: inset 3px 0 0 #a90707; }
+
+.empty-table {
+  text-align: center;
+  padding: 12px;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+}
+
+/* ===== Pills (mismo estilo que EquiposDashboard) ===== */
 .pill {
   display: inline-block;
-  padding: 1.5px 7px;
-  border-radius: 9px;
-  font-size: 11px;
+  padding: 1.5px 6px;
+  border-radius: 8px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.3px;
 }
@@ -729,11 +733,10 @@ watch(() => props.planta, () => {
 }
 .title-bar {
   display: inline-block;
-  width: 3px;
-  height: 16px;
+  width: 4px;
+  height: 14px;
+  background: #2563eb;
   border-radius: 2px;
-  background: var(--navy, #172954);
-  flex-shrink: 0;
 }
 
 /* ===== Responsive ===== */
