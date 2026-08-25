@@ -616,7 +616,7 @@
             <div v-else class="comp-grid">
               <!-- Columna: Día anterior -->
               <div class="comp-col">
-                <div class="comp-col-title">{{ diaAnteriorNombre }} — {{ fechaAnteriorLabel }} | {{ cumplimientoSupervisorAnterior.reduce((s,v) => s + v.revisados, 0) > 0 ? cumplimientoSupervisorAnterior.reduce((s,v) => s + Math.round(v.revisados * v.cumplimiento / 100), 0) : 0 }}/{{ cumplimientoSupervisorAnterior.reduce((s,v) => s + v.revisados, 0) }} ejecutadas</div>
+                <div class="comp-col-title">{{ diaAnteriorNombre }} — {{ fechaAnteriorLabel }} | {{ cumplimientoSupervisorAnterior.reduce((s,v) => s + v.revisados, 0) > 0 ? cumplimientoSupervisorAnterior.reduce((s,v) => s + Math.round(v.revisados * v.cumplimiento / 100), 0) : 0 }}/{{ cumplimientoSupervisorAnterior.reduce((s,v) => s + v.revisados, 0) }} completadas</div>
                 <div class="comp-inner">
                   <div class="comp-chart-cell">
                     <div class="chart-box-donut">
@@ -630,13 +630,13 @@
                   </div>
                   <div class="comp-sup-cell">
                     <table class="comp-sup-table">
-                      <thead><tr><th>Supervisor</th><th>T</th><th>Ej.</th><th>P.</th><th>%</th></tr></thead>
+                      <thead><tr><th>Responsable</th><th>T</th><th>Comp.</th><th>Pend.</th><th>%</th></tr></thead>
                       <tbody>
                         <tr v-for="s in cumplimientoSupervisorAnterior" :key="s.supervisor">
                           <td>{{ s.supervisor }}</td>
                           <td class="r">{{ s.revisados }}</td>
-                          <td class="r" :class="s.cumplimiento >= 85 ? 'pct-high' : ''">{{ s.cumplimiento >= 85 ? s.revisados : Math.round(s.revisados * s.cumplimiento / 100) }}</td>
-                          <td class="r" :class="s.cumplimiento < 85 ? 'pct-low' : ''">{{ s.cumplimiento < 85 ? s.revisados - Math.round(s.revisados * s.cumplimiento / 100) : 0 }}</td>
+                          <td class="r" :class="s.cumplimiento >= 85 ? 'pct-high' : ''">{{ Math.round(s.revisados * s.cumplimiento / 100) }}</td>
+                          <td class="r" :class="s.cumplimiento < 85 ? 'pct-low' : ''">{{ s.revisados - Math.round(s.revisados * s.cumplimiento / 100) }}</td>
                           <td class="r" :class="s.cumplimiento >= 80 ? 'pct-high' : s.cumplimiento >= 50 ? 'pct-mid' : 'pct-low'">{{ s.cumplimiento }}%</td>
                         </tr>
                         <tr v-if="cumplimientoSupervisorAnterior.length === 0">
@@ -649,7 +649,7 @@
               </div>
               <!-- Columna: Hoy -->
               <div class="comp-col">
-                <div class="comp-col-title">{{ diaActualNombre }} — {{ informeFechaLabel }} | {{ cumplimientoSupervisor.reduce((s,v) => s + v.revisados, 0) > 0 ? cumplimientoSupervisor.reduce((s,v) => s + Math.round(v.revisados * v.cumplimiento / 100), 0) : 0 }}/{{ cumplimientoSupervisor.reduce((s,v) => s + v.revisados, 0) }} ejecutadas</div>
+                <div class="comp-col-title">{{ diaActualNombre }} — {{ informeFechaLabel }} | {{ cumplimientoSupervisor.reduce((s,v) => s + v.revisados, 0) > 0 ? cumplimientoSupervisor.reduce((s,v) => s + Math.round(v.revisados * v.cumplimiento / 100), 0) : 0 }}/{{ cumplimientoSupervisor.reduce((s,v) => s + v.revisados, 0) }} completadas</div>
                 <div class="comp-inner">
                   <div class="comp-chart-cell">
                     <div class="chart-box-donut">
@@ -663,13 +663,13 @@
                   </div>
                   <div class="comp-sup-cell">
                     <table class="comp-sup-table">
-                      <thead><tr><th>Supervisor</th><th>T</th><th>Ej.</th><th>P.</th><th>%</th></tr></thead>
+                      <thead><tr><th>Responsable</th><th>T</th><th>Comp.</th><th>Pend.</th><th>%</th></tr></thead>
                       <tbody>
                         <tr v-for="s in cumplimientoSupervisor" :key="s.supervisor">
                           <td>{{ s.supervisor }}</td>
                           <td class="r">{{ s.revisados }}</td>
-                          <td class="r" :class="s.cumplimiento >= 85 ? 'pct-high' : ''">{{ s.cumplimiento >= 85 ? s.revisados : Math.round(s.revisados * s.cumplimiento / 100) }}</td>
-                          <td class="r" :class="s.cumplimiento < 85 ? 'pct-low' : ''">{{ s.cumplimiento < 85 ? s.revisados - Math.round(s.revisados * s.cumplimiento / 100) : 0 }}</td>
+                          <td class="r" :class="s.cumplimiento >= 85 ? 'pct-high' : ''">{{ Math.round(s.revisados * s.cumplimiento / 100) }}</td>
+                          <td class="r" :class="s.cumplimiento < 85 ? 'pct-low' : ''">{{ s.revisados - Math.round(s.revisados * s.cumplimiento / 100) }}</td>
                           <td class="r" :class="s.cumplimiento >= 80 ? 'pct-high' : s.cumplimiento >= 50 ? 'pct-mid' : 'pct-low'">{{ s.cumplimiento }}%</td>
                         </tr>
                         <tr v-if="cumplimientoSupervisor.length === 0">
@@ -1197,32 +1197,34 @@ const tareasAbiertas = computed(() => {
   return result
 })
 
-// Cumplimiento diario por supervisor
+// Cumplimiento diario por supervisor (basado en tareas)
 const cumplimientoSupervisor = computed(() => {
-  const records = activePlacasRows.value
+  const tareas = dispStore.data?.tareas || []
   const targetIso = effectiveCorteIso.value
   if (!targetIso) return []
 
-  const supMap = new Map<string, { total: number; scoreSum: number }>()
+  const supMap = new Map<string, { total: number; completadas: number }>()
 
-  for (const r of records) {
-    const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
-    if (!d) continue
-    if (getDateKey(d) !== targetIso) continue
+  for (const t of tareas) {
+    const fechaReg = parseSerialDate(t['Fecha_Registro'])
+    if (!fechaReg) continue
+    if (getDateKey(fechaReg) !== targetIso) continue
 
-    const supervisor = String(r['Supervisor_Texto'] ?? r['Supervisor'] ?? r['SUPERVISOR'] ?? 'Sin asignar').trim()
-    if (!supervisor || supervisor === '—') continue
+    const responsable = String(t['Nombre_Responsable'] ?? t['Nombre Responsable'] ?? t['Responsable_Texto'] ?? t['Responsable'] ?? 'Sin asignar').trim()
+    if (!responsable || responsable === '—') continue
 
-    const info = getInspectionDetails(r)
-    if (!supMap.has(supervisor)) supMap.set(supervisor, { total: 0, scoreSum: 0 })
-    const item = supMap.get(supervisor)!
+    const estado = String(t['Estado_Tarea'] ?? '').trim()
+    const esCompletada = estado === 'Completada' || estado === 'Cerrada'
+
+    if (!supMap.has(responsable)) supMap.set(responsable, { total: 0, completadas: 0 })
+    const item = supMap.get(responsable)!
     item.total++
-    item.scoreSum += info.score
+    if (esCompletada) item.completadas++
   }
 
   const result: { supervisor: string; revisados: number; cumplimiento: number; color: string }[] = []
   for (const [supervisor, v] of supMap.entries()) {
-    const cumplimiento = v.total > 0 ? Math.round((v.scoreSum / v.total) * 100) : 0
+    const cumplimiento = v.total > 0 ? Math.round((v.completadas / v.total) * 100) : 0
     const color = cumplimiento >= 85 ? '#16A34A' : cumplimiento >= 60 ? '#F59E0B' : '#DC2626'
     result.push({ supervisor, revisados: v.total, cumplimiento, color })
   }
@@ -1268,32 +1270,34 @@ const diaActualNombre = computed(() => {
   return diasSemana[effectiveCorteDate.value.getUTCDay()]
 })
 
-// Cumplimiento del día anterior
+// Cumplimiento del día anterior (basado en tareas)
 const cumplimientoSupervisorAnterior = computed(() => {
-  const records = activePlacasRows.value
+  const tareas = dispStore.data?.tareas || []
   const targetIso = fechaAnteriorIso.value
   if (!targetIso) return []
 
-  const supMap = new Map<string, { total: number; scoreSum: number }>()
+  const supMap = new Map<string, { total: number; completadas: number }>()
 
-  for (const r of records) {
-    const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
-    if (!d) continue
-    if (getDateKey(d) !== targetIso) continue
+  for (const t of tareas) {
+    const fechaReg = parseSerialDate(t['Fecha_Registro'])
+    if (!fechaReg) continue
+    if (getDateKey(fechaReg) !== targetIso) continue
 
-    const supervisor = String(r['Supervisor_Texto'] ?? r['Supervisor'] ?? r['SUPERVISOR'] ?? 'Sin asignar').trim()
-    if (!supervisor || supervisor === '—') continue
+    const responsable = String(t['Nombre_Responsable'] ?? t['Nombre Responsable'] ?? t['Responsable_Texto'] ?? t['Responsable'] ?? 'Sin asignar').trim()
+    if (!responsable || responsable === '—') continue
 
-    const info = getInspectionDetails(r)
-    if (!supMap.has(supervisor)) supMap.set(supervisor, { total: 0, scoreSum: 0 })
-    const item = supMap.get(supervisor)!
+    const estado = String(t['Estado_Tarea'] ?? '').trim()
+    const esCompletada = estado === 'Completada' || estado === 'Cerrada'
+
+    if (!supMap.has(responsable)) supMap.set(responsable, { total: 0, completadas: 0 })
+    const item = supMap.get(responsable)!
     item.total++
-    item.scoreSum += info.score
+    if (esCompletada) item.completadas++
   }
 
   const result: { supervisor: string; revisados: number; cumplimiento: number; color: string }[] = []
   for (const [supervisor, v] of supMap.entries()) {
-    const cumplimiento = v.total > 0 ? Math.round((v.scoreSum / v.total) * 100) : 0
+    const cumplimiento = v.total > 0 ? Math.round((v.completadas / v.total) * 100) : 0
     const color = cumplimiento >= 85 ? '#16A34A' : cumplimiento >= 60 ? '#F59E0B' : '#DC2626'
     result.push({ supervisor, revisados: v.total, cumplimiento, color })
   }
