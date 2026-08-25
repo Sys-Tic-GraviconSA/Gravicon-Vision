@@ -14,8 +14,8 @@ function dateToSerial(iso: string | null): number {
   return Date.UTC(y, m - 1, d) / 86400000 + EXCEL_EPOCH_OFFSET
 }
 
-const CUNCIA_HEADERS = ['Fecha', 'Total de M³', 'Cañaveral', 'Guayuriba', 'Linea 3', 'M³ Proyectado', 'PROVEEDOR', '% Cumplimiento', 'ID_Registro']
-const ACACIAS_HEADERS = ['Fecha', 'Total de M³', 'Planta 1', 'Planta 2', 'M³ Proyectado', 'PROVEEDOR', '% Cumplimiento', 'ID_Registro']
+const CUNCIA_HEADERS = ['Fecha', 'Total de M³', 'Cañaveral', 'Guayuriba', 'Linea 3', 'M³ Proyectado', 'Meta Mensual M³', 'PROVEEDOR', '% Cumplimiento', 'ID_Registro']
+const ACACIAS_HEADERS = ['Fecha', 'Total de M³', 'Planta 1', 'Planta 2', 'M³ Proyectado', 'Meta Mensual M³', 'PROVEEDOR', '% Cumplimiento', 'ID_Registro']
 
 /**
  * Producción de agregados de Cuncia desde Supabase (tabla
@@ -26,7 +26,7 @@ export async function loadCunciaProduccion(): Promise<ProduccionDiaria> {
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase
     .from('produccion_agregados_cuncia')
-    .select('fecha, total_m3, canaveral, guayuriba, linea_3, m3_proyectado, porcentaje_cumplimiento, id_registro')
+    .select('fecha, total_m3, canaveral, guayuriba, linea_3, m3_proyectado, m3_meta_mensual, porcentaje_cumplimiento, id_registro')
     .order('fecha', { ascending: true })
     .limit(100000)
   if (error) throw error
@@ -37,6 +37,7 @@ export async function loadCunciaProduccion(): Promise<ProduccionDiaria> {
     'Guayuriba': Number(r.guayuriba) || 0,
     'Linea 3': Number(r.linea_3) || 0,
     'M³ Proyectado': Number(r.m3_proyectado) || 0,
+    'Meta Mensual M³': Number(r.m3_meta_mensual) || 0,
     'PROVEEDOR': '',
     '% Cumplimiento': Number(r.porcentaje_cumplimiento) || 0,
     'ID_Registro': r.id_registro ?? '',
@@ -53,7 +54,7 @@ export async function loadAcaciasProduccion(): Promise<ProduccionDiaria> {
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase
     .from('produccion_agregados_acacias')
-    .select('fecha, total_m3, planta_1, planta_2, m3_proyectado, agregados, porcentaje_cumplimiento, id_registro')
+    .select('fecha, total_m3, planta_1, planta_2, m3_proyectado, m3_meta_mensual, agregados, porcentaje_cumplimiento, id_registro')
     .order('fecha', { ascending: true })
     .limit(100000)
   if (error) throw error
@@ -63,6 +64,7 @@ export async function loadAcaciasProduccion(): Promise<ProduccionDiaria> {
     'Planta 1': Number(r.planta_1) || 0,
     'Planta 2': Number(r.planta_2) || 0,
     'M³ Proyectado': Number(r.m3_proyectado) || 0,
+    'Meta Mensual M³': Number(r.m3_meta_mensual) || 0,
     'PROVEEDOR': r.agregados ?? '',
     '% Cumplimiento': Number(r.porcentaje_cumplimiento) || 0,
     'ID_Registro': r.id_registro ?? '',

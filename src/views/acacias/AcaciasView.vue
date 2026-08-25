@@ -163,6 +163,7 @@ const tableData = computed(() => {
     const dateStr = serial ? serialToDate(serial).toLocaleDateString('es-CO', { timeZone: 'UTC' }) : ''
     const total = Number(r['Total de M³']) || 0
     const proyectado = Number(r['M³ Proyectado']) || 0
+    const metaMensual = Number(r['Meta Mensual M³']) || 0
     const diferencia = total - proyectado
     return {
       Fecha: dateStr,
@@ -170,6 +171,7 @@ const tableData = computed(() => {
       'Planta 2': Number(r['Planta 2']) || 0,
       'Total de M³': total,
       'M³ Proyectado': proyectado,
+      'Meta Mensual M³': metaMensual,
       'Diferencia': diferencia,
       '% Cumplimiento': r['% Cumplimiento'] ?? '',
     }
