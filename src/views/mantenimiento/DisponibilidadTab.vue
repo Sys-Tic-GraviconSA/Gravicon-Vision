@@ -1127,10 +1127,11 @@ const tareasAbiertas = computed(() => {
   if (tareas.length === 0) return []
 
   const result: { id: string; placa: string; fecha: string; responsable: string; actividad: string; observaciones: string; estado: string; dias: number }[] = []
+  const nowUtc = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate())
 
   for (const t of tareas) {
-    const estado = String(t['Estado_Tarea'] ?? '').trim()
-    if (estado !== 'Pendiente') continue
+    const estadoRaw = String(t['Estado_Tarea'] ?? '').trim()
+    if (estadoRaw !== 'Pendiente') continue
 
     const fechaReg = parseSerialDate(t['Fecha_Registro'])
     if (!fechaReg) continue
@@ -1140,7 +1141,8 @@ const tareasAbiertas = computed(() => {
     const responsable = String(t['Nombre_Responsable'] ?? t['Nombre Responsable'] ?? t['Responsable_Texto'] ?? t['Responsable'] ?? '—').trim()
     const actividad = String(t['Actividad'] ?? '—')
     const observaciones = String(t['observaciones'] ?? '—')
-    const dias = Number(t['Dias_entre_Cierres'] ?? 0)
+    const dias = Math.max(1, Math.floor((nowUtc - fechaReg.getTime()) / 86400000))
+    const estado = estadoRaw.length > 6 ? estadoRaw.slice(0, 5) + '.' : estadoRaw
 
     const dia = String(fechaReg.getUTCDate()).padStart(2, '0')
     const mes = String(fechaReg.getUTCMonth() + 1).padStart(2, '0')
