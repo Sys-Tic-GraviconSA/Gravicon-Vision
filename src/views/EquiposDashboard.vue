@@ -2895,10 +2895,10 @@ const procesoDisponibles = computed(() => {
   return [...set].sort()
 })
 
-/** Producción filtrada por fecha */
+/** Producción filtrada por fecha (usa rango del informe si no hay filtro manual) */
 const prodFilteredByDate = computed(() => {
-  const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
-  const until = fechaFin.value ? dateToSerial(fechaFin.value) : Infinity
+  const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : (informeMinSerial.value ?? -Infinity)
+  const until = fechaFin.value ? dateToSerial(fechaFin.value) : (informeMaxSerial.value ?? Infinity)
   return prodRows.value.filter(r => {
     const v = Number(r['Fecha'])
     return typeof v === 'number' && !isNaN(v) && v >= since && v <= until
