@@ -2852,7 +2852,7 @@ async function loadData(forceRefresh = false) {
     { id: 'planta', label: 'Planta', count: countTipo(raw, 'PLANTA') },
     { id: 'maquinaria', label: 'Maquinaria', count: countTipo(raw, 'MAQUINARIA') },
     { id: 'disponibilidad', label: 'Disponibilidad', count: 0 },
-    { id: 'tareas', label: 'Tareas', count: (isConcretos.value ? (mant.concretosData?.tareas?.length ?? 0) : isAcacias.value ? (mant.acaciasData?.tareas?.length ?? 0) : (mant.cunciaData?.tareas?.length ?? 0)) },
+    { id: 'tareas', label: 'Tareas', count: 0 },
   ]
 }
 

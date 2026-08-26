@@ -592,7 +592,6 @@
 import { ref, computed, markRaw, watch, onMounted, nextTick } from 'vue'
 import KpiCard from '../../components/dashboard/KpiCard.vue'
 import ChartCard from '../../components/dashboard/ChartCard.vue'
-import EmptyState from '../../components/ui/EmptyState.vue'
 import { useTheme } from '../../composables/useTheme'
 import { useDisponibilidadStore } from '../../stores'
 import * as echarts from 'echarts'
@@ -1514,13 +1513,6 @@ const informeAnalisisTexto = computed(() => {
   return texto
 })
 
-// Filtrar solo las 3 plantas de Concretos
-function esPlanta(loc: string): boolean {
-  const plantas = ['VILLAVICENCIO', 'RESTREPO', 'ACACIAS']
-  const upper = loc.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  return plantas.some(p => upper.includes(p))
-}
-
 // Tendencia AM vs PM por planta (mismo día)
 const tendenciaSedesAmPm = computed(() => {
   const records = activePlacasRows.value
@@ -1956,14 +1948,6 @@ async function generarInformePdf() {
   }
 }
 
-const tieneAlquilados = computed(() => {
-  if (!isConcretosPlanta.value) return false
-  return activePlacasRows.value.some(r => {
-    const info = getInspectionDetails(r)
-    return info.esAlquilado
-  })
-})
-
 const kpis = computed(() => {
   const records = activePlacasRows.value
   if (!records || records.length === 0) {
@@ -2137,7 +2121,6 @@ function buildDispEquipoOption(equipos: EquipoDisp[], limit?: number) {
       formatter: (params: any[]) => {
         const p = params[0]
         const eq = p.data
-        const total = eq.diasOp + eq.diasNoOp
         const color = semColor(p.value)
         return `<div style="font-size:12px"><strong>${p.name}</strong> ${eq?.tipo ? `<span style="color:#888">(${eq.tipo})</span>` : ''}<hr style="margin:4px 0;border:none;border-top:1px solid #e5e7eb"/><div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color}"></span><strong>${p.value}%</strong> Disponibilidad</div><div style="margin-top:4px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981"></span>Op.: <strong>${eq?.diasOp}</strong> d</div><div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444"></span>No Op.: <strong>${eq?.diasNoOp}</strong> d</div><hr style="margin:4px 0;border:none;border-top:1px solid #e5e7eb"/><div style="color:#6b7280;font-size:11px">Prom. Op. <strong>${avgDiasOp}</strong> d · Prom. Mant. <strong>${avgDiasMant}</strong> d</div></div>`
       },
@@ -2250,7 +2233,6 @@ function buildIncidenciaOption(equipos: EquipoMant[], limit?: number) {
       formatter: (params: any[]) => {
         const p = params[0]
         const eq = p.data
-        const total = eq.diasOp + eq.diasMant
         const color = semColor(p.value)
         return `<div style="font-size:12px"><strong>${p.name}</strong> ${eq?.tipo ? `<span style="color:#888">(${eq.tipo})</span>` : ''}<hr style="margin:4px 0;border:none;border-top:1px solid #e5e7eb"/><div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color}"></span><strong>${p.value}%</strong> Incidencia Mant.</div><div style="margin-top:4px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981"></span>Op.: <strong>${eq?.diasOp}</strong> d</div><div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444"></span>No Op.: <strong>${eq?.diasMant}</strong> d</div><hr style="margin:4px 0;border:none;border-top:1px solid #e5e7eb"/><div style="color:#6b7280;font-size:11px">Prom. Op. <strong>${avgDiasOp}</strong> d · Prom. Mant. <strong>${avgDiasMant}</strong> d</div></div>`
       },
