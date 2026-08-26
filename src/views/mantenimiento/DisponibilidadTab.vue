@@ -114,80 +114,6 @@
             :height="440"
           />
         </div>
-
-        <!-- Gráfica: Disponibilidad por Planta y Distribución Mensual (ref: foto 2) -->
-        <div class="charts-grid cols-1">
-          <ChartCard
-            title="Disponibilidad por Planta y Distribución de Días Operativos vs. Mantenimiento"
-            description="Evolución mensual por sede con línea de promedio de mantenimiento"
-            :option="dispMensualPlantaOpt"
-            :height="360"
-          />
-        </div>
-
-        <!-- Gráfica: Días Promedio Operación vs Mantenimiento por Tipo de Vehículo (ref: imagen 11) -->
-        <div class="charts-grid cols-1">
-          <ChartCard
-            title="Días Promedio de Operación vs. Mantenimiento por Tipo de Vehículo"
-            description="Comparativo de días operativos (azul oscuro) vs. días en mantenimiento (rojo) agrupados por categoría de equipo"
-            :option="diasPromTipoOpt"
-            :height="320"
-          />
-        </div>
-        <!-- Gráfica 1: Comparativo y Variación Diaria Ronda AM vs Ronda PM (Líneas) -->
-        <div class="charts-grid cols-1">
-          <ChartCard
-            :title="`Variación Diaria de Disponibilidad — Ronda AM vs Ronda PM (${plantaLabel})`"
-            description="Evolución diaria comparativa de la ronda de la mañana frente a la tarde. Meta institucional: 85%."
-            :option="amVsPmTrendOpt"
-            :height="340"
-          />
-        </div>
-
-        <!-- Gráficas 2 y 3: Tipo de Equipo y Operatividad Global -->
-        <div class="charts-grid cols-2">
-          <ChartCard
-            title="Disponibilidad por Tipo de Equipo — Agregados"
-            description="Desglose de maquinaria de Agregados: Trituradoras, Bandas, Cargadores y Volquetas"
-            :option="tipoEquipoOpt"
-            :height="300"
-          />
-
-          <ChartCard
-            :title="`Operatividad Global — Maquinaria ${plantaLabel}`"
-            description="Distribución porcentual de operatividad sobre la flota total del módulo"
-            :option="donaOpt"
-            :height="300"
-          />
-        </div>
-
-        <!-- Gráficas 4 y 5: Brecha Diaria y Disponibilidad por Planta -->
-        <div class="charts-grid cols-2">
-          <ChartCard
-            title="Brecha Diaria AM vs PM (Control de Inspección)"
-            description="Diferencia diaria en puntos porcentuales entre la ronda de la mañana y la tarde"
-            :option="brechaDiariaOpt"
-            :height="300"
-          />
-
-          <ChartCard
-            title="Disponibilidad por Frente de Trabajo — Maquinaria"
-            description="Operatividad agrupada por frente de extracción, cantera o beneficio (excluye sedes de planta concretera)"
-            :option="plantaOpt"
-            :height="300"
-          />
-        </div>
-
-        <!-- Gráfica 6: Top Equipos con Mayor Inactividad / Días en Taller -->
-        <div class="charts-grid cols-1">
-          <ChartCard
-            title="Top Equipos con Mayor Inactividad / Días en Taller"
-            description="Equipos con mayor permanencia fuera de servicio o pendientes de orden de trabajo"
-            :option="topInactivosOpt"
-            :expand-option="topInactivosFullOpt"
-            :height="320"
-          />
-        </div>
     </template>
 
     <!-- ==================================================== -->
@@ -2148,437 +2074,17 @@ const textColor = computed(() => isDark.value ? '#94a3b8' : '#475569')
 const titleColor = computed(() => isDark.value ? '#f1f5f9' : '#0f172a')
 const splitLineColor = computed(() => isDark.value ? 'rgba(255,255,255,0.06)' : '#e2e8f0')
 
-// ================= GRÁFICAS ECHARTS (AGREGADOS) =================
-
-// 1. Gráfico de Líneas: Comparativo Diario Ronda AM vs Ronda PM
-const amVsPmTrendOpt = computed(() => {
-  const records = activePlacasRows.value
-  const datesMap = new Map<string, { amSum: number; pmSum: number; count: number }>()
-
-  for (const r of records) {
-    const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
-    if (!d) continue
-    const dateKey = `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}`
-    if (!datesMap.has(dateKey)) {
-      datesMap.set(dateKey, { amSum: 0, pmSum: 0, count: 0 })
-    }
-    const dm = datesMap.get(dateKey)!
-    const info = getInspectionDetails(r)
-    if (!isNaN(info.revAm)) dm.amSum += info.revAm
-    if (!isNaN(info.revPm)) dm.pmSum += info.revPm
-    dm.count++
-  }
-
-  let dates = [...datesMap.keys()]
-  let dataAM = [...datesMap.values()].map(v => v.count > 0 ? Math.round((v.amSum / v.count) * 100) : 0)
-  let dataPM = [...datesMap.values()].map(v => v.count > 0 ? Math.round((v.pmSum / v.count) * 100) : 0)
-
-  if (dates.length === 0) {
-    dates = ['Día 1', 'Día 2', 'Día 3']
-    dataAM = [kpis.value.dispPropiaPct, kpis.value.dispPropiaPct, kpis.value.dispPropiaPct]
-    dataPM = [Math.max(0, kpis.value.dispPropiaPct - 15), Math.max(0, kpis.value.dispPropiaPct - 10), Math.max(0, kpis.value.dispPropiaPct - 12)]
-  }
-
-  return markRaw({
-    tooltip: {
-      trigger: 'axis',
-      formatter: (params: any[]) => {
-        if (!params || !params.length) return ''
-        const date = params[0].name
-        const valAM = params.find(p => p.seriesName === 'Ronda AM (Mañana)')?.value ?? '—'
-        const valPM = params.find(p => p.seriesName === 'Ronda PM (Tarde)')?.value ?? '—'
-        const brecha = typeof valAM === 'number' && typeof valPM === 'number' ? (valPM - valAM) : 0
-        return `
-          <div style="font-size:12px; font-weight:700; color:${titleColor.value}; margin-bottom:4px;">${date}</div>
-          <div style="display:flex; justify-content:space-between; gap:16px; font-size:12px; color:#3b82f6;">
-            <span>🌅 Ronda AM:</span> <strong>${valAM}%</strong>
-          </div>
-          <div style="display:flex; justify-content:space-between; gap:16px; font-size:12px; color:#f59e0b;">
-            <span>🌇 Ronda PM:</span> <strong>${valPM}%</strong>
-          </div>
-          <div style="margin-top:4px; padding-top:4px; border-top:1px solid ${splitLineColor.value}; font-size:11px; color:${brecha < 0 ? '#ef4444' : '#10b981'};">
-            Brecha AM→PM: <strong>${brecha >= 0 ? '+' : ''}${brecha} pp</strong>
-          </div>
-        `
-      },
-    },
-    legend: {
-      data: ['Ronda AM (Mañana)', 'Ronda PM (Tarde)', 'Meta (85%)'],
-      top: 0,
-      textStyle: { color: textColor.value, fontSize: 12 },
-    },
-    grid: { left: '3%', right: '4%', bottom: '8%', top: '15%', containLabel: true },
-    xAxis: {
-      type: 'category',
-      data: dates,
-      axisLine: { lineStyle: { color: textColor.value } },
-      axisLabel: { color: textColor.value, fontSize: 11 },
-    },
-    yAxis: {
-      type: 'value',
-      min: 0,
-      max: 100,
-      axisLabel: { formatter: '{value}%', color: textColor.value },
-      splitLine: { lineStyle: { color: splitLineColor.value } },
-    },
-    series: [
-      {
-        name: 'Ronda AM (Mañana)',
-        type: 'line',
-        data: dataAM,
-        smooth: true,
-        symbolSize: 7,
-        itemStyle: { color: '#3b82f6' },
-        lineStyle: { color: '#3b82f6', width: 3 },
-        areaStyle: {
-          color: {
-            type: 'linear',
-            x: 0, y: 0, x2: 0, y2: 1,
-            colorStops: [
-              { offset: 0, color: 'rgba(59, 130, 246, 0.22)' },
-              { offset: 1, color: 'rgba(59, 130, 246, 0.01)' },
-            ],
-          },
-        },
-        markLine: {
-          silent: true,
-          data: [{ yAxis: 85, name: 'Meta (85%)', label: { formatter: 'Meta 85%', position: 'end', color: '#10b981', fontWeight: 'bold' } }],
-          lineStyle: { color: '#10b981', type: 'dashed', width: 2 },
-        },
-      },
-      {
-        name: 'Ronda PM (Tarde)',
-        type: 'line',
-        data: dataPM,
-        smooth: true,
-        symbolSize: 7,
-        itemStyle: { color: '#f59e0b' },
-        lineStyle: { color: '#f59e0b', width: 2.5, type: 'solid' },
-        areaStyle: {
-          color: {
-            type: 'linear',
-            x: 0, y: 0, x2: 0, y2: 1,
-            colorStops: [
-              { offset: 0, color: 'rgba(245, 158, 11, 0.15)' },
-              { offset: 1, color: 'rgba(245, 158, 11, 0.01)' },
-            ],
-          },
-        },
-      },
-    ],
-  })
-})
-
-// 2. Disponibilidad por Tipo de Equipo (Barras Apiladas)
-const tipoEquipoOpt = computed(() => {
-  const records = activePlacasRows.value
-  const targetIso = effectiveCorteIso.value
-  const map = new Map<string, { opPropio: number; opAlq: number; parciales: number; noOp: number }>()
-
-  for (const r of records) {
-    const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
-    if (!d) continue
-    if (targetIso && getDateKey(d) !== targetIso) continue
-
-    const info = getInspectionDetails(r)
-    const tipo = info.baseTipo
-
-    if (!map.has(tipo)) {
-      map.set(tipo, { opPropio: 0, opAlq: 0, parciales: 0, noOp: 0 })
-    }
-    const cat = map.get(tipo)!
-    if (info.isNoOp) {
-      cat.noOp++
-    } else if (info.isParcial) {
-      cat.parciales++
-    } else if (info.esAlquilado) {
-      cat.opAlq++
-    } else {
-      cat.opPropio++
-    }
-  }
-
-  const sortedCategories = [...map.entries()].sort((a, b) => {
-    const totalA = a[1].opPropio + a[1].opAlq + a[1].parciales + a[1].noOp
-    const totalB = b[1].opPropio + b[1].opAlq + b[1].parciales + b[1].noOp
-    return totalA - totalB
-  })
-
-  const categories = sortedCategories.map(s => s[0])
-  const opPropio = sortedCategories.map(s => s[1].opPropio)
-  const opAlq = sortedCategories.map(s => s[1].opAlq)
-  const parciales = sortedCategories.map(s => s[1].parciales)
-  const noOp = sortedCategories.map(s => s[1].noOp)
-
-  return markRaw({
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    legend: {
-      data: ['Operativo Propio', 'Alquilado', 'Parcial (0.5)', 'No Operativo'],
-      top: 0,
-      textStyle: { color: textColor.value, fontSize: 11 },
-    },
-    grid: { left: '3%', right: '6%', bottom: '3%', top: '15%', containLabel: true },
-    xAxis: {
-      type: 'value',
-      axisLabel: { color: textColor.value },
-      splitLine: { lineStyle: { color: splitLineColor.value } },
-    },
-    yAxis: {
-      type: 'category',
-      data: categories,
-      axisLabel: { fontWeight: 'bold', color: titleColor.value },
-    },
-    series: [
-      { name: 'Operativo Propio', type: 'bar', stack: 'total', data: opPropio, itemStyle: { color: '#10b981' } },
-      { name: 'Alquilado', type: 'bar', stack: 'total', data: opAlq, itemStyle: { color: '#06b6d4' } },
-      { name: 'Parcial (0.5)', type: 'bar', stack: 'total', data: parciales, itemStyle: { color: '#f59e0b' } },
-      { name: 'No Operativo', type: 'bar', stack: 'total', data: noOp, itemStyle: { color: '#ef4444' } },
-    ],
-  })
-})
-
-// 3. Dona Operatividad Global
-const donaOpt = computed(() => {
-  return markRaw({
-    tooltip: { trigger: 'item', formatter: '{b}: <strong>{c} equipos</strong> ({d}%)' },
-    legend: { orient: 'horizontal', bottom: '0', textStyle: { color: textColor.value, fontSize: 11 } },
-    series: [
-      {
-        name: 'Operatividad',
-        type: 'pie',
-        radius: ['52%', '76%'],
-        avoidLabelOverlap: false,
-        label: {
-          show: true,
-          position: 'center',
-          formatter: `${kpis.value.dispPropiaPct}%\nDISPONIBILIDAD`,
-          fontSize: 16,
-          fontWeight: 'bold',
-          color: kpis.value.dispPropiaPct >= 85 ? '#10b981' : kpis.value.dispPropiaPct >= 60 ? '#f59e0b' : '#ef4444',
-        },
-        data: [
-          { value: kpis.value.operativos, name: 'Operativos', itemStyle: { color: '#10b981' } },
-          { value: kpis.value.parciales, name: 'Parciales (0,5)', itemStyle: { color: '#f59e0b' } },
-          { value: kpis.value.noOperativos, name: 'No Operativos', itemStyle: { color: '#ef4444' } },
-        ],
-      },
-    ],
-  })
-})
-
-
-
-// 4. Brecha Diaria AM vs PM
-const brechaDiariaOpt = computed(() => {
-  const records = activePlacasRows.value
-  const datesMap = new Map<string, { amSum: number; pmSum: number; count: number }>()
-
-  for (const r of records) {
-    const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
-    if (!d) continue
-    const dateKey = `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}`
-    if (!datesMap.has(dateKey)) {
-      datesMap.set(dateKey, { amSum: 0, pmSum: 0, count: 0 })
-    }
-    const dm = datesMap.get(dateKey)!
-    const info = getInspectionDetails(r)
-    if (!isNaN(info.revAm)) dm.amSum += info.revAm
-    if (!isNaN(info.revPm)) dm.pmSum += info.revPm
-    dm.count++
-  }
-
-  const dates = [...datesMap.keys()]
-  const brechas = [...datesMap.values()].map(v => {
-    if (v.count === 0) return 0
-    const am = Math.round((v.amSum / v.count) * 100)
-    const pm = Math.round((v.pmSum / v.count) * 100)
-    return pm - am
-  })
-
-  return markRaw({
-    tooltip: {
-      trigger: 'axis',
-      formatter: '{b}: Brecha AM vs PM de <strong>{c} puntos porcentuales</strong>',
-    },
-    grid: { left: '3%', right: '4%', bottom: '3%', top: '15%', containLabel: true },
-    xAxis: {
-      type: 'category',
-      data: dates.length > 0 ? dates : ['Día 1'],
-      axisLabel: { color: textColor.value, fontSize: 10 },
-      axisLine: { lineStyle: { color: textColor.value } },
-    },
-    yAxis: {
-      type: 'value',
-      axisLabel: { formatter: '{value} pp', color: textColor.value },
-      splitLine: { lineStyle: { color: splitLineColor.value } },
-    },
-    series: [
-      {
-        name: 'Brecha AM - PM',
-        type: 'bar',
-        barWidth: '50%',
-        data: (brechas.length > 0 ? brechas : [0]).map(v => ({
-          value: v,
-          itemStyle: { color: v <= -30 ? '#ef4444' : v <= -20 ? '#f59e0b' : '#3b82f6', borderRadius: [0, 0, 4, 4] },
-        })),
-        label: { show: true, position: 'bottom', formatter: '{c}', color: textColor.value, fontSize: 10 },
-      },
-    ],
-  })
-})
-
-// 5. Disponibilidad por Planta / Localización / Frente de Trabajo
-const plantaOpt = computed(() => {
-  const records = activePlacasRows.value
-  const targetIso = effectiveCorteIso.value
-  const locMap = new Map<string, { sumScore: number; count: number }>()
-
-  // En Concretos mostramos localizaciones tipo "Planta" (PLANTA VILLAVICENCIO, PLANTA ACACIAS, LOGISTICA ...)
-  // En Maquinaria/Cuncia mostramos solo frentes de trabajo (no PLANTA ... ni el fallback genérico "Planta")
-  const esConcretos = isConcretosPlanta.value
-
-  for (const r of records) {
-    const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
-    if (!d) continue
-    if (targetIso && getDateKey(d) !== targetIso) continue
-
-    const info = getInspectionDetails(r)
-    const loc = (info.loc || '').toUpperCase().trim()
-
-    // Excluir registros sin localización real (fallback genérico)
-    if (!loc || loc === 'PLANTA' || loc === 'SIN LOCALIZACIÓN' || loc === 'N/A') continue
-
-    // Filtro por contexto:
-    // - Concretos: solo sedes tipo planta (empieza con PLANTA o LOGÍSTICA/LOGISTICA)
-    // - Maquinaria: solo frentes de trabajo (excluir los que sean una sede de planta concretera)
-    const esSedePlanta = loc.startsWith('PLANTA') || loc.startsWith('LOGISTIC')
-    if (esConcretos && !esSedePlanta) continue
-    if (!esConcretos && esSedePlanta) continue
-
-    const existing = locMap.get(loc) ?? { sumScore: 0, count: 0 }
-    existing.sumScore += info.score
-    existing.count++
-    locMap.set(loc, existing)
-  }
-
-  const sortedLocs = [...locMap.entries()].sort((a, b) => a[1].count - b[1].count)
-  const chartTitle = esConcretos ? 'Sede / Planta' : 'Frente de Trabajo'
-  const plantNames = sortedLocs.map(s => `${s[0]} (${s[1].count} eq)`)
-  const dataValues = sortedLocs.map(s => {
-    const item = s[1]
-    const pct = item.count > 0 ? Math.round((item.sumScore / item.count) * 100) : 0
-    return {
-      value: pct,
-      itemStyle: {
-        color: pct >= 85 ? '#10b981' : pct >= 60 ? '#f59e0b' : '#ef4444',
-        borderRadius: [0, 4, 4, 0],
-      },
-    }
-  })
-
-  return markRaw({
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      formatter: (params: { name: string; value: number }[]) => {
-        const p = params[0]
-        return `<strong>${p.name}</strong><br/>${chartTitle}: <strong>${p.value}%</strong>`
-      },
-    },
-    grid: { left: '3%', right: '10%', bottom: '3%', top: '10%', containLabel: true },
-    xAxis: {
-      type: 'value',
-      max: 100,
-      axisLabel: { formatter: '{value}%', color: textColor.value },
-      splitLine: { lineStyle: { color: splitLineColor.value } },
-    },
-    yAxis: {
-      type: 'category',
-      data: plantNames,
-      axisLabel: { fontWeight: 'bold', color: titleColor.value, fontSize: 11 },
-    },
-    series: [
-      {
-        name: 'Disponibilidad',
-        type: 'bar',
-        barMaxWidth: 24,
-        data: dataValues,
-        label: { show: true, position: 'right', formatter: '{c}%', fontWeight: 'bold', color: titleColor.value },
-      },
-    ],
-  })
-})
-
-// 6. Top Equipos con Mayor Inactividad / Días en Taller
-const topInactivosList = computed(() => {
-  const records = activePlacasRows.value
-  const targetIso = effectiveCorteIso.value
-  const mantMap = new Map<string, number>()
-
-  for (const r of records) {
-    const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
-    if (!d) continue
-    if (targetIso && getDateKey(d) !== targetIso) continue
-    const info = getInspectionDetails(r)
-    if (!info.placa) continue
-    if (info.isNoOp || info.esEnTaller) {
-      mantMap.set(info.placa, (mantMap.get(info.placa) ?? 0) + 1)
-    }
-  }
-
-  return [...mantMap.entries()].sort((a, b) => b[1] - a[1])
-})
-
-function buildTopInactivosOption(list: [string, number][], limit?: number) {
-  const sliced = limit ? list.slice(0, limit) : list
-  const equipos = sliced.map(s => s[0])
-  const dias = sliced.map(s => s[1])
-
-  return markRaw({
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: '{b}: <strong>{c} días inactivo / en taller</strong>' },
-    grid: { left: '3%', right: '10%', bottom: '3%', top: '10%', containLabel: true },
-    xAxis: {
-      type: 'value',
-      axisLabel: { formatter: '{value} d', color: textColor.value },
-      splitLine: { lineStyle: { color: splitLineColor.value } },
-    },
-    yAxis: {
-      type: 'category',
-      inverse: true,
-      data: equipos,
-      axisLabel: { fontWeight: 'bold', color: titleColor.value, fontSize: 11 },
-    },
-    series: [
-      {
-        name: 'Días Inactivo',
-        type: 'bar',
-        barMaxWidth: 22,
-        data: dias.map(v => ({
-          value: v,
-          itemStyle: { color: v >= 2 ? '#ef4444' : '#f59e0b', borderRadius: [0, 4, 4, 0] },
-        })),
-        label: { show: true, position: 'right', formatter: '{c} días', fontWeight: 'bold', color: titleColor.value },
-      },
-    ],
-  })
-}
-
-const topInactivosOpt = computed(() => buildTopInactivosOption(topInactivosList.value, 15))
-const topInactivosFullOpt = computed(() => buildTopInactivosOption(topInactivosList.value))
-
 // ================= GRÁFICAS EXCLUSIVAS CONCRETOS =================
 
-type EquipoDisp = { placa: string; dispPct: number; diasOp: number; tipo: string; loc: string }
+type EquipoDisp = { placa: string; dispPct: number; diasOp: number; diasNoOp: number; tipo: string; loc: string }
 
 const dispEquipoList = computed<EquipoDisp[]>(() => {
   const records = activePlacasRows.value
-  const targetIso = effectiveCorteIso.value
-  const equiposMap = new Map<string, { placa: string; sumScore: number; count: number; tipo: string; loc: string }>()
+  const equiposMap = new Map<string, { placa: string; sumScore: number; count: number; tipo: string; loc: string; diasNoOp: number }>()
 
   for (const r of records) {
     const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
     if (!d) continue
-    if (targetIso && getDateKey(d) !== targetIso) continue
     const info = getInspectionDetails(r)
     if (!info.placa) continue
     const existing = equiposMap.get(info.placa) ?? {
@@ -2587,9 +2093,11 @@ const dispEquipoList = computed<EquipoDisp[]>(() => {
       count: 0,
       tipo: info.baseTipo + (info.esAlquilado ? ' [Alq]' : ''),
       loc: info.loc,
+      diasNoOp: 0,
     }
     existing.sumScore += info.score
     existing.count++
+    if (info.isNoOp || info.esEnTaller) existing.diasNoOp++
     equiposMap.set(info.placa, existing)
   }
 
@@ -2597,6 +2105,7 @@ const dispEquipoList = computed<EquipoDisp[]>(() => {
     placa: e.placa,
     dispPct: e.count > 0 ? Math.round((e.sumScore / e.count) * 100) : 0,
     diasOp: +e.sumScore.toFixed(1),
+    diasNoOp: e.diasNoOp,
     tipo: e.tipo,
     loc: e.loc,
   }))
@@ -2607,6 +2116,20 @@ const dispEquipoList = computed<EquipoDisp[]>(() => {
 
 function buildDispEquipoOption(equipos: EquipoDisp[], limit?: number) {
   const list = limit ? equipos.slice(0, limit) : equipos
+  const records = activePlacasRows.value
+  const diasEnPeriodo = new Set<string>()
+  for (const r of records) {
+    const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
+    if (d) diasEnPeriodo.add(getDateKey(d))
+  }
+  const diasDelMes = diasEnPeriodo.size || 1
+  const cantidadVehiculos = equipos.length || 1
+  const diasTotalesPosibles = cantidadVehiculos * diasDelMes
+  const totalDiasOp = equipos.reduce((s, e) => s + e.diasOp, 0)
+  const totalDiasMant = Math.max(0, diasTotalesPosibles - totalDiasOp)
+  const avgDiasOp = cantidadVehiculos > 0 ? +(totalDiasOp / cantidadVehiculos).toFixed(1) : 0
+  const avgDiasMant = cantidadVehiculos > 0 ? +(totalDiasMant / cantidadVehiculos).toFixed(1) : 0
+  const semColor = (pct: number) => pct >= 85 ? '#10b981' : pct >= 60 ? '#f59e0b' : '#ef4444'
   return markRaw({
     tooltip: {
       trigger: 'axis',
@@ -2614,10 +2137,12 @@ function buildDispEquipoOption(equipos: EquipoDisp[], limit?: number) {
       formatter: (params: any[]) => {
         const p = params[0]
         const eq = p.data
-        return `<strong>${p.name}</strong> ${eq?.tipo ? `(${eq.tipo})` : ''}<br/>Disponibilidad: <strong>${p.value}%</strong><br/>Días op.: <strong>${eq?.diasOp} días</strong>`
+        const total = eq.diasOp + eq.diasNoOp
+        const color = semColor(p.value)
+        return `<div style="font-size:12px"><strong>${p.name}</strong> ${eq?.tipo ? `<span style="color:#888">(${eq.tipo})</span>` : ''}<hr style="margin:4px 0;border:none;border-top:1px solid #e5e7eb"/><div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color}"></span><strong>${p.value}%</strong> Disponibilidad</div><div style="margin-top:4px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981"></span>Op.: <strong>${eq?.diasOp}</strong> d</div><div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444"></span>No Op.: <strong>${eq?.diasNoOp}</strong> d</div><hr style="margin:4px 0;border:none;border-top:1px solid #e5e7eb"/><div style="color:#6b7280;font-size:11px">Prom. Op. <strong>${avgDiasOp}</strong> d · Prom. Mant. <strong>${avgDiasMant}</strong> d</div></div>`
       },
     },
-    grid: { left: '3%', right: '14%', bottom: '3%', top: '3%', containLabel: true },
+    grid: { left: '3%', right: '14%', bottom: '14%', top: '3%', containLabel: true },
     xAxis: {
       type: 'value', min: 0, max: 100,
       axisLabel: { formatter: '{value}%', color: textColor.value, fontSize: 10 },
@@ -2636,6 +2161,7 @@ function buildDispEquipoOption(equipos: EquipoDisp[], limit?: number) {
       data: list.map(e => ({
         value: e.dispPct,
         diasOp: e.diasOp,
+        diasNoOp: e.diasNoOp,
         tipo: e.tipo,
         itemStyle: {
           color: e.dispPct >= 85 ? '#10b981' : e.dispPct >= 60 ? '#f59e0b' : '#ef4444',
@@ -2648,32 +2174,43 @@ function buildDispEquipoOption(equipos: EquipoDisp[], limit?: number) {
         fontSize: 10, fontWeight: 'bold', color: titleColor.value,
       },
     }],
+    graphic: [
+      { type: 'group', left: '3%', bottom: 2, children: [
+        { type: 'rect', shape: { width: 190, height: 22, r: 4 }, style: { fill: isDark.value ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' } },
+        { type: 'rect', shape: { x: 8, y: 6, width: 10, height: 10, r: 2 }, style: { fill: '#10b981' } },
+        { type: 'text', style: { text: '≥85%', x: 22, y: 15, fill: textColor.value, fontSize: 10, font: 'bold 10px sans-serif' } },
+        { type: 'rect', shape: { x: 68, y: 6, width: 10, height: 10, r: 2 }, style: { fill: '#f59e0b' } },
+        { type: 'text', style: { text: '≥60%', x: 82, y: 15, fill: textColor.value, fontSize: 10, font: 'bold 10px sans-serif' } },
+        { type: 'rect', shape: { x: 128, y: 6, width: 10, height: 10, r: 2 }, style: { fill: '#ef4444' } },
+        { type: 'text', style: { text: '<60%', x: 142, y: 15, fill: textColor.value, fontSize: 10, font: 'bold 10px sans-serif' } },
+      ]},
+    ],
   })
 }
 
 const dispEquipoOpt = computed(() => buildDispEquipoOption(dispEquipoList.value, 15))
 const dispEquipoFullOpt = computed(() => buildDispEquipoOption(dispEquipoList.value))
 
-type EquipoMant = { placa: string; mantPct: number; diasMant: number; tipo: string }
+type EquipoMant = { placa: string; mantPct: number; diasMant: number; diasOp: number; tipo: string }
 
 const incidenciaMantenimientoList = computed<EquipoMant[]>(() => {
   const records = activePlacasRows.value
-  const targetIso = effectiveCorteIso.value
-  const equiposMap = new Map<string, { placa: string; diasMant: number; count: number; tipo: string }>()
+  const equiposMap = new Map<string, { placa: string; diasMant: number; diasOp: number; count: number; tipo: string }>()
 
   for (const r of records) {
     const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
     if (!d) continue
-    if (targetIso && getDateKey(d) !== targetIso) continue
     const info = getInspectionDetails(r)
     if (!info.placa) continue
     const existing = equiposMap.get(info.placa) ?? {
       placa: info.placa,
       diasMant: 0,
+      diasOp: 0,
       count: 0,
       tipo: info.baseTipo + (info.esAlquilado ? ' [Alq]' : ''),
     }
     if (info.isNoOp || info.esEnTaller) existing.diasMant++
+    else existing.diasOp++
     existing.count++
     equiposMap.set(info.placa, existing)
   }
@@ -2682,6 +2219,7 @@ const incidenciaMantenimientoList = computed<EquipoMant[]>(() => {
     placa: e.placa,
     mantPct: e.count > 0 ? Math.round((e.diasMant / e.count) * 100) : 0,
     diasMant: e.diasMant,
+    diasOp: e.diasOp,
     tipo: e.tipo,
   }))
 
@@ -2691,6 +2229,20 @@ const incidenciaMantenimientoList = computed<EquipoMant[]>(() => {
 
 function buildIncidenciaOption(equipos: EquipoMant[], limit?: number) {
   const list = limit ? equipos.slice(0, limit) : equipos
+  const records = activePlacasRows.value
+  const diasEnPeriodo = new Set<string>()
+  for (const r of records) {
+    const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
+    if (d) diasEnPeriodo.add(getDateKey(d))
+  }
+  const diasDelMes = diasEnPeriodo.size || 1
+  const cantidadVehiculos = equipos.length || 1
+  const diasTotalesPosibles = cantidadVehiculos * diasDelMes
+  const totalDiasOp = equipos.reduce((s, e) => s + e.diasOp, 0)
+  const totalDiasMant = Math.max(0, diasTotalesPosibles - totalDiasOp)
+  const avgDiasOp = cantidadVehiculos > 0 ? +(totalDiasOp / cantidadVehiculos).toFixed(1) : 0
+  const avgDiasMant = cantidadVehiculos > 0 ? +(totalDiasMant / cantidadVehiculos).toFixed(1) : 0
+  const semColor = (pct: number) => pct <= 15 ? '#10b981' : pct <= 40 ? '#f59e0b' : '#ef4444'
   return markRaw({
     tooltip: {
       trigger: 'axis',
@@ -2698,10 +2250,12 @@ function buildIncidenciaOption(equipos: EquipoMant[], limit?: number) {
       formatter: (params: any[]) => {
         const p = params[0]
         const eq = p.data
-        return `<strong>${p.name}</strong> ${eq?.tipo ? `(${eq.tipo})` : ''}<br/>Incidencia mant.: <strong>${p.value}%</strong><br/>Días mant.: <strong>${eq?.diasMant} días</strong>`
+        const total = eq.diasOp + eq.diasMant
+        const color = semColor(p.value)
+        return `<div style="font-size:12px"><strong>${p.name}</strong> ${eq?.tipo ? `<span style="color:#888">(${eq.tipo})</span>` : ''}<hr style="margin:4px 0;border:none;border-top:1px solid #e5e7eb"/><div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color}"></span><strong>${p.value}%</strong> Incidencia Mant.</div><div style="margin-top:4px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981"></span>Op.: <strong>${eq?.diasOp}</strong> d</div><div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444"></span>No Op.: <strong>${eq?.diasMant}</strong> d</div><hr style="margin:4px 0;border:none;border-top:1px solid #e5e7eb"/><div style="color:#6b7280;font-size:11px">Prom. Op. <strong>${avgDiasOp}</strong> d · Prom. Mant. <strong>${avgDiasMant}</strong> d</div></div>`
       },
     },
-    grid: { left: '3%', right: '14%', bottom: '3%', top: '3%', containLabel: true },
+    grid: { left: '3%', right: '14%', bottom: '14%', top: '3%', containLabel: true },
     xAxis: {
       type: 'value', min: 0, max: 100,
       axisLabel: { formatter: '{value}%', color: textColor.value, fontSize: 10 },
@@ -2720,6 +2274,7 @@ function buildIncidenciaOption(equipos: EquipoMant[], limit?: number) {
       data: list.map(e => ({
         value: e.mantPct,
         diasMant: e.diasMant,
+        diasOp: e.diasOp,
         tipo: e.tipo,
         itemStyle: {
           color: e.mantPct >= 50 ? '#ef4444' : e.mantPct >= 25 ? '#f59e0b' : '#10b981',
@@ -2732,194 +2287,22 @@ function buildIncidenciaOption(equipos: EquipoMant[], limit?: number) {
         fontSize: 10, fontWeight: 'bold', color: titleColor.value,
       },
     }],
+    graphic: [
+      { type: 'group', left: '3%', bottom: 2, children: [
+        { type: 'rect', shape: { width: 190, height: 22, r: 4 }, style: { fill: isDark.value ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' } },
+        { type: 'rect', shape: { x: 8, y: 6, width: 10, height: 10, r: 2 }, style: { fill: '#10b981' } },
+        { type: 'text', style: { text: '≤15%', x: 22, y: 15, fill: textColor.value, fontSize: 10, font: 'bold 10px sans-serif' } },
+        { type: 'rect', shape: { x: 68, y: 6, width: 10, height: 10, r: 2 }, style: { fill: '#f59e0b' } },
+        { type: 'text', style: { text: '≤40%', x: 82, y: 15, fill: textColor.value, fontSize: 10, font: 'bold 10px sans-serif' } },
+        { type: 'rect', shape: { x: 128, y: 6, width: 10, height: 10, r: 2 }, style: { fill: '#ef4444' } },
+        { type: 'text', style: { text: '>40%', x: 142, y: 15, fill: textColor.value, fontSize: 10, font: 'bold 10px sans-serif' } },
+      ]},
+    ],
   })
 }
 
 const incidenciaMantenimientoOpt = computed(() => buildIncidenciaOption(incidenciaMantenimientoList.value, 15))
 const incidenciaMantenimientoFullOpt = computed(() => buildIncidenciaOption(incidenciaMantenimientoList.value))
-
-/**
- * Disponibilidad por Planta y Distribución Diaria / Mensual.
- * Datos agrupados por fecha e indicador de planta de 'Reporte Placa Disponibilidad'.
- */
-const dispMensualPlantaOpt = computed(() => {
-  const records = activePlacasRows.value
-
-  const dateLocMap = new Map<string, Map<string, { sum: number; count: number }>>()
-  const dateMeta = new Map<string, { opTotal: number; mantTotal: number; total: number }>()
-  const allLocs = new Set<string>()
-
-  for (const r of records) {
-    const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
-    if (!d) continue
-    const dateKey = `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}`
-    if (!dateLocMap.has(dateKey)) {
-      dateLocMap.set(dateKey, new Map())
-      dateMeta.set(dateKey, { opTotal: 0, mantTotal: 0, total: 0 })
-    }
-    const info = getInspectionDetails(r)
-    const val = info.score
-    const loc = (info.loc || 'Sin Localización').toUpperCase()
-    allLocs.add(loc)
-
-    const locMap = dateLocMap.get(dateKey)!
-    if (!locMap.has(loc)) locMap.set(loc, { sum: 0, count: 0 })
-    const lm = locMap.get(loc)!
-    lm.sum += val
-    lm.count++
-
-    const dm = dateMeta.get(dateKey)!
-    if (info.isOperativo || info.isParcial) dm.opTotal += val
-    if (info.isNoOp || info.esEnTaller) dm.mantTotal++
-    dm.total++
-  }
-
-  const locArr = [...allLocs].sort()
-  const dates = [...dateLocMap.keys()].sort()
-  const colors = ['#3b82f6', '#e11d48', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ea580c', '#64748b']
-
-  const series = locArr.map((loc, i) => ({
-    name: loc,
-    type: 'bar' as const,
-    data: dates.map(d => {
-      const lm = dateLocMap.get(d)?.get(loc)
-      return lm && lm.count > 0 ? Math.round((lm.sum / lm.count) * 100) : 0
-    }),
-    itemStyle: { color: colors[i % colors.length], borderRadius: [3, 3, 0, 0] },
-    label: { show: true, position: 'top' as const, fontSize: 9, fontWeight: 'bold' as const, color: textColor.value, formatter: '{c}%' },
-  }))
-
-  const promOp = dates.map(d => +(dateMeta.get(d)?.opTotal ?? 0).toFixed(1))
-  const promMant = dates.map(d => +(dateMeta.get(d)?.mantTotal ?? 0).toFixed(1))
-
-  return markRaw({
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    legend: {
-      data: [...locArr, 'Días Operativos', 'Días en Mantenimiento'],
-      top: 0,
-      textStyle: { color: textColor.value, fontSize: 11 },
-    },
-    grid: { left: '3%', right: '4%', bottom: '8%', top: '18%', containLabel: true },
-    xAxis: {
-      type: 'category',
-      data: dates,
-      axisLabel: { color: textColor.value, fontSize: 10, fontWeight: 'bold' },
-      axisLine: { lineStyle: { color: textColor.value } },
-    },
-    yAxis: [
-      {
-        type: 'value', name: '% Disp.', min: 0, max: 100,
-        axisLabel: { formatter: '{value}%', color: textColor.value, fontSize: 10 },
-        splitLine: { lineStyle: { color: splitLineColor.value } },
-      },
-      {
-        type: 'value', name: 'Equipos', min: 0,
-        axisLabel: { formatter: '{value}', color: textColor.value, fontSize: 10 },
-        splitLine: { show: false },
-      },
-    ],
-    series: [
-      ...series,
-      {
-        name: 'Días Operativos', type: 'line', yAxisIndex: 1,
-        data: promOp, smooth: true, symbolSize: 8,
-        itemStyle: { color: '#6d28d9' }, lineStyle: { color: '#6d28d9', width: 2.5 },
-        label: { show: true, position: 'top', fontSize: 10, fontWeight: 'bold', color: '#6d28d9', formatter: '{c}' },
-      },
-      {
-        name: 'Días en Mantenimiento', type: 'line', yAxisIndex: 1,
-        data: promMant, smooth: true, symbolSize: 8,
-        itemStyle: { color: '#ef4444' }, lineStyle: { color: '#ef4444', width: 2, type: 'dashed' },
-        label: { show: true, position: 'bottom', fontSize: 10, fontWeight: 'bold', color: '#ef4444', formatter: '{c}' },
-      },
-    ],
-  })
-})
-
-/**
- * Días Promedio de Operación vs. Mantenimiento por Tipo de Vehículo.
- * Datos calculados dinámicamente de 'Reporte Placa Disponibilidad'.
- */
-const diasPromTipoOpt = computed(() => {
-  const records = activePlacasRows.value
-  const tiposMap = new Map<string, { tipo: string; sumRevAm: number; sumMant: number; placas: Set<string> }>()
-
-  for (const r of records) {
-    const info = getInspectionDetails(r)
-    const tipo = info.baseTipo
-    const placa = info.placa
-
-    const existing = tiposMap.get(tipo) ?? { tipo, sumRevAm: 0, sumMant: 0, placas: new Set<string>() }
-    existing.sumRevAm += info.score
-    if (info.isNoOp || info.esEnTaller) existing.sumMant++
-    if (placa) existing.placas.add(placa)
-    tiposMap.set(tipo, existing)
-  }
-
-  const tiposArr = [...tiposMap.values()].map(t => {
-    const numVehiculos = Math.max(t.placas.size, 1)
-    return {
-      tipo: t.tipo,
-      diasOp: +(t.sumRevAm / numVehiculos).toFixed(1),
-      diasMant: +(t.sumMant / numVehiculos).toFixed(1),
-      vehiculos: numVehiculos,
-    }
-  })
-
-  tiposArr.sort((a, b) => b.vehiculos - a.vehiculos)
-
-  const tipos = tiposArr.map(t => `${t.tipo} (${t.vehiculos})`)
-  const diasOp = tiposArr.map(t => t.diasOp)
-  const diasMant = tiposArr.map(t => t.diasMant)
-
-  return markRaw({
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      formatter: (params: any[]) => {
-        const tipo = params[0].name
-        const op = params.find((p: any) => p.seriesName === 'Promedio Días Operativos')?.value ?? '—'
-        const mant = params.find((p: any) => p.seriesName === 'Días Mantenimiento Promedio')?.value ?? '—'
-        return `<strong>${tipo}</strong><br/>🟦 Op.: <strong>${op} días</strong><br/>🟥 Mant.: <strong>${mant} días</strong>`
-      },
-    },
-    legend: {
-      data: ['Días Mantenimiento Promedio', 'Promedio Días Operativos'],
-      top: 0,
-      textStyle: { color: textColor.value, fontSize: 11 },
-    },
-    grid: { left: '3%', right: '4%', bottom: '12%', top: '15%', containLabel: true },
-    xAxis: {
-      type: 'category',
-      data: tipos,
-      axisLabel: { color: textColor.value, fontSize: 10, fontWeight: 'bold', rotate: 15 },
-      axisLine: { lineStyle: { color: textColor.value } },
-    },
-    yAxis: {
-      type: 'value',
-      axisLabel: { formatter: '{value} d', color: textColor.value, fontSize: 10 },
-      splitLine: { lineStyle: { color: splitLineColor.value } },
-    },
-    series: [
-      {
-        name: 'Días Mantenimiento Promedio', type: 'bar', barWidth: '30%',
-        data: diasMant.map(v => ({
-          value: v,
-          itemStyle: { color: '#ef4444', borderRadius: [3, 3, 0, 0] },
-        })),
-        label: { show: true, position: 'top', fontSize: 10, fontWeight: 'bold', color: textColor.value, formatter: '{c}' },
-      },
-      {
-        name: 'Promedio Días Operativos', type: 'bar', barWidth: '30%',
-        data: diasOp.map(v => ({
-          value: v,
-          itemStyle: { color: '#1a237e', borderRadius: [3, 3, 0, 0] },
-        })),
-        label: { show: true, position: 'top', fontSize: 10, fontWeight: 'bold', color: textColor.value, formatter: '{c}' },
-      },
-    ],
-  })
-})
 </script>
 
 <style scoped>
