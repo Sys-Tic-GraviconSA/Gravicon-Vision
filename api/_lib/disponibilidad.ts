@@ -36,6 +36,28 @@ export async function loadDisponibilidadData(planta: string, forceRefresh = fals
         if (placa) maestroMap.set(placa, m)
       }
 
+      // 2b. Cargar GRAVICON_INTERNO_OT del maestro para resolver IDs de Responsable (solo Cuncía)
+      tareas = tareasSheet.rows
+      resumen = resumenSheet.rows
+      if (p === 'cuncia') {
+        try {
+          const personalSheet = await getSheetData(maestroKey, 'GRAVICON_INTERNO_OT', forceRefresh)
+          const personalMap = new Map<string, string>()
+          for (const r of personalSheet.rows) {
+            const id = String(r['Id_Registro'] ?? '').trim()
+            const nombre = String(r['Nombre_Proveedor'] ?? '').trim()
+            if (id && nombre) personalMap.set(id, nombre)
+          }
+          // Enriquecer tareas: resolver Responsable ID → nombre
+          for (const t of tareas) {
+            const respId = String(t['Responsable'] ?? '').trim()
+            if (respId && personalMap.has(respId)) {
+              t['Nombre_Responsable'] = personalMap.get(respId)
+            }
+          }
+        } catch {}
+      }
+
       // 3. Normalizar y enriquecer las filas de Reporte Placa Disponibilidad
       placas = placasSheet.rows.map(r => {
         const idRef = String(r['Placa'] ?? '').trim()
@@ -70,9 +92,6 @@ export async function loadDisponibilidadData(planta: string, forceRefresh = fals
           Proveedor_Texto: r['Proveedor_Texto'] || r['Proveedor'] || '',
         }
       })
-
-      tareas = tareasSheet.rows
-      resumen = resumenSheet.rows
     }
   } catch (e) {
     console.error('[disponibilidad-load]', e)
