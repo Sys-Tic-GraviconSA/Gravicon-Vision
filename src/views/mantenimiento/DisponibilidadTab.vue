@@ -1,14 +1,10 @@
 <template>
   <div class="disponibilidad-tab">
-    <!-- Toggle de Vistas de Disponibilidad: Gráficas | Detalles | Informe -->
+    <!-- Toggle de Vistas de Disponibilidad: Gráficas | Informe -->
     <div class="almacen-view-toggle">
       <button class="av-btn" :class="{ active: dispView === 'graficas' }" @click="dispView = 'graficas'">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         Gráficas
-      </button>
-      <button class="av-btn" :class="{ active: dispView === 'detalles' }" @click="dispView = 'detalles'">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-        Detalles
       </button>
       <button class="av-btn" :class="{ active: dispView === 'informe' }" @click="dispView = 'informe'">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -194,65 +190,8 @@
         </div>
     </template>
 
-    <!-- ========================================== -->
-    <!-- VISTA 2: DETALLES                          -->
-    <!-- ========================================== -->
-    <template v-else-if="dispView === 'detalles'">
-      <div class="ots-section">
-        <div class="ots-bar">
-          <div class="ots-stats">
-            <span><strong>{{ activePlacasRows.length }}</strong> registros</span>
-            <span class="ots-dot"></span>
-            <span class="stat-op"><strong>{{ kpis.operativos }}</strong> operativos</span>
-            <span class="ots-dot"></span>
-            <span class="stat-noop"><strong>{{ kpis.noOperativos }}</strong> no operativos</span>
-            <span class="ots-dot"></span>
-            <span class="stat-warn"><strong>{{ kpis.parciales }}</strong> parciales</span>
-          </div>
-        </div>
-
-        <div class="data-card">
-          <div v-if="activePlacasRows.length === 0" class="empty-table">Sin datos de disponibilidad para este corte</div>
-          <div v-else class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th class="idx-col">#</th>
-                  <th>Placa</th>
-                  <th>Tipo</th>
-                  <th>Supervisor</th>
-                  <th>Localización</th>
-                  <th class="r">Rev. AM</th>
-                  <th class="r">Rev. PM</th>
-                  <th class="r">Score</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(r, i) in activePlacasRows" :key="i">
-                  <td class="idx">{{ i + 1 }}</td>
-                  <td class="bold accent-text">{{ r['Placa_Texto'] ?? r['Placa'] ?? '—' }}</td>
-                  <td>{{ r['Tipo de Vehiculos'] ?? r['Clase de Mantenimiento'] ?? '—' }}</td>
-                  <td>{{ r['Supervisor_Texto'] ?? r['Supervisor'] ?? '—' }}</td>
-                  <td>{{ r['Localizacion'] ?? r['Localización'] ?? r['Area de Trabajo'] ?? '—' }}</td>
-                  <td class="r" :class="Number(r['Rev_AM'] ?? NaN) === 0 ? 'red' : Number(r['Rev_AM'] ?? NaN) >= 0.9 ? 'green' : 'yellow'">{{ r['Rev_AM'] ?? '—' }}</td>
-                  <td class="r" :class="Number(r['Rev_PM'] ?? NaN) === 0 ? 'red' : Number(r['Rev_PM'] ?? NaN) >= 0.9 ? 'green' : 'yellow'">{{ r['Rev_PM'] ?? '—' }}</td>
-                  <td class="r bold" :class="(Number(r['Porcentaje_Placa'] ?? NaN) >= 85) ? 'green' : (Number(r['Porcentaje_Placa'] ?? NaN) >= 60) ? 'yellow' : 'red'">{{ r['Porcentaje_Placa'] ?? '—' }}</td>
-                  <td>
-                    <span v-if="Number(r['Porcentaje_Placa'] ?? NaN) >= 0.9" class="pill p-verde">Operativo</span>
-                    <span v-else-if="Number(r['Porcentaje_Placa'] ?? NaN) >= 0.1" class="pill p-ambar">Parcial</span>
-                    <span v-else class="pill p-rojo">No Op.</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </template>
-
     <!-- ==================================================== -->
-    <!-- VISTA 3: INFORME OFICIAL DE DISPONIBILIDAD           -->
+    <!-- VISTA 2: INFORME OFICIAL DE DISPONIBILIDAD           -->
     <!-- ==================================================== -->
     <template v-else-if="dispView === 'informe'">
 
@@ -741,7 +680,7 @@ const props = defineProps<{
 
 const { theme } = useTheme()
 const dispStore = useDisponibilidadStore()
-const dispView = ref<'graficas' | 'detalles' | 'informe'>('graficas')
+const dispView = ref<'graficas' | 'informe'>('graficas')
 // Removed iframe reference – not needed after switching to v-html rendering
 
 const isConcretosPlanta = computed(() => {

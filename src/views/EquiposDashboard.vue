@@ -349,14 +349,17 @@
             </p>
           </div>
 
-          <!-- 10 Tarjetas KPI Oficiales -->
+          <!-- Tarjetas KPI Oficiales -->
           <div class="kpi-row compact-kpi">
+            <KpiCard label="Total Órdenes" accent="#8B5CF6" icon="list" :value="String(totalOrdenes)" />
             <KpiCard label="OT Abiertas" accent="#DC2626" icon="activity" :value="String(repAbiertas)" />
             <KpiCard label="OT Cerradas" accent="#16A34A" icon="check-circle" :value="String(repCerradas)" />
             <KpiCard label="Cerradas Mes" accent="#2563EB" icon="check-circle" :value="String(repCerradasMes)" />
             <KpiCard label="Costo Acumulado" accent="#1D4ED8" icon="dollar" :value="$$short(repCostoTotal)" />
             <KpiCard label="Costo Servicios" accent="#0EA5E9" icon="dollar" :value="$$short(repCostoServTotal)" />
             <KpiCard label="Costo Insumos" accent="#F97316" icon="package" :value="$$short(repCostoInsumosTotal)" />
+            <KpiCard label="Total Producción" accent="#10B981" icon="trending-up" :value="fmt(totalProd) + ' m³'" />
+            <KpiCard label="Costo por m³" :accent="costoM3 > 3000 ? '#EF4444' : '#10B981'" meta="Meta: $3.000/m³" icon="target" :value="$$(costoM3)" />
             <KpiCard
               label="% Cierre"
               :accent="repPctCierre >= 85 ? '#16A34A' : repPctCierre >= 60 ? '#F59E0B' : '#DC2626'"
@@ -365,6 +368,8 @@
               :value="repPctCierre + '%'"
             />
             <KpiCard label="Duración Promedio" accent="#8B5CF6" icon="clock" :value="otDuracionEstimadaProm + ' h'" />
+            <KpiCard label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" :value="otTiempoRealProm + ' h'" />
+            <KpiCard label="OT con Solicitud (SOPLED/Interno)" accent="#10B981" icon="package" :value="otConSopledPct + '%'" />
             <KpiCard label="Gasto Interno" accent="#2563EB" icon="package" :value="$$short(repCostosProv.interno)" />
             <KpiCard label="Gasto Externo" accent="#F59E0B" icon="users" :value="$$short(repCostosProv.externo)" />
           </div>
@@ -527,6 +532,34 @@
             </div>
           </div>
 
+          <!-- Equipos con Fallas Recurrentes -->
+          <div class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Equipos con Fallas Recurrentes (Mantenimiento Correctivo)</h3>
+            <div class="data-card">
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width: 24px">#</th>
+                      <th>{{ repSectionLabelVehiculo }}</th>
+                      <th class="r" style="width: 90px">OTs Correctivas</th>
+                      <th style="width: 120px">Última OT</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(v, i) in repFallasRecurrentes" :key="v.placa">
+                      <td class="idx">{{ i + 1 }}</td>
+                      <td class="bold accent-text">{{ v.placa }}</td>
+                      <td class="r bold" style="color: #dc2626;">{{ v.n }}</td>
+                      <td>{{ v.ultimaFecha ? serialDate(v.ultimaFecha) : '—' }}</td>
+                    </tr>
+                    <tr v-if="!repFallasRecurrentes.length"><td colspan="4" class="empty-table">Sin equipos con fallas recurrentes en el período</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
           <!-- Costos por Proveedores Internos y Externos -->
           <div class="report-section-block">
             <h3 class="report-block-title"><span class="title-bar"></span>Costos por Proveedores Internos y Externos</h3>
@@ -626,20 +659,24 @@
                     <tr>
                       <th style="width: 24px">#</th>
                       <th>Proveedor</th>
-                      <th class="r" style="width: 65px">N.º de OT</th>
-                      <th class="r" style="width: 130px">Costo Acumulado</th>
-                      <th class="r" style="width: 70px">Particip.</th>
+                      <th class="r" style="width: 50px">OTs</th>
+                      <th class="r" style="width: 110px">Costo</th>
+                      <th class="r" style="width: 75px">Dur. Est.</th>
+                      <th class="r" style="width: 75px">T. Real</th>
+                      <th class="r" style="width: 55px">Part.</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(p, i) in repRankProveedores.slice(0, 6)" :key="p.label">
+                    <tr v-for="(p, i) in repRankProveedores.slice(0, 8)" :key="p.label">
                       <td class="idx">{{ i + 1 }}</td>
                       <td class="bold accent-text">{{ p.label }}</td>
                       <td class="r bold">{{ p.n }}</td>
                       <td class="r bold">{{ $$(p.costo) }}</td>
+                      <td class="r">{{ p.horasEstProm > 0 ? p.horasEstProm.toFixed(1) + ' h' : '—' }}</td>
+                      <td class="r">{{ p.horasProm > 0 ? p.horasProm.toFixed(1) + ' h' : '—' }}</td>
                       <td class="r">{{ repPct(p.costo) }}%</td>
                     </tr>
-                    <tr v-if="!repRankProveedores.length"><td colspan="5" class="empty-table">Sin datos en el período</td></tr>
+                    <tr v-if="!repRankProveedores.length"><td colspan="7" class="empty-table">Sin datos en el período</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -782,9 +819,12 @@
           <div class="report-section-block">
             <h3 class="report-block-title"><span class="title-bar"></span>Conclusiones y Resumen Ejecutivo</h3>
             <div class="data-card" style="padding: 10px 14px;">
-              <ul class="res">
-                <li v-for="(l, i) in repLectura" :key="i">{{ l }}</li>
-              </ul>
+              <template v-for="(g, gi) in repConclusiones" :key="gi">
+                <div class="card-head" :style="{ fontSize: '11px', fontWeight: 700, color: 'var(--navy)', marginBottom: '6px', marginTop: gi > 0 ? '12px' : '0', textTransform: 'uppercase' }">{{ g.titulo }}</div>
+                <ul class="res">
+                  <li v-for="(l, i) in g.items" :key="i">{{ l }}</li>
+                </ul>
+              </template>
             </div>
           </div>
 
@@ -1672,16 +1712,13 @@ const claseMantenimientoRanking = computed(() => rankBy(dataFilteredMain.value, 
 const motivosNoEjecucionRanking = computed(() => rankBy(dataFilteredMain.value.filter(r => String(r['Motivo No Ejecución'] ?? '').trim()), 'Motivo No Ejecución', 10))
 
 /**
- * Personal de intervención: participaciones + horas reales + costo total.
- * Horas reales calculadas entre Fecha Recepción y Fecha Cierre.
+ * Personal de intervención: participaciones + horas (Duración_Estimada) + costo total.
  * Costo = Costo servicios + Costos Insumos.
  */
 const personalInternoRanking = computed((): { label: string; n: number; horas: number; costo: number }[] => {
   const map = new Map<string, { n: number; horas: number; costo: number }>()
   for (const r of dataFilteredMain.value.filter(isInterno)) {
-    const rec = Number(r['Fecha Recepción']) || 0
-    const cie = Number(r['Fecha Cierre']) || 0
-    const horas = (rec && cie && cie > rec) ? (cie - rec) * 24 : (Number(r['Duración (horas)']) || 0)
+    const horas = Number(r['Duración (horas)']) || 0
 
     const personalDetalles = r['_personalDetalles']
     if (Array.isArray(personalDetalles) && personalDetalles.length > 0) {
@@ -2318,24 +2355,6 @@ function repPct(part: number): number {
 }
 
 
-/** Agrupa por campo acumulando nº de OTs y costo (servicios + insumos). */
-function groupCosto(rows: Record<string, unknown>[], field: string, limit = 12, multi = false): { label: string; n: number; costo: number }[] {
-  const map = new Map<string, { n: number; costo: number }>()
-  for (const r of rows) {
-    const raw = String(r[field] ?? '').trim()
-    if (!raw) continue
-    const parts = multi ? raw.split(/[,;]/) : [raw]
-    for (const part of parts) {
-      const label = part.trim()
-      if (!label) continue
-      const e = map.get(label) ?? { n: 0, costo: 0 }
-      e.n++
-      e.costo += rowServicios(r) + rowInsumos(r)
-      map.set(label, e)
-    }
-  }
-  return [...map.entries()].map(([label, e]) => ({ label, ...e })).sort((a, b) => b.costo - a.costo).slice(0, limit)
-}
 
 /** Extrae un tipo corto de la descripción de planta/maquinaria (ej. "CARGADOR : 950…" → "CARGADOR"). */
 function vehTypeLabel(text: string): string {
@@ -2399,6 +2418,22 @@ const repTopVehiculos = computed(() => {
   return [...map.values()].sort((a, b) => b.costo - a.costo).slice(0, 5)
 })
 
+/** Equipos con fallas recurrentes: 2 o más OTs de mantenimiento correctivo en el período. */
+const repFallasRecurrentes = computed(() => {
+  const map = new Map<string, { placa: string; n: number; ultimaFecha: number }>()
+  for (const r of repRows.value) {
+    const clase = String(r['Clase Mantenimiento'] ?? '').trim().toUpperCase()
+    if (!clase.includes('CORRECTIVO')) continue
+    const placa = String(r['Placa del Vehículo'] ?? '').trim() || vehTypeLabel(String(r['Tipo de Vehículo'] ?? ''))
+    const e = map.get(placa) ?? { placa, n: 0, ultimaFecha: 0 }
+    e.n++
+    const f = Number(r['FECHA']) || 0
+    if (f > e.ultimaFecha) e.ultimaFecha = f
+    map.set(placa, e)
+  }
+  return [...map.values()].filter(e => e.n >= 2).sort((a, b) => b.n - a.n).slice(0, 8)
+})
+
 /** Costos por proveedores internos (Gravicon) y externos. */
 const repCostosProv = computed(() => {
   let interno = 0, externo = 0, nInt = 0, nExt = 0
@@ -2414,8 +2449,26 @@ const repCostosProv = computed(() => {
   }
 })
 
-/** Ranking de proveedores con mayor uso (nº de OT y acumulado $). */
-const repRankProveedores = computed(() => groupCosto(repRows.value, 'PROVEEDOR', 10))
+/** Ranking de proveedores con mayor uso: nº de OT, acumulado $, duración estimada promedio y tiempo real promedio (Recepción → Cierre). */
+const repRankProveedores = computed((): { label: string; n: number; costo: number; horasEstProm: number; horasProm: number }[] => {
+  const map = new Map<string, { n: number; costo: number; sumHorasEst: number; sumHoras: number; nHoras: number }>()
+  for (const r of repRows.value) {
+    const label = String(r['PROVEEDOR'] ?? '').trim()
+    if (!label) continue
+    const e = map.get(label) ?? { n: 0, costo: 0, sumHorasEst: 0, sumHoras: 0, nHoras: 0 }
+    e.n++
+    e.costo += rowServicios(r) + rowInsumos(r)
+    e.sumHorasEst += Number(r['Duración (horas)']) || 0
+    const rec = Number(r['Fecha Recepción'])
+    const cie = Number(r['Fecha Cierre'])
+    if (!isNaN(rec) && !isNaN(cie) && rec > 0 && cie > rec) { e.sumHoras += (cie - rec) * 24; e.nHoras++ }
+    map.set(label, e)
+  }
+  return [...map.entries()]
+    .map(([label, e]) => ({ label, n: e.n, costo: e.costo, horasEstProm: e.n > 0 ? e.sumHorasEst / e.n : 0, horasProm: e.nHoras > 0 ? e.sumHoras / e.nHoras : 0 }))
+    .sort((a, b) => b.costo - a.costo)
+    .slice(0, 10)
+})
 
 /** Distribución por Jornada (Noche / Dia). */
 const repJornada = computed(() => {
@@ -2435,9 +2488,7 @@ const repJornada = computed(() => {
 const repPersonalInterno = computed(() => {
   const map = new Map<string, { n: number; costoServ: number; horas: number }>()
   for (const r of repRows.value.filter(isInterno)) {
-    const rec = Number(r['Fecha Recepción']) || 0
-    const cie = Number(r['Fecha Cierre']) || 0
-    const horas = (rec && cie && cie > rec) ? (cie - rec) * 24 : (Number(r['Duración (horas)']) || 0)
+    const horas = Number(r['Duración (horas)']) || 0
 
     const personalDetalles = r['_personalDetalles']
     if (Array.isArray(personalDetalles) && personalDetalles.length > 0) {
@@ -2520,17 +2571,63 @@ const repRankAlmacen = computed(() => {
   return [...map.entries()].map(([label, e]) => ({ label, ...e })).sort((a, b) => b.n - a.n).slice(0, 8)
 })
 
-const repLectura = computed(() => {
-  const list: string[] = []
+interface ConclusionGrupo { titulo: string; items: string[] }
+
+/** Conclusiones y resumen ejecutivo, agrupado por categoría, con lectura detallada del período. */
+const repConclusiones = computed((): ConclusionGrupo[] => {
+  const grupos: ConclusionGrupo[] = []
   const total = repRows.value.length
-  list.push(`Entre el ${informeDesde.value} y el ${informeHasta.value} se gestionaron ${total} órdenes de trabajo: ${repCerradas.value} cerradas y ${repAbiertas.value} abiertas (índice de cierre ${repPctCierre.value}%).`)
-  list.push(`El costo acumulado del período ascendió a ${$$(repCostoTotal.value)}: ${$$(repCostosProv.value.interno)} (${repCostosProv.value.pctInt}%) en proveedores internos y ${$$(repCostosProv.value.externo)} (${repCostosProv.value.pctExt}%) en proveedores externos.`)
-  if (repClaseMant.value.total > 0) list.push(`La ejecución se distribuyó en ${repClaseMant.value.pctCor}% correctivo, ${repClaseMant.value.pctPrev}% preventivo y ${repClaseMant.value.pctOtro}% de otras clasificaciones.`)
+
+  const volumen: string[] = []
+  volumen.push(`Entre el ${informeDesde.value} y el ${informeHasta.value} se gestionaron ${total} órdenes de trabajo: ${repCerradas.value} cerradas y ${repAbiertas.value} abiertas, para un índice de cierre del ${repPctCierre.value}%.`)
+  volumen.push(`${repCerradasMes.value} orden(es) se cerraron dentro del mes en curso.`)
+  volumen.push(repAbiertas.value > 0
+    ? `Existen ${repAbiertas.value} OT abiertas; se recomienda dar seguimiento prioritario a su cierre administrativo u operativo.`
+    : 'No hay OT abiertas en el período: el cierre de las órdenes se mantiene al día.')
+  grupos.push({ titulo: 'Volumen y Estado de Cierre', items: volumen })
+
+  const costos: string[] = []
+  costos.push(`El costo acumulado del período ascendió a ${$$(repCostoTotal.value)}: ${$$(repCostosProv.value.interno)} (${repCostosProv.value.pctInt}%) en recursos internos de Gravicon y ${$$(repCostosProv.value.externo)} (${repCostosProv.value.pctExt}%) en proveedores externos.`)
+  costos.push(`Producción total del período: ${fmt(totalProd.value)} m³, con un costo de mantenimiento de ${$$(costoM3.value)}/m³ ${costoM3.value > 3000 ? '(por encima de la meta de $3.000/m³)' : '(dentro de la meta de $3.000/m³)'}.`)
+  const topProv = repRankProveedores.value[0]
+  if (topProv) costos.push(`El proveedor con mayor uso fue ${topProv.label}, con ${topProv.n} OT y ${$$(topProv.costo)} acumulados (${repPct(topProv.costo)}% del costo total).`)
+  grupos.push({ titulo: 'Costos y Producción', items: costos })
+
+  const desempeno: string[] = []
+  desempeno.push(`Duración estimada promedio por OT: ${otDuracionEstimadaProm.value} h. Tiempo real promedio entre recepción y cierre: ${otTiempoRealProm.value} h.`)
+  const estNum = Number(otDuracionEstimadaProm.value)
+  const realNum = Number(otTiempoRealProm.value)
+  if (estNum > 0 && realNum > 0) {
+    const desv = ((realNum - estNum) / estNum) * 100
+    if (desv > 15) desempeno.push(`El tiempo real de atención supera en ${desv.toFixed(0)}% el tiempo estimado, lo que sugiere demoras en la gestión administrativa o en la disponibilidad de repuestos.`)
+  }
+  if (repClaseMant.value.total > 0) desempeno.push(`La ejecución se distribuyó en ${repClaseMant.value.pctCor}% correctivo, ${repClaseMant.value.pctPrev}% preventivo y ${repClaseMant.value.pctOtro}% de otras clasificaciones.`)
+  desempeno.push(`${otConSopledPct.value}% de las OT registraron una solicitud de materiales o intervención interna asociada (SOPLED/Interno).`)
+  const topSistema = repRankSistemas.value[0]
+  if (topSistema) desempeno.push(`El sistema con mayor intervención fue "${topSistema.label}" con ${topSistema.n} intervenciones.`)
+  grupos.push({ titulo: 'Desempeño Operativo', items: desempeno })
+
+  const equipos: string[] = []
   const top = repTopVehiculos.value[0]
-  if (top) list.push(`El ${repSectionLabelVehiculo.value.toLowerCase()} con mayor consumo fue ${top.placa} con ${$$(top.costo)} y ${fmtDuracion(top.dias) || '—'} en taller.`)
-  if (repAbiertas.value > 0) list.push(`Existen ${repAbiertas.value} OT abiertas; se recomienda dar seguimiento prioritario a su cierre administrativo u operativo.`)
-  else list.push('No hay OT abiertas en el período: el cierre de las órdenes se mantiene al día.')
-  return list
+  if (top) equipos.push(`El ${repSectionLabelVehiculo.value.toLowerCase()} con mayor consumo fue ${top.placa}, con ${$$(top.costo)} y ${fmtDuracion(top.dias) || '—'} acumuladas en taller.`)
+  if (repFallasRecurrentes.value.length > 0) {
+    const peor = repFallasRecurrentes.value[0]
+    equipos.push(`${repFallasRecurrentes.value.length} equipo(s) registraron fallas recurrentes (2 o más OT correctivas en el período); el más crítico fue ${peor.placa} con ${peor.n} OT correctivas.`)
+  } else {
+    equipos.push('No se identificaron equipos con fallas recurrentes en el período.')
+  }
+  grupos.push({ titulo: 'Equipos y Confiabilidad', items: equipos })
+
+  const alertas: string[] = []
+  if (repAbiertas.value > 0) alertas.push(`Priorizar el cierre de las ${repAbiertas.value} OT abiertas para mantener el índice de cierre por encima del 85%.`)
+  if (repFallasRecurrentes.value.length > 0) alertas.push(`Evaluar mantenimiento de fondo o reemplazo de los ${repFallasRecurrentes.value.length} equipo(s) con fallas recurrentes.`)
+  const topMotivo = motivosNoEjecucionRanking.value[0]
+  if (topMotivo) alertas.push(`El motivo de no ejecución más frecuente fue "${topMotivo[0]}" (${topMotivo[1]} caso(s)); se recomienda revisar la causa raíz.`)
+  if (costoM3.value > 3000) alertas.push(`El costo por m³ (${$$(costoM3.value)}) supera la meta institucional de $3.000/m³.`)
+  if (!alertas.length) alertas.push('No se identifican alertas críticas en el período: la gestión se mantiene dentro de los parámetros esperados.')
+  grupos.push({ titulo: 'Alertas y Recomendaciones', items: alertas })
+
+  return grupos
 })
 
 const informeAnalisisTexto = computed(() => {
@@ -2591,43 +2688,65 @@ async function generarInformePdf() {
     try {
       const pageW = 210
       const pageH = 297
-      const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
 
-      function addCanvasToPdf(canvas: HTMLCanvasElement, isFirst: boolean) {
-        const imgW = pageW
-        const imgH = (canvas.height * imgW) / canvas.width
-        const imgData = canvas.toDataURL('image/png')
-
-        if (imgH <= pageH) {
-          if (!isFirst) pdf.addPage()
-          pdf.addImage(imgData, 'PNG', 0, 0, imgW, imgH, undefined, 'FAST')
-        } else {
-          const pxPerMm = canvas.width / imgW
-          const pageHeightPx = Math.floor(pageH * pxPerMm)
-          let yOffset = 0
-          let firstSlice = isFirst
-
-          while (yOffset < canvas.height) {
-            const sliceHeight = Math.min(pageHeightPx, canvas.height - yOffset)
-            const sliceCanvas = document.createElement('canvas')
-            sliceCanvas.width = canvas.width
-            sliceCanvas.height = sliceHeight
-            const ctx = sliceCanvas.getContext('2d')!
-            ctx.fillStyle = '#ffffff'
-            ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height)
-            ctx.drawImage(canvas, 0, yOffset, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight)
-
-            if (!firstSlice) pdf.addPage()
-            const sliceData = sliceCanvas.toDataURL('image/png')
-            const sliceHm = (sliceHeight * imgW) / canvas.width
-            pdf.addImage(sliceData, 'PNG', 0, 0, imgW, sliceHm, undefined, 'FAST')
-
-            yOffset += sliceHeight
-            firstSlice = false
-          }
-        }
+      /**
+       * Puntos de corte "seguros" dentro de una página (en px de canvas): tope de cada bloque,
+       * tarjeta, fila de tabla o ítem de lista. Evita partir una tabla o un párrafo a la mitad
+       * cuando el contenido de una página no cabe en una sola hoja A4 y hay que dividirlo.
+       */
+      function getBreakCandidates(pageEl: HTMLElement, canvasWidth: number): number[] {
+        const pageRect = pageEl.getBoundingClientRect()
+        const ratio = canvasWidth / (pageRect.width || pageEl.offsetWidth || 1)
+        const nodes = pageEl.querySelectorAll<HTMLElement>(
+          ':scope > *, .report-section-block, .data-card, .charts-grid > *, table, tr, .res li, .rank-bar'
+        )
+        const boundaries = new Set<number>()
+        nodes.forEach(el => {
+          const top = Math.round((el.getBoundingClientRect().top - pageRect.top) * ratio)
+          if (top > 0) boundaries.add(top)
+        })
+        return [...boundaries].sort((a, b) => a - b)
       }
 
+      /**
+       * Corta un canvas en "rebanadas" de como máximo una hoja A4 de alto, prefiriendo cortar
+       * en un punto seguro cercano al borde. Cada rebanada mide exactamente lo que ocupa su
+       * contenido (nunca más de 297mm), para que la página del PDF no quede con espacio sobrante.
+       */
+      function sliceCanvas(canvas: HTMLCanvasElement, breakPoints: number[]): { dataUrl: string; heightMm: number }[] {
+        const imgW = pageW
+        const imgH = (canvas.height * imgW) / canvas.width
+        if (imgH <= pageH) {
+          return [{ dataUrl: canvas.toDataURL('image/png'), heightMm: imgH }]
+        }
+
+        const pxPerMm = canvas.width / imgW
+        const pageHeightPx = Math.floor(pageH * pxPerMm)
+        const margin = pageHeightPx * 0.08
+        const slices: { dataUrl: string; heightMm: number }[] = []
+        let yOffset = 0
+
+        while (yOffset < canvas.height) {
+          const maxEnd = Math.min(yOffset + pageHeightPx, canvas.height)
+          const candidates = breakPoints.filter(b => b > yOffset && b >= maxEnd - margin && b <= maxEnd)
+          const sliceEnd = candidates.length ? candidates[candidates.length - 1] : maxEnd
+          const sliceHeightPx = Math.max(sliceEnd - yOffset, 1)
+
+          const sliceCanvasEl = document.createElement('canvas')
+          sliceCanvasEl.width = canvas.width
+          sliceCanvasEl.height = sliceHeightPx
+          const ctx = sliceCanvasEl.getContext('2d')!
+          ctx.fillStyle = '#ffffff'
+          ctx.fillRect(0, 0, sliceCanvasEl.width, sliceCanvasEl.height)
+          ctx.drawImage(canvas, 0, yOffset, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx)
+
+          slices.push({ dataUrl: sliceCanvasEl.toDataURL('image/png'), heightMm: (sliceHeightPx * imgW) / canvas.width })
+          yOffset += sliceHeightPx
+        }
+        return slices
+      }
+
+      const allSlices: { dataUrl: string; heightMm: number }[] = []
       const pages = elemento.querySelectorAll<HTMLElement>('.report-page')
       if (pages.length === 0) {
         const canvas = await html2canvas(elemento, {
@@ -2636,9 +2755,8 @@ async function generarInformePdf() {
           backgroundColor: '#ffffff',
           logging: false,
         })
-        addCanvasToPdf(canvas, true)
+        allSlices.push(...sliceCanvas(canvas, []))
       } else {
-        let first = true
         for (let i = 0; i < pages.length; i++) {
           const pageCanvas = await html2canvas(pages[i], {
             scale: 3,
@@ -2650,10 +2768,21 @@ async function generarInformePdf() {
             windowWidth: pages[i].scrollWidth,
             windowHeight: pages[i].scrollHeight,
           })
-          addCanvasToPdf(pageCanvas, first)
-          first = false
+          const breakPoints = getBreakCandidates(pages[i], pageCanvas.width)
+          allSlices.push(...sliceCanvas(pageCanvas, breakPoints))
         }
       }
+
+      if (!allSlices.length) throw new Error('No se pudo generar contenido para el PDF')
+
+      // Cada página del PDF se crea con el alto exacto de su rebanada (nunca más de 297mm),
+      // así nunca queda espacio en blanco sobrante al final de una página.
+      const pdf = new jsPDF({ unit: 'mm', format: [pageW, allSlices[0].heightMm], orientation: 'portrait' })
+      allSlices.forEach((slice, i) => {
+        if (i > 0) pdf.addPage([pageW, slice.heightMm])
+        pdf.addImage(slice.dataUrl, 'PNG', 0, 0, pageW, slice.heightMm, undefined, 'FAST')
+      })
+
       const filename = `Informe_Gestion_OT_${plantaLabel.value}_${informeDesde.value || 'reporte'}_al_${informeHasta.value || 'corte'}.pdf`
       pdf.save(filename)
     } finally {
@@ -3657,9 +3786,7 @@ const motivosNoEjExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy
 const personalInternoExpandOpt = computed(() => {
   const map = new Map<string, { n: number; horas: number; costo: number }>()
   for (const r of dataFilteredMain.value.filter(isInterno)) {
-    const rec = Number(r['Fecha Recepción']) || 0
-    const cie = Number(r['Fecha Cierre']) || 0
-    const horas = (rec && cie && cie > rec) ? (cie - rec) * 24 : (Number(r['Duración (horas)']) || 0)
+    const horas = Number(r['Duración (horas)']) || 0
 
     const personalDetalles = r['_personalDetalles']
     if (Array.isArray(personalDetalles) && personalDetalles.length > 0) {
