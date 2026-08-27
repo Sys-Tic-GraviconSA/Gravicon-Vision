@@ -838,13 +838,14 @@ const informeKpis = computed(() => {
     const info = getInspectionDetails(r)
     if (info.placa) {
       vehiculosSet.add(info.placa)
-      if (info.esAlquilado) alquiladosSet.add(info.placa)
     }
 
     const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
     if (!d) continue
     const iso = getDateKey(d)
     if (targetIso && iso !== targetIso) continue
+
+    if (info.esAlquilado && info.placa) alquiladosSet.add(info.placa)
 
     inspectedCount++
     countTotal++
