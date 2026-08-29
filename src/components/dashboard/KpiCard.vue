@@ -9,6 +9,7 @@
         <slot>{{ value }}</slot>
         <span v-if="unit" class="kpi-unit">{{ unit }}</span>
       </span>
+      <div v-if="detail" class="kpi-detail">{{ detail }}</div>
       <div v-if="trend" class="kpi-trend" :class="trendClass">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <polyline v-if="trend.direction === 'up'" points="18 15 12 9 6 15"/>
@@ -38,6 +39,7 @@ const props = withDefaults(defineProps<{
   accent?: string
   pulse?: boolean
   meta?: string
+  detail?: string
   to?: string
   icon?: string
   trend?: { value: number; direction: 'up' | 'down' }
@@ -68,7 +70,7 @@ function navigate() {
   overflow: hidden;
   transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
   backdrop-filter: blur(8px);
-  min-height: 110px;
+  min-height: 125px;
 }
 
 .kpi-card::before {
@@ -140,6 +142,15 @@ function navigate() {
 
 .kpi-value.pulse {
   animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+.kpi-detail {
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+  line-height: 1.35;
+  font-weight: 500;
+  letter-spacing: 0.1px;
 }
 
 .kpi-trend {

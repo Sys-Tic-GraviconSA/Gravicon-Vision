@@ -87,18 +87,18 @@
 
       <template v-if="dashboardView === 'resumen'">
       <div class="kpi-row">
-        <KpiCard :value="$$(totalGeneral)" label="Costo Total General" accent="#15223c" icon="dollar" />
-        <KpiCard :value="$$(servicios)" label="Costos Servicios" accent="#3B82F6" icon="settings" />
-        <KpiCard :value="$$(insumos)" label="Costos Insumos" accent="#EF4444" icon="package" />
+        <KpiCard :value="$$(totalGeneral)" label="Costo Total General" accent="#15223c" icon="dollar" :detail="`Int: ${$$short(intTotal)} (${intPct}%) · Ext: ${$$short(extTotal)} (${extPct}%)`" />
+        <KpiCard :value="$$(servicios)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`Int: ${$$short(intServ)} · Ext: ${$$short(extServ)}`" />
+        <KpiCard :value="$$(insumos)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`Int: ${$$short(intIns)} · Ext: ${$$short(extIns)}`" />
         <KpiCard :value="fmt(totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
-        <KpiCard :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > 3000 ? '#EF4444' : '#10B981'" :meta="'Meta: $3.000/m³'" icon="target" />
-        <KpiCard :value="String(totalOrdenes)" label="Total Órdenes" accent="#8B5CF6" icon="list" />
-        <KpiCard :value="String(estadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" />
-        <KpiCard :value="String(estadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" />
-        <KpiCard :value="otPctCierre + '%'" label="% Cierre" accent="#3B82F6" icon="zap" />
-        <KpiCard :value="otDuracionEstimadaProm + ' h'" label="Duración Estimada Promedio" accent="#8B5CF6" icon="clock" />
-        <KpiCard :value="otTiempoRealProm + ' h'" label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" />
-        <KpiCard :value="otConSopledPct + '%'" label="OT con Solicitud (SOPLED/Interno)" accent="#10B981" icon="package" />
+        <KpiCard :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > 3000 ? '#EF4444' : '#10B981'" :meta="'Meta: $3.000/m³'" icon="target" :detail="`Int: ${$$short(intCostoM3)}/m³ · Ext: ${$$short(extCostoM3)}/m³`" />
+        <KpiCard :value="String(totalOrdenes)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`Int: ${intCount} · Ext: ${extCount}`" />
+        <KpiCard :value="String(estadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`Int: ${otsIntEstadoCounts.abiertas} · Ext: ${otsExtEstadoCounts.abiertas}`" />
+        <KpiCard :value="String(estadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`Int: ${otsIntEstadoCounts.cerradas} · Ext: ${otsExtEstadoCounts.cerradas}`" />
+        <KpiCard :value="otPctCierre + '%'" label="% Cierre" accent="#3B82F6" icon="zap" :detail="`Int: ${otsIntPctCierre}% · Ext: ${otsExtPctCierre}%`" />
+        <KpiCard :value="otDuracionEstimadaProm + ' h'" label="Duración Estimada Promedio" accent="#8B5CF6" icon="clock" :detail="`Int: ${otsIntDuracionEstimadaProm}h · Ext: ${otsExtDuracionEstimadaProm}h`" />
+        <KpiCard :value="otTiempoRealProm + ' h'" label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" :detail="`Int: ${otsIntTiempoRealProm}h · Ext: ${otsExtTiempoRealProm}h`" />
+        <KpiCard :value="otConSopledPct + '%'" label="OT con Solicitud (SOPLED/Interno)" accent="#10B981" icon="package" :detail="`Int: ${otsIntConSopledPct}% · Ext: ${otsExtConSopledPct}%`" />
       </div>
 
       <div class="ots-bar">
