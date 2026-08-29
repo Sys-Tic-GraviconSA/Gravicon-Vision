@@ -9,7 +9,7 @@
         <slot>{{ value }}</slot>
         <span v-if="unit" class="kpi-unit">{{ unit }}</span>
       </span>
-      <div v-if="detail" class="kpi-detail">{{ detail }}</div>
+      <div v-if="detail" class="kpi-detail" v-html="detail"></div>
       <div v-if="trend" class="kpi-trend" :class="trendClass">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <polyline v-if="trend.direction === 'up'" points="18 15 12 9 6 15"/>
@@ -145,12 +145,49 @@ function navigate() {
 }
 
 .kpi-detail {
-  font-size: 10.5px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11.5px;
   color: var(--text-tertiary);
-  margin-top: 4px;
-  line-height: 1.35;
+  margin-top: 8px;
+  line-height: 1.4;
   font-weight: 500;
   letter-spacing: 0.1px;
+}
+
+.kpi-detail :deep(.kpi-dot) {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.kpi-detail :deep(.kpi-detail-int) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+}
+
+.kpi-detail :deep(.kpi-detail-ext) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+}
+
+.kpi-detail :deep(strong) {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.kpi-detail :deep(.kpi-sep) {
+  color: var(--text-tertiary);
+  opacity: 0.5;
+  margin: 0 1px;
 }
 
 .kpi-trend {
