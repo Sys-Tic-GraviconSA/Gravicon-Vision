@@ -149,44 +149,22 @@ function navigate() {
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--text-tertiary);
   margin-top: 8px;
   line-height: 1.4;
   font-weight: 500;
-  letter-spacing: 0.1px;
-}
-
-.kpi-detail :deep(.kpi-dot) {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.kpi-detail :deep(.kpi-detail-int) {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--text-secondary);
-}
-
-.kpi-detail :deep(.kpi-detail-ext) {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--text-secondary);
+  letter-spacing: 0.2px;
 }
 
 .kpi-detail :deep(strong) {
-  color: var(--text-primary);
+  color: var(--text-secondary);
   font-weight: 700;
 }
 
 .kpi-detail :deep(.kpi-sep) {
   color: var(--text-tertiary);
-  opacity: 0.5;
+  opacity: 0.4;
   margin: 0 1px;
 }
 
