@@ -87,18 +87,18 @@
 
       <template v-if="dashboardView === 'resumen'">
       <div class="kpi-row">
-        <KpiCard :value="$$(totalGeneral)" label="Costo Total General" accent="#15223c" icon="dollar" :detail="`Int: <strong>${$$short(intTotal)}</strong> (${intPct}%) <span class='kpi-sep'>·</span> Ext: <strong>${$$short(extTotal)}</strong> (${extPct}%)`" />
-        <KpiCard :value="$$(servicios)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`Int: <strong>${$$short(intServ)}</strong> <span class='kpi-sep'>·</span> Ext: <strong>${$$short(extServ)}</strong>`" />
-        <KpiCard :value="$$(insumos)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`Int: <strong>${$$short(intIns)}</strong> <span class='kpi-sep'>·</span> Ext: <strong>${$$short(extIns)}</strong>`" />
+        <KpiCard :value="$$(totalGeneral)" label="Costo Total General" accent="#15223c" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$short(intTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${intPct}%)</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$short(extTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${extPct}%)</span></div>`" />
+        <KpiCard :value="$$(servicios)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$short(intServ)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$short(extServ)}</strong></div>`" />
+        <KpiCard :value="$$(insumos)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$short(intIns)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$short(extIns)}</strong></div>`" />
         <KpiCard :value="fmt(totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
-        <KpiCard :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > 3000 ? '#EF4444' : '#10B981'" :meta="'Meta: $3.000/m³'" icon="target" :detail="`Int: <strong>${$$short(intCostoM3)}/m³</strong> <span class='kpi-sep'>·</span> Ext: <strong>${$$short(extCostoM3)}/m³</strong>`" />
-        <KpiCard :value="String(totalOrdenes)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`Int: <strong>${intCount}</strong> <span class='kpi-sep'>·</span> Ext: <strong>${extCount}</strong>`" />
-        <KpiCard :value="String(estadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`Int: <strong>${otsIntEstadoCounts.abiertas}</strong> <span class='kpi-sep'>·</span> Ext: <strong>${otsExtEstadoCounts.abiertas}</strong>`" />
-        <KpiCard :value="String(estadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`Int: <strong>${otsIntEstadoCounts.cerradas}</strong> <span class='kpi-sep'>·</span> Ext: <strong>${otsExtEstadoCounts.cerradas}</strong>`" />
-        <KpiCard :value="otPctCierre + '%'" label="% Cierre" accent="#3B82F6" icon="zap" :detail="`Int: <strong>${otsIntPctCierre}%</strong> <span class='kpi-sep'>·</span> Ext: <strong>${otsExtPctCierre}%</strong>`" />
-        <KpiCard :value="otDuracionEstimadaProm + ' h'" label="Duración Estimada Promedio" accent="#8B5CF6" icon="clock" :detail="`Int: <strong>${otsIntDuracionEstimadaProm}h</strong> <span class='kpi-sep'>·</span> Ext: <strong>${otsExtDuracionEstimadaProm}h</strong>`" />
-        <KpiCard :value="otTiempoRealProm + ' h'" label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" :detail="`Int: <strong>${otsIntTiempoRealProm}h</strong> <span class='kpi-sep'>·</span> Ext: <strong>${otsExtTiempoRealProm}h</strong>`" />
-        <KpiCard :value="otConSopledPct + '%'" label="OT con Solicitud (SOPLED/Interno)" accent="#10B981" icon="package" :detail="`Int: <strong>${otsIntConSopledPct}%</strong> <span class='kpi-sep'>·</span> Ext: <strong>${otsExtConSopledPct}%</strong>`" />
+        <KpiCard :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > 3000 ? '#EF4444' : '#10B981'" :meta="'Meta: $3.000/m³'" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$short(intCostoM3)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$short(extCostoM3)}/m³</strong></div>`" />
+        <KpiCard :value="String(totalOrdenes)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCount}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCount}</strong></div>`" />
+        <KpiCard :value="String(estadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.abiertas}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.abiertas}</strong></div>`" />
+        <KpiCard :value="String(estadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.cerradas}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.cerradas}</strong></div>`" />
+        <KpiCard :value="otPctCierre + '%'" label="% Cierre" accent="#3B82F6" icon="zap" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntPctCierre}%</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtPctCierre}%</strong></div>`" />
+        <KpiCard :value="otDuracionEstimadaProm + ' h'" label="Duración Estimada Promedio" accent="#8B5CF6" icon="clock" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntDuracionEstimadaProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtDuracionEstimadaProm}h</strong></div>`" />
+        <KpiCard :value="otTiempoRealProm + ' h'" label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntTiempoRealProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtTiempoRealProm}h</strong></div>`" />
+        <KpiCard :value="otConSopledPct + '%'" label="OT con Solicitud (SOPLED/Interno)" accent="#10B981" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntConSopledPct}%</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtConSopledPct}%</strong></div>`" />
       </div>
 
       <div class="ots-bar">
@@ -2824,13 +2824,9 @@ async function loadData(forceRefresh = false) {
 
   const data = allData.value
   if (data?.length) {
-    const serials = data.map(r => Number(r['FECHA'])).filter(v => typeof v === 'number' && !isNaN(v) && v > 0)
-    if (serials.length) {
-      const minD = serialToDate(Math.min(...serials))
-      const maxD = serialToDate(Math.max(...serials))
-      fechaInicio.value = minD.toISOString().slice(0, 10)
-      fechaFin.value = maxD.toISOString().slice(0, 10)
-    }
+    // Sin filtro de fecha por defecto: mostrar todo sin filtrar
+    fechaInicio.value = ''
+    fechaFin.value = ''
   }
   selectedLineas.value = new Set(lineasDisponibles.value)
   selectedVehiculos.value = new Set(vehiculosDisponibles.value)

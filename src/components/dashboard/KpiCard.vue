@@ -146,9 +146,8 @@ function navigate() {
 
 .kpi-detail {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-direction: column;
+  gap: 3px;
   font-size: 11px;
   color: var(--text-tertiary);
   margin-top: 8px;
@@ -157,15 +156,35 @@ function navigate() {
   letter-spacing: 0.2px;
 }
 
+.kpi-detail :deep(.kpi-detail-row) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kpi-detail :deep(.kpi-dot) {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.kpi-detail :deep(.kpi-label-int),
+.kpi-detail :deep(.kpi-label-ext) {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 22px;
+}
+
+.kpi-detail :deep(.kpi-label-int) { color: #3B82F6; }
+.kpi-detail :deep(.kpi-label-ext) { color: #10B981; }
+
 .kpi-detail :deep(strong) {
   color: var(--text-secondary);
   font-weight: 700;
-}
-
-.kpi-detail :deep(.kpi-sep) {
-  color: var(--text-tertiary);
-  opacity: 0.4;
-  margin: 0 1px;
+  font-size: 11.5px;
 }
 
 .kpi-trend {
