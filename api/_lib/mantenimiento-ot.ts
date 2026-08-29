@@ -22,25 +22,18 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
     getSheetData(otKey, 'Cronologia', forceRefresh),
   ])
 
-  let plantasMaquinariaSheet = { rows: [] as Record<string, unknown>[] }
-  try {
-    plantasMaquinariaSheet = await getSheetData(maestroKey, 'Plantas/Maquinaria', forceRefresh)
-  } catch { /* hoja no disponible aún */ }
+  // 4 hojas opcionales en paralelo (antes eran 4 await secuenciales → ~800ms extra)
+  const [plantasMaquinariaRes, personalInternoRes, solicitantesRes, proveedoresRes] = await Promise.allSettled([
+    getSheetData(maestroKey, 'Plantas/Maquinaria', forceRefresh),
+    getSheetData(maestroKey, 'GRAVICON_INTERNO_OT', forceRefresh),
+    getSheetData(otKey, 'SOLICITANTES_OT', forceRefresh),
+    getSheetData(maestroKey, 'PROVEEDORES_OT', forceRefresh),
+  ])
 
-  let personalInternoSheet = { rows: [] as Record<string, unknown>[] }
-  try {
-    personalInternoSheet = await getSheetData(maestroKey, 'GRAVICON_INTERNO_OT', forceRefresh)
-  } catch { /* hoja no disponible aún */ }
-
-  let solicitantesSheet = { rows: [] as Record<string, unknown>[] }
-  try {
-    solicitantesSheet = await getSheetData(otKey, 'SOLICITANTES_OT', forceRefresh)
-  } catch { /* hoja no disponible aún */ }
-
-  let proveedoresSheet = { rows: [] as Record<string, unknown>[] }
-  try {
-    proveedoresSheet = await getSheetData(maestroKey, 'PROVEEDORES_OT', forceRefresh)
-  } catch { /* hoja no disponible aún */ }
+  const plantasMaquinariaSheet = plantasMaquinariaRes.status === 'fulfilled' ? plantasMaquinariaRes.value : { rows: [] as Record<string, unknown>[] }
+  const personalInternoSheet = personalInternoRes.status === 'fulfilled' ? personalInternoRes.value : { rows: [] as Record<string, unknown>[] }
+  const solicitantesSheet = solicitantesRes.status === 'fulfilled' ? solicitantesRes.value : { rows: [] as Record<string, unknown>[] }
+  const proveedoresSheet = proveedoresRes.status === 'fulfilled' ? proveedoresRes.value : { rows: [] as Record<string, unknown>[] }
 
   const solicitantesMap = new Map<string, string>()
   for (const r of solicitantesSheet.rows) {

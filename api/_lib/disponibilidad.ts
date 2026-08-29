@@ -13,20 +13,21 @@ export async function loadDisponibilidadData(planta: string, forceRefresh = fals
   try {
     const spreadsheetId = SPREADSHEETS[key]
     if (spreadsheetId) {
-      // 1. Cargar las hojas oficiales de Disponibilidad directamente del spreadsheet de la planta
-      const [placasSheet, tareasSheet, resumenSheet] = await Promise.all([
-        getSheetData(key, 'Reporte Placa Disponibilidad', forceRefresh).catch(() => ({ rows: [] })),
-        getSheetData(key, 'Tareas Seguimiento', forceRefresh).catch(() => ({ rows: [] })),
-        getSheetData(key, 'Resumen Diario Disponibilidad', forceRefresh).catch(() => ({ rows: [] })),
-      ])
+      // 1. Cargar las 3 hojas oficiales + maestro en paralelo (antes eran 2/3 waterfall stages → ~400-600ms extra)
+      const plantasMaqPromise = SPREADSHEETS[maestroKey]
+        ? getSheetData(maestroKey, 'Plantas/Maquinaria', forceRefresh).catch(() => ({ rows: [] as Record<string, unknown>[] }))
+        : Promise.resolve({ rows: [] as Record<string, unknown>[] })
+      const personalPromise = p === 'cuncia' && SPREADSHEETS[maestroKey]
+        ? getSheetData(maestroKey, 'GRAVICON_INTERNO_OT', forceRefresh).catch(() => ({ rows: [] as Record<string, unknown>[] }))
+        : Promise.resolve({ rows: [] as Record<string, unknown>[] })
 
-      // 2. Cargar Maestro para enriquecer datos de maquinaria (Localización, tipo, etc.)
-      let plantasMaq = { rows: [] as Record<string, unknown>[] }
-      try {
-        if (SPREADSHEETS[maestroKey]) {
-          plantasMaq = await getSheetData(maestroKey, 'Plantas/Maquinaria', forceRefresh)
-        }
-      } catch {}
+      const [placasSheet, tareasSheet, resumenSheet, plantasMaq, personalSheet] = await Promise.all([
+        getSheetData(key, 'Reporte Placa Disponibilidad', forceRefresh).catch(() => ({ rows: [] as Record<string, unknown>[] })),
+        getSheetData(key, 'Tareas Seguimiento', forceRefresh).catch(() => ({ rows: [] as Record<string, unknown>[] })),
+        getSheetData(key, 'Resumen Diario Disponibilidad', forceRefresh).catch(() => ({ rows: [] as Record<string, unknown>[] })),
+        plantasMaqPromise,
+        personalPromise,
+      ])
 
       const maestroMap = new Map<string, Record<string, unknown>>()
       for (const m of plantasMaq.rows) {
@@ -36,26 +37,23 @@ export async function loadDisponibilidadData(planta: string, forceRefresh = fals
         if (placa) maestroMap.set(placa, m)
       }
 
-      // 2b. Cargar GRAVICON_INTERNO_OT del maestro para resolver IDs de Responsable (solo Cuncía)
+      // 2b. Resolver IDs de Responsable → nombre via GRAVICON_INTERNO_OT (solo Cuncía, ya cargado en paralelo)
       tareas = tareasSheet.rows
       resumen = resumenSheet.rows
-      if (p === 'cuncia') {
-        try {
-          const personalSheet = await getSheetData(maestroKey, 'GRAVICON_INTERNO_OT', forceRefresh)
-          const personalMap = new Map<string, string>()
-          for (const r of personalSheet.rows) {
-            const id = String(r['Id_Registro'] ?? '').trim()
-            const nombre = String(r['Nombre_Proveedor'] ?? '').trim()
-            if (id && nombre) personalMap.set(id, nombre)
+      if (p === 'cuncia' && personalSheet.rows.length > 0) {
+        const personalMap = new Map<string, string>()
+        for (const r of personalSheet.rows) {
+          const id = String(r['Id_Registro'] ?? '').trim()
+          const nombre = String(r['Nombre_Proveedor'] ?? '').trim()
+          if (id && nombre) personalMap.set(id, nombre)
+        }
+        // Enriquecer tareas: resolver Responsable ID → nombre
+        for (const t of tareas) {
+          const respId = String(t['Responsable'] ?? '').trim()
+          if (respId && personalMap.has(respId)) {
+            t['Nombre_Responsable'] = personalMap.get(respId)
           }
-          // Enriquecer tareas: resolver Responsable ID → nombre
-          for (const t of tareas) {
-            const respId = String(t['Responsable'] ?? '').trim()
-            if (respId && personalMap.has(respId)) {
-              t['Nombre_Responsable'] = personalMap.get(respId)
-            }
-          }
-        } catch {}
+        }
       }
 
       // 3. Normalizar y enriquecer las filas de Reporte Placa Disponibilidad
