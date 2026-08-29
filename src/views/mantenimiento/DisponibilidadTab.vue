@@ -594,7 +594,13 @@ import KpiCard from '../../components/dashboard/KpiCard.vue'
 import ChartCard from '../../components/dashboard/ChartCard.vue'
 import { useTheme } from '../../composables/useTheme'
 import { useDisponibilidadStore } from '../../stores'
-import * as echarts from 'echarts'
+import * as echarts from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { BarChart, LineChart, PieChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent, TitleComponent, LegendComponent } from 'echarts/components'
+import { LabelLayout } from 'echarts/features'
+
+echarts.use([CanvasRenderer, BarChart, LineChart, PieChart, GridComponent, TooltipComponent, TitleComponent, LegendComponent, LabelLayout])
 
 const props = defineProps<{
   data: Record<string, unknown>[]
@@ -1584,7 +1590,7 @@ function renderAllCharts() {
 
     // ── 1. Donut Disponibilidad Global ──
     if (chartDispRef.value) {
-      const chart = echarts.init(chartDispRef.value, null, { renderer: 'svg' })
+      const chart = echarts.init(chartDispRef.value, null, { renderer: 'canvas' })
       chartInstances.push(chart)
       const dp = k.dispPropiaPct
       const opTot = k.operativos
@@ -1607,7 +1613,7 @@ function renderAllCharts() {
 
     // ── 2. Barras horizontales por Tipo ──
     if (chartTipoRef.value) {
-      const chart = echarts.init(chartTipoRef.value, null, { renderer: 'svg' })
+      const chart = echarts.init(chartTipoRef.value, null, { renderer: 'canvas' })
       chartInstances.push(chart)
       const rows = catData.rows
       const keys = rows.map(r => r.tipo)
@@ -1661,7 +1667,7 @@ function renderAllCharts() {
 
     // ── 3. Barras verticales por Sede ──
     if (chartSedeRef.value) {
-      const chart = echarts.init(chartSedeRef.value, null, { renderer: 'svg' })
+      const chart = echarts.init(chartSedeRef.value, null, { renderer: 'canvas' })
       chartInstances.push(chart)
       const records = activePlacasRows.value
       const targetIso = effectiveCorteIso.value
@@ -1734,7 +1740,7 @@ function renderAllCharts() {
 
     // ── 4. Línea tendencia AM vs PM por sede ──
     if (chartTendenciaRef.value) {
-      const chart = echarts.init(chartTendenciaRef.value, null, { renderer: 'svg' })
+      const chart = echarts.init(chartTendenciaRef.value, null, { renderer: 'canvas' })
       chartInstances.push(chart)
       const sedesData = tendenciaSedesAmPm.value
       if (sedesData.length > 0) {
@@ -1788,7 +1794,7 @@ function renderAllCharts() {
 
     // ── 5. Línea tendencia mensual ──
     if (chartMensualRef.value) {
-      const chart = echarts.init(chartMensualRef.value, null, { renderer: 'svg' })
+      const chart = echarts.init(chartMensualRef.value, null, { renderer: 'canvas' })
       chartInstances.push(chart)
       const trend = svgTrend.value
       if (trend && trend.points.length > 0) {
@@ -1808,7 +1814,7 @@ function renderAllCharts() {
     // ── 6. Donuts de Cumplimiento ──
     function renderCump(el: HTMLElement | null, pct: number) {
       if (!el) return
-      const chart = echarts.init(el, null, { renderer: 'svg' })
+      const chart = echarts.init(el, null, { renderer: 'canvas' })
       chartInstances.push(chart)
       const dc = pct >= 80 ? '#16a34a' : pct >= 50 ? '#e8a020' : '#dc2626'
       chart.setOption({

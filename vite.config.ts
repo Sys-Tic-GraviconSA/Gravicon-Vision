@@ -27,10 +27,13 @@ export default defineConfig({
           if (id.includes('node_modules/@supabase')) {
             return 'vendor-supabase'
           }
+          if (id.includes('node_modules/jspdf') || id.includes('node_modules/html2canvas') || id.includes('node_modules/html2pdf')) {
+            return 'vendor-pdf'
+          }
         },
       },
     },
     sourcemap: false,
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 600,
   },
 })
