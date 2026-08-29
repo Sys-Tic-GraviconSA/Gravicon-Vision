@@ -248,23 +248,29 @@ function normalizeString(str: string): string {
 
 /**
  * Obtiene el título real de una hoja por su nombre (insensible a tildes/mayúsculas).
+ * Usa cache de títulos por spreadsheet (5min) para evitar N+1 meta fetches — antes cada getSheetData hacía 1 meta + 1 values.get.
  * @param spreadsheetId - ID del spreadsheet.
  * @param name - Nombre a buscar.
  */
-async function getSheetTitleByName(spreadsheetId: string, name: string): Promise<string | null> {
-  const sheetsApi = getSheets();
+async function _fetchTitlesMap(spreadsheetId: string): Promise<Map<string, string>> {
+  const sheetsApi = getSheets()
   const meta = await sheetsApi.spreadsheets.get({
     spreadsheetId,
     fields: 'sheets(properties(title))',
-  });
-
-  const target = normalizeString(name);
-  const sheet = meta.data.sheets?.find((s) => {
-    const title = s.properties?.title ?? '';
-    return normalizeString(title) === target;
-  });
-
-  return sheet?.properties?.title ?? null;
+  })
+  const map = new Map<string, string>()
+  for (const s of meta.data.sheets ?? []) {
+    const title = s.properties?.title ?? ''
+    map.set(normalizeString(title), title)
+  }
+  return map
+}
+async function getTitlesMap(spreadsheetId: string): Promise<Map<string, string>> {
+  return withCache(`titles:${spreadsheetId}`, () => _fetchTitlesMap(spreadsheetId))
+}
+async function getSheetTitleByName(spreadsheetId: string, name: string): Promise<string | null> {
+  const map = await getTitlesMap(spreadsheetId)
+  return map.get(normalizeString(name)) ?? null
 }
 
 /**

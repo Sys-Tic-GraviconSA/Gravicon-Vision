@@ -631,13 +631,17 @@ const plantaLabel = computed(() => {
   return 'Concretos'
 })
 
-// Cargar datos reales desde el store de disponibilidad
+// Cargar datos reales desde el store de disponibilidad — con dedup (store ya tiene guard, pero evitamos llamada extra)
 onMounted(() => {
-  dispStore.fetchDisponibilidad(plantaKey.value)
+  if (!dispStore.data || dispStore.data.planta !== plantaKey.value) {
+    dispStore.fetchDisponibilidad(plantaKey.value)
+  }
 })
 
 watch(() => props.planta, () => {
-  dispStore.fetchDisponibilidad(plantaKey.value)
+  if (!dispStore.data || dispStore.data.planta !== plantaKey.value) {
+    dispStore.fetchDisponibilidad(plantaKey.value)
+  }
 })
 
 // Recargar también cuando cambia la fecha (para sincronizar con el filtro principal)

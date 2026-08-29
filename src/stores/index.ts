@@ -212,10 +212,12 @@ export const useDisponibilidadStore = defineStore('disponibilidad', () => {
   const error = ref<string | null>(null)
 
   async function fetchDisponibilidad(planta: string, forceRefresh = false) {
+    const p = planta.toLowerCase()
+    // Deduplicación: si ya tenemos datos para esta planta y no es force, no re-fetch
+    if (!forceRefresh && data.value?.planta === p && (data.value?.placas?.length ?? 0) > 0) return
     loading.value = true
     error.value = null
     try {
-      const p = planta.toLowerCase()
       const d = await fetchApi<any>(`/api/disponibilidad/data?planta=${p}${forceRefresh ? '&force=true' : ''}`)
       // Reasignar con nuevos arrays para garantizar reactividad profunda
       data.value = {
