@@ -117,7 +117,7 @@
     </div>
 
     <div class="charts-grid cols-1" style="margin-top:22px">
-      <ChartCard title="Costos por Placa de la Planta" :option="vehiculoGenOpt" :expand-option="vehiculoGenExpandOpt" :height="500" tall />
+      <ChartCard title="Costos por Placa de la Planta" :option="vehiculoGenOpt" :expand-option="vehiculoGenExpandOpt" :height="500" tall clickable @chart-click="onPlacaClick" />
     </div>
 
       <div class="charts-grid cols-2" style="margin-bottom:22px">
@@ -1257,6 +1257,44 @@
         </div>
       </div>
 
+    </Teleport>
+
+    <!-- Modal detalle por placa — click en Costos por Placa -->
+    <Teleport to="body">
+      <div v-if="showPlacaDetail" class="placa-detail-overlay" @click.self="closePlacaDetail">
+        <div class="placa-detail-panel">
+          <div class="placa-detail-top">
+            <div>
+              <h3 class="placa-detail-title">Órdenes — {{ selectedPlaca }}</h3>
+              <p class="placa-detail-sub">{{ placaDetailRows.length }} órdenes · Total {{ $$(placaDetailTotal) }}</p>
+            </div>
+            <button class="placa-detail-close" @click="closePlacaDetail">✕</button>
+          </div>
+          <div class="placa-detail-table-wrap">
+            <table class="placa-detail-table">
+              <thead>
+                <tr>
+                  <th>OT</th><th>Fecha</th><th>Estado</th><th>Tipo Vehículo</th><th>Localización</th><th>Prioridad</th><th>Servicios</th><th>Insumos</th><th>Total</th><th>Solicitante</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="r in placaDetailRows" :key="String(r['_rowKey'] ?? r['Nº Orden de Trabajo'])">
+                  <td class="mono">{{ r['Nº Orden de Trabajo'] }}</td>
+                  <td>{{ serialDate(r['FECHA']) }}</td>
+                  <td><span class="pill" :class="estadoClass(String(r['Estado'] ?? ''))">{{ r['Estado'] }}</span></td>
+                  <td>{{ r['Tipo Vehículo'] || r['Tipo de Vehículo'] }}</td>
+                  <td>{{ r['Localización'] }}</td>
+                  <td>{{ r['Prioridad'] }}</td>
+                  <td class="r">{{ $$(Number(r['Costo servicios']) || 0) }}</td>
+                  <td class="r">{{ $$(Number(r['Costos Insumos']) || 0) }}</td>
+                  <td class="r"><strong>{{ $$(Number(r['Costo servicios']) + Number(r['Costos Insumos'])) }}</strong></td>
+                  <td>{{ r['Solicitante'] }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </Teleport>
 
       </template> <!-- cierre v-else que envuelve sub-tabs Planta/Maquinaria -->
@@ -3613,6 +3651,26 @@ const vehiculoExtOpt = computed(() => markRaw(buildBarOpt(extRows.value, 'Placa 
 
 const intProveedorOpt = computed(() => markRaw(buildBarOpt(intRows.value, 'PROVEEDOR')))
 
+// ——— Detalle por placa al hacer click en Costos por Placa ———
+const selectedPlaca = ref<string | null>(null)
+const showPlacaDetail = ref(false)
+const placaDetailRows = computed(() => {
+  if (!selectedPlaca.value) return []
+  return dataFilteredNoAcpm.value.filter(r => String(r['Placa del Vehículo'] ?? '').trim() === selectedPlaca.value)
+})
+const placaDetailTotal = computed(() => {
+  let t = 0
+  for (const r of placaDetailRows.value) t += (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0)
+  return t
+})
+function onPlacaClick(params: any) {
+  const placa = String(params?.name ?? params?.data?.name ?? '').trim()
+  if (!placa || placa === '(Sin Placa del Vehículo)') return
+  selectedPlaca.value = placa
+  showPlacaDetail.value = true
+}
+function closePlacaDetail() { showPlacaDetail.value = false }
+
 /** Gráfica de barras horizontal por conteo (rankings de sistemas, proveedores, responsables). */
 /** Barras horizontales por conteo con un color distinto por barra. */
 function buildCountBarColorOpt(entries: [string, number][], seriesName: string) {
@@ -5616,7 +5674,24 @@ ul.res li::before {
 
 @media (max-width: 768px) {
   .section-sub { font-size: 11px; }
+  .placa-detail-panel { width: 100vw; max-height: 92vh; }
 }
+.placa-detail-overlay { position: fixed; inset: 0; z-index: 9998; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.placa-detail-panel { background: var(--card-bg, #fff); border-radius: 16px; width: 95vw; max-width: 1100px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+.placa-detail-top { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--card-border, #e5e7eb); }
+.placa-detail-title { font-size: 16px; font-weight: 700; margin: 0; color: var(--text-primary, #1f2937); }
+.placa-detail-sub { font-size: 12px; color: var(--text-secondary, #6b7280); margin: 2px 0 0; }
+.placa-detail-close { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #d1d5db; background: #fff; cursor: pointer; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.placa-detail-close:hover { background: #ef4444; border-color: #ef4444; color: #fff; }
+.placa-detail-table-wrap { overflow: auto; flex: 1; }
+.placa-detail-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.placa-detail-table th { position: sticky; top: 0; background: var(--bg-alt, #f8fafc); font-weight: 600; text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--card-border, #e5e7eb); white-space: nowrap; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
+.placa-detail-table td { padding: 7px 10px; border-bottom: 1px solid var(--card-border, #f1f5f9); }
+.placa-detail-table .r { text-align: right; font-variant-numeric: tabular-nums; }
+.placa-detail-table .mono { font-family: ui-monospace, monospace; font-size: 11px; }
+.placa-detail-table .pill { padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; display: inline-block; }
+.placa-detail-table .pill.ok { background: #dcfce7; color: #166534; }
+.placa-detail-table .pill.warn { background: #fef3c7; color: #92400e; }
 </style>
 
 <style>

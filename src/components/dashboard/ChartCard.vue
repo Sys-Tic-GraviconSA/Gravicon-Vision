@@ -27,6 +27,8 @@
         :theme="theme"
         autoresize
         class="chart"
+        :class="{ clickable: clickable }"
+        @click="onChartClick"
       />
     </div>
 
@@ -83,7 +85,12 @@ const props = withDefaults(defineProps<{
   description?: string
   height?: number
   tall?: boolean
-}>(), { tall: false })
+  clickable?: boolean
+}>(), { tall: false, clickable: false })
+
+const emit = defineEmits<{
+  (e: 'chart-click', params: any): void
+}>()
 
 const expanded = ref(false)
 const expandLimit = ref<number>(10)
@@ -147,6 +154,10 @@ function cleanAxes(opt: Record<string, unknown>): Record<string, unknown> {
 
 function getChartInstance() {
   return chartRef.value?.chart
+}
+
+function onChartClick(params: any) {
+  if (props.clickable) emit('chart-click', params)
 }
 
 // Copia la gráfica como imagen PNG al portapapeles (fallback a descarga)
@@ -256,6 +267,9 @@ onBeforeUnmount(() => {
   width: 100%;
   height: v-bind(chartHeight);
   max-height: 50vh;
+}
+.chart.clickable {
+  cursor: pointer;
 }
 .chart-card.tall .chart {
   max-height: 65vh;
