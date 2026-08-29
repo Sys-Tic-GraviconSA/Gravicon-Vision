@@ -650,28 +650,49 @@ watch([() => props.fechaInicio, () => props.fechaFin], () => {
   }
 })
 
-// Fechas y formateo
+// Fechas y formateo — con cache para evitar re-parsear la misma fecha 12× por fila
+const _parseDateCache = new Map<string, Date | null>()
 function parseSerialDate(val: unknown): Date | null {
   if (!val) return null
+  const key = String(val)
+  if (_parseDateCache.has(key)) return _parseDateCache.get(key)!
+  let result: Date | null = null
   const num = Number(val)
   if (!isNaN(num) && num > 30000) {
     const utcDays = Math.floor(num - 25569)
-    return new Date(utcDays * 86400 * 1000)
+    result = new Date(utcDays * 86400 * 1000)
+  } else {
+    const s = String(val).trim()
+    const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+    if (isoMatch) {
+      result = new Date(Date.UTC(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3])))
+    } else {
+      const d = new Date(s)
+      result = isNaN(d.getTime()) ? null : d
+    }
   }
-  const s = String(val).trim()
-  const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})$/)
-  if (isoMatch) {
-    return new Date(Date.UTC(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3])))
+  _parseDateCache.set(key, result)
+  if (_parseDateCache.size > 1000) {
+    const first = _parseDateCache.keys().next().value as string
+    _parseDateCache.delete(first)
   }
-  const d = new Date(s)
-  return isNaN(d.getTime()) ? null : d
+  return result
 }
 
+const _dateKeyCache = new Map<number, string>()
 function getDateKey(d: Date): string {
+  const ts = d.getTime()
+  if (_dateKeyCache.has(ts)) return _dateKeyCache.get(ts)!
   const y = d.getUTCFullYear()
   const m = String(d.getUTCMonth() + 1).padStart(2, '0')
   const day = String(d.getUTCDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
+  const key = `${y}-${m}-${day}`
+  _dateKeyCache.set(ts, key)
+  if (_dateKeyCache.size > 2000) {
+    const first = _dateKeyCache.keys().next().value as number
+    _dateKeyCache.delete(first)
+  }
+  return key
 }
 
 // Filas activas: inspecciones de disponibilidad del store filtradas por rango de fechas
@@ -756,8 +777,9 @@ const informeFechaLabel = computed(() => {
 })
 
 // KPIs calculados dinámicamente según la fecha de corte del filtro principal
-// Normalización y detalle de cada registro de inspección
-function getInspectionDetails(r: Record<string, unknown>) {
+// Normalización y detalle de cada registro de inspección — con WeakMap cache (misma fila no se re-parsea 11×)
+const _inspectionCache = new WeakMap<Record<string, unknown>, ReturnType<typeof _getInspectionDetailsRaw>>()
+function _getInspectionDetailsRaw(r: Record<string, unknown>) {
   const placa = String(r['Placa_Texto'] ?? r['Placa'] ?? r['Placa del Vehículo'] ?? '').trim()
   const rawTipo = String(r['Tipo de Vehiculos'] ?? r['Clase de Mantenimiento'] ?? 'MAQUINARIA').trim().toUpperCase()
   const prov = String(r['Proveedor_Texto'] ?? r['PROVEEDOR'] ?? '').trim().toUpperCase()
@@ -805,6 +827,13 @@ function getInspectionDetails(r: Record<string, unknown>) {
     isParcial,
     isOperativo,
   }
+}
+function getInspectionDetails(r: Record<string, unknown>) {
+  const cached = _inspectionCache.get(r)
+  if (cached) return cached
+  const v = _getInspectionDetailsRaw(r)
+  _inspectionCache.set(r, v)
+  return v
 }
 
 // KPIs calculados dinámicamente según la fecha de corte del filtro principal
@@ -1993,13 +2022,14 @@ const kpis = computed(() => {
     const info = getInspectionDetails(r)
     if (info.placa) {
       vehiculosSet.add(info.placa)
-      if (info.esAlquilado) alquiladosSet.add(info.placa)
     }
 
     const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
     if (!d) continue
     const iso = getDateKey(d)
     if (targetIso && iso !== targetIso) continue
+
+    if (info.esAlquilado && info.placa) alquiladosSet.add(info.placa)
 
     inspectedCount++
     countTotal++
