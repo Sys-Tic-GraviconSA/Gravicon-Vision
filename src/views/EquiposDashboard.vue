@@ -1270,28 +1270,8 @@
             </div>
             <button class="placa-detail-close" @click="closePlacaDetail">✕</button>
           </div>
-          <div class="placa-detail-table-wrap">
-            <table class="placa-detail-table">
-              <thead>
-                <tr>
-                  <th>OT</th><th>Fecha</th><th>Estado</th><th>Tipo Vehículo</th><th>Localización</th><th>Prioridad</th><th>Servicios</th><th>Insumos</th><th>Total</th><th>Solicitante</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="r in placaDetailRows" :key="String(r['_rowKey'] ?? r['Nº Orden de Trabajo'])">
-                  <td class="mono">{{ r['Nº Orden de Trabajo'] }}</td>
-                  <td>{{ serialDate(r['FECHA']) }}</td>
-                  <td><span class="pill" :class="estadoClass(String(r['Estado'] ?? ''))">{{ r['Estado'] }}</span></td>
-                  <td>{{ r['Tipo Vehículo'] || r['Tipo de Vehículo'] }}</td>
-                  <td>{{ r['Localización'] }}</td>
-                  <td>{{ r['Prioridad'] }}</td>
-                  <td class="r">{{ $$(Number(r['Costo servicios']) || 0) }}</td>
-                  <td class="r">{{ $$(Number(r['Costos Insumos']) || 0) }}</td>
-                  <td class="r"><strong>{{ $$(Number(r['Costo servicios']) + Number(r['Costos Insumos'])) }}</strong></td>
-                  <td>{{ r['Solicitante'] }}</td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="placa-detail-table-wrap" style="padding: 12px;">
+            <DataTable :title="`Órdenes — ${selectedPlaca} — haz clic en una fila para ver detalle`" :data="placaDetailTableRows" :page-size="10" :columnWidths="otColWidths" :excludeFields="['_ot', '_rowKey']" :badgeFields="['Estado']" :defaultVisible="['Nº Orden de Trabajo', 'Fecha y Hora', 'Estado', 'Jornada', 'PLANTA', 'PROVEEDOR', 'Tipo de Vehículo', 'Placa del Vehículo', 'Costo Total', 'Motivo No Ejecución', 'Observaciones']" small selectColumns exportColumns clickable @row-click="openOtDetail" />
           </div>
         </div>
       </div>
@@ -3663,6 +3643,19 @@ const placaDetailTotal = computed(() => {
   for (const r of placaDetailRows.value) t += (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0)
   return t
 })
+const placaDetailTableRows = computed<Record<string, unknown>[]>(() => placaDetailRows.value.map(r => ({
+  'Nº Orden de Trabajo': r['Nº Orden de Trabajo'] ?? '',
+  'Fecha y Hora': otDateTime(r as Record<string, unknown>),
+  'Estado': r['Estado'] ?? '',
+  'Jornada': r['Jornada'] ?? '',
+  'PLANTA': r['PLANTA'] ?? '',
+  'PROVEEDOR': r['PROVEEDOR'] ?? '',
+  'Tipo de Vehículo': r['Tipo de Vehículo'] ?? '',
+  'Placa del Vehículo': r['Placa del Vehículo'] ?? '',
+  'Costo Total': (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0),
+  ...r as Record<string, unknown>,
+  _ot: r,
+})))
 function onPlacaClick(params: any) {
   const placa = String(params?.name ?? params?.data?.name ?? '').trim()
   if (!placa || placa === '(Sin Placa del Vehículo)') return
