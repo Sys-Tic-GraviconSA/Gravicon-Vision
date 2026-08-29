@@ -2826,13 +2826,9 @@ async function loadData(forceRefresh = false) {
   if (data?.length) {
     const serials = data.map(r => Number(r['FECHA'])).filter(v => typeof v === 'number' && !isNaN(v) && v > 0)
     if (serials.length) {
+      const minD = serialToDate(Math.min(...serials))
       const maxD = serialToDate(Math.max(...serials))
-      const hace7 = new Date(Date.UTC(
-        maxD.getUTCFullYear(),
-        maxD.getUTCMonth(),
-        maxD.getUTCDate() - 7
-      ))
-      fechaInicio.value = hace7.toISOString().slice(0, 10)
+      fechaInicio.value = minD.toISOString().slice(0, 10)
       fechaFin.value = maxD.toISOString().slice(0, 10)
     }
   }
