@@ -15,7 +15,7 @@
                 <MultiSelect v-model="selectedProceso" :options="procesoDisponibles" label="Proceso" icon="filter" />
               </template>
               <template v-else>
-                <MultiSelect v-model="selectedLineas" :options="lineasDisponibles" label="Línea" icon="filter" />
+                <MultiSelect v-model="selectedLineas" :options="lineasDisponibles" :label="isConcretos ? 'Planta' : 'Línea'" icon="filter" />
                 <MultiSelect v-model="selectedVehiculos" :options="vehiculosDisponibles" label="Vehículos" icon="filter" />
                 <MultiSelect v-model="selectedProveedores" :options="proveedoresDisponibles" label="Proveedor" icon="user" />
                 <MultiSelect v-model="selectedEstados" :options="estadosDisponibles" label="Estado" icon="filter" />
@@ -111,7 +111,30 @@
         </div>
       </div>
 
-    <div class="charts-grid cols-2">
+    <!-- Eficiencia de Mantenimiento y Costos Generales para Concretos -->
+    <template v-if="isConcretos">
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
+        <ChartCard
+          title="Eficiencia de Mantenimiento y Costo Unitario (m³)"
+          description="Costos de mantenimiento por planta (Acacías, Restrepo, Villavicencio) y costo unitario por m³ producido"
+          :option="eficienciaMttoConcretosOpt"
+          :expand-option="eficienciaMttoConcretosExpandOpt"
+          :height="480"
+          tall
+        />
+      </div>
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
+        <ChartCard
+          title="Costos Generales y Costo Unitario (m³)"
+          description="Costos mensuales de servicios e insumos junto con el costo unitario por m³ producido"
+          :option="costosGeneralesM3Opt"
+          :expand-option="costosGeneralesM3ExpandOpt"
+          :height="480"
+          tall
+        />
+      </div>
+    </template>
+    <div v-else class="charts-grid cols-2" style="margin-bottom:22px">
       <ChartCard title="Costos Mensuales" :option="costosMensualOpt" />
       <ChartCard title="Costo por m³ - Tendencia" :option="costoM3Opt" />
     </div>
@@ -1591,6 +1614,7 @@ function openOtDetail(row: Record<string, unknown>) {
 const totalSubs = computed(() => {
   let n = 0
   for (const r of dataFilteredMain.value) {
+    if (isAcpm(r)) continue
     const subs = r['_subOrdenes']
     if (Array.isArray(subs)) n += subs.length
   }
@@ -1600,6 +1624,7 @@ const totalSubs = computed(() => {
 const totalSopled = computed(() => {
   let n = 0
   for (const r of dataFilteredMain.value) {
+    if (isAcpm(r)) continue
     const s = r['_sopled']
     if (Array.isArray(s)) n += s.length
   }
@@ -1609,6 +1634,7 @@ const totalSopled = computed(() => {
 const otsCostoTotal = computed(() => {
   let t = 0
   for (const r of dataFilteredMain.value) {
+    if (isAcpm(r)) continue
     t += Number(r['Costo servicios']) + Number(r['Costos Insumos'])
   }
   return t
@@ -1617,6 +1643,7 @@ const otsCostoTotal = computed(() => {
 const estadoCounts = computed(() => {
   let abiertas = 0, cerradas = 0
   for (const r of dataFilteredMain.value) {
+    if (isAcpm(r)) continue
     const cls = estadoClass(String(r['Estado'] ?? ''))
     if (cls === 'ok') cerradas++
     else if (cls === 'warn') abiertas++
@@ -1633,6 +1660,7 @@ const otPctCierre = computed(() => {
 const otDuracionEstimadaProm = computed(() => {
   let sum = 0, n = 0
   for (const r of dataFilteredMain.value) {
+    if (isAcpm(r)) continue
     const v = r['Duración (horas)']
     if (typeof v === 'number' && !isNaN(v)) { sum += v; n++ }
   }
@@ -1643,6 +1671,7 @@ const otDuracionEstimadaProm = computed(() => {
 const otTiempoRealProm = computed(() => {
   let sum = 0, n = 0
   for (const r of dataFilteredMain.value) {
+    if (isAcpm(r)) continue
     const rec = Number(r['Fecha Recepción'])
     const cie = Number(r['Fecha Cierre'])
     if (!isNaN(rec) && !isNaN(cie) && rec > 0 && cie > rec) { sum += (cie - rec) * 24; n++ }
@@ -1655,9 +1684,10 @@ const prioridadRanking = computed(() => rankBy(dataFilteredMain.value, 'Priorida
 const fuenteNovedadRanking = computed(() => rankBy(dataFilteredMain.value, 'Fuente_Novedad', 10))
 const jornadaRanking = computed(() => rankBy(dataFilteredMain.value, 'Jornada', 6))
 const otConSopledPct = computed(() => {
-  const n = dataFilteredMain.value.length
+  const base = dataFilteredMain.value.filter(r => !isAcpm(r))
+  const n = base.length
   if (!n) return '0.0'
-  const c = dataFilteredMain.value.filter(r => Array.isArray(r['_sopled']) && (r['_sopled'] as any[]).length).length
+  const c = base.filter(r => Array.isArray(r['_sopled']) && (r['_sopled'] as any[]).length).length
   return ((c / n) * 100).toFixed(1)
 })
 
@@ -2947,8 +2977,30 @@ const allData = computed(() => {
   return base.filter(r => String(r['Tipo de Mantenimiento'] ?? '').trim().toUpperCase() === 'MAQUINARIA')
 })
 
+const MEZCLAS_EXCLUIDAS_CONCRETO = new Set([
+  'CA ARENA',
+  'CG2 GRAVA 1/2',
+  'CG4 GRAVA 3/4',
+  'CG1 GRAVA DE 1"',
+])
+
+function isConcretoMezclaExcluida(r: Record<string, unknown>): boolean {
+  const m = String(r['Mezcla'] ?? r['MEZCLA'] ?? r['concreto_mezcla'] ?? '').trim().toUpperCase()
+  if (MEZCLAS_EXCLUIDAS_CONCRETO.has(m)) return true
+  const cliente = String(r['Cliente'] ?? r['CLIENTE'] ?? '').toUpperCase()
+  const planta = String(r['Planta'] ?? r['PLANTA'] ?? '').toLowerCase()
+  if (planta.includes('restrepo') && cliente.includes('RETIRA') && (m === '' || m.includes('GRAVA') || m.includes('ARENA'))) {
+    return true
+  }
+  if (m.startsWith('CG1 GRAVA')) return true
+  return false
+}
+
 const prodRows = computed(() => {
-  if (isConcretos.value) return concretoStore.data?.rows ?? []
+  if (isConcretos.value) {
+    const raw = concretoStore.data?.rows ?? []
+    return raw.filter(r => !isConcretoMezclaExcluida(r))
+  }
   if (isAcacias.value) return prod.acaciasData?.rows ?? []
   return prod.cunciaData?.rows ?? []
 })
@@ -2968,9 +3020,23 @@ const LOCALIZACION_TO_LINEA: Record<string, string> = {
   'planta linea 3': 'Linea 3',
 }
 
+function toTitleCase(str: string): string {
+  if (!str) return ''
+  return str
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
 function normalizeLocalizacion(loc: string): string {
   const key = loc.trim().toLowerCase()
-  return LOCALIZACION_TO_LINEA[key] ?? loc.trim()
+  if (LOCALIZACION_TO_LINEA[key]) return LOCALIZACION_TO_LINEA[key]
+  if (key.includes('acacia')) return 'Acacías'
+  if (key.includes('restrepo')) return 'Restrepo'
+  if (key.includes('villa')) return 'Villavicencio'
+  return toTitleCase(loc.trim())
 }
 
 /** Nombres de columnas de líneas en datos de producción (excluye metadatos) */
@@ -2985,15 +3051,15 @@ const prodLineNames = computed(() => {
 })
 
 const selectedLineas = ref<Set<string>>(new Set())
-/** Líneas disponibles: Localización de OTs (+ columnas de producción solo para Agregados) */
+/** Líneas/Plantas disponibles: Localización de OTs (+ columnas de producción solo para Agregados) con inicial en mayúscula */
 const lineasDisponibles = computed(() => {
   const set = new Set<string>()
   for (const r of allData.value) {
     const loc = String(r['Localización'] ?? '').trim()
-    if (loc) set.add(normalizeLocalizacion(loc))
+    if (loc) set.add(toTitleCase(normalizeLocalizacion(loc)))
   }
   if (!isConcretos.value) {
-    for (const ln of prodLineNames.value) set.add(ln)
+    for (const ln of prodLineNames.value) set.add(toTitleCase(ln))
   }
   return [...set].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
 })
@@ -3171,7 +3237,13 @@ function onClearFilters() {
 function isInterno(r: Record<string, unknown>): boolean {
   const id = String(r['PROVEEDOR_ID'] ?? '').trim().toUpperCase()
   const expected = tipoTab.value === 'maquinaria' ? 'PROV-002' : 'PROV-001'
-  return id === expected
+  if (id === expected) return true
+  // Fallback por nombre de proveedor (datos históricos / desalineación de ID)
+  const prov = String(r['PROVEEDOR'] ?? '').trim().toUpperCase()
+  if (prov.includes('GRAVICON INTERNO') || prov.includes('MANTENIMIENTO MAQUINARIA')) return true
+  // Cualquier ID interno conocido cuenta como interno aunque el tab no coincida (robusto para Concretos)
+  if (id === 'PROV-001' || id === 'PROV-002') return true
+  return false
 }
 function isAcpm(r: Record<string, unknown>): boolean {
   return String(r['Observaciones'] ?? '').trim().toUpperCase().includes('ACPM')
@@ -3182,9 +3254,9 @@ const partition = computed(() => {
   const ext: Record<string, unknown>[] = []
   const acpm: Record<string, unknown>[] = []
   for (const r of dataFilteredMain.value) {
+    if (isAcpm(r)) { acpm.push(r); continue }
     if (isInterno(r)) int.push(r)
     else ext.push(r)
-    if (isAcpm(r)) acpm.push(r)
   }
   return { int, ext, acpm }
 })
@@ -3334,8 +3406,44 @@ const costosMensualOpt = computed(() => markRaw({
   xAxis: { type: 'category' as const, data: monthlyGen.value.labels, axisLabel: { fontWeight: 600 as const, color: chartTextColor.value } },
   yAxis: { type: 'value' as const, axisLabel: { show: false }, splitLine: { show: false } },
   series: [
-    { name: 'Servicios', type: 'line', smooth: true, data: monthlyGen.value.serv, areaStyle: { opacity: 0.25 }, label: labelLine.value },
-    { name: 'Insumos', type: 'line', smooth: true, data: monthlyGen.value.ins, areaStyle: { opacity: 0.25 }, label: labelLine.value },
+    {
+      name: 'Servicios',
+      type: 'bar',
+      barMaxWidth: 32,
+      data: monthlyGen.value.serv,
+      itemStyle: { color: palette[1], borderRadius: [4, 4, 0, 0] },
+      emphasis: { focus: 'series' },
+      label: {
+        show: true,
+        position: 'top',
+        fontSize: 9.5,
+        fontWeight: 600 as const,
+        color: theme.value === 'light' ? '#475569' : '#cbd5e1',
+        formatter: (p: any) => {
+          const v = Number(p.value) || 0
+          return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
+        },
+      },
+    },
+    {
+      name: 'Insumos',
+      type: 'bar',
+      barMaxWidth: 32,
+      data: monthlyGen.value.ins,
+      itemStyle: { color: '#EF4444', borderRadius: [4, 4, 0, 0] },
+      emphasis: { focus: 'series' },
+      label: {
+        show: true,
+        position: 'top',
+        fontSize: 9.5,
+        fontWeight: 600 as const,
+        color: theme.value === 'light' ? '#475569' : '#cbd5e1',
+        formatter: (p: any) => {
+          const v = Number(p.value) || 0
+          return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
+        },
+      },
+    },
   ],
   legend: { bottom: 0, textStyle: { fontWeight: 600, color: chartTextColor.value } },
 }))
@@ -3371,6 +3479,706 @@ const costoM3Opt = computed(() => markRaw({
     label: labelLineCurrency.value,
   }],
 }))
+
+// ================= GRÁFICA EXCLUSIVA: EFICIENCIA DE MANTENIMIENTO Y COSTO UNITARIO (CONCRETOS) =================
+const MESES_ES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+
+function getConcretoPlantaName(r: Record<string, unknown>): 'Acacias' | 'Restrepo' | 'Villavicencio' {
+  const loc = String(r['Localización'] ?? r['LOCALIZACIÓN'] ?? r['PLANTA'] ?? r['Planta'] ?? '').toLowerCase()
+  if (loc.includes('acacia')) return 'Acacias'
+  if (loc.includes('restrepo')) return 'Restrepo'
+  if (loc.includes('villa') || loc.includes('villavicencio')) return 'Villavicencio'
+
+  const combined = (String(r['PROVEEDOR'] ?? '') + ' ' + String(r['Observaciones'] ?? '') + ' ' + String(r['Placa del Vehículo'] ?? '')).toLowerCase()
+  if (combined.includes('acacia')) return 'Acacias'
+  if (combined.includes('restrepo')) return 'Restrepo'
+  if (combined.includes('villa') || combined.includes('villavicencio')) return 'Villavicencio'
+
+  return 'Villavicencio'
+}
+
+function parseConcretoRowDate(f: unknown): Date | null {
+  if (typeof f === 'number' && f > 30000) {
+    return new Date((f - 25569) * 86400 * 1000)
+  }
+  if (typeof f === 'string') {
+    const num = Number(f)
+    if (!isNaN(num) && num > 30000) {
+      return new Date((num - 25569) * 86400 * 1000)
+    }
+    const d = new Date(f)
+    if (!isNaN(d.getTime())) return d
+  }
+  return null
+}
+
+interface PlantaMonthItem {
+  costo: number
+  serv: number
+  ins: number
+  ots: number
+  abiertas: number
+  cerradas: number
+  prodM3: number
+  costoM3: number
+}
+
+const concretoMonthlyEfficiency = computed(() => {
+  const monthMap = new Map<string, {
+    key: string
+    label: string
+    acacias: PlantaMonthItem
+    restrepo: PlantaMonthItem
+    villavicencio: PlantaMonthItem
+    totalMtto: number
+    totalServ: number
+    totalIns: number
+    totalOTs: number
+    totalAbiertas: number
+    totalCerradas: number
+    prodM3: number
+    costoUnitario: number
+  }>()
+
+  const createEmptyPlanta = (): PlantaMonthItem => ({
+    costo: 0,
+    serv: 0,
+    ins: 0,
+    ots: 0,
+    abiertas: 0,
+    cerradas: 0,
+    prodM3: 0,
+    costoM3: 0,
+  })
+
+  // 1. Mantenimiento OTs de Concretos (todas las órdenes de la planta)
+  const sourceMaintenanceRows = isConcretos.value
+    ? cleanedData.value.filter(r => !isAcpm(r))
+    : dataFilteredNoAcpm.value
+
+  for (const r of sourceMaintenanceRows) {
+    const f = r['FECHA'] ?? r['Fecha']
+    const d = parseConcretoRowDate(f)
+    if (!d) continue
+    const y = d.getUTCFullYear()
+    const mIdx = d.getUTCMonth()
+    const m = String(mIdx + 1).padStart(2, '0')
+    const key = `${y}-${m}`
+    const label = `${y} ${MESES_ES[mIdx]}`
+
+    let item = monthMap.get(key)
+    if (!item) {
+      item = {
+        key,
+        label,
+        acacias: createEmptyPlanta(),
+        restrepo: createEmptyPlanta(),
+        villavicencio: createEmptyPlanta(),
+        totalMtto: 0,
+        totalServ: 0,
+        totalIns: 0,
+        totalOTs: 0,
+        totalAbiertas: 0,
+        totalCerradas: 0,
+        prodM3: 0,
+        costoUnitario: 0,
+      }
+      monthMap.set(key, item)
+    }
+
+    const costServ = Number(r['Costo servicios']) || 0
+    const costIns = Number(r['Costos Insumos']) || 0
+    const rowCost = (costServ + costIns) > 0 ? (costServ + costIns) : (Number(r['Costo Total']) || 0)
+    const isCerrada = estadoClass(String(r['Estado'] ?? '')) === 'ok'
+
+    const planta = getConcretoPlantaName(r)
+    const target = planta === 'Acacias' ? item.acacias : planta === 'Restrepo' ? item.restrepo : item.villavicencio
+    target.costo += rowCost
+    target.serv += costServ
+    target.ins += costIns
+    target.ots += 1
+    if (isCerrada) target.cerradas += 1
+    else target.abiertas += 1
+
+    item.totalMtto += rowCost
+    item.totalServ += costServ
+    item.totalIns += costIns
+    item.totalOTs += 1
+    if (isCerrada) item.totalCerradas += 1
+    else item.totalAbiertas += 1
+  }
+
+  // 2. Producción Concreto por Planta (excluyendo mezclas de agregados)
+  const sourceProdRows = prodRows.value
+
+  for (const r of sourceProdRows) {
+    const f = (r as Record<string, unknown>)['Fecha'] ?? (r as Record<string, unknown>)['FECHA']
+    const d = parseConcretoRowDate(f)
+    if (!d) continue
+    const y = d.getUTCFullYear()
+    const mIdx = d.getUTCMonth()
+    const m = String(mIdx + 1).padStart(2, '0')
+    const key = `${y}-${m}`
+    const label = `${y} ${MESES_ES[mIdx]}`
+
+    let item = monthMap.get(key)
+    if (!item) {
+      item = {
+        key,
+        label,
+        acacias: createEmptyPlanta(),
+        restrepo: createEmptyPlanta(),
+        villavicencio: createEmptyPlanta(),
+        totalMtto: 0,
+        totalServ: 0,
+        totalIns: 0,
+        totalOTs: 0,
+        totalAbiertas: 0,
+        totalCerradas: 0,
+        prodM3: 0,
+        costoUnitario: 0,
+      }
+      monthMap.set(key, item)
+    }
+
+    const m3 = Number((r as Record<string, unknown>)['Total de M³']) || Number((r as Record<string, unknown>)['Cant. Concreto']) || 0
+    item.prodM3 += m3
+
+    const pPlanta = String((r as Record<string, unknown>)['Planta'] ?? (r as Record<string, unknown>)['PLANTA'] ?? '').toLowerCase()
+    if (pPlanta.includes('acacia')) {
+      item.acacias.prodM3 += m3
+    } else if (pPlanta.includes('restrepo')) {
+      item.restrepo.prodM3 += m3
+    } else {
+      item.villavicencio.prodM3 += m3
+    }
+  }
+
+  // Filtrar exclusivamente los meses que contienen registros reales en base de datos
+  const sorted = [...monthMap.values()]
+    .filter(s => s.totalMtto > 0 || s.prodM3 > 0)
+    .sort((a, b) => a.key.localeCompare(b.key))
+
+  for (const s of sorted) {
+    s.acacias.costoM3 = s.acacias.prodM3 > 0 ? +(s.acacias.costo / s.acacias.prodM3).toFixed(2) : 0
+    s.restrepo.costoM3 = s.restrepo.prodM3 > 0 ? +(s.restrepo.costo / s.restrepo.prodM3).toFixed(2) : 0
+    s.villavicencio.costoM3 = s.villavicencio.prodM3 > 0 ? +(s.villavicencio.costo / s.villavicencio.prodM3).toFixed(2) : 0
+    s.costoUnitario = s.prodM3 > 0 ? +(s.totalMtto / s.prodM3).toFixed(2) : 0
+  }
+
+  return {
+    labels: sorted.map(s => s.label),
+    months: sorted,
+  }
+})
+
+function buildEficienciaMttoConcretosOption(isExpand = false) {
+  const data = concretoMonthlyEfficiency.value
+  const isLight = theme.value === 'light'
+
+  return markRaw({
+    animation: true,
+    animationDuration: 900,
+    animationEasing: 'cubicOut',
+    animationDurationUpdate: 500,
+    animationEasingUpdate: 'cubicInOut',
+    tooltip: {
+      trigger: 'item' as const,
+      formatter: (params: any) => {
+        const item = params.data
+        if (!item) return ''
+
+        if (params.seriesName === 'Costo Mtto por m³') {
+          return `<b>Costo Mtto por m³ — ${item.monthLabel}</b><br/>` +
+            `<span style="color:#172554">\u25CF</span> Costo Mtto/m³: <b>$${item.value.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b><br/>` +
+            `<span style="color:#1f2937">\u25CF</span> Total Mantenimiento: <b>$${Math.round(item.totalMtto).toLocaleString('es-CO')}</b><br/>` +
+            `<span style="color:${palette[1]}">\u25CF</span> Servicios: <b>$${Math.round(item.totalServ).toLocaleString('es-CO')}</b><br/>` +
+            `<span style="color:#EF4444">\u25CF</span> Insumos: <b>$${Math.round(item.totalIns).toLocaleString('es-CO')}</b><br/>` +
+            `<span style="color:#10B981">\u25CF</span> Volumen Producido: <b>${Math.round(item.prodM3).toLocaleString('es-CO')} m³</b><br/>` +
+            `<span style="color:#8B5CF6">\u25CF</span> Total Órdenes: <b>${item.totalOTs}</b> (Cerradas: <b>${item.totalCerradas}</b>, Abiertas: <b>${item.totalAbiertas}</b>)`
+        }
+
+        const dotColor = params.color || '#3B82F6'
+        const cM3Str = item.costoM3 > 0 ? `$${item.costoM3.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '$0,00'
+        return `<b>Planta ${item.planta} — ${item.monthLabel}</b><br/>` +
+          `<span style="color:${dotColor}">\u25CF</span> Costo Total: <b>$${Math.round(item.value).toLocaleString('es-CO')}</b><br/>` +
+          `<span style="color:${palette[1]}">\u25CF</span> Servicios: <b>$${Math.round(item.serv).toLocaleString('es-CO')}</b><br/>` +
+          `<span style="color:#EF4444">\u25CF</span> Insumos: <b>$${Math.round(item.ins).toLocaleString('es-CO')}</b><br/>` +
+          `<span style="color:#10B981">\u25CF</span> Volumen Producido: <b>${Math.round(item.prodM3).toLocaleString('es-CO')} m³</b><br/>` +
+          `<span style="color:#06B6D4">\u25CF</span> Costo Mtto/m³: <b>${cM3Str}</b><br/>` +
+          `<span style="color:#8B5CF6">\u25CF</span> Total Órdenes: <b>${item.ots}</b> (Cerradas: <b>${item.cerradas}</b>, Abiertas: <b>${item.abiertas}</b>)`
+      },
+    },
+    legend: {
+      top: 8,
+      left: 12,
+      itemGap: 18,
+      icon: 'circle',
+      itemWidth: 10,
+      itemHeight: 10,
+      textStyle: {
+        fontWeight: 600 as const,
+        color: chartTextColor.value,
+        fontSize: 12,
+      },
+      data: [
+        { name: 'Acacias', itemStyle: { color: '#38a9f8' } },
+        { name: 'Restrepo', itemStyle: { color: '#3b4cb8' } },
+        { name: 'Villavicencio', itemStyle: { color: '#ec4899' } },
+        { name: 'Costo Mtto por m³', itemStyle: { color: isLight ? '#172554' : '#60a5fa' } },
+      ],
+    },
+    grid: {
+      left: 16,
+      right: 16,
+      top: 50,
+      bottom: isExpand ? 40 : 25,
+      containLabel: true,
+    },
+    xAxis: {
+      type: 'category' as const,
+      data: data.labels,
+      axisLine: { lineStyle: { color: isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)' } },
+      axisTick: { show: false },
+      axisLabel: {
+        fontWeight: 600 as const,
+        color: chartTextColor.value,
+        fontSize: 11,
+        margin: 12,
+      },
+    },
+    yAxis: [
+      {
+        type: 'value' as const,
+        axisLabel: { show: false },
+        axisLine: { show: false },
+        axisTick: { show: false },
+        splitLine: {
+          show: true,
+          lineStyle: {
+            color: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
+            type: 'dashed' as const,
+          },
+        },
+        max: (val: any) => Math.ceil((val.max || 1000000) * 1.2),
+      },
+      {
+        type: 'value' as const,
+        position: 'right' as const,
+        axisLabel: { show: false },
+        axisLine: { show: false },
+        axisTick: { show: false },
+        splitLine: { show: false },
+        max: (val: any) => Math.ceil((val.max || 20000) * 1.25),
+      },
+    ],
+    series: [
+      {
+        name: 'Acacias',
+        type: 'bar' as const,
+        yAxisIndex: 0,
+        barMaxWidth: 36,
+        itemStyle: {
+          color: '#38a9f8',
+          borderRadius: [4, 4, 0, 0],
+        },
+        emphasis: {
+          focus: 'series' as const,
+          itemStyle: {
+            shadowBlur: 10,
+            shadowColor: 'rgba(0, 0, 0, 0.25)',
+          },
+        },
+        label: {
+          show: true,
+          position: 'top' as const,
+          fontSize: 9.5,
+          fontWeight: 600 as const,
+          color: isLight ? '#475569' : '#cbd5e1',
+          formatter: (p: any) => {
+            const v = Number(p.value) || 0
+            return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
+          },
+        },
+        data: data.months.map(m => ({
+          value: m.acacias.costo,
+          monthLabel: m.label,
+          planta: 'Acacías',
+          serv: m.acacias.serv,
+          ins: m.acacias.ins,
+          ots: m.acacias.ots,
+          abiertas: m.acacias.abiertas,
+          cerradas: m.acacias.cerradas,
+          prodM3: m.acacias.prodM3,
+          costoM3: m.acacias.costoM3,
+        })),
+      },
+      {
+        name: 'Restrepo',
+        type: 'bar' as const,
+        yAxisIndex: 0,
+        barMaxWidth: 36,
+        itemStyle: {
+          color: '#3b4cb8',
+          borderRadius: [4, 4, 0, 0],
+        },
+        emphasis: {
+          focus: 'series' as const,
+          itemStyle: {
+            shadowBlur: 10,
+            shadowColor: 'rgba(0, 0, 0, 0.25)',
+          },
+        },
+        label: {
+          show: true,
+          position: 'top' as const,
+          fontSize: 9.5,
+          fontWeight: 600 as const,
+          color: isLight ? '#475569' : '#cbd5e1',
+          formatter: (p: any) => {
+            const v = Number(p.value) || 0
+            return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
+          },
+        },
+        data: data.months.map(m => ({
+          value: m.restrepo.costo,
+          monthLabel: m.label,
+          planta: 'Restrepo',
+          serv: m.restrepo.serv,
+          ins: m.restrepo.ins,
+          ots: m.restrepo.ots,
+          abiertas: m.restrepo.abiertas,
+          cerradas: m.restrepo.cerradas,
+          prodM3: m.restrepo.prodM3,
+          costoM3: m.restrepo.costoM3,
+        })),
+      },
+      {
+        name: 'Villavicencio',
+        type: 'bar' as const,
+        yAxisIndex: 0,
+        barMaxWidth: 36,
+        itemStyle: {
+          color: '#ec4899',
+          borderRadius: [4, 4, 0, 0],
+        },
+        emphasis: {
+          focus: 'series' as const,
+          itemStyle: {
+            shadowBlur: 10,
+            shadowColor: 'rgba(0, 0, 0, 0.25)',
+          },
+        },
+        label: {
+          show: true,
+          position: 'top' as const,
+          fontSize: 9.5,
+          fontWeight: 600 as const,
+          color: isLight ? '#475569' : '#cbd5e1',
+          formatter: (p: any) => {
+            const v = Number(p.value) || 0
+            return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
+          },
+        },
+        data: data.months.map(m => ({
+          value: m.villavicencio.costo,
+          monthLabel: m.label,
+          planta: 'Villavicencio',
+          serv: m.villavicencio.serv,
+          ins: m.villavicencio.ins,
+          ots: m.villavicencio.ots,
+          abiertas: m.villavicencio.abiertas,
+          cerradas: m.villavicencio.cerradas,
+          prodM3: m.villavicencio.prodM3,
+          costoM3: m.villavicencio.costoM3,
+        })),
+      },
+      {
+        name: 'Costo Mtto por m³',
+        type: 'line' as const,
+        yAxisIndex: 1,
+        smooth: 0.35,
+        symbol: 'circle' as const,
+        symbolSize: 8,
+        showSymbol: true,
+        emphasis: {
+          scale: 1.4,
+          focus: 'series' as const,
+          itemStyle: {
+            shadowBlur: 12,
+            shadowColor: isLight ? 'rgba(23, 37, 84, 0.4)' : 'rgba(96, 165, 250, 0.5)',
+          },
+        },
+        lineStyle: {
+          width: 2.5,
+          color: isLight ? '#172554' : '#60a5fa',
+        },
+        itemStyle: {
+          color: isLight ? '#172554' : '#60a5fa',
+        },
+        label: {
+          show: true,
+          position: 'top' as const,
+          distance: 8,
+          fontSize: 10.5,
+          fontWeight: 700 as const,
+          color: isLight ? '#0f172a' : '#f8fafc',
+          formatter: (p: any) => {
+            const v = Number(p.value) || 0
+            return v > 0 ? `$ ${v.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''
+          },
+        },
+        data: data.months.map(m => ({
+          value: m.costoUnitario,
+          monthLabel: m.label,
+          costoUnitario: m.costoUnitario,
+          totalMtto: m.totalMtto,
+          totalServ: m.totalServ,
+          totalIns: m.totalIns,
+          totalOTs: m.totalOTs,
+          totalAbiertas: m.totalAbiertas,
+          totalCerradas: m.totalCerradas,
+          prodM3: m.prodM3,
+        })),
+      },
+    ],
+  })
+}
+
+const eficienciaMttoConcretosOpt = computed(() => buildEficienciaMttoConcretosOption(false))
+const eficienciaMttoConcretosExpandOpt = computed(() => buildEficienciaMttoConcretosOption(true))
+
+function buildCostosGeneralesM3Option(isExpand = false) {
+  const data = concretoMonthlyEfficiency.value
+  const isLight = theme.value === 'light'
+
+  return markRaw({
+    animation: true,
+    animationDuration: 900,
+    animationEasing: 'cubicOut',
+    animationDurationUpdate: 500,
+    animationEasingUpdate: 'cubicInOut',
+    tooltip: {
+      trigger: 'item' as const,
+      formatter: (params: any) => {
+        const item = params.data
+        if (!item) return ''
+
+        if (params.seriesName === 'Costo Mtto por m³') {
+          return `<b>Costo Mtto por m³ — ${item.monthLabel}</b><br/>` +
+            `<span style="color:#172554">\u25CF</span> Costo Mtto/m³: <b>$${item.value.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b><br/>` +
+            `<span style="color:#1f2937">\u25CF</span> Total Mantenimiento: <b>$${Math.round(item.totalMtto).toLocaleString('es-CO')}</b><br/>` +
+            `<span style="color:${palette[1]}">\u25CF</span> Servicios: <b>$${Math.round(item.totalServ).toLocaleString('es-CO')}</b><br/>` +
+            `<span style="color:#EF4444">\u25CF</span> Insumos: <b>$${Math.round(item.totalIns).toLocaleString('es-CO')}</b><br/>` +
+            `<span style="color:#10B981">\u25CF</span> Volumen Producido: <b>${Math.round(item.prodM3).toLocaleString('es-CO')} m³</b><br/>` +
+            `<span style="color:#8B5CF6">\u25CF</span> Total Órdenes: <b>${item.totalOTs}</b> (Cerradas: <b>${item.totalCerradas}</b>, Abiertas: <b>${item.totalAbiertas}</b>)`
+        }
+
+        const dotColor = params.color || (params.seriesName === 'Servicios' ? palette[1] : '#EF4444')
+        return `<b>${params.seriesName} — ${item.monthLabel}</b><br/>` +
+          `<span style="color:${dotColor}">\u25CF</span> Costo ${params.seriesName}: <b>$${Math.round(item.value).toLocaleString('es-CO')}</b><br/>` +
+          `<span style="color:#1f2937">\u25CF</span> Total Mantenimiento: <b>$${Math.round(item.totalMtto).toLocaleString('es-CO')}</b><br/>` +
+          `<span style="color:#10B981">\u25CF</span> Volumen Producido: <b>${Math.round(item.prodM3).toLocaleString('es-CO')} m³</b><br/>` +
+          `<span style="color:#8B5CF6">\u25CF</span> Total Órdenes: <b>${item.totalOTs}</b> (Cerradas: <b>${item.totalCerradas}</b>, Abiertas: <b>${item.totalAbiertas}</b>)`
+      },
+    },
+    legend: {
+      top: 8,
+      left: 12,
+      itemGap: 18,
+      icon: 'circle',
+      itemWidth: 10,
+      itemHeight: 10,
+      textStyle: {
+        fontWeight: 600 as const,
+        color: chartTextColor.value,
+        fontSize: 12,
+      },
+      data: [
+        { name: 'Servicios', itemStyle: { color: palette[1] } },
+        { name: 'Insumos', itemStyle: { color: '#EF4444' } },
+        { name: 'Costo Mtto por m³', itemStyle: { color: isLight ? '#172554' : '#60a5fa' } },
+      ],
+    },
+    grid: {
+      left: 16,
+      right: 16,
+      top: 50,
+      bottom: isExpand ? 40 : 25,
+      containLabel: true,
+    },
+    xAxis: {
+      type: 'category' as const,
+      data: data.labels,
+      axisLine: { lineStyle: { color: isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)' } },
+      axisTick: { show: false },
+      axisLabel: {
+        fontWeight: 600 as const,
+        color: chartTextColor.value,
+        fontSize: 11,
+        margin: 12,
+      },
+    },
+    yAxis: [
+      {
+        type: 'value' as const,
+        axisLabel: { show: false },
+        axisLine: { show: false },
+        axisTick: { show: false },
+        splitLine: {
+          show: true,
+          lineStyle: {
+            color: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
+            type: 'dashed' as const,
+          },
+        },
+        max: (val: any) => Math.ceil((val.max || 1000000) * 1.2),
+      },
+      {
+        type: 'value' as const,
+        position: 'right' as const,
+        axisLabel: { show: false },
+        axisLine: { show: false },
+        axisTick: { show: false },
+        splitLine: { show: false },
+        max: (val: any) => Math.ceil((val.max || 20000) * 1.25),
+      },
+    ],
+    series: [
+      {
+        name: 'Servicios',
+        type: 'bar' as const,
+        yAxisIndex: 0,
+        barMaxWidth: 36,
+        itemStyle: {
+          color: palette[1],
+          borderRadius: [4, 4, 0, 0],
+        },
+        emphasis: {
+          focus: 'series' as const,
+          itemStyle: {
+            shadowBlur: 10,
+            shadowColor: 'rgba(0, 0, 0, 0.25)',
+          },
+        },
+        label: {
+          show: true,
+          position: 'top' as const,
+          fontSize: 9.5,
+          fontWeight: 600 as const,
+          color: isLight ? '#475569' : '#cbd5e1',
+          formatter: (p: any) => {
+            const v = Number(p.value) || 0
+            return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
+          },
+        },
+        data: data.months.map(m => ({
+          value: m.totalServ,
+          monthLabel: m.label,
+          totalServ: m.totalServ,
+          totalIns: m.totalIns,
+          totalMtto: m.totalMtto,
+          totalOTs: m.totalOTs,
+          totalAbiertas: m.totalAbiertas,
+          totalCerradas: m.totalCerradas,
+          prodM3: m.prodM3,
+          costoM3: m.costoUnitario,
+        })),
+      },
+      {
+        name: 'Insumos',
+        type: 'bar' as const,
+        yAxisIndex: 0,
+        barMaxWidth: 36,
+        itemStyle: {
+          color: '#EF4444',
+          borderRadius: [4, 4, 0, 0],
+        },
+        emphasis: {
+          focus: 'series' as const,
+          itemStyle: {
+            shadowBlur: 10,
+            shadowColor: 'rgba(0, 0, 0, 0.25)',
+          },
+        },
+        label: {
+          show: true,
+          position: 'top' as const,
+          fontSize: 9.5,
+          fontWeight: 600 as const,
+          color: isLight ? '#475569' : '#cbd5e1',
+          formatter: (p: any) => {
+            const v = Number(p.value) || 0
+            return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
+          },
+        },
+        data: data.months.map(m => ({
+          value: m.totalIns,
+          monthLabel: m.label,
+          totalServ: m.totalServ,
+          totalIns: m.totalIns,
+          totalMtto: m.totalMtto,
+          totalOTs: m.totalOTs,
+          totalAbiertas: m.totalAbiertas,
+          totalCerradas: m.totalCerradas,
+          prodM3: m.prodM3,
+          costoM3: m.costoUnitario,
+        })),
+      },
+      {
+        name: 'Costo Mtto por m³',
+        type: 'line' as const,
+        yAxisIndex: 1,
+        smooth: 0.35,
+        symbol: 'circle' as const,
+        symbolSize: 8,
+        showSymbol: true,
+        emphasis: {
+          scale: 1.4,
+          focus: 'series' as const,
+          itemStyle: {
+            shadowBlur: 12,
+            shadowColor: isLight ? 'rgba(23, 37, 84, 0.4)' : 'rgba(96, 165, 250, 0.5)',
+          },
+        },
+        lineStyle: {
+          width: 2.5,
+          color: isLight ? '#172554' : '#60a5fa',
+        },
+        itemStyle: {
+          color: isLight ? '#172554' : '#60a5fa',
+        },
+        label: {
+          show: true,
+          position: 'top' as const,
+          distance: 8,
+          fontSize: 10.5,
+          fontWeight: 700 as const,
+          color: isLight ? '#0f172a' : '#f8fafc',
+          formatter: (p: any) => {
+            const v = Number(p.value) || 0
+            return v > 0 ? `$ ${v.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''
+          },
+        },
+        data: data.months.map(m => ({
+          value: m.costoUnitario,
+          monthLabel: m.label,
+          costoUnitario: m.costoUnitario,
+          totalMtto: m.totalMtto,
+          totalServ: m.totalServ,
+          totalIns: m.totalIns,
+          totalOTs: m.totalOTs,
+          totalAbiertas: m.totalAbiertas,
+          totalCerradas: m.totalCerradas,
+          prodM3: m.prodM3,
+        })),
+      },
+    ],
+  })
+}
+
+const costosGeneralesM3Opt = computed(() => buildCostosGeneralesM3Option(false))
+const costosGeneralesM3ExpandOpt = computed(() => buildCostosGeneralesM3Option(true))
 
 const intRows = computed(() => partition.value.int)
 const intKpi = computed(() => {
