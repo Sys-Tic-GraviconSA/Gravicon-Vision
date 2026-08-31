@@ -1734,8 +1734,9 @@ const otConSopledPct = computed(() => {
 function rankBy(items: Record<string, unknown>[], field: string, limit = Infinity): [string, number][] {
   const map = new Map<string, number>()
   for (const r of items) {
-    const label = String(r[field] ?? '').trim()
-    if (!label) continue
+    const raw = String(r[field] ?? '').trim()
+    if (!raw) continue
+    const label = toTitleCase(raw)
     map.set(label, (map.get(label) || 0) + 1)
   }
   return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit)
@@ -1748,7 +1749,7 @@ function rankByMultiValue(items: Record<string, unknown>[], field: string, limit
     const raw = String(r[field] ?? '').trim()
     if (!raw) continue
     for (const part of raw.split(',')) {
-      const label = part.trim()
+      const label = toTitleCase(part.trim())
       if (!label) continue
       map.set(label, (map.get(label) || 0) + 1)
     }
@@ -1760,11 +1761,13 @@ function rankByMultiValue(items: Record<string, unknown>[], field: string, limit
 const sistemasRanking = computed(() => {
   const map = new Map<string, number>()
   for (const r of dataFilteredMain.value) {
+    if (isAcpm(r)) continue
     const subs = r['_subOrdenes']
     if (!Array.isArray(subs)) continue
     for (const s of subs) {
-      const label = String(s?.sistemaTexto || s?.sistema || '').trim()
-      if (!label) continue
+      const raw = String(s?.sistemaTexto || s?.sistema || '').trim()
+      if (!raw) continue
+      const label = toTitleCase(raw)
       map.set(label, (map.get(label) || 0) + 1)
     }
   }
@@ -3113,7 +3116,7 @@ const tipoCompraDisponibles = computed(() => {
     if (!Array.isArray(sops)) continue
     for (const sop of sops) {
       const v = String(sop?.tipoCompra ?? '').trim()
-      if (v) set.add(v)
+      if (v) set.add(toTitleCase(v))
     }
   }
   return [...set].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
@@ -3126,7 +3129,7 @@ const centroCostoDisponibles = computed(() => {
     if (!Array.isArray(sops)) continue
     for (const sop of sops) {
       const v = String(sop?.centroCosto ?? '').trim()
-      if (v) set.add(v)
+      if (v) set.add(toTitleCase(v))
     }
   }
   return [...set].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
@@ -3139,7 +3142,7 @@ const procesoDisponibles = computed(() => {
     if (!Array.isArray(sops)) continue
     for (const sop of sops) {
       const v = String(sop?.procesoTexto ?? '').trim()
-      if (v) set.add(v)
+      if (v) set.add(toTitleCase(v))
     }
   }
   return [...set].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
@@ -3185,14 +3188,14 @@ const filteredData = computed(() => {
   })
 })
 
-/** Listas fijas: no se recalculan al filtrar, así el menú no salta ni pierde opciones. */
+/** Listas fijas: no se recalculan al filtrar, así el menú no salta ni pierde opciones. Solo inicial en mayúscula. */
 const vehiculosDisponibles = computed(() => {
   const map = new Set<string>()
   for (const r of allData.value) {
     const t = isConcretos.value
       ? String(r['Tipo Vehículo'] ?? '').trim()
       : String(r['Placa del Vehículo'] ?? '').trim()
-    if (t) map.add(t)
+    if (t) map.add(toTitleCase(t))
   }
   return [...map].sort((a, b) => a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' }))
 })
@@ -3201,7 +3204,7 @@ const proveedoresDisponibles = computed(() => {
   const map = new Set<string>()
   for (const r of allData.value) {
     const p = String(r['PROVEEDOR'] ?? '').trim()
-    if (p) map.add(p)
+    if (p) map.add(toTitleCase(p))
   }
   return [...map].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
 })
@@ -3210,7 +3213,7 @@ const estadosDisponibles = computed(() => {
   const map = new Set<string>()
   for (const r of allData.value) {
     const e = String(r['Estado'] ?? '').trim()
-    if (e) map.add(e)
+    if (e) map.add(toTitleCase(e))
   }
   return [...map].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
 })
@@ -3236,17 +3239,17 @@ const dataFilteredMain = computed(() => {
   const hasLineaFilter = selectedLineas.value.size > 0 && selectedLineas.value.size !== lineasDisponibles.value.length
   const hasEstadoFilter = selectedEstados.value.size > 0 && selectedEstados.value.size !== estadosDisponibles.value.length
   const hasPersonalFilter = selectedPersonalInterno.value.size > 0 && selectedPersonalInterno.value.size < personalInternoOptions.length
-  if (!hasVehiculoFilter && !hasProveedorFilter && !hasLineaFilter && !hasEstadoFilter && !hasPersonalFilter) return filteredData.value
+   if (!hasVehiculoFilter && !hasProveedorFilter && !hasLineaFilter && !hasEstadoFilter && !hasPersonalFilter) return filteredData.value
    return filteredData.value.filter(r => {
     if (hasVehiculoFilter) {
       const vehiculoVal = isConcretos.value
         ? String(r['Tipo Vehículo'] ?? '').trim()
         : String(r['Placa del Vehículo'] ?? '').trim()
-      if (!selectedVehiculos.value.has(vehiculoVal)) return false
+      if (!selectedVehiculos.value.has(toTitleCase(vehiculoVal))) return false
     }
-    if (hasProveedorFilter && !selectedProveedores.value.has(String(r['PROVEEDOR'] ?? '').trim())) return false
-    if (hasLineaFilter && !selectedLineas.value.has(normalizeLocalizacion(String(r['Localización'] ?? '')))) return false
-    if (hasEstadoFilter && !selectedEstados.value.has(String(r['Estado'] ?? '').trim())) return false
+    if (hasProveedorFilter && !selectedProveedores.value.has(toTitleCase(String(r['PROVEEDOR'] ?? '').trim()))) return false
+    if (hasLineaFilter && !selectedLineas.value.has(toTitleCase(normalizeLocalizacion(String(r['Localización'] ?? ''))))) return false
+    if (hasEstadoFilter && !selectedEstados.value.has(toTitleCase(String(r['Estado'] ?? '').trim()))) return false
     if (hasPersonalFilter) {
       const esInt = isInterno(r)
       if (selectedPersonalInterno.value.has('Interno') && !esInt) return false
@@ -3591,10 +3594,8 @@ const concretoMonthlyEfficiency = computed(() => {
     costoM3: 0,
   })
 
-  // 1. Mantenimiento OTs de Concretos (todas las órdenes de la planta)
-  const sourceMaintenanceRows = isConcretos.value
-    ? cleanedData.value.filter(r => !isAcpm(r))
-    : dataFilteredNoAcpm.value
+  // 1. Mantenimiento OTs — respeta todos los filtros (fecha, línea, vehículo, proveedor, estado, personal) y excluye ACPM
+  const sourceMaintenanceRows = dataFilteredNoAcpm.value
 
   for (const r of sourceMaintenanceRows) {
     const f = r['FECHA'] ?? r['Fecha']
@@ -3648,8 +3649,8 @@ const concretoMonthlyEfficiency = computed(() => {
     else item.totalAbiertas += 1
   }
 
-  // 2. Producción Concreto por Planta (excluyendo mezclas de agregados)
-  const sourceProdRows = prodRows.value
+  // 2. Producción Concreto por Planta — respeta filtros de fecha/línea y excluye mezclas de agregados
+  const sourceProdRows = prodFiltered.value
 
   for (const r of sourceProdRows) {
     const f = (r as Record<string, unknown>)['Fecha'] ?? (r as Record<string, unknown>)['FECHA']
@@ -4595,23 +4596,23 @@ function fechaToDiariasLabel(serial: number): string {
 const rankingDetailRows = computed(() => {
   if (!selectedRankingField.value || selectedRankingValue.value == null) return []
   const field = selectedRankingField.value!
-  const val = selectedRankingValue.value!
+  const val = String(selectedRankingValue.value!).trim().toLowerCase()
   return dataFilteredNoAcpm.value.filter(r => {
     if (field === 'Sistema') {
       const subs = r['_subOrdenes'] as any[]
       if (!Array.isArray(subs)) return false
-      return subs.some(s => String(s?.sistemaTexto || s?.sistema || '').trim() === val)
+      return subs.some(s => String(s?.sistemaTexto || s?.sistema || '').trim().toLowerCase() === val)
     }
     if (field === 'Personal') {
       const raw = String(r['Personal'] ?? '').trim()
       if (!raw) return false
-      return raw.split(',').map(s => s.trim()).includes(val)
+      return raw.split(',').map(s => s.trim().toLowerCase()).includes(val)
     }
     if (field === 'Fecha') {
       const lbl = fechaToDiariasLabel(Number(r['FECHA']))
-      return lbl === val
+      return lbl.toLowerCase() === val
     }
-    return String(r[field] ?? '').trim() === val
+    return String(r[field] ?? '').trim().toLowerCase() === val
   })
 })
 const rankingDetailTotal = computed(() => {
