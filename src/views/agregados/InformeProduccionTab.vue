@@ -53,7 +53,6 @@
           <div class="kpi-row">
             <KpiCard label="Total M³" accent="#3B82F6" icon="chart-bar">{{ fmt(kpi.total) }}</KpiCard>
             <KpiCard v-for="l in config.lines" :key="l.key" :label="l.label" :accent="config.palette[config.lines.indexOf(l)]" icon="layers">{{ fmt(lineTotals[l.key] || 0) }}</KpiCard>
-            <KpiCard label="Promedio Diario" accent="#10B981" icon="activity">{{ fmt(kpi.promedio) }} M³</KpiCard>
           </div>
         </div>
 
