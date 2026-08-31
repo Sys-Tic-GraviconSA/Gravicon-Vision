@@ -93,20 +93,16 @@ async function toggleOpen() {
 
 function toggle(opt: string) {
   const next = new Set(props.modelValue)
-  if (next.has(opt)) {
-    if (next.size > 1) next.delete(opt)
-  } else {
-    next.add(opt)
-  }
+  if (next.has(opt)) next.delete(opt)
+  else next.add(opt)
   emit('update:modelValue', next)
   // Mantener posición fija tras el reflow del header
   nextTick(() => updateMenuPosition())
 }
 
 function toggleAll() {
-  const next = props.modelValue.size === props.options.length
-    ? new Set(props.options.length > 0 ? [props.options[0]] : [])
-    : new Set(props.options)
+  const allSelected = props.modelValue.size === props.options.length && props.options.length > 0
+  const next = allSelected ? new Set<string>() : new Set(props.options)
   emit('update:modelValue', next)
   nextTick(() => updateMenuPosition())
 }
