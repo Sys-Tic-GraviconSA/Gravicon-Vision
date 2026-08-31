@@ -21,6 +21,16 @@
                 <MultiSelect v-model="selectedEstados" :options="estadosDisponibles" label="Estado" icon="filter" />
                 <MultiSelect v-model="selectedPersonalInterno" :options="personalInternoOptions" label="Personal" icon="user" />
               </template>
+              <div class="filter-quick-nav" v-if="subTab==='dashboard' && dashboardView==='resumen'">
+                <button class="quick-nav-btn ghost" @click="scrollToSec('sec-general')">General</button>
+                <button class="quick-nav-btn ghost" @click="scrollToSec('sec-internos')">Internos</button>
+                <button class="quick-nav-btn ghost" @click="scrollToSec('sec-externos')">Externos</button>
+              </div>
+              <div class="filter-quick-nav" v-if="subTab==='gerencial'">
+                <button class="quick-nav-btn ghost" @click="scrollToSec('sec-ger-general')">General</button>
+                <button class="quick-nav-btn ghost" @click="scrollToSec('sec-ger-internos')">Internos</button>
+                <button class="quick-nav-btn ghost" @click="scrollToSec('sec-ger-externos')">Externos</button>
+              </div>
             </div>
             <button class="action-btn" @click="loadData(true)" :disabled="loading">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
@@ -87,24 +97,6 @@
       </div>
 
       <template v-if="dashboardView === 'resumen'">
-      <div class="section-quick-nav">
-        <span class="quick-nav-label">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-          Ir a sección:
-        </span>
-        <button class="quick-nav-btn" @click="scrollToSec('sec-general')">
-          <span class="quick-nav-dot" style="background:#15223c"></span>
-          General
-        </button>
-        <button class="quick-nav-btn" @click="scrollToSec('sec-internos')">
-          <span class="quick-nav-dot" style="background:#3B82F6"></span>
-          Costos Internos
-        </button>
-        <button class="quick-nav-btn" @click="scrollToSec('sec-externos')">
-          <span class="quick-nav-dot" style="background:#10B981"></span>
-          Costos Externos
-        </button>
-      </div>
 
       <div id="sec-general" class="section-anchor"></div>
       <div class="kpi-row">
@@ -995,25 +987,6 @@
     </template>
 
     <template v-if="subTab === 'gerencial'">
-      <div class="section-quick-nav">
-        <span class="quick-nav-label">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-          Ir a sección:
-        </span>
-        <button class="quick-nav-btn" @click="scrollToSec('sec-ger-general')">
-          <span class="quick-nav-dot" style="background:#15223c"></span>
-          General
-        </button>
-        <button class="quick-nav-btn" @click="scrollToSec('sec-ger-internos')">
-          <span class="quick-nav-dot" style="background:#3B82F6"></span>
-          Costos Internos
-        </button>
-        <button class="quick-nav-btn" @click="scrollToSec('sec-ger-externos')">
-          <span class="quick-nav-dot" style="background:#10B981"></span>
-          Costos Externos
-        </button>
-      </div>
-
       <!-- ==================== SECCIÓN 1: GENERAL ==================== -->
       <div id="sec-ger-general" class="section-anchor"></div>
       <div class="kpi-row">
@@ -4896,21 +4869,31 @@ const sistemasExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(comput
 </script>
 
 <style scoped>
-/* ── Quick Navigation Bar ── */
+/* ── Quick Navigation Bar — en filtros, estilo vacío ── */
 .section-quick-nav {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px;
-  margin-bottom: 18px;
-  background: var(--card-bg, #ffffff);
-  border: 1px solid var(--card-border, #e5e7eb);
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,.06);
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  backdrop-filter: blur(12px);
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  margin: 0;
+}
+.filter-quick-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  padding-left: 12px;
+  border-left: 1px solid var(--card-border);
+}
+@media (max-width: 768px) {
+  .filter-quick-nav {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: none;
+  }
 }
 .quick-nav-label {
   display: flex;
@@ -4925,24 +4908,31 @@ const sistemasExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(comput
 .quick-nav-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border: 1px solid var(--card-border, #e2e8f0);
-  border-radius: 8px;
-  background: var(--bg-alt, #f8fafc);
-  color: var(--text-primary, #1f2937);
-  font-size: 12px;
-  font-weight: 600;
+  gap: 5px;
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all .2s ease;
+  transition: all .15s ease;
   white-space: nowrap;
 }
 .quick-nav-btn:hover {
-  background: rgba(56, 39, 245, .08);
-  border-color: rgba(56, 39, 245, .3);
-  color: #3827f5;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(56, 39, 245, .12);
+  background: var(--card-bg);
+  border-color: var(--card-border);
+  color: var(--text-primary);
+}
+.quick-nav-btn.ghost {
+  border-color: var(--card-border);
+  background: transparent;
+}
+.quick-nav-btn.ghost:hover {
+  background: var(--card-bg);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 .quick-nav-dot {
   width: 8px;
