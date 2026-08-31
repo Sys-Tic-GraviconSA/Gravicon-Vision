@@ -51,8 +51,13 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
             Detalles
           </button>
+          <button class="sub-tab-btn" :class="{ active: prodTab === 'informe' }" @click="prodTab = 'informe'">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Informe
+          </button>
         </nav>
         <ResumenTab v-if="prodTab === 'resumen'" :config="config" :data="filteredDiario" />
+        <InformeProduccionTab v-else-if="prodTab === 'informe'" :config="config" :data="filteredDiario" />
         <div v-else-if="prodTab === 'ordenes'" class="table-section">
           <div class="ots-section">
             <div class="ots-bar">
@@ -95,6 +100,7 @@ import { useProduccionStore } from '../../stores'
 import FilterBar from '../../components/dashboard/FilterBar.vue'
 import DataTable from '../../components/dashboard/DataTable.vue'
 import ResumenTab from '../agregados/ResumenTab.vue'
+import InformeProduccionTab from '../agregados/InformeProduccionTab.vue'
 import ProgramacionView from '../agregados/ProgramacionView.vue'
 import EquiposDashboard from '../EquiposDashboard.vue'
 import { serialToDate } from '../../utils/dates'
