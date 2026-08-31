@@ -3,9 +3,12 @@
     <div class="informe-control-bar">
       <div class="icb-info">
         <span class="icb-tag">Reporte Oficial de Producción</span>
-        <span class="icb-title">Producción {{ config.plantName }} — {{ nombreMes }} {{ anioActual }}</span>
+        <span class="icb-title">Producción {{ config.plantName }} — {{ selectedLabel }}</span>
       </div>
       <div class="icb-actions" style="display:flex; gap:8px; align-items:center;">
+        <select v-model="selectedMonthKey" class="month-select">
+          <option v-for="m in availableMonths" :key="m.key" :value="m.key">{{ m.label }}</option>
+        </select>
         <button class="tb-btn primary" @click="generarPdf" :disabled="!hasData || generandoPdf">
           <svg v-if="!generandoPdf" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           <span v-if="generandoPdf">Generando PDF...</span>
@@ -21,12 +24,12 @@
             <img src="/Logos/Logo_Gravicon_Azul.png" alt="Gravicon" class="report-logo" />
             <div class="report-header-text">
               <h2>Producción {{ config.plantName }} Gravicon</h2>
-              <span>GRAVAS Y CONCRETOS S.A. · Agregados · {{ nombreMes }} {{ anioActual }}</span>
+              <span>GRAVAS Y CONCRETOS S.A. · Agregados · {{ selectedLabel }}</span>
             </div>
           </div>
           <div class="report-header-meta">
-            <div class="meta-item"><span>Periodo:</span> <strong>{{ nombreMes }} {{ anioActual }}</strong></div>
-            <div class="meta-item"><span>Código:</span> <strong>GRV-INF-PROD-{{ config.plantName.toUpperCase() }}-{{ anioActual }}{{ String(mesActual).padStart(2,'0') }}</strong></div>
+            <div class="meta-item"><span>Periodo:</span> <strong>{{ selectedLabel }}</strong></div>
+            <div class="meta-item"><span>Código:</span> <strong>GRV-INF-PROD-{{ config.plantName.toUpperCase() }}-{{ selectedMonthKey.replace('/','') }}</strong></div>
             <div class="meta-item page-counter"><span>Pág. 1 de 2</span></div>
           </div>
         </header>
@@ -34,7 +37,7 @@
         <div class="report-title-section">
           <h1>Informe Diario de Producción</h1>
           <p class="report-intro">
-            Consolidado operativo de <strong>{{ config.plantName }}</strong> para {{ nombreMes }} {{ anioActual }}. Volumen neto acumulado: <strong>{{ fmt(kpi.totalM3Acum) }} M³</strong> frente a meta mensual de <strong>{{ fmt(kpi.metaMensual) }} M³</strong> y total proyectado de <strong>{{ fmt(kpi.totalMProyectado) }} M³</strong>. Cumplimiento global del <strong>{{ kpi.cumpGlobal }}%</strong>.
+            Consolidado operativo de <strong>{{ config.plantName }}</strong> para {{ selectedLabel }}. Volumen neto del mes: <strong>{{ fmt(kpi.total) }} M³</strong> frente a meta mensual de <strong>{{ fmt(kpi.metaMensual) }} M³</strong> y proyectado diario acumulado de <strong>{{ fmt(kpi.proyectado) }} M³</strong>. Cumplimiento meta <strong>{{ kpi.cumplimientoMeta }}</strong> · Proyectado <strong>{{ kpi.cumplimientoProy }}</strong>.
           </p>
         </div>
 
@@ -45,18 +48,29 @@
           </div>
         </div>
 
-        <div class="kpi-row compact-kpi">
-          <KpiCard label="Ejec. Acumulado m³" accent="#1e293b" icon="trending-up" :value="fmt(kpi.totalM3Acum)" />
-          <KpiCard label="Total M Proyectado" accent="#0369a1" icon="target" :value="fmt(kpi.totalMProyectado)" />
-          <KpiCard label="M Proyectado Mensual" accent="#3b82f6" icon="target" :value="fmt(kpi.metaMensual)" />
-          <KpiCard label="Faltante Meta" :accent="Number(kpi.faltante) >= 0 ? '#ef4444' : '#10b981'" icon="activity" :value="fmt(kpi.faltante)" />
-          <KpiCard :label="`Cumplimiento %`" :accent="Number(kpi.cumpGlobal) >= 90 ? '#10b981' : Number(kpi.cumpGlobal) >= 70 ? '#f59e0b' : '#ef4444'" icon="check-circle" :value="kpi.cumpGlobal + '%'" />
+        <div class="kpi-section">
+          <h4 class="kpi-section-title">Producción Total — {{ selectedLabel }}</h4>
+          <div class="kpi-row">
+            <KpiCard label="Total M³" accent="#3B82F6" icon="chart-bar">{{ fmt(kpi.total) }}</KpiCard>
+            <KpiCard v-for="l in config.lines" :key="l.key" :label="l.label" :accent="config.palette[config.lines.indexOf(l)]" icon="layers">{{ fmt(lineTotals[l.key] || 0) }}</KpiCard>
+          </div>
         </div>
 
-        <div class="report-section-block">
-          <h3 class="report-block-title"><span class="title-bar"></span>Comportamiento Operativo</h3>
-          <div class="data-card" style="padding:16px;">
-            <ChartCard title="" :option="chartOpt" :height="260" />
+        <div class="kpi-section">
+          <h4 class="kpi-section-title">Meta Mensual</h4>
+          <div class="kpi-row kpi-row-3">
+            <KpiCard label="Meta Mensual M³" accent="#8B5CF6" icon="target">{{ fmt(kpi.metaMensual) }}</KpiCard>
+            <KpiCard label="Diferencia Meta" :accent="kpi.diferenciaMeta < 0 ? '#EF4444' : '#10B981'" icon="trending-up">{{ kpi.diferenciaMeta >= 0 ? '+' : '' }}{{ fmt(kpi.diferenciaMeta) }}</KpiCard>
+            <KpiCard label="% Cumpl. Meta" accent="#06B6D4" icon="check-circle">{{ kpi.cumplimientoMeta }}</KpiCard>
+          </div>
+        </div>
+
+        <div class="kpi-section">
+          <h4 class="kpi-section-title">Proyectado Diario</h4>
+          <div class="kpi-row kpi-row-3">
+            <KpiCard label="M³ Proyectado" accent="#EC4899" icon="trending-up">{{ fmt(kpi.proyectado) }}</KpiCard>
+            <KpiCard label="Diferencia Proy." :accent="kpi.diferenciaProy < 0 ? '#EF4444' : '#10B981'" icon="trending-up">{{ kpi.diferenciaProy >= 0 ? '+' : '' }}{{ fmt(kpi.diferenciaProy) }}</KpiCard>
+            <KpiCard label="% Cumpl. Proy." accent="#F59E0B" icon="check-circle">{{ kpi.cumplimientoProy }}</KpiCard>
           </div>
         </div>
 
@@ -69,7 +83,7 @@
       <div class="report-page">
         <div class="report-salto-superior"></div>
         <div class="report-section-block">
-          <h3 class="report-block-title"><span class="title-bar"></span>Historial de Operación Diaria ({{ nombreMes }})</h3>
+          <h3 class="report-block-title"><span class="title-bar"></span>Historial de Operación Diaria ({{ selectedLabel }})</h3>
           <div class="data-card">
             <div class="table-wrap">
               <table>
@@ -84,7 +98,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="row in tablaRows" :key="row.Fecha + row['Total de M³']" :style="(row as any).esHoy ? 'background:#eff6ff; font-weight:700; border-left:4px solid #3b82f6;' : ''">
+                  <tr v-for="row in tablaRows" :key="row.Fecha + row['Total de M³']">
                     <td>{{ row.Fecha }}</td>
                     <td v-for="l in config.lines" :key="l.key" class="r">{{ fmt((row as any)[l.key]) }}</td>
                     <td class="r bold">{{ fmt(row['Total de M³']) }}</td>
@@ -105,6 +119,14 @@
             </div>
           </div>
         </div>
+
+        <div class="report-section-block">
+          <h3 class="report-block-title"><span class="title-bar"></span>Comportamiento Operativo</h3>
+          <div class="data-card" style="padding:16px;">
+            <ChartCard title="" :option="chartOpt" :height="260" />
+          </div>
+        </div>
+
         <footer class="report-footer">
           <span>Informe de Producción — Gravicon</span>
           <span>Documento Oficial | Pág. 2 de 2</span>
@@ -115,13 +137,13 @@
     <div v-else class="informe-empty">
       <span class="placeholder-icon">📄</span>
       <span class="placeholder-text">Sin datos para el periodo</span>
-      <span class="placeholder-sub">No hay registros de producción para mostrar el informe</span>
+      <span class="placeholder-sub">Selecciona un mes con registros</span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, nextTick } from 'vue'
+import { computed, ref, watch, nextTick } from 'vue'
 import { serialToDate } from '../../utils/dates'
 import { fmt } from '../../utils/format'
 import KpiCard from '../../components/dashboard/KpiCard.vue'
@@ -139,21 +161,46 @@ const chartTextColor = computed(() => theme.value === 'light' ? '#475569' : '#94
 
 const generandoPdf = ref(false)
 
-const hoy = new Date()
-const mesActual = hoy.getMonth() + 1
-const anioActual = hoy.getFullYear()
-const mesesNombres = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-const nombreMes = mesesNombres[mesActual - 1]
+const availableMonths = computed(() => {
+  const map = new Map<string, { label: string; first: number }>()
+  for (const r of props.data) {
+    const fecha = Number(r['Fecha'])
+    if (!fecha) continue
+    const d = serialToDate(fecha)
+    const key = d.toLocaleDateString('es-CO', { year: 'numeric', month: '2-digit', timeZone: 'UTC' })
+    const label = d.toLocaleDateString('es-CO', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+    if (!map.has(key)) map.set(key, { label: label.charAt(0).toUpperCase() + label.slice(1), first: fecha })
+  }
+  return [...map.entries()].sort((a,b)=>a[1].first-b[1].first).map(([k,v])=>({ key:k, label:v.label, first:v.first }))
+})
 
-const hasData = computed(() => props.data.length > 0)
+const selectedMonthKey = ref('')
+watch(availableMonths, (list) => {
+  if (list.length) selectedMonthKey.value = list[list.length-1].key
+}, { immediate: true })
+
+const selectedLabel = computed(() => availableMonths.value.find(m=>m.key===selectedMonthKey.value)?.label ?? '')
+
+const monthData = computed(() => {
+  if (!selectedMonthKey.value) return props.data
+  return props.data.filter(r => {
+    const fecha = Number(r['Fecha'])
+    if (!fecha) return false
+    const d = serialToDate(fecha)
+    const key = d.toLocaleDateString('es-CO', { year: 'numeric', month: '2-digit', timeZone: 'UTC' })
+    return key === selectedMonthKey.value
+  })
+})
+
+const hasData = computed(() => monthData.value.length > 0)
 
 const kpi = computed(() => {
-  const rows = props.data
-  let totalM3Acum = 0, totalMProyectado = 0, metaMensual = 0
+  const rows = monthData.value
+  let total = 0, proyectado = 0, metaMensual = 0
   const metaByMonth = new Map<string, number>()
   for (const r of rows) {
-    totalM3Acum += Number(r['Total de M³']) || 0
-    totalMProyectado += Number(r['M³ Proyectado']) || 0
+    total += Number(r['Total de M³']) || 0
+    proyectado += Number(r['M³ Proyectado']) || 0
     const fecha = Number(r['Fecha'])
     if (!fecha) continue
     const d = serialToDate(fecha)
@@ -161,36 +208,43 @@ const kpi = computed(() => {
     if (!metaByMonth.has(key)) metaByMonth.set(key, Number(r['Meta Mensual M³']) || 0)
   }
   for (const v of metaByMonth.values()) metaMensual += v
-  const faltante = metaMensual - totalM3Acum
-  const cumpGlobal = metaMensual > 0 ? (totalM3Acum / metaMensual * 100) : 0
+  const diferenciaMeta = total - metaMensual
+  const diferenciaProy = total - proyectado
+  const cumplimientoMeta = metaMensual > 0 ? (total / metaMensual * 100) : 0
+  const cumplimientoProy = proyectado > 0 ? (total / proyectado * 100) : 0
   return {
-    totalM3Acum: Math.round(totalM3Acum),
-    totalMProyectado: Math.round(totalMProyectado),
-    metaMensual: Math.round(metaMensual),
-    faltante: Math.round(faltante),
-    cumpGlobal: cumpGlobal.toFixed(1),
-    metaMensualRaw: metaMensual,
+    total,
+    proyectado,
+    metaMensual,
+    diferenciaMeta,
+    diferenciaProy,
+    cumplimientoMeta: cumplimientoMeta.toFixed(1)+'%',
+    cumplimientoProy: cumplimientoProy.toFixed(1)+'%',
   }
 })
 
+const lineTotals = computed(() => {
+  const t: Record<string, number> = {}
+  for (const l of props.config.lines) t[l.key] = monthData.value.reduce((s, r) => s + (Number(r[l.key]) || 0), 0)
+  return t
+})
+
 const textoAnalisis = computed(() => {
-  const rows = props.data
-  if (!rows.length) return 'Sin datos para el periodo.'
-  const totalHoy = rows[rows.length - 1]
+  if (!monthData.value.length) return 'Sin datos para el periodo.'
+  const totalHoy = monthData.value[monthData.value.length-1]
   const obs = String(totalHoy['Observación'] ?? '')
-  let txt = `Consolidado Operativo ${props.config.plantName}: Volumen neto acumulado ${fmt(kpi.value.totalM3Acum)} M³ frente a meta mensual ${fmt(kpi.value.metaMensual)} M³. Cumplimiento ${kpi.value.cumpGlobal}%.`
-  if (obs) txt += ` Observación del día: ${obs}`
+  let txt = `Consolidado Operativo ${props.config.plantName} — ${selectedLabel.value}: Volumen neto ${fmt(kpi.value.total)} M³ frente a meta mensual ${fmt(kpi.value.metaMensual)} M³. Cumplimiento meta ${kpi.value.cumplimientoMeta} · Proyectado ${kpi.value.cumplimientoProy}.`
+  if (obs) txt += ` Observación: ${obs}`
   return txt
 })
 
 const tablaRows = computed(() => {
-  return props.data.map(r => {
+  return monthData.value.map(r => {
     const serial = Number(r['Fecha'])
     const d = serial ? serialToDate(serial) : null
     const fechaStr = d ? d.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }) : ''
     const total = Number(r['Total de M³']) || 0
     const proy = Number(r['M³ Proyectado']) || 0
-    const esHoy = serial === Math.floor(Date.now()/86400000) + 25569 - 1 // aprox hoy
     return {
       Fecha: fechaStr,
       ...Object.fromEntries(props.config.lines.map(l => [l.key, Number(r[l.key]) || 0])),
@@ -198,16 +252,15 @@ const tablaRows = computed(() => {
       'M³ Proyectado': proy,
       'Diferencia': total - proy,
       '% Cumplimiento': r['% Cumplimiento'] ?? 0,
-      esHoy,
     }
   })
 })
 
 const totales = computed(() => {
   const t: Record<string, any> = {}
-  for (const l of props.config.lines) t[l.key] = props.data.reduce((s, r) => s + (Number(r[l.key]) || 0), 0)
-  const totalM3 = props.data.reduce((s, r) => s + (Number(r['Total de M³']) || 0), 0)
-  const totalProy = props.data.reduce((s, r) => s + (Number(r['M³ Proyectado']) || 0), 0)
+  for (const l of props.config.lines) t[l.key] = monthData.value.reduce((s, r) => s + (Number(r[l.key]) || 0), 0)
+  const totalM3 = monthData.value.reduce((s, r) => s + (Number(r['Total de M³']) || 0), 0)
+  const totalProy = monthData.value.reduce((s, r) => s + (Number(r['M³ Proyectado']) || 0), 0)
   t['Total de M³'] = totalM3
   t['M³ Proyectado'] = totalProy
   t['Diferencia'] = totalM3 - totalProy
@@ -216,13 +269,13 @@ const totales = computed(() => {
 })
 
 const chartOpt = computed(() => {
-  const labels = props.data.map(r => {
+  const labels = monthData.value.map(r => {
     const serial = Number(r['Fecha'])
     if (!serial) return ''
     const d = serialToDate(serial)
     return `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}`
   })
-  const total = props.data.map(r => Number(r['Total de M³']) || 0)
+  const total = monthData.value.map(r => Number(r['Total de M³']) || 0)
   return {
     color: ['#2563eb'],
     textStyle: { fontFamily: 'Lato, sans-serif' },
@@ -255,7 +308,7 @@ async function generarPdf() {
       const imgH = (canvas.height * imgW) / canvas.width
       const pdf = new (jsPDF as any)({ unit: 'mm', format: [imgW, imgH], orientation: 'portrait' })
       pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, imgW, imgH, undefined, 'FAST')
-      pdf.save(`Produccion_${props.config.plantName}_${nombreMes}_${anioActual}.pdf`)
+      pdf.save(`Produccion_${props.config.plantName}_${selectedLabel.value.replace(/ /g,'_')}.pdf`)
     } finally {
       if (temaPrevio) {
         root.setAttribute('data-theme', temaPrevio)
@@ -267,10 +320,11 @@ async function generarPdf() {
 </script>
 
 <style scoped>
-.informe-control-bar { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:var(--card-bg); border:1px solid var(--card-border); border-radius:12px; margin-bottom:16px; }
+.informe-control-bar { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:var(--card-bg); border:1px solid var(--card-border); border-radius:12px; margin-bottom:16px; flex-wrap:wrap; gap:8px; }
 .icb-info { display:flex; flex-direction:column; }
 .icb-tag { font-size:10px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; }
 .icb-title { font-size:14px; font-weight:700; color:var(--text-primary); }
+.month-select { padding:6px 10px; border:1px solid var(--card-border); border-radius:8px; background:var(--bg); color:var(--text-primary); font-size:13px; }
 .report-paper { background:#fff; border:1px solid #cbd5e1; border-radius:12px; overflow:hidden; }
 .report-page { padding:24px 32px; }
 .report-header { display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:16px; margin-bottom:16px; }
@@ -298,6 +352,9 @@ async function generarPdf() {
 .table-total-row { background:#f1f5f9; font-weight:700; }
 .report-footer { display:flex; justify-content:space-between; font-size:10px; color:#94a3b8; border-top:1px solid #f1f5f9; padding-top:12px; margin-top:16px; }
 .informe-empty { text-align:center; padding:60px; color:var(--text-secondary); }
-.kpi-row.compact-kpi { grid-template-columns: repeat(5, 1fr); }
-@media (max-width: 768px) { .kpi-row.compact-kpi { grid-template-columns: repeat(2, 1fr); } }
+.kpi-section { margin-bottom:16px; }
+.kpi-section-title { font-size:12px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; margin:0 0 8px 2px; }
+.kpi-row { display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; }
+.kpi-row-3 { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 768px) { .kpi-row, .kpi-row-3 { grid-template-columns: repeat(2, 1fr); } }
 </style>
