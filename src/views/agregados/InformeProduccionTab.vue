@@ -9,7 +9,7 @@
         <select v-model="selectedMonthKey" class="month-select">
           <option v-for="m in availableMonths" :key="m.key" :value="m.key">{{ m.label }}</option>
         </select>
-        <button class="tb-btn primary" @click="generarPdf" :disabled="!hasData || generandoPdf">
+        <button class="action-btn" @click="generarPdf" :disabled="!hasData || generandoPdf">
           <svg v-if="!generandoPdf" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           <span v-if="generandoPdf">Generando PDF...</span>
           <span v-else>Descargar PDF</span>
@@ -53,6 +53,7 @@
           <div class="kpi-row">
             <KpiCard label="Total M³" accent="#3B82F6" icon="chart-bar">{{ fmt(kpi.total) }}</KpiCard>
             <KpiCard v-for="l in config.lines" :key="l.key" :label="l.label" :accent="config.palette[config.lines.indexOf(l)]" icon="layers">{{ fmt(lineTotals[l.key] || 0) }}</KpiCard>
+            <KpiCard label="Promedio Diario" accent="#10B981" icon="activity">{{ fmt(kpi.promedio) }} M³</KpiCard>
           </div>
         </div>
 
@@ -212,6 +213,7 @@ const kpi = computed(() => {
   const diferenciaProy = total - proyectado
   const cumplimientoMeta = metaMensual > 0 ? (total / metaMensual * 100) : 0
   const cumplimientoProy = proyectado > 0 ? (total / proyectado * 100) : 0
+  const promedio = rows.length > 0 ? total / rows.length : 0
   return {
     total,
     proyectado,
@@ -220,6 +222,7 @@ const kpi = computed(() => {
     diferenciaProy,
     cumplimientoMeta: cumplimientoMeta.toFixed(1)+'%',
     cumplimientoProy: cumplimientoProy.toFixed(1)+'%',
+    promedio: Math.round(promedio),
   }
 })
 
@@ -276,14 +279,22 @@ const chartOpt = computed(() => {
     return `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}`
   })
   const total = monthData.value.map(r => Number(r['Total de M³']) || 0)
+  const promedio = kpi.value.promedio
   return {
-    color: ['#2563eb'],
+    color: ['#2563eb', '#10B981'],
     textStyle: { fontFamily: 'Lato, sans-serif' },
-    tooltip: { trigger: 'axis' as const },
+    tooltip: { trigger: 'axis' as const, formatter: (params:any) => {
+      const p = Array.isArray(params) ? params[0] : params
+      const idx = p?.dataIndex ?? 0
+      const val = Number(total[idx] || 0)
+      return `<b>${labels[idx] || ''}</b><br/>Producción Total: <b>${fmt(val)} M³</b><br/>Promedio: <b>${fmt(promedio)} M³</b>`
+    }},
     grid: { left: 40, right: 20, bottom: 30, top: 20, containLabel: true },
     xAxis: { type: 'category' as const, data: labels, axisLabel: { color: chartTextColor.value, fontSize: 9 }, axisLine: { show: false } },
     yAxis: { type: 'value' as const, axisLabel: { show: false }, splitLine: { show: true, lineStyle: { color: '#f1f5f9' } } },
-    series: [{ name: 'Producción Total (m³)', type: 'line' as const, smooth: true, data: total, areaStyle: { opacity: 0.08, color: '#2563eb' }, lineStyle: { width: 3, color: '#2563eb' }, symbolSize: 4, itemStyle: { color: '#1d4ed8', borderColor: '#fff', borderWidth: 2 } }],
+    series: [
+      { name: 'Producción Total (m³)', type: 'line' as const, smooth: true, data: total, areaStyle: { opacity: 0.08, color: '#2563eb' }, lineStyle: { width: 3, color: '#2563eb' }, symbolSize: 4, itemStyle: { color: '#1d4ed8', borderColor: '#fff', borderWidth: 2 }, markLine: { symbol: 'none', label: { show: true, position: 'end' as const, formatter: `Promedio ${fmt(promedio)} M³`, color: '#10B981', fontSize: 10, fontWeight: 600 as const, backgroundColor: 'rgba(255,255,255,.9)', padding: [2,6] as [number,number], borderRadius: 4 }, lineStyle: { color: '#10B981', type: 'dashed' as const, width: 1.5 }, data: [{ yAxis: promedio }] } },
+    ],
   }
 })
 
