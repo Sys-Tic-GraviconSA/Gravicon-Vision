@@ -169,7 +169,7 @@
       </div>
 
     <div class="charts-grid cols-1" style="margin-bottom:22px">
-      <ChartCard title="Órdenes Diarias" description="Abiertas y cerradas con sus costos" :option="ordenesDiariasOpt" :height="300" />
+      <ChartCard title="Órdenes Diarias" description="Abiertas y cerradas con sus costos" :option="ordenesDiariasOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fecha', p)" />
     </div>
 
     <div class="section-divider"></div>
@@ -3300,27 +3300,32 @@ const partition = computed(() => {
 })
 
 function buildDiarias(rows: Record<string, unknown>[]) {
-  const map = new Map<string, { abiertas: number; cerradas: number; costoAbiertas: number; costoCerradas: number }>()
+  const map = new Map<string, { abiertas: number; cerradas: number; costoAbiertas: number; costoCerradas: number; intAbiertas: number; extAbiertas: number; intCerradas: number; extCerradas: number; costoIntAbiertas: number; costoExtAbiertas: number; costoIntCerradas: number; costoExtCerradas: number }>()
   for (const r of rows) {
     const v = Number(r['FECHA'])
     if (!v) continue
     const d = new Date((v - 25569) * 86400 * 1000)
     const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
-    const e = map.get(key) ?? { abiertas: 0, cerradas: 0, costoAbiertas: 0, costoCerradas: 0 }
+    const e = map.get(key) ?? { abiertas: 0, cerradas: 0, costoAbiertas: 0, costoCerradas: 0, intAbiertas: 0, extAbiertas: 0, intCerradas: 0, extCerradas: 0, costoIntAbiertas: 0, costoExtAbiertas: 0, costoIntCerradas: 0, costoExtCerradas: 0 }
     const cls = estadoClass(String(r['Estado'] ?? ''))
     const cost = (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0)
-    if (cls === 'ok') { e.cerradas++; e.costoCerradas += cost }
-    else if (cls === 'warn') { e.abiertas++; e.costoAbiertas += cost }
+    const esInt = isInterno(r as Record<string, unknown>)
+    if (cls === 'ok') { e.cerradas++; e.costoCerradas += cost; if (esInt) { e.intCerradas++; e.costoIntCerradas += cost } else { e.extCerradas++; e.costoExtCerradas += cost } }
+    else if (cls === 'warn') { e.abiertas++; e.costoAbiertas += cost; if (esInt) { e.intAbiertas++; e.costoIntAbiertas += cost } else { e.extAbiertas++; e.costoExtAbiertas += cost } }
     map.set(key, e)
   }
   const sorted = [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]))
   const labels: string[] = []; const totals: number[] = []; const abiertas: number[] = []; const cerradas: number[] = []; const costAb: number[] = []; const costCer: number[] = []
+  const intAbiertas: number[] = []; const extAbiertas: number[] = []; const intCerradas: number[] = []; const extCerradas: number[] = []
+  const costIntAbiertas: number[] = []; const costExtAbiertas: number[] = []; const costIntCerradas: number[] = []; const costExtCerradas: number[] = []
   for (const [k, v] of sorted) {
     const d = new Date(k + 'T00:00:00Z')
     labels.push(d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', timeZone: 'UTC' }))
     totals.push(v.abiertas + v.cerradas); abiertas.push(v.abiertas); cerradas.push(v.cerradas); costAb.push(v.costoAbiertas); costCer.push(v.costoCerradas)
+    intAbiertas.push(v.intAbiertas); extAbiertas.push(v.extAbiertas); intCerradas.push(v.intCerradas); extCerradas.push(v.extCerradas)
+    costIntAbiertas.push(v.costoIntAbiertas); costExtAbiertas.push(v.costoExtAbiertas); costIntCerradas.push(v.costoIntCerradas); costExtCerradas.push(v.costoExtCerradas)
   }
-  return { labels, totals, abiertas, cerradas, costAb, costCer }
+  return { labels, totals, abiertas, cerradas, costAb, costCer, intAbiertas, extAbiertas, intCerradas, extCerradas, costIntAbiertas, costExtAbiertas, costIntCerradas, costExtCerradas }
 }
 function buildDiariasOpt(data: ReturnType<typeof buildDiarias>) {
   return markRaw({
@@ -3331,9 +3336,9 @@ function buildDiariasOpt(data: ReturnType<typeof buildDiarias>) {
         const p = Array.isArray(params) ? params[0] : params
         const dia = p.name ?? ''; const idx = p.dataIndex ?? 0; const total = Number(p.value) || 0
         return `<b>${dia}</b><br/>` +
-          `<span style="color:#EF4444">\u25CF</span> Abiertas: <b>${data.abiertas[idx] ?? 0}</b> — $${Math.round(data.costAb[idx] ?? 0).toLocaleString('es-CO')}<br/>` +
-          `<span style="color:#10B981">\u25CF</span> Cerradas: <b>${data.cerradas[idx] ?? 0}</b> — $${Math.round(data.costCer[idx] ?? 0).toLocaleString('es-CO')}<br/>` +
-          `<span style="color:#3B82F6">\u25CF</span> Total: <b>${total}</b> — $${Math.round((data.costAb[idx] ?? 0) + (data.costCer[idx] ?? 0)).toLocaleString('es-CO')}`
+          `<span style="color:#EF4444">\u25CF</span> Abiertas: <b>${data.abiertas[idx] ?? 0}</b> — $${Math.round(data.costAb[idx] ?? 0).toLocaleString('es-CO')} <span style="color:#64748b;font-size:10px">(Int ${data.intAbiertas[idx] ?? 0} $${Math.round(data.costIntAbiertas[idx] ?? 0).toLocaleString('es-CO')} / Ext ${data.extAbiertas[idx] ?? 0} $${Math.round(data.costExtAbiertas[idx] ?? 0).toLocaleString('es-CO')})</span><br/>` +
+          `<span style="color:#10B981">\u25CF</span> Cerradas: <b>${data.cerradas[idx] ?? 0}</b> — $${Math.round(data.costCer[idx] ?? 0).toLocaleString('es-CO')} <span style="color:#64748b;font-size:10px">(Int ${data.intCerradas[idx] ?? 0} $${Math.round(data.costIntCerradas[idx] ?? 0).toLocaleString('es-CO')} / Ext ${data.extCerradas[idx] ?? 0} $${Math.round(data.costExtCerradas[idx] ?? 0).toLocaleString('es-CO')})</span><br/>` +
+          `<span style="color:#3B82F6">\u25CF</span> Total: <b>${total}</b> — $${Math.round((data.costAb[idx] ?? 0) + (data.costCer[idx] ?? 0)).toLocaleString('es-CO')} <span style="color:#64748b;font-size:10px">(Int ${(data.intAbiertas[idx] ?? 0)+(data.intCerradas[idx] ?? 0)} $${Math.round(((data.costIntAbiertas[idx] ?? 0)+(data.costIntCerradas[idx] ?? 0))).toLocaleString('es-CO')} / Ext ${(data.extAbiertas[idx] ?? 0)+(data.extCerradas[idx] ?? 0)} $${Math.round(((data.costExtAbiertas[idx] ?? 0)+(data.costExtCerradas[idx] ?? 0))).toLocaleString('es-CO')})</span>`
       },
     },
     grid: { left: 40, right: 20, bottom: 40, top: 30, containLabel: true },
