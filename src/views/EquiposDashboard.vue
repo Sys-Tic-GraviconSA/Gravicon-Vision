@@ -155,9 +155,8 @@
         <ChartCard title="Órdenes por Localización" description="Órdenes según la localización registrada" :option="localizacionOpt" :expand-option="localizacionExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Localización', p)" />
         <ChartCard title="Prioridad" description="Órdenes por nivel de prioridad" :option="prioridadOpt" :expand-option="prioridadExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Prioridad', p)" />
       </div>
-      <div class="charts-grid cols-2" style="margin-bottom:22px">
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
         <ChartCard title="Fuente de Novedad" description="Órdenes según la fuente de novedad registrada" :option="fuenteNovedadOpt" :expand-option="fuenteNovedadExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fuente_Novedad', p)" />
-        <ChartCard title="Tipos de Trabajo" description="Órdenes de trabajo según el tipo registrado" :option="tiposTrabajoOpt" :expand-option="tiposTrabajoExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Tipo Trabajo', p)" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
         <ChartCard title="Responsables de Cierre con Más Órdenes" description="Quienes más cierran órdenes de trabajo" :option="responsablesCierreOpt" :expand-option="responsablesCierreExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Responsable Cierre', p)" />
@@ -224,9 +223,8 @@
         <ChartCard title="Órdenes por Localización" description="Órdenes según la localización registrada" :option="localizacionIntOpt" :height="300" />
         <ChartCard title="Prioridad" description="Órdenes por nivel de prioridad" :option="prioridadIntOpt" :height="300" />
       </div>
-      <div class="charts-grid cols-2" style="margin-bottom:22px">
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
         <ChartCard title="Fuente de Novedad" description="Órdenes según la fuente de novedad registrada" :option="fuenteNovedadIntOpt" :height="300" />
-        <ChartCard title="Tipos de Trabajo" description="Órdenes de trabajo según el tipo registrado" :option="tiposTrabajoIntOpt" :height="300" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
         <ChartCard title="Responsables de Cierre con Más Órdenes" description="Quienes más cierran órdenes de trabajo" :option="responsablesCierreIntOpt" :height="300" />
@@ -290,9 +288,8 @@
         <ChartCard title="Órdenes por Localización" description="Órdenes según la localización registrada" :option="localizacionExtOpt" :height="300" />
         <ChartCard title="Prioridad" description="Órdenes por nivel de prioridad" :option="prioridadExtOpt" :height="300" />
       </div>
-      <div class="charts-grid cols-2" style="margin-bottom:22px">
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
         <ChartCard title="Fuente de Novedad" description="Órdenes según la fuente de novedad registrada" :option="fuenteNovedadExtOpt" :height="300" />
-        <ChartCard title="Tipos de Trabajo" description="Órdenes de trabajo según el tipo registrado" :option="tiposTrabajoExtOpt" :height="300" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
         <ChartCard title="Responsables de Cierre con Más Órdenes" description="Quienes más cierran órdenes de trabajo" :option="responsablesCierreExtOpt" :height="300" />
@@ -4824,6 +4821,7 @@ const localizacionExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankB
 const prioridadExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(dataFilteredMain.value, 'Prioridad'), 'Órdenes')))
 const fuenteNovedadExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(dataFilteredMain.value, 'Fuente_Novedad'), 'Órdenes')))
 const tiposTrabajoExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(dataFilteredMain.value, 'Tipo Trabajo'), 'Órdenes')))
+void tiposTrabajoOpt; void tiposTrabajoIntOpt; void tiposTrabajoExtOpt; void tiposTrabajoExpandOpt
 const claseMantExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(dataFilteredMain.value, 'Clase Mantenimiento'), 'Órdenes')))
 const motivosNoEjExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(dataFilteredMain.value.filter(r => String(r['Motivo No Ejecución'] ?? '').trim()), 'Motivo No Ejecución'), 'Órdenes')))
 const personalInternoExpandOpt = computed(() => {
