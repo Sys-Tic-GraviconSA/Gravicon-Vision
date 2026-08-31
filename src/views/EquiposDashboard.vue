@@ -3672,11 +3672,12 @@ const concretoMonthlyEfficiency = computed(() => {
   }
 })
 
-function buildEficienciaMttoConcretosOption(isExpand = false) {
+function buildEficienciaMttoConcretosOption(_isExpand = false) {
   const data = concretoMonthlyEfficiency.value
   const isLight = theme.value === 'light'
 
   return markRaw({
+    textStyle: { fontFamily: 'Lato, sans-serif' },
     animation: true,
     animationDuration: 900,
     animationEasing: 'cubicOut',
@@ -3717,9 +3718,10 @@ function buildEficienciaMttoConcretosOption(isExpand = false) {
       itemWidth: 10,
       itemHeight: 10,
       textStyle: {
+        fontFamily: 'Lato, sans-serif',
         fontWeight: 600 as const,
         color: chartTextColor.value,
-        fontSize: 12,
+        fontSize: 11,
       },
       data: [
         { name: 'Acacias', itemStyle: { color: '#38a9f8' } },
@@ -3728,19 +3730,14 @@ function buildEficienciaMttoConcretosOption(isExpand = false) {
         { name: 'Costo Mtto por m³', itemStyle: { color: isLight ? '#172554' : '#60a5fa' } },
       ],
     },
-    grid: {
-      left: 16,
-      right: 16,
-      top: 50,
-      bottom: isExpand ? 40 : 25,
-      containLabel: true,
-    },
+    grid: { left: 60, right: 30, bottom: 60, top: 50, containLabel: true },
     xAxis: {
       type: 'category' as const,
       data: data.labels,
       axisLine: { lineStyle: { color: isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)' } },
       axisTick: { show: false },
       axisLabel: {
+        fontFamily: 'Lato, sans-serif',
         fontWeight: 600 as const,
         color: chartTextColor.value,
         fontSize: 11,
@@ -3793,7 +3790,6 @@ function buildEficienciaMttoConcretosOption(isExpand = false) {
           ...labelLine.value,
           position: 'top' as const,
           distance: 4,
-          fontSize: 9.5,
           formatter: (p: any) => {
             const v = Number(p.value) || 0
             return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
@@ -3832,7 +3828,6 @@ function buildEficienciaMttoConcretosOption(isExpand = false) {
           ...labelLine.value,
           position: 'top' as const,
           distance: 4,
-          fontSize: 9.5,
           formatter: (p: any) => {
             const v = Number(p.value) || 0
             return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
@@ -3871,7 +3866,6 @@ function buildEficienciaMttoConcretosOption(isExpand = false) {
           ...labelLine.value,
           position: 'top' as const,
           distance: 4,
-          fontSize: 9.5,
           formatter: (p: any) => {
             const v = Number(p.value) || 0
             return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
@@ -3914,12 +3908,9 @@ function buildEficienciaMttoConcretosOption(isExpand = false) {
           color: isLight ? '#172554' : '#60a5fa',
         },
         label: {
-          ...labelLineCurrency.value,
+          ...labelLine.value,
           position: 'top' as const,
           distance: 8,
-          fontSize: 10.5,
-          fontWeight: 700 as const,
-          color: isLight ? '#0f172a' : '#f8fafc',
           formatter: (p: any) => {
             const v = Number(p.value) || 0
             return v > 0 ? `$ ${v.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''
@@ -3945,11 +3936,12 @@ function buildEficienciaMttoConcretosOption(isExpand = false) {
 const eficienciaMttoConcretosOpt = computed(() => buildEficienciaMttoConcretosOption(false))
 const eficienciaMttoConcretosExpandOpt = computed(() => buildEficienciaMttoConcretosOption(true))
 
-function buildCostosGeneralesM3Option(isExpand = false) {
+function buildCostosGeneralesM3Option(_isExpand = false) {
   const data = concretoMonthlyEfficiency.value
   const isLight = theme.value === 'light'
 
   return markRaw({
+    textStyle: { fontFamily: 'Lato, sans-serif' },
     animation: true,
     animationDuration: 900,
     animationEasing: 'cubicOut',
@@ -3987,9 +3979,10 @@ function buildCostosGeneralesM3Option(isExpand = false) {
       itemWidth: 10,
       itemHeight: 10,
       textStyle: {
+        fontFamily: 'Lato, sans-serif',
         fontWeight: 600 as const,
         color: chartTextColor.value,
-        fontSize: 12,
+        fontSize: 11,
       },
       data: [
         { name: 'Servicios', itemStyle: { color: palette[1] } },
@@ -3997,19 +3990,14 @@ function buildCostosGeneralesM3Option(isExpand = false) {
         { name: 'Costo Mtto por m³', itemStyle: { color: isLight ? '#172554' : '#60a5fa' } },
       ],
     },
-    grid: {
-      left: 16,
-      right: 16,
-      top: 50,
-      bottom: isExpand ? 40 : 25,
-      containLabel: true,
-    },
+    grid: { left: 60, right: 30, bottom: 60, top: 50, containLabel: true },
     xAxis: {
       type: 'category' as const,
       data: data.labels,
       axisLine: { lineStyle: { color: isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)' } },
       axisTick: { show: false },
       axisLabel: {
+        fontFamily: 'Lato, sans-serif',
         fontWeight: 600 as const,
         color: chartTextColor.value,
         fontSize: 11,
@@ -4144,12 +4132,9 @@ function buildCostosGeneralesM3Option(isExpand = false) {
           color: isLight ? '#172554' : '#60a5fa',
         },
         label: {
-          ...labelLineCurrency.value,
+          ...labelLine.value,
           position: 'top' as const,
           distance: 8,
-          fontSize: 10.5,
-          fontWeight: 700 as const,
-          color: isLight ? '#0f172a' : '#f8fafc',
           formatter: (p: any) => {
             const v = Number(p.value) || 0
             return v > 0 ? `$ ${v.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''
