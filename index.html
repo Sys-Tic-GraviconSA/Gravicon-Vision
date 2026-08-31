@@ -6,13 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Dashboard de Producción - Monitoreo industrial de plantas Cuncia y Acacias" />
     <meta name="theme-color" content="#0b0f1a" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://cdn-icons-png.flaticon.com; connect-src 'self' https://*.supabase.co; base-uri 'self'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://scripts.sirv.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://cdn-icons-png.flaticon.com https://*.sirv.com https://gravicon2026.sirv.com; connect-src 'self' https://*.supabase.co https://*.sirv.com; base-uri 'self'" />
     <!-- frame-ancestors CSP solo funciona como HTTP header, no en meta tag. Se envía via helmet (Express) y vercel.json headers. -->
     <meta name="robots" content="noindex, nofollow" />
     <title>Dashboard Producción — Gravicon</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet" />
+    <script src="https://scripts.sirv.com/sirvjs/v3/sirv.js"></script>
   </head>
   <body>
     <div id="app"></div>

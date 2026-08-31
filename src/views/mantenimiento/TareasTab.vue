@@ -124,12 +124,19 @@
           <div class="report-page">
             <header class="report-header">
               <div class="report-header-brand">
-                <img src="/Logos/Logo_Gravicon_Azul.png" alt="Gravicon" class="report-logo" />
-                <div class="report-header-text">
-                  <h2>Mantenimiento {{ plantaLabel }} Gravicon</h2>
-                  <span>GRAVAS Y CONCRETOS S.A. · Tareas de Seguimiento</span>
-                </div>
+              <img
+                src="https://gravicon2026.sirv.com/Pagina%20Gravicon/images/Logos/gravicon_logo.png"
+                @error="($event.target as HTMLImageElement).src = '/Logos/Logo-Gravicon-Nuevo.png'"
+                alt="Gravicon"
+                class="report-logo"
+                crossorigin="anonymous"
+                loading="eager"
+              />
+              <div class="report-header-text">
+                <h2>Mantenimiento {{ plantaLabel }} Gravicon</h2>
+                <span>GRAVAS Y CONCRETOS S.A. · Tareas de Seguimiento</span>
               </div>
+            </div>
               <div class="report-header-meta">
                 <div class="meta-item"><span>Período:</span> <strong>{{ informeDesde }} al {{ informeHasta }}</strong></div>
                 <div class="meta-item"><span>Código:</span> <strong>GRV-INF-{{ new Date().getFullYear() }}-{{ plantaKey.toUpperCase() }}-TAR</strong></div>
@@ -140,10 +147,16 @@
             <div class="report-title-section">
               <h1>Informe de Tareas de Seguimiento</h1>
               <p class="report-intro">
-                Consolidado de tareas registradas para <strong>{{ plantaLabel }}</strong>
-                en el período del <strong>{{ informeDesde }}</strong> al <strong>{{ informeHasta }}</strong>:
-                estado, antigüedad, responsables y seguimiento de pendientes críticas.
+                Diagnóstico integral y balance operativo de las tareas de mantenimiento registradas para <strong>{{ plantaLabel }}</strong> durante el período comprendido del <strong>{{ informeDesde }}</strong> al <strong>{{ informeHasta }}</strong>: evaluación de estados, índice de antigüedad, desempeño por responsable y priorización de pendientes críticas para asegurar la confiabilidad mecánica.
               </p>
+            </div>
+
+            <!-- Análisis Operativo Directivo (Encima de los KPIs) -->
+            <div class="report-section-block">
+              <div class="zoho-analysis-box">
+                <div class="zoho-analysis-label">Análisis Operativo Directivo — Tareas de Seguimiento</div>
+                <div class="zoho-analysis-text" v-html="informeAnalisisTexto"></div>
+              </div>
             </div>
 
             <div class="kpi-row compact-kpi">
@@ -153,13 +166,6 @@
               <KpiCard label="Completadas" accent="#16A34A" icon="check-circle" :value="String(kpis.completadas)" />
               <KpiCard label="Días Prom. Abierta" accent="#8B5CF6" icon="calendar" :value="String(kpis.diasPromedio)" />
               <KpiCard label="Críticas (>7 d)" accent="#EF4444" icon="activity" :value="String(tareasCriticas.length)" />
-            </div>
-
-            <div class="report-section-block">
-              <div class="zoho-analysis-box">
-                <div class="zoho-analysis-label">Análisis Operativo Directivo — Tareas de Seguimiento</div>
-                <div class="zoho-analysis-text" v-html="informeAnalisisTexto"></div>
-              </div>
             </div>
 
             <div v-if="tareasCriticas.length > 0" class="report-nota alerta">
@@ -365,6 +371,23 @@ type TareaRow = {
   dias: number
 }
 
+// Mapa de ID/Ref -> Placa_Texto resuelta a partir de los datos de placas/vehículos
+const placaLookupMap = computed(() => {
+  const map = new Map<string, string>()
+  const placas = dispStore.data?.placas || []
+  for (const r of placas) {
+    const idRef = String(r['Placa'] ?? '').trim()
+    const idReg = String(r['Id_Registro'] ?? r['ID_Registro'] ?? '').trim()
+    const txt = String(r['Placa_Texto'] ?? r['Placa del Vehículo'] ?? r['PLACA'] ?? '').trim()
+    if (txt) {
+      if (idRef) map.set(idRef, txt)
+      if (idReg) map.set(idReg, txt)
+      map.set(txt, txt)
+    }
+  }
+  return map
+})
+
 /** Tareas filtradas por Fecha_Registro según el rango del FilterBar (mismo criterio que Disponibilidad). */
 const allTareas = computed(() => {
   const tareas = dispStore.data?.tareas || []
@@ -384,7 +407,10 @@ const allTareas = computed(() => {
 
     const estado = String(t['Estado_Tarea'] ?? '').trim()
     const id = String(t['ID_Tarea'] ?? '').slice(0, 8)
-    const placa = String(t['Placa'] ?? t['PLACA'] ?? t['Placa_Texto'] ?? '—').trim()
+    const rawPlaca = String(t['Placa_Texto'] ?? t['Placa del Vehículo'] ?? t['PLACA'] ?? '').trim()
+    const idPlaca = String(t['Placa'] ?? '').trim()
+    const placa = rawPlaca || placaLookupMap.value.get(idPlaca) || placaLookupMap.value.get(rawPlaca) || (idPlaca ? idPlaca : '—')
+
     const tipo = String(t['Tipo de Vehiculos'] ?? t['Tipo'] ?? '—').trim()
     const responsable = String(t['Nombre_Responsable'] ?? t['Nombre Responsable'] ?? t['Responsable_Texto'] ?? t['Responsable'] ?? '—').trim()
     const actividad = String(t['Actividad'] ?? '—')
@@ -961,7 +987,7 @@ watch(() => props.planta, () => {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
   box-sizing: border-box;
   page-break-after: always;
   break-after: page;
@@ -998,8 +1024,11 @@ watch(() => props.planta, () => {
   gap: 12px;
 }
 .report-logo {
-  height: 38px;
+  height: 48px;
+  max-width: 200px;
+  width: auto;
   object-fit: contain;
+  display: block;
 }
 .report-header-text h2 {
   font-size: 14px;
@@ -1026,22 +1055,26 @@ watch(() => props.planta, () => {
 }
 .report-title-section {
   text-align: center;
-  margin: 2px 0 6px;
+  margin: 4px 0 12px;
+  width: 100%;
 }
 .report-title-section h1 {
-  font-size: 16px;
+  font-size: 21px;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
   color: var(--text-primary);
-  margin: 0 0 4px;
+  margin: 0 0 6px;
 }
 .report-intro {
   font-size: 12px;
-  color: var(--text-secondary);
-  max-width: 760px;
-  margin: 0 auto;
-  line-height: 1.45;
+  color: var(--text-secondary, #475569);
+  width: 100%;
+  max-width: 100%;
+  margin: 6px 0 0 0;
+  line-height: 1.65;
+  text-align: justify;
+  box-sizing: border-box;
 }
 .report-nota {
   border-left: 3px solid var(--navy, #172954);
@@ -1092,9 +1125,11 @@ watch(() => props.planta, () => {
 
 .zoho-analysis-box {
   background-color: var(--card-bg-hover, #f8fafc);
-  padding: 12px 16px;
+  padding: 14px 18px;
   border-radius: 6px;
   border-left: 3px solid var(--navy, #172954);
+  width: 100%;
+  box-sizing: border-box;
 }
 .zoho-analysis-label {
   font-size: 10px;
@@ -1108,6 +1143,7 @@ watch(() => props.planta, () => {
   font-size: 12px;
   color: var(--text-primary, #475569);
   line-height: 1.6;
+  text-align: justify;
 }
 
 .data-card {

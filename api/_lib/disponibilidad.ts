@@ -37,9 +37,21 @@ export async function loadDisponibilidadData(planta: string, forceRefresh = fals
         if (placa) maestroMap.set(placa, m)
       }
 
-      // 2b. Resolver IDs de Responsable → nombre via GRAVICON_INTERNO_OT (solo Cuncía, ya cargado en paralelo)
       tareas = tareasSheet.rows
       resumen = resumenSheet.rows
+
+      // 2b. Enriquecer tareas: resolver Placa ID → Placa_Texto usando maestroMap
+      for (const t of tareas) {
+        const idRef = String(t['Placa'] ?? t['PLACA'] ?? '').trim()
+        const placaTexto = String(t['Placa_Texto'] ?? '').trim()
+        const maestro = maestroMap.get(idRef) || maestroMap.get(placaTexto) || maestroMap.get(idRef.toUpperCase()) || maestroMap.get(placaTexto.toUpperCase()) || {}
+        const resolvedPlaca = placaTexto || String(maestro['PLACA'] ?? maestro['Placa_Texto'] ?? '')
+        if (resolvedPlaca) {
+          t['Placa_Texto'] = resolvedPlaca
+        }
+      }
+
+      // 2c. Resolver IDs de Responsable → nombre via GRAVICON_INTERNO_OT (solo Cuncía, ya cargado en paralelo)
       if (p === 'cuncia' && personalSheet.rows.length > 0) {
         const personalMap = new Map<string, string>()
         for (const r of personalSheet.rows) {

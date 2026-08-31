@@ -140,12 +140,17 @@
       <div class="report-paper">
 
         <!-- ============================================== -->
-        <!-- PÁGINA 1: PORTADA EJECUTIVA Y TENDENCIAS      -->
-        <!-- ============================================== -->
         <div class="report-page">
           <header class="report-header">
             <div class="report-header-brand">
-              <img src="/Logos/Logo_Gravicon_Azul.png" alt="Gravicon" class="report-logo" />
+              <img
+                src="https://gravicon2026.sirv.com/Pagina%20Gravicon/images/Logos/gravicon_logo.png"
+                @error="($event.target as HTMLImageElement).src = '/Logos/Logo-Gravicon-Nuevo.png'"
+                alt="Gravicon"
+                class="report-logo"
+                crossorigin="anonymous"
+                loading="eager"
+              />
               <div class="report-header-text">
                 <h2>Mantenimiento {{ plantaLabel }} Gravicon</h2>
                 <span>GRAVAS Y CONCRETOS S.A. · {{ isConcretosPlanta ? 'Concretos' : 'Agregados' }}</span>
@@ -161,17 +166,24 @@
           <div class="report-title-section">
             <h1>Reporte de Disponibilidad de Equipos</h1>
             <p class="report-intro">
-              Operatividad de la flota de <strong>{{ plantaLabel }}</strong> al corte del <strong>{{ informeFechaLabel }}</strong>:
-              disponibilidad por tipo de equipo, seguimiento de maquinaria operativa y equipos en intervención de taller.
+              Diagnóstico técnico y consolidado integral sobre el estado de operatividad de la flota vehicular y maquinaria pesada asignada a <strong>{{ plantaLabel }}</strong> con corte al <strong>{{ informeFechaLabel }}</strong>: evaluación detallada de índices de disponibilidad por familia de equipo, monitoreo continuo de unidades activas en frentes de operación, control y seguimiento riguroso a maquinaria en intervención de taller, y proyección estratégica de altas para asegurar la continuidad del servicio.
             </p>
           </div>
 
-          <!-- 8 Tarjetas KPI Oficiales -->
+          <!-- Análisis Operativo Directivo estilo Zoho (Encima de los KPIs) -->
+          <div class="report-section-block">
+            <div class="zoho-analysis-box">
+              <div class="zoho-analysis-label">Análisis Operativo Directivo</div>
+              <div class="zoho-analysis-text" v-html="informeAnalisisTexto"></div>
+            </div>
+          </div>
+
+          <!-- Tarjetas KPI Oficiales -->
           <div class="kpi-row compact-kpi">
             <KpiCard label="Flota Propia" accent="#1D4ED8" icon="package" :value="String(informeKpis.flotaPropia)" />
             <KpiCard label="Alquilados" accent="#2563EB" icon="truck" :value="String(informeKpis.alquilados)" />
             <KpiCard label="Operativos" accent="#16A34A" icon="check-circle" :value="informeKpis.operativosFormatted" />
-            <KpiCard label="No Operativos" accent="#DC2626" icon="activity" :value="String(informeKpis.noOperativos)" />
+            <KpiCard label="En Taller (No Op.)" accent="#DC2626" icon="activity" :value="String(informeKpis.noOperativos)" />
             <KpiCard
               label="Disponibilidad Propia"
               :accent="informeKpis.dispPropiaPct >= 85 ? '#16A34A' : informeKpis.dispPropiaPct >= 60 ? '#F59E0B' : '#DC2626'"
@@ -180,21 +192,14 @@
               :value="informeKpis.dispPropiaPct + '%'"
             />
             <KpiCard
-              label="Disponible en Cancha"
-              :accent="informeKpis.dispCanchaPct >= 85 ? '#16A34A' : informeKpis.dispCanchaPct >= 60 ? '#F59E0B' : '#DC2626'"
-              icon="trending-up"
-              :value="informeKpis.dispCanchaPct + '%'"
+              label="Salen Hoy de Taller"
+              :accent="informeKpis.salenHoy > 0 ? '#10B981' : '#64748B'"
+              icon="check-circle"
+              :meta="informeKpis.salenHoy > 0 ? 'Listos para entrega' : 'Sin salidas prog.'"
+              :value="String(informeKpis.salenHoy)"
             />
             <KpiCard label="Cobertura" accent="#16A34A" icon="zap" :value="informeKpis.coberturaPct + '%'" />
             <KpiCard label="Días de Rezago" accent="#1D4ED8" icon="clock" :value="String(informeKpis.diasRezago)" />
-          </div>
-
-          <!-- Análisis Operativo Directivo estilo Zoho -->
-          <div class="report-section-block">
-            <div class="zoho-analysis-box">
-              <div class="zoho-analysis-label">Análisis Operativo Directivo</div>
-              <div class="zoho-analysis-text" v-html="informeAnalisisTexto"></div>
-            </div>
           </div>
 
           <!-- Nota de Contexto / Alertas -->
@@ -206,14 +211,14 @@
             <strong>Nota de Cobertura:</strong> La disponibilidad se calcula sobre los {{ informeKpis.inspeccionados }} equipos efectivamente inspeccionados ({{ informeKpis.coberturaPct }}% del total).
           </div>
 
-          <!-- Tendencia de Disponibilidad por Planta — AM vs PM -->
-          <div class="report-section-block">
-            <h3 class="report-block-title"><span class="title-bar"></span>Tendencia de Disponibilidad por Planta — {{ informeFechaLabel }}</h3>
-            <div v-if="tendenciaSedesAmPm.length === 0" class="data-card">
-              <div class="empty-table">Sin datos AM/PM para este corte</div>
+            <!-- Tendencia de Disponibilidad por Planta — AM vs PM vs Proyección D+1 -->
+            <div class="report-section-block">
+              <h3 class="report-block-title"><span class="title-bar"></span>Tendencia de Disponibilidad por Planta y Proyección — {{ informeFechaLabel }}</h3>
+              <div v-if="tendenciaSedesAmPm.length === 0" class="data-card">
+                <div class="empty-table">Sin datos AM/PM para este corte</div>
+              </div>
+              <div v-else ref="chartTendenciaRef" style="width:100%;height:520px;"></div>
             </div>
-            <div v-else ref="chartTendenciaRef" style="width:100%;height:360px;"></div>
-          </div>
 
           <!-- Bloque Fila: Tipo de Equipo + Dona Global -->
           <div class="report-section-block">
@@ -302,7 +307,68 @@
           <!-- Disponibilidad por Planta / Frente -->
           <div class="report-section-block">
             <h3 class="report-block-title"><span class="title-bar"></span>Disponibilidad por sede</h3>
-            <div ref="chartSedeRef" style="width:100%;height:280px;"></div>
+            <div ref="chartSedeRef" style="width:100%;height:400px;"></div>
+          </div>
+
+          <!-- Matriz de Operatividad por Planta y Categoría (Flota Propia) -->
+          <div class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Matriz de Operatividad por Planta y Categoría (Flota Propia)</h3>
+            <div class="data-card">
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="min-width: 110px;">Planta / Sede</th>
+                      <th>Tipo de Vehículo</th>
+                      <th class="r">Operativos (1.0)</th>
+                      <th class="r">Parciales (0,5)</th>
+                      <th class="r">No Operativos (0.0)</th>
+                      <th class="r">Total Flota</th>
+                      <th class="r">Disponibilidad %</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <template v-for="grupo in matrizPlantaData.grupos" :key="grupo.planta">
+                      <tr v-for="(item, idx) in grupo.items" :key="grupo.planta + '__' + item.tipo">
+                        <td v-if="idx === 0" :rowspan="grupo.items.length" class="bold accent-text" style="vertical-align: middle; border-right: 1px solid var(--border-color, #e2e8f0); background: rgba(43,34,86,0.03);">
+                          {{ grupo.planta }}
+                        </td>
+                        <td class="bold">{{ item.tipo }}</td>
+                        <td class="r green">{{ item.opProp }}</td>
+                        <td class="r yellow">{{ item.parcial || '—' }}</td>
+                        <td class="r" :class="item.noOp > 0 ? 'red' : ''">{{ item.noOp }}</td>
+                        <td class="r bold">{{ item.total }}</td>
+                        <td class="r bold" :class="item.disp >= 85 ? 'green' : item.disp >= 60 ? 'yellow' : 'red'">{{ item.disp }}%</td>
+                      </tr>
+                      <!-- Fila Subtotal por Planta -->
+                      <tr style="background: rgba(43,34,86,0.06); font-weight: bold; border-bottom: 2px solid var(--border-color, #cbd5e1);">
+                        <td colspan="2" style="padding-left: 12px; color: var(--navy, #2b2256);">
+                          SUBTOTAL {{ grupo.planta.toUpperCase() }}
+                        </td>
+                        <td class="r green">{{ grupo.totales.opProp }}</td>
+                        <td class="r yellow">{{ grupo.totales.parcial || '—' }}</td>
+                        <td class="r" :class="grupo.totales.noOp > 0 ? 'red' : ''">{{ grupo.totales.noOp }}</td>
+                        <td class="r">{{ grupo.totales.total }}</td>
+                        <td class="r" :class="grupo.totales.disp >= 85 ? 'green' : grupo.totales.disp >= 60 ? 'yellow' : 'red'">
+                          {{ grupo.totales.disp }}%
+                        </td>
+                      </tr>
+                    </template>
+                    <!-- Fila Total General Flota Propia -->
+                    <tr class="table-total-row">
+                      <td class="bold" colspan="2">TOTAL GENERAL FLOTA PROPIA</td>
+                      <td class="r bold green">{{ matrizPlantaData.totales.opProp }}</td>
+                      <td class="r bold yellow">{{ matrizPlantaData.totales.parcial }}</td>
+                      <td class="r bold red">{{ matrizPlantaData.totales.noOp }}</td>
+                      <td class="r bold">{{ matrizPlantaData.totales.total }}</td>
+                      <td class="r bold" :class="matrizPlantaData.totales.disp >= 85 ? 'green' : matrizPlantaData.totales.disp >= 60 ? 'yellow' : 'red'">
+                        {{ matrizPlantaData.totales.disp }}%
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
 
           <!-- Movimientos de Taller -->
@@ -355,6 +421,10 @@
             </div>
           </div>
 
+          <footer class="report-footer">
+            <span>Informe de Disponibilidad de Flota — Gravicon</span>
+            <span>Documento Oficial | Página 2 de 3</span>
+          </footer>
         </div>
 
         <!-- ============================================== -->
@@ -376,22 +446,44 @@
                   <thead>
                     <tr>
                       <th class="idx-col">#</th>
-                      <th>Placa</th>
-                      <th>Tipo</th>
+                      <th>Tipo de Vehículo</th>
                       <th>Supervisor</th>
+                      <th>Placa</th>
+                      <th>OT</th>
                       <th>Actividad / Diagnóstico</th>
                       <th class="r">Estado</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(eq, i) in informeEquiposEnTaller" :key="eq.placa">
-                      <td class="idx">{{ i + 1 }}</td>
-                      <td class="bold accent-text">{{ eq.placa }}</td>
-                      <td>{{ eq.tipo }}</td>
-                      <td>{{ eq.supervisor }}</td>
-                      <td style="font-size: 12px; color: var(--text-secondary);">{{ eq.motivo }}</td>
-                      <td class="r red">{{ eq.revAm }}</td>
-                    </tr>
+                    <template v-for="tGroup in equiposEnTallerAgrupados" :key="tGroup.tipo">
+                      <template v-for="(sGroup, sIdx) in tGroup.supervisores" :key="tGroup.tipo + '__' + sGroup.supervisor">
+                        <tr v-for="(eq, eqIdx) in sGroup.items" :key="eq.placa">
+                          <td class="idx">{{ eq.globalIdx }}</td>
+                          <td
+                            v-if="sIdx === 0 && eqIdx === 0"
+                            :rowspan="tGroup.totalItems"
+                            class="bold accent-text"
+                            style="vertical-align: middle; border-right: 1px solid var(--card-border, #e2e8f0); background: rgba(43,34,86,0.02);"
+                          >
+                            {{ tGroup.tipo }}
+                          </td>
+                          <td
+                            v-if="eqIdx === 0"
+                            :rowspan="sGroup.items.length"
+                            style="vertical-align: middle; border-right: 1px solid var(--card-border, #e2e8f0);"
+                          >
+                            {{ sGroup.supervisor }}
+                          </td>
+                          <td class="bold accent-text">{{ eq.placa }}</td>
+                          <td>
+                            <span v-if="eq.ot && eq.ot !== '—'" class="pill p-azul bold">{{ eq.ot }}</span>
+                            <span v-else style="color: var(--text-secondary);">—</span>
+                          </td>
+                          <td style="font-size: 12px; color: var(--text-secondary);">{{ eq.motivo }}</td>
+                          <td class="r red">{{ eq.revAm }}</td>
+                        </tr>
+                      </template>
+                    </template>
                   </tbody>
                 </table>
               </div>
@@ -409,25 +501,42 @@
                 <table>
                   <thead>
                     <tr>
-                      <th>#</th>
-                      <th>Placa</th>
-                      <th>Tipo</th>
-                      <th>Localización</th>
+                      <th class="idx-col">#</th>
+                      <th>Tipo de Vehículo</th>
                       <th>Supervisor</th>
+                      <th>Placa</th>
+                      <th>Localización / Frente</th>
                       <th class="r">Estado AM</th>
                       <th class="r">Ronda PM</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(eq, i) in informeEquiposOperativos" :key="eq.placa">
-                      <td class="idx">{{ i + 1 }}</td>
-                      <td class="bold accent-text">{{ eq.placa }}</td>
-                      <td>{{ eq.tipo }}</td>
-                      <td>{{ eq.loc }}</td>
-                      <td>{{ eq.supervisor }}</td>
-                      <td class="r bold" :class="eq.revAm.includes('En taller') ? 'red' : eq.revAm.includes('Parcial') ? 'yellow' : 'green'">{{ eq.revAm }}</td>
-                      <td class="r bold" :class="eq.revPm.includes('Cayó') ? 'red' : eq.revPm.includes('Parcial') ? 'yellow' : 'green'">{{ eq.revPm }}</td>
-                    </tr>
+                    <template v-for="tGroup in equiposOperativosAgrupados" :key="tGroup.tipo">
+                      <template v-for="(sGroup, sIdx) in tGroup.supervisores" :key="tGroup.tipo + '__' + sGroup.supervisor">
+                        <tr v-for="(eq, eqIdx) in sGroup.items" :key="eq.placa">
+                          <td class="idx">{{ eq.globalIdx }}</td>
+                          <td
+                            v-if="sIdx === 0 && eqIdx === 0"
+                            :rowspan="tGroup.totalItems"
+                            class="bold accent-text"
+                            style="vertical-align: middle; border-right: 1px solid var(--card-border, #e2e8f0); background: rgba(43,34,86,0.02);"
+                          >
+                            {{ tGroup.tipo }}
+                          </td>
+                          <td
+                            v-if="eqIdx === 0"
+                            :rowspan="sGroup.items.length"
+                            style="vertical-align: middle; border-right: 1px solid var(--card-border, #e2e8f0);"
+                          >
+                            {{ sGroup.supervisor }}
+                          </td>
+                          <td class="bold accent-text">{{ eq.placa }}</td>
+                          <td>{{ eq.loc }}</td>
+                          <td class="r bold" :class="eq.revAm.includes('En taller') ? 'red' : eq.revAm.includes('Parcial') ? 'yellow' : 'green'">{{ eq.revAm }}</td>
+                          <td class="r bold" :class="eq.revPm.includes('Cayó') ? 'red' : eq.revPm.includes('Parcial') ? 'yellow' : 'green'">{{ eq.revPm }}</td>
+                        </tr>
+                      </template>
+                    </template>
                   </tbody>
                 </table>
               </div>
@@ -435,13 +544,117 @@
           </div>
 
           <!-- ============================================ -->
-          <!-- TAREAS DE SEGUIMIENTO ABIERTAS               -->
+          <!-- CUMPLIMIENTO DIARIO POR SUPERVISOR           -->
           <!-- ============================================ -->
           <div class="report-section-block">
-            <h3 class="report-block-title"><span class="title-bar"></span>Tareas de Seguimiento Abiertas ({{ tareasAbiertas.length }})</h3>
+            <h3 class="report-block-title"><span class="title-bar"></span>Indicadores de Cumplimiento Diario por Supervisor</h3>
+            <div v-if="cumplimientoSupervisorPrevio1.length === 0 && cumplimientoSupervisorPrevio2.length === 0" class="data-card">
+              <div class="empty-table">Sin datos de supervisor para los días hábiles evaluados</div>
+            </div>
+            <div v-else class="comp-grid">
+              <!-- Columna 1: Día hábil previo 1 (ej: Viernes si corte es Lunes) -->
+              <div class="comp-col">
+                <div class="comp-col-title">{{ diaPrevio1Nombre }} — {{ fechaPrevio1Label }} | {{ cumplimientoSupervisorPrevio1.reduce((s,v) => s + v.revisados, 0) > 0 ? cumplimientoSupervisorPrevio1.reduce((s,v) => s + Math.round(v.revisados * v.cumplimiento / 100), 0) : 0 }}/{{ cumplimientoSupervisorPrevio1.reduce((s,v) => s + v.revisados, 0) }} completadas</div>
+                <div class="comp-inner">
+                  <div class="comp-chart-cell">
+                    <div class="chart-box-donut">
+                      <svg viewBox="0 0 210 210" class="chart-svg">
+                        <circle cx="105" cy="105" r="72" fill="none" stroke="#e6eaf0" stroke-width="22"/>
+                        <circle cx="105" cy="105" r="72" fill="none" :stroke="cumplimientoGlobalPctPrevio1 >= 85 ? '#1f7a3d' : cumplimientoGlobalPctPrevio1 >= 60 ? '#b8860b' : '#a90707'" stroke-width="22" :stroke-dasharray="`${cumplimientoGlobalPctPrevio1 / 100 * 452.4} 452.4`" stroke-linecap="butt" transform="rotate(-90 105 105)"/>
+                        <text x="105" y="101" text-anchor="middle" class="dona" :fill="cumplimientoGlobalPctPrevio1 >= 85 ? '#1f7a3d' : cumplimientoGlobalPctPrevio1 >= 60 ? '#b8860b' : '#a90707'">{{ cumplimientoGlobalPctPrevio1 }}%</text>
+                        <text x="105" y="118" text-anchor="middle" class="ax">CUMPLIMIENTO</text>
+                      </svg>
+                    </div>
+                  </div>
+                  <div class="comp-sup-cell">
+                    <table class="comp-sup-table">
+                      <thead><tr><th>Responsable</th><th>T</th><th>Comp.</th><th>Pend.</th><th>%</th></tr></thead>
+                      <tbody>
+                        <tr v-for="s in cumplimientoSupervisorPrevio1" :key="s.supervisor">
+                          <td>{{ s.supervisor }}</td>
+                          <td class="r">{{ s.revisados }}</td>
+                          <td class="r" :class="s.cumplimiento >= 85 ? 'pct-high' : ''">{{ Math.round(s.revisados * s.cumplimiento / 100) }}</td>
+                          <td class="r" :class="s.cumplimiento < 85 ? 'pct-low' : ''">{{ s.revisados - Math.round(s.revisados * s.cumplimiento / 100) }}</td>
+                          <td class="r" :class="s.cumplimiento >= 80 ? 'pct-high' : s.cumplimiento >= 50 ? 'pct-mid' : 'pct-low'">{{ s.cumplimiento }}%</td>
+                        </tr>
+                        <tr v-if="cumplimientoSupervisorPrevio1.length === 0">
+                          <td colspan="5" style="text-align:center;color:#888;font-style:italic">Sin datos</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+              <!-- Columna 2: Día hábil previo 2 (ej: Sábado si corte es Lunes) -->
+              <div class="comp-col">
+                <div class="comp-col-title">{{ diaPrevio2Nombre }} — {{ fechaPrevio2Label }} | {{ cumplimientoSupervisorPrevio2.reduce((s,v) => s + v.revisados, 0) > 0 ? cumplimientoSupervisorPrevio2.reduce((s,v) => s + Math.round(v.revisados * v.cumplimiento / 100), 0) : 0 }}/{{ cumplimientoSupervisorPrevio2.reduce((s,v) => s + v.revisados, 0) }} completadas</div>
+                <div class="comp-inner">
+                  <div class="comp-chart-cell">
+                    <div class="chart-box-donut">
+                      <svg viewBox="0 0 210 210" class="chart-svg">
+                        <circle cx="105" cy="105" r="72" fill="none" stroke="#e6eaf0" stroke-width="22"/>
+                        <circle cx="105" cy="105" r="72" fill="none" :stroke="cumplimientoGlobalPctPrevio2 >= 85 ? '#1f7a3d' : cumplimientoGlobalPctPrevio2 >= 60 ? '#b8860b' : '#a90707'" stroke-width="22" :stroke-dasharray="`${cumplimientoGlobalPctPrevio2 / 100 * 452.4} 452.4`" stroke-linecap="butt" transform="rotate(-90 105 105)"/>
+                        <text x="105" y="101" text-anchor="middle" class="dona" :fill="cumplimientoGlobalPctPrevio2 >= 85 ? '#1f7a3d' : cumplimientoGlobalPctPrevio2 >= 60 ? '#b8860b' : '#a90707'">{{ cumplimientoGlobalPctPrevio2 }}%</text>
+                        <text x="105" y="118" text-anchor="middle" class="ax">CUMPLIMIENTO</text>
+                      </svg>
+                    </div>
+                  </div>
+                  <div class="comp-sup-cell">
+                    <table class="comp-sup-table">
+                      <thead><tr><th>Responsable</th><th>T</th><th>Comp.</th><th>Pend.</th><th>%</th></tr></thead>
+                      <tbody>
+                        <tr v-for="s in cumplimientoSupervisorPrevio2" :key="s.supervisor">
+                          <td>{{ s.supervisor }}</td>
+                          <td class="r">{{ s.revisados }}</td>
+                          <td class="r" :class="s.cumplimiento >= 85 ? 'pct-high' : ''">{{ Math.round(s.revisados * s.cumplimiento / 100) }}</td>
+                          <td class="r" :class="s.cumplimiento < 85 ? 'pct-low' : ''">{{ s.revisados - Math.round(s.revisados * s.cumplimiento / 100) }}</td>
+                          <td class="r" :class="s.cumplimiento >= 80 ? 'pct-high' : s.cumplimiento >= 50 ? 'pct-mid' : 'pct-low'">{{ s.cumplimiento }}%</td>
+                        </tr>
+                        <tr v-if="cumplimientoSupervisorPrevio2.length === 0">
+                          <td colspan="5" style="text-align:center;color:#888;font-style:italic">Sin datos</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ============================================ -->
+          <!-- CONCLUSIONES Y RESUMEN EJECUTIVO             -->
+          <!-- ============================================ -->
+          <div class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Conclusiones y Resumen Ejecutivo</h3>
+            <div class="data-card" style="padding: 10px 14px;">
+              <template v-for="(g, gi) in dispConclusiones" :key="gi">
+                <div class="card-head" :style="{ fontSize: '11px', fontWeight: 700, color: 'var(--navy)', marginBottom: '6px', marginTop: gi > 0 ? '10px' : '0', textTransform: 'uppercase' }">{{ g.titulo }}</div>
+                <ul class="res">
+                  <li v-for="(l, i) in g.items" :key="i">{{ l }}</li>
+                </ul>
+              </template>
+            </div>
+          </div>
+
+          <!-- ============================================ -->
+          <!-- TENDENCIA MENSUAL DE DISPONIBILIDAD          -->
+          <!-- ============================================ -->
+          <div class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Tendencia Mensual de Disponibilidad</h3>
+            <div v-if="svgTrend" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px;">
+              Promedio mensual: <strong>{{ svgTrend.avgPct }}%</strong> · Mejor día: <strong>{{ svgTrend.maxPct }}%</strong> · Día más bajo: <strong>{{ svgTrend.minPct }}%</strong>
+            </div>
+            <div ref="chartMensualRef" style="width:100%;height:420px;"></div>
+          </div>
+
+          <!-- ============================================ -->
+          <!-- TAREAS DE SEGUIMIENTO ABIERTAS (ÚLTIMOS 3 DÍAS) -->
+          <!-- ============================================ -->
+          <div class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Tareas de Seguimiento Abiertas — Últimos 3 días ({{ tareasAbiertas.length }})</h3>
             <div class="data-card">
               <div v-if="tareasAbiertas.length === 0" class="empty-table">
-                No hay tareas pendientes en este corte
+                No hay tareas pendientes en los últimos 3 días para este corte
               </div>
               <div v-else class="table-wrap">
                 <table>
@@ -470,112 +683,6 @@
             </div>
           </div>
 
-          <!-- ============================================ -->
-          <!-- CUMPLIMIENTO DIARIO POR SUPERVISOR           -->
-          <!-- ============================================ -->
-          <div class="report-section-block">
-            <h3 class="report-block-title"><span class="title-bar"></span>Indicadores de Cumplimiento Diario por Supervisor</h3>
-            <div v-if="cumplimientoSupervisor.length === 0 && cumplimientoSupervisorAnterior.length === 0" class="data-card">
-              <div class="empty-table">Sin datos de supervisor para este corte</div>
-            </div>
-            <div v-else class="comp-grid">
-              <!-- Columna: Día anterior -->
-              <div class="comp-col">
-                <div class="comp-col-title">{{ diaAnteriorNombre }} — {{ fechaAnteriorLabel }} | {{ cumplimientoSupervisorAnterior.reduce((s,v) => s + v.revisados, 0) > 0 ? cumplimientoSupervisorAnterior.reduce((s,v) => s + Math.round(v.revisados * v.cumplimiento / 100), 0) : 0 }}/{{ cumplimientoSupervisorAnterior.reduce((s,v) => s + v.revisados, 0) }} completadas</div>
-                <div class="comp-inner">
-                  <div class="comp-chart-cell">
-                    <div class="chart-box-donut">
-                      <svg viewBox="0 0 210 210" class="chart-svg">
-                        <circle cx="105" cy="105" r="72" fill="none" stroke="#e6eaf0" stroke-width="22"/>
-                        <circle cx="105" cy="105" r="72" fill="none" :stroke="cumplimientoGlobalPctAnterior >= 85 ? '#1f7a3d' : cumplimientoGlobalPctAnterior >= 60 ? '#b8860b' : '#a90707'" stroke-width="22" :stroke-dasharray="`${cumplimientoGlobalPctAnterior / 100 * 452.4} 452.4`" stroke-linecap="butt" transform="rotate(-90 105 105)"/>
-                        <text x="105" y="101" text-anchor="middle" class="dona" :fill="cumplimientoGlobalPctAnterior >= 85 ? '#1f7a3d' : cumplimientoGlobalPctAnterior >= 60 ? '#b8860b' : '#a90707'">{{ cumplimientoGlobalPctAnterior }}%</text>
-                        <text x="105" y="118" text-anchor="middle" class="ax">CUMPLIMIENTO</text>
-                      </svg>
-                    </div>
-                  </div>
-                  <div class="comp-sup-cell">
-                    <table class="comp-sup-table">
-                      <thead><tr><th>Responsable</th><th>T</th><th>Comp.</th><th>Pend.</th><th>%</th></tr></thead>
-                      <tbody>
-                        <tr v-for="s in cumplimientoSupervisorAnterior" :key="s.supervisor">
-                          <td>{{ s.supervisor }}</td>
-                          <td class="r">{{ s.revisados }}</td>
-                          <td class="r" :class="s.cumplimiento >= 85 ? 'pct-high' : ''">{{ Math.round(s.revisados * s.cumplimiento / 100) }}</td>
-                          <td class="r" :class="s.cumplimiento < 85 ? 'pct-low' : ''">{{ s.revisados - Math.round(s.revisados * s.cumplimiento / 100) }}</td>
-                          <td class="r" :class="s.cumplimiento >= 80 ? 'pct-high' : s.cumplimiento >= 50 ? 'pct-mid' : 'pct-low'">{{ s.cumplimiento }}%</td>
-                        </tr>
-                        <tr v-if="cumplimientoSupervisorAnterior.length === 0">
-                          <td colspan="5" style="text-align:center;color:#888;font-style:italic">Sin datos</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-              <!-- Columna: Hoy -->
-              <div class="comp-col">
-                <div class="comp-col-title">{{ diaActualNombre }} — {{ informeFechaLabel }} | {{ cumplimientoSupervisor.reduce((s,v) => s + v.revisados, 0) > 0 ? cumplimientoSupervisor.reduce((s,v) => s + Math.round(v.revisados * v.cumplimiento / 100), 0) : 0 }}/{{ cumplimientoSupervisor.reduce((s,v) => s + v.revisados, 0) }} completadas</div>
-                <div class="comp-inner">
-                  <div class="comp-chart-cell">
-                    <div class="chart-box-donut">
-                      <svg viewBox="0 0 210 210" class="chart-svg">
-                        <circle cx="105" cy="105" r="72" fill="none" stroke="#e6eaf0" stroke-width="22"/>
-                        <circle cx="105" cy="105" r="72" fill="none" :stroke="cumplimientoGlobalPct >= 85 ? '#1f7a3d' : cumplimientoGlobalPct >= 60 ? '#b8860b' : '#a90707'" stroke-width="22" :stroke-dasharray="`${cumplimientoGlobalPct / 100 * 452.4} 452.4`" stroke-linecap="butt" transform="rotate(-90 105 105)"/>
-                        <text x="105" y="101" text-anchor="middle" class="dona" :fill="cumplimientoGlobalPct >= 85 ? '#1f7a3d' : cumplimientoGlobalPct >= 60 ? '#b8860b' : '#a90707'">{{ cumplimientoGlobalPct }}%</text>
-                        <text x="105" y="118" text-anchor="middle" class="ax">CUMPLIMIENTO</text>
-                      </svg>
-                    </div>
-                  </div>
-                  <div class="comp-sup-cell">
-                    <table class="comp-sup-table">
-                      <thead><tr><th>Responsable</th><th>T</th><th>Comp.</th><th>Pend.</th><th>%</th></tr></thead>
-                      <tbody>
-                        <tr v-for="s in cumplimientoSupervisor" :key="s.supervisor">
-                          <td>{{ s.supervisor }}</td>
-                          <td class="r">{{ s.revisados }}</td>
-                          <td class="r" :class="s.cumplimiento >= 85 ? 'pct-high' : ''">{{ Math.round(s.revisados * s.cumplimiento / 100) }}</td>
-                          <td class="r" :class="s.cumplimiento < 85 ? 'pct-low' : ''">{{ s.revisados - Math.round(s.revisados * s.cumplimiento / 100) }}</td>
-                          <td class="r" :class="s.cumplimiento >= 80 ? 'pct-high' : s.cumplimiento >= 50 ? 'pct-mid' : 'pct-low'">{{ s.cumplimiento }}%</td>
-                        </tr>
-                        <tr v-if="cumplimientoSupervisor.length === 0">
-                          <td colspan="5" style="text-align:center;color:#888;font-style:italic">Sin datos</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- ============================================ -->
-          <!-- RESUMEN EJECUTIVO                            -->
-          <!-- ============================================ -->
-          <div class="report-section-block" v-if="resumenEjecutivo">
-            <h3 class="report-block-title"><span class="title-bar"></span>Resumen Ejecutivo</h3>
-            <div class="data-card" style="padding: 12px 16px;">
-              <ul class="res">
-                <li>Disponibilidad de la ronda AM: <strong>{{ informeKpis.dispPropiaPct }}%</strong> ({{ informeKpis.operativosFormatted }} de {{ informeKpis.flotaTotal }} equipos operativos).</li>
-                <li v-if="resumenEjecutivo.totalPendientes > 0">{{ resumenEjecutivo.totalPendientes }} equipo(s) pendiente(s) de revisión.</li>
-                <li v-if="informeEquiposEnTaller.length > 0">{{ informeEquiposEnTaller.length }} equipo(s) en taller; {{ informeEquiposEnTaller.filter(e => !e.motivo || e.motivo === '—').length }} de ellos sin actividad que respalde la intervención.</li>
-              </ul>
-              <div v-if="resumenEjecutivo.notasCierre" class="report-nota" style="margin-top: 8px;">
-                <strong>Notas de Cierre:</strong> {{ resumenEjecutivo.notasCierre }}
-              </div>
-            </div>
-          </div>
-
-          <!-- ============================================ -->
-          <!-- TENDENCIA MENSUAL DE DISPONIBILIDAD          -->
-          <!-- ============================================ -->
-          <div class="report-section-block">
-            <h3 class="report-block-title"><span class="title-bar"></span>Tendencia Mensual de Disponibilidad</h3>
-            <div v-if="svgTrend" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px;">
-              Promedio mensual: <strong>{{ svgTrend.avgPct }}%</strong> · Mejor día: <strong>{{ svgTrend.maxPct }}%</strong> · Día más bajo: <strong>{{ svgTrend.minPct }}%</strong>
-            </div>
-            <div ref="chartMensualRef" style="width:100%;height:220px;"></div>
-          </div>
-
           <footer class="report-footer">
             <span>Informe de Disponibilidad de Flota — Gravicon</span>
             <span>Documento Oficial | Página 3 de 3</span>
@@ -593,7 +700,7 @@ import { ref, computed, markRaw, watch, onMounted, nextTick } from 'vue'
 import KpiCard from '../../components/dashboard/KpiCard.vue'
 import ChartCard from '../../components/dashboard/ChartCard.vue'
 import { useTheme } from '../../composables/useTheme'
-import { useDisponibilidadStore } from '../../stores'
+import { useDisponibilidadStore, useMantenimientoStore } from '../../stores'
 import * as echarts from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart, LineChart, PieChart } from 'echarts/charts'
@@ -611,6 +718,7 @@ const props = defineProps<{
 
 const { theme } = useTheme()
 const dispStore = useDisponibilidadStore()
+const mantStore = useMantenimientoStore()
 const dispView = ref<'graficas' | 'informe'>('graficas')
 // Removed iframe reference – not needed after switching to v-html rendering
 
@@ -631,10 +739,24 @@ const plantaLabel = computed(() => {
   return 'Concretos'
 })
 
-// Cargar datos reales desde el store de disponibilidad — con dedup (store ya tiene guard, pero evitamos llamada extra)
+function loadMaintenanceDataIfNeeded() {
+  const k = plantaKey.value
+  if (k === 'cuncia' && !mantStore.cunciaData) mantStore.fetchCuncia()
+  else if (k === 'acacias' && !mantStore.acaciasData) mantStore.fetchAcacias()
+  else if (k === 'concretos' && !mantStore.concretosData) mantStore.fetchConcretos()
+}
+
+// Cargar datos reales desde el store de disponibilidad y mantenimiento — con dedup
 onMounted(() => {
   if (!dispStore.data || dispStore.data.planta !== plantaKey.value) {
     dispStore.fetchDisponibilidad(plantaKey.value)
+  }
+  loadMaintenanceDataIfNeeded()
+  if (typeof document !== 'undefined' && !document.querySelector('script[src="https://scripts.sirv.com/sirvjs/v3/sirv.js"]')) {
+    const s = document.createElement('script')
+    s.src = 'https://scripts.sirv.com/sirvjs/v3/sirv.js'
+    s.async = true
+    document.head.appendChild(s)
   }
 })
 
@@ -642,6 +764,7 @@ watch(() => props.planta, () => {
   if (!dispStore.data || dispStore.data.planta !== plantaKey.value) {
     dispStore.fetchDisponibilidad(plantaKey.value)
   }
+  loadMaintenanceDataIfNeeded()
 })
 
 // Recargar también cuando cambia la fecha (para sincronizar con el filtro principal)
@@ -652,6 +775,7 @@ watch([() => props.fechaInicio, () => props.fechaFin], () => {
   if (!storeData || storeData.planta !== currentPlanta || storeData.placas.length === 0) {
     dispStore.fetchDisponibilidad(currentPlanta)
   }
+  loadMaintenanceDataIfNeeded()
 })
 
 // Fechas y formateo — con cache para evitar re-parsear la misma fecha 12× por fila
@@ -854,6 +978,7 @@ const informeKpis = computed(() => {
       parciales: 0,
       dispPropiaPct: 0,
       dispCanchaPct: 0,
+      salenHoy: 0,
       coberturaPct: 0,
       inspeccionados: 0,
       diasRezago: 0,
@@ -916,6 +1041,26 @@ const informeKpis = computed(() => {
     ? Math.round((scoreSumTotal / countTotal) * 100)
     : dispPropiaPct
 
+  // Salidas programadas para el día de hoy (o fecha de corte)
+  const salenHoySet = new Set<string>()
+  for (const r of records) {
+    const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
+    if (!d) continue
+    const iso = getDateKey(d)
+    if (targetIso && iso !== targetIso) continue
+
+    const fSalida = parseSerialDate(r['Fecha_Salida'] ?? r['Fecha Salida'])
+    const fSalidaAj = parseSerialDate(r['Fecha_Salida_Ajustada'] ?? r['Fecha Salida Ajustada'])
+    const fSalidaEst = parseSerialDate(r['Fecha_Salida_Estimada'] ?? r['Fecha Estimada Salida'])
+    const fEfectiva = fSalidaAj ?? fSalida ?? fSalidaEst
+
+    if (fEfectiva && targetIso && getDateKey(fEfectiva) === targetIso) {
+      const info = getInspectionDetails(r)
+      if (info.placa) salenHoySet.add(info.placa)
+    }
+  }
+  const salenHoy = salenHoySet.size
+
   const coberturaPct = flotaTotal > 0 ? Math.min(100, Math.round((inspectedCount / flotaTotal) * 100)) : 100
 
   let diasRezago = 0
@@ -936,11 +1081,27 @@ const informeKpis = computed(() => {
     parciales: parcialCount,
     dispPropiaPct,
     dispCanchaPct,
+    salenHoy,
     coberturaPct,
     inspeccionados: inspectedCount,
     diasRezago,
   }
 })
+
+// Helper para validar códigos de OT legítimos
+function isValidOtCode(val: string): boolean {
+  const v = val.trim().toUpperCase()
+  if (!v || v === '—' || v === '-' || v === 'N/A' || v === 'NA' || v === 'NO' || v === 'SI' || v === 'SÍ' || v === 'OR' || v === 'DE' || v === 'EN' || v === 'POR' || v === 'MOTOR' || v === 'ROTOR' || v === 'SIN OT') return false
+  return /\d/.test(v) || /^OT[-_# ]?[A-Z0-9]+$/i.test(v)
+}
+
+function formatOtNumber(val: string): string {
+  const v = val.trim()
+  if (!isValidOtCode(v)) return '—'
+  if (/^OT[-_# ]/i.test(v)) return v.toUpperCase().replace(/^OT[-_# ]+/i, 'OT-')
+  if (!isNaN(Number(v)) || /^\d+/.test(v)) return `OT-${v}`
+  return v
+}
 
 // Equipos fuera de servicio para la fecha de corte
 const informeEquiposEnTaller = computed(() => {
@@ -948,7 +1109,38 @@ const informeEquiposEnTaller = computed(() => {
   const targetIso = effectiveCorteIso.value
   if (!targetIso) return []
 
-  const result: { placa: string; tipo: string; loc: string; revAm: string; supervisor: string; motivo: string }[] = []
+  // Mapa auxiliar de OT por placa desde diferentes fuentes
+  const otByPlacaMap = new Map<string, string>()
+
+  // 1. Tareas de seguimiento
+  const tareas = dispStore.data?.tareas || []
+  for (const t of tareas) {
+    const rawPlaca = String(t['Placa_Texto'] ?? t['Placa del Vehículo'] ?? t['PLACA'] ?? t['Placa'] ?? '').trim().toUpperCase()
+    const rawOt = String(t['OT'] ?? t['No_OT'] ?? t['No OT'] ?? t['Numero_OT'] ?? t['Nº Orden de Trabajo'] ?? t['N° Orden de Trabajo'] ?? t['ID_OT'] ?? t['Consecutivo_OT'] ?? '').trim()
+    if (rawPlaca && isValidOtCode(rawOt) && !otByPlacaMap.has(rawPlaca)) {
+      otByPlacaMap.set(rawPlaca, formatOtNumber(rawOt))
+    }
+  }
+
+  // 2. Órdenes de trabajo del store de mantenimiento
+  const mantRows = isConcretosPlanta.value
+    ? (mantStore.concretosData?.rows ?? [])
+    : plantaKey.value === 'acacias'
+      ? (mantStore.acaciasData?.rows ?? [])
+      : (mantStore.cunciaData?.rows ?? [])
+
+  for (const mr of mantRows) {
+    const p = String(mr['Placa del Vehículo'] ?? mr['PLACA'] ?? mr['Placa'] ?? mr['Placa_Texto'] ?? '').trim().toUpperCase()
+    const rawOt = String(mr['Nº Orden de Trabajo'] ?? mr['N° Orden de Trabajo'] ?? mr['Numero_OT'] ?? mr['No_OT'] ?? mr['OT'] ?? mr['Consecutivo'] ?? '').trim()
+    if (p && isValidOtCode(rawOt)) {
+      const estado = String(mr['Estado'] ?? mr['ESTADO'] ?? '').trim().toUpperCase()
+      if (estado.includes('ABIERTA') || estado.includes('PROCESO') || !otByPlacaMap.has(p)) {
+        otByPlacaMap.set(p, formatOtNumber(rawOt))
+      }
+    }
+  }
+
+  const result: { placa: string; tipo: string; loc: string; revAm: string; supervisor: string; motivo: string; ot: string }[] = []
   const seen = new Set<string>()
 
   for (const r of records) {
@@ -965,6 +1157,37 @@ const informeEquiposEnTaller = computed(() => {
       const provTaller = String(r['Proveedor_Texto'] ?? r['Proveedor'] ?? '').trim()
       const motivo = act ? `${act}${provTaller ? ` (${provTaller})` : ''}` : (provTaller ? `Taller: ${provTaller}` : 'Fuera de servicio / En intervención')
 
+      // Extraer OT de la fila directa con validación estricta
+      let rawOt = String(
+        r['OT'] ||
+        r['No_OT'] ||
+        r['No OT'] ||
+        r['Numero_OT'] ||
+        r['Número_OT'] ||
+        r['Nº Orden de Trabajo'] ||
+        r['N° Orden de Trabajo'] ||
+        r['Orden de Trabajo'] ||
+        r['Orden_Trabajo'] ||
+        r['Id_OT'] ||
+        r['ID_OT'] ||
+        ''
+      ).trim()
+
+      let ot = '—'
+      if (isValidOtCode(rawOt)) {
+        ot = formatOtNumber(rawOt)
+      } else if (act || motivo) {
+        // Regex estricto con límites de palabra (\b) y requiriendo dígitos para no confundir palabras como 'motor' o 'rotor'
+        const match = `${act} ${motivo}`.match(/\b(?:OT|O\.T\.|ORDEN\s*(?:DE\s*)?TRABAJO)\s*(?:N[°º#]|NRO|NUMERO|#)?\s*[:#-]?\s*(\d+[A-Z0-9-]*)\b/i)
+        if (match && match[1] && isValidOtCode(match[1])) {
+          ot = formatOtNumber(match[1])
+        }
+      }
+
+      if (ot === '—') {
+        ot = otByPlacaMap.get(info.placa.toUpperCase()) || '—'
+      }
+
       result.push({
         placa: info.placa,
         tipo: info.baseTipo + (info.esAlquilado ? ' (Alquilada)' : ''),
@@ -972,13 +1195,52 @@ const informeEquiposEnTaller = computed(() => {
         revAm: '0 (No Operativo)',
         supervisor: info.supervisor,
         motivo,
+        ot,
       })
     }
+  }
+
+  // Ordenar por Tipo -> Supervisor -> Placa
+  result.sort((a, b) => a.tipo.localeCompare(b.tipo) || a.supervisor.localeCompare(b.supervisor) || a.placa.localeCompare(b.placa))
+  return result
+})
+
+// Estructura jerárquica agrupada para tabla de taller (Tipo -> Supervisor -> Equipos)
+const equiposEnTallerAgrupados = computed(() => {
+  const list = informeEquiposEnTaller.value
+  type Item = typeof list[0] & { globalIdx: number }
+  const tipoMap = new Map<string, Map<string, Item[]>>()
+
+  let idx = 1
+  for (const eq of list) {
+    const t = eq.tipo || 'MAQUINARIA'
+    const s = eq.supervisor || '—'
+    if (!tipoMap.has(t)) tipoMap.set(t, new Map())
+    const supMap = tipoMap.get(t)!
+    if (!supMap.has(s)) supMap.set(s, [])
+    supMap.get(s)!.push({ ...eq, globalIdx: idx++ })
+  }
+
+  const result: {
+    tipo: string
+    totalItems: number
+    supervisores: { supervisor: string; items: Item[] }[]
+  }[] = []
+
+  for (const [tipo, supMap] of tipoMap.entries()) {
+    const supervisores: { supervisor: string; items: Item[] }[] = []
+    let totalItems = 0
+    for (const [supervisor, items] of supMap.entries()) {
+      supervisores.push({ supervisor, items })
+      totalItems += items.length
+    }
+    result.push({ tipo, totalItems, supervisores })
   }
   return result
 })
 
 // Matriz de operatividad por categoría para el informe
+// Disponibilidad se calcula SOLO sobre flota propia (excluye alquilados del % para reflejo fiel)
 const matrizCategoriaData = computed(() => {
   const records = activePlacasRows.value
   const targetIso = effectiveCorteIso.value
@@ -1009,7 +1271,9 @@ const matrizCategoriaData = computed(() => {
 
   const rows = Array.from(map.values()).map(item => {
     const total = item.opProp + item.opAlq + item.parcial + item.noOp
-    const disp = total > 0 ? Math.round(((item.opProp + item.opAlq + item.parcial * 0.5) / total) * 100) : 0
+    // % disponibilidad: solo flota propia (excluye alquiladas)
+    const propiaBase = item.opProp + item.parcial + item.noOp
+    const disp = propiaBase > 0 ? Math.round(((item.opProp + item.parcial * 0.5) / propiaBase) * 100) : 0
     return {
       ...item,
       total,
@@ -1024,7 +1288,9 @@ const matrizCategoriaData = computed(() => {
   const totalParcial = rows.reduce((s, r) => s + r.parcial, 0)
   const totalNoOp = rows.reduce((s, r) => s + r.noOp, 0)
   const totalGeneral = totalOpProp + totalOpAlq + totalParcial + totalNoOp
-  const totalDisp = totalGeneral > 0 ? Math.round(((totalOpProp + totalOpAlq + totalParcial * 0.5) / totalGeneral) * 100) : 0
+  // % total también solo flota propia
+  const totalPropiaBase = totalOpProp + totalParcial + totalNoOp
+  const totalDisp = totalPropiaBase > 0 ? Math.round(((totalOpProp + totalParcial * 0.5) / totalPropiaBase) * 100) : 0
 
   return {
     rows,
@@ -1035,6 +1301,122 @@ const matrizCategoriaData = computed(() => {
       noOp: totalNoOp,
       total: totalGeneral,
       disp: totalDisp,
+    },
+  }
+})
+
+interface PlantaGrupo {
+  planta: string
+  items: {
+    tipo: string
+    opProp: number
+    parcial: number
+    noOp: number
+    total: number
+    disp: number
+  }[]
+  totales: {
+    opProp: number
+    parcial: number
+    noOp: number
+    total: number
+    disp: number
+  }
+}
+
+// Matriz de operatividad por planta/sede y tipo de vehículo (solo flota propia)
+const matrizPlantaData = computed(() => {
+  const records = activePlacasRows.value
+  const targetIso = effectiveCorteIso.value
+  const map = new Map<string, Map<string, { opProp: number; parcial: number; noOp: number }>>()
+
+  for (const r of records) {
+    const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
+    if (!d) continue
+    if (targetIso && getDateKey(d) !== targetIso) continue
+
+    const info = getInspectionDetails(r)
+    // Excluir alquiladas de esta matriz según requerimiento
+    if (info.esAlquilado) continue
+
+    const planta = info.loc || 'Sin sede'
+    const tipo = info.baseTipo || 'MAQUINARIA'
+
+    if (!map.has(planta)) {
+      map.set(planta, new Map())
+    }
+    const plantaMap = map.get(planta)!
+    if (!plantaMap.has(tipo)) {
+      plantaMap.set(tipo, { opProp: 0, parcial: 0, noOp: 0 })
+    }
+    const item = plantaMap.get(tipo)!
+    if (info.isNoOp) {
+      item.noOp++
+    } else if (info.isParcial) {
+      item.parcial++
+    } else {
+      item.opProp++
+    }
+  }
+
+  const grupos: PlantaGrupo[] = []
+  let totalGeneralOpProp = 0
+  let totalGeneralParcial = 0
+  let totalGeneralNoOp = 0
+  let totalGeneralTotal = 0
+
+  for (const [planta, tiposMap] of map.entries()) {
+    const items = Array.from(tiposMap.entries()).map(([tipo, counts]) => {
+      const total = counts.opProp + counts.parcial + counts.noOp
+      const disp = total > 0 ? Math.round(((counts.opProp + counts.parcial * 0.5) / total) * 100) : 0
+      return {
+        tipo,
+        ...counts,
+        total,
+        disp,
+      }
+    })
+    items.sort((a, b) => b.total - a.total)
+
+    const subOp = items.reduce((s, i) => s + i.opProp, 0)
+    const subParc = items.reduce((s, i) => s + i.parcial, 0)
+    const subNo = items.reduce((s, i) => s + i.noOp, 0)
+    const subTot = subOp + subParc + subNo
+    const subDisp = subTot > 0 ? Math.round(((subOp + subParc * 0.5) / subTot) * 100) : 0
+
+    totalGeneralOpProp += subOp
+    totalGeneralParcial += subParc
+    totalGeneralNoOp += subNo
+    totalGeneralTotal += subTot
+
+    grupos.push({
+      planta,
+      items,
+      totales: {
+        opProp: subOp,
+        parcial: subParc,
+        noOp: subNo,
+        total: subTot,
+        disp: subDisp,
+      },
+    })
+  }
+
+  // Ordenar grupos alfabéticamente por planta
+  grupos.sort((a, b) => a.planta.localeCompare(b.planta))
+
+  const totalGeneralDisp = totalGeneralTotal > 0
+    ? Math.round(((totalGeneralOpProp + totalGeneralParcial * 0.5) / totalGeneralTotal) * 100)
+    : 0
+
+  return {
+    grupos,
+    totales: {
+      opProp: totalGeneralOpProp,
+      parcial: totalGeneralParcial,
+      noOp: totalGeneralNoOp,
+      total: totalGeneralTotal,
+      disp: totalGeneralDisp,
     },
   }
 })
@@ -1078,15 +1460,75 @@ const informeEquiposOperativos = computed(() => {
       })
     }
   }
+  // Ordenar por Tipo -> Supervisor -> Placa
+  result.sort((a, b) => a.tipo.localeCompare(b.tipo) || a.supervisor.localeCompare(b.supervisor) || a.placa.localeCompare(b.placa))
   return result
 })
 
-// Tareas de seguimiento abiertas (Pendientes)
+// Estructura jerárquica agrupada para tabla de operativos (Tipo -> Supervisor -> Equipos)
+const equiposOperativosAgrupados = computed(() => {
+  const list = informeEquiposOperativos.value
+  type Item = typeof list[0] & { globalIdx: number }
+  const tipoMap = new Map<string, Map<string, Item[]>>()
+
+  let idx = 1
+  for (const eq of list) {
+    const t = eq.tipo || 'MAQUINARIA'
+    const s = eq.supervisor || '—'
+    if (!tipoMap.has(t)) tipoMap.set(t, new Map())
+    const supMap = tipoMap.get(t)!
+    if (!supMap.has(s)) supMap.set(s, [])
+    supMap.get(s)!.push({ ...eq, globalIdx: idx++ })
+  }
+
+  const result: {
+    tipo: string
+    totalItems: number
+    supervisores: { supervisor: string; items: Item[] }[]
+  }[] = []
+
+  for (const [tipo, supMap] of tipoMap.entries()) {
+    const supervisores: { supervisor: string; items: Item[] }[] = []
+    let totalItems = 0
+    for (const [supervisor, items] of supMap.entries()) {
+      supervisores.push({ supervisor, items })
+      totalItems += items.length
+    }
+    result.push({ tipo, totalItems, supervisores })
+  }
+  return result
+})
+
+// Mapa de ID/Ref -> Placa_Texto resuelta a partir de los datos de placas/vehículos
+const placaLookupMap = computed(() => {
+  const map = new Map<string, string>()
+  const placas = dispStore.data?.placas || []
+  for (const r of placas) {
+    const idRef = String(r['Placa'] ?? '').trim()
+    const idReg = String(r['Id_Registro'] ?? r['ID_Registro'] ?? '').trim()
+    const txt = String(r['Placa_Texto'] ?? r['Placa del Vehículo'] ?? r['PLACA'] ?? '').trim()
+    if (txt) {
+      if (idRef) map.set(idRef, txt)
+      if (idReg) map.set(idReg, txt)
+      map.set(txt, txt)
+    }
+  }
+  return map
+})
+
+// Tareas de seguimiento abiertas (Pendientes) — se muestran solo las de los últimos 3 días desde el corte efectivo
 const tareasAbiertas = computed(() => {
   const tareas = dispStore.data?.tareas || []
   if (tareas.length === 0) return []
 
   const result: { id: string; placa: string; fecha: string; responsable: string; actividad: string; observaciones: string; estado: string; dias: number }[] = []
+
+  // Ventana de 3 días atrás desde el corte efectivo
+  const corteDate = effectiveCorteDate.value
+  const corteMs = corteDate
+    ? Date.UTC(corteDate.getUTCFullYear(), corteDate.getUTCMonth(), corteDate.getUTCDate())
+    : Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate())
+  const tresDiasAtrasMs = corteMs - 3 * 86400000
   const nowUtc = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate())
 
   for (const t of tareas) {
@@ -1096,12 +1538,19 @@ const tareasAbiertas = computed(() => {
     const fechaReg = parseSerialDate(t['Fecha_Registro'])
     if (!fechaReg) continue
 
+    // Filtrar: solo tareas registradas entre [corte - 3 días] y el corte efectivo
+    const fechaMs = fechaReg.getTime()
+    if (fechaMs < tresDiasAtrasMs || fechaMs > corteMs) continue
+
     const id = String(t['ID_Tarea'] ?? '').slice(0, 8)
-    const placa = String(t['Placa'] ?? t['PLACA'] ?? t['Placa_Texto'] ?? '—').trim()
+    const rawPlaca = String(t['Placa_Texto'] ?? t['Placa del Vehículo'] ?? t['PLACA'] ?? '').trim()
+    const idPlaca = String(t['Placa'] ?? '').trim()
+    const placa = rawPlaca || placaLookupMap.value.get(idPlaca) || placaLookupMap.value.get(rawPlaca) || (idPlaca ? idPlaca : '—')
+
     const responsable = String(t['Nombre_Responsable'] ?? t['Nombre Responsable'] ?? t['Responsable_Texto'] ?? t['Responsable'] ?? '—').trim()
     const actividad = String(t['Actividad'] ?? '—')
     const observaciones = String(t['observaciones'] ?? '—')
-    const dias = Math.max(1, Math.floor((nowUtc - fechaReg.getTime()) / 86400000))
+    const dias = Math.max(1, Math.floor((nowUtc - fechaMs) / 86400000))
     const estado = estadoRaw.length > 6 ? estadoRaw.slice(0, 5) + '.' : estadoRaw
 
     const dia = String(fechaReg.getUTCDate()).padStart(2, '0')
@@ -1115,10 +1564,55 @@ const tareasAbiertas = computed(() => {
   return result
 })
 
-// Cumplimiento diario por supervisor (basado en tareas)
-const cumplimientoSupervisor = computed(() => {
+// Helper para obtener los 2 días hábiles previos excluyendo domingos
+function getPreviousWorkingDays(baseDate: Date, count = 2): Date[] {
+  const result: Date[] = []
+  let curr = new Date(Date.UTC(baseDate.getUTCFullYear(), baseDate.getUTCMonth(), baseDate.getUTCDate()))
+  while (result.length < count) {
+    curr = new Date(curr.getTime() - 86400000)
+    // 0 = Domingo en UTC
+    if (curr.getUTCDay() !== 0) {
+      result.push(new Date(curr.getTime()))
+    }
+  }
+  return result.reverse() // [Día anteayer hábil, Día ayer hábil]
+}
+
+const diasPreviosHabiles = computed(() => {
+  if (!effectiveCorteDate.value) return []
+  return getPreviousWorkingDays(effectiveCorteDate.value, 2)
+})
+
+const fechaPrevio1Date = computed(() => diasPreviosHabiles.value[0] || null)
+const fechaPrevio2Date = computed(() => diasPreviosHabiles.value[1] || null)
+
+const fechaPrevio1Iso = computed(() => fechaPrevio1Date.value ? getDateKey(fechaPrevio1Date.value) : '')
+const fechaPrevio2Iso = computed(() => fechaPrevio2Date.value ? getDateKey(fechaPrevio2Date.value) : '')
+
+const fechaPrevio1Label = computed(() => {
+  if (!fechaPrevio1Date.value) return ''
+  return fechaPrevio1Date.value.toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' })
+})
+const fechaPrevio2Label = computed(() => {
+  if (!fechaPrevio2Date.value) return ''
+  return fechaPrevio2Date.value.toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' })
+})
+
+const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+
+const diaPrevio1Nombre = computed(() => {
+  if (!fechaPrevio1Date.value) return ''
+  return diasSemana[fechaPrevio1Date.value.getUTCDay()]
+})
+const diaPrevio2Nombre = computed(() => {
+  if (!fechaPrevio2Date.value) return ''
+  return diasSemana[fechaPrevio2Date.value.getUTCDay()]
+})
+
+// Cumplimiento del día anteayer hábil (Día Previo 1, ej: Viernes si corte es Lunes)
+const cumplimientoSupervisorPrevio1 = computed(() => {
   const tareas = dispStore.data?.tareas || []
-  const targetIso = effectiveCorteIso.value
+  const targetIso = fechaPrevio1Iso.value
   if (!targetIso) return []
 
   const supMap = new Map<string, { total: number; completadas: number }>()
@@ -1151,47 +1645,18 @@ const cumplimientoSupervisor = computed(() => {
   return result
 })
 
-const cumplimientoGlobalPct = computed(() => {
-  const lista = cumplimientoSupervisor.value
+const cumplimientoGlobalPctPrevio1 = computed(() => {
+  const lista = cumplimientoSupervisorPrevio1.value
   if (!lista.length) return 0
   const total = lista.reduce((s, v) => s + v.revisados, 0)
   const scoreSum = lista.reduce((s, v) => s + v.revisados * v.cumplimiento / 100, 0)
   return total > 0 ? Math.round(scoreSum / total * 100) : 0
 })
 
-// Día anterior al corte efectivo
-const fechaAnteriorDate = computed<Date | null>(() => {
-  const current = effectiveCorteDate.value
-  if (!current) return null
-  const dates = fechasEncontradas.value
-  const idx = dates.findIndex(d => getDateKey(d) === getDateKey(current))
-  if (idx > 0) return dates[idx - 1]
-  return null
-})
-
-const fechaAnteriorIso = computed(() => fechaAnteriorDate.value ? getDateKey(fechaAnteriorDate.value) : '')
-
-const fechaAnteriorLabel = computed(() => {
-  if (!fechaAnteriorDate.value) return ''
-  return fechaAnteriorDate.value.toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' })
-})
-
-const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
-
-const diaAnteriorNombre = computed(() => {
-  if (!fechaAnteriorDate.value) return ''
-  return diasSemana[fechaAnteriorDate.value.getUTCDay()]
-})
-
-const diaActualNombre = computed(() => {
-  if (!effectiveCorteDate.value) return ''
-  return diasSemana[effectiveCorteDate.value.getUTCDay()]
-})
-
-// Cumplimiento del día anterior (basado en tareas)
-const cumplimientoSupervisorAnterior = computed(() => {
+// Cumplimiento del día ayer hábil (Día Previo 2, ej: Sábado si corte es Lunes)
+const cumplimientoSupervisorPrevio2 = computed(() => {
   const tareas = dispStore.data?.tareas || []
-  const targetIso = fechaAnteriorIso.value
+  const targetIso = fechaPrevio2Iso.value
   if (!targetIso) return []
 
   const supMap = new Map<string, { total: number; completadas: number }>()
@@ -1224,8 +1689,8 @@ const cumplimientoSupervisorAnterior = computed(() => {
   return result
 })
 
-const cumplimientoGlobalPctAnterior = computed(() => {
-  const lista = cumplimientoSupervisorAnterior.value
+const cumplimientoGlobalPctPrevio2 = computed(() => {
+  const lista = cumplimientoSupervisorPrevio2.value
   if (!lista.length) return 0
   const total = lista.reduce((s, v) => s + v.revisados, 0)
   const scoreSum = lista.reduce((s, v) => s + v.revisados * v.cumplimiento / 100, 0)
@@ -1266,6 +1731,79 @@ const resumenEjecutivo = computed(() => {
     notasCierre,
     areasCount,
   }
+})
+
+interface ConclusionGrupo {
+  titulo: string
+  items: string[]
+}
+
+/** Conclusiones y resumen ejecutivo altamente informativo, estructurado y analítico */
+const dispConclusiones = computed((): ConclusionGrupo[] => {
+  const grupos: ConclusionGrupo[] = []
+  const k = informeKpis.value
+  const enTaller = informeEquiposEnTaller.value
+  const sinActividad = enTaller.filter(e => !e.motivo || e.motivo === '—' || e.motivo.includes('Fuera de servicio / En intervención'))
+  const res = resumenEjecutivo.value
+  const meta = 85
+
+  // 1. Disponibilidad y Cobertura de Flota
+  const operatividad: string[] = []
+  const brechaMeta = k.dispPropiaPct - meta
+  const estadoMeta = brechaMeta >= 0
+    ? `cumple la meta corporativa del ${meta}% (+${brechaMeta}% por encima)`
+    : `se sitúa a ${Math.abs(brechaMeta)} puntos porcentuales de la meta (${meta}%)`
+
+  operatividad.push(`Disponibilidad ronda AM de flota propia: ${k.dispPropiaPct}% (${k.operativosFormatted} de ${k.flotaTotal} equipos operativos), ${estadoMeta}.`)
+  operatividad.push(`Composición operativa en cancha: ${k.operativos} equipo(s) con operatividad plena (1.0) y ${k.parciales} equipo(s) con disponibilidad parcial (0.5).`)
+
+  if (informeFlotaAlquilada.value.total > 0) {
+    operatividad.push(`Apoyo de flota alquilada: ${informeFlotaAlquilada.value.op} de ${informeFlotaAlquilada.value.total} unidades activas (${informeFlotaAlquilada.value.dispPct}% disp.), reforzando los frentes de trabajo.`)
+  }
+  if (res && res.totalPendientes > 0) {
+    operatividad.push(`Alerta de cobertura: ${res.totalPendientes} equipo(s) no registraron inspección en la jornada. Cobertura actual: ${k.coberturaPct}%.`)
+  }
+  grupos.push({ titulo: 'Disponibilidad y Cobertura de Flota', items: operatividad })
+
+  // 2. Diagnóstico de Taller e Impacto en Disponibilidad
+  const taller: string[] = []
+  if (enTaller.length > 0) {
+    const pctInmovilizado = k.flotaTotal > 0 ? Math.round((enTaller.length / k.flotaTotal) * 100) : 0
+    taller.push(`${enTaller.length} equipo(s) en taller / fuera de servicio (${pctInmovilizado}% de la flota propia inmovilizada).`)
+
+    if (sinActividad.length > 0) {
+      const placasSinAct = sinActividad.map(e => e.placa).slice(0, 5).join(', ')
+      taller.push(`Atención requerida: ${sinActividad.length} de ellos sin actividad registrada que respalde la intervención (${placasSinAct}${sinActividad.length > 5 ? '...' : ''}).`)
+    }
+    const placasEnTaller = enTaller.map(e => e.placa).slice(0, 6).join(', ')
+    taller.push(`Equipos en intervención: ${placasEnTaller}${enTaller.length > 6 ? ` y ${enTaller.length - 6} más.` : '.'}`)
+  } else {
+    taller.push('Excelente confiabilidad: 100% de la flota propia se encuentra operativa; sin paradas en taller registradas.')
+  }
+  if (movimientosTaller.value.hasPrev) {
+    const ing = movimientosTaller.value.ingresaron.length
+    const sal = movimientosTaller.value.salieron.length
+    taller.push(`Dinámica de taller vs corte anterior: ${ing} ingreso(s) nuevo(s) y ${sal} equipo(s) recuperado(s) retornaron a operación.`)
+  }
+  grupos.push({ titulo: 'Diagnóstico de Taller e Impacto Operativo', items: taller })
+
+  // 3. Rendimiento de Supervisión y Control de Rondas
+  const supervision: string[] = []
+  if (cumplimientoSupervisorPrevio1.value.length > 0 || cumplimientoSupervisorPrevio2.value.length > 0) {
+    supervision.push(`Cumplimiento de rondas e inspecciones: ${diaPrevio1Nombre.value} (${cumplimientoGlobalPctPrevio1.value}%) vs ${diaPrevio2Nombre.value} (${cumplimientoGlobalPctPrevio2.value}%).`)
+  }
+  if (tareasAbiertas.value.length > 0) {
+    const tareasCriticas = tareasAbiertas.value.filter(t => t.dias > 7).length
+    supervision.push(`${tareasAbiertas.value.length} tarea(s) de seguimiento abiertas en los últimos 3 días${tareasCriticas > 0 ? ` (${tareasCriticas} con más de 7 días sin cierre)` : ''}.`)
+  } else {
+    supervision.push('Sin tareas de seguimiento pendientes en la ventana de los últimos 3 días: gestión al día.')
+  }
+  if (res?.notasCierre) {
+    supervision.push(`Observación oficial de cierre: "${res.notasCierre}"`)
+  }
+  grupos.push({ titulo: 'Supervisión, Tareas y Control Operativo', items: supervision })
+
+  return grupos
 })
 
 // Flota alquilada detallada con chips para el informe
@@ -1472,21 +2010,26 @@ const svgTrend = computed(() => {
   }
 
   const sortedKeys = Array.from(dateMap.keys()).sort()
-  const last14Keys = sortedKeys.slice(-14)
-  if (last14Keys.length === 0) return null
+  // Seleccionar todas las fechas del mes correspondiente al corte
+  const targetYearMonth = effectiveCorteIso.value ? effectiveCorteIso.value.slice(0, 7) : ''
+  let monthKeys = targetYearMonth ? sortedKeys.filter(k => k.startsWith(targetYearMonth)) : []
+  if (monthKeys.length === 0) {
+    monthKeys = sortedKeys.slice(-31)
+  }
+  if (monthKeys.length === 0) return null
 
-  const points = last14Keys.map((k, i) => {
+  const points = monthKeys.map((k, i) => {
     const item = dateMap.get(k)!
     const disp = item.total > 0 ? item.scoreSum / item.total : 0
     const pct = Math.round(disp * 100)
-    const n = last14Keys.length
+    const n = monthKeys.length
     const x = n > 1 ? 44 + i * (640 / (n - 1)) : 364
     const y = 180 - disp * 162
     const d = item.date
     const dia = String(d.getUTCDate()).padStart(2, '0')
     const mes = String(d.getUTCMonth() + 1).padStart(2, '0')
     const dateLabel = `${dia}/${mes}`
-    const isLast = i === last14Keys.length - 1
+    const isLast = i === monthKeys.length - 1
     return {
       x,
       y,
@@ -1494,7 +2037,7 @@ const svgTrend = computed(() => {
       dateLabel,
       totalEq: item.total,
       isLast,
-      color: isLast ? (pct >= 85 ? '#16A34A' : pct >= 60 ? '#F59E0B' : '#DC2626') : '#2563eb',
+      color: isLast ? (pct >= 85 ? '#16A34A' : pct >= 60 ? '#F59E0B' : '#DC2626') : '#3B82F6',
     }
   })
 
@@ -1531,35 +2074,55 @@ const informeAnalisisTexto = computed(() => {
   const rezago = k.diasRezago
   const noOpCount = k.noOperativos
   const parcialCount = k.parciales
+  const salenHoy = k.salenHoy
 
-  let texto = `Consolidado Operativo ${plantaLabel.value}: Evaluación de disponibilidad de la flota al corte del <strong>${fecha}</strong>. `
+  let texto = `Evaluación ejecutiva y consolidado del estado de operatividad de la flota vehicular y maquinaria pesada asignada a <strong>${plantaLabel.value}</strong> al corte del <strong>${fecha}</strong>: diagnóstico detallado de disponibilidad por categoría de equipo, monitoreo de unidades activas en frente de trabajo, seguimiento riguroso a maquinaria en intervención de taller y proyección de altas para garantizar la continuidad operativa.<br><br>`
+  texto += `Consolidado Operativo <strong>${plantaLabel.value}</strong>: Evaluación de disponibilidad de la flota al corte del <strong>${fecha}</strong>. `
   texto += `Flota total evaluada: <strong>${totalFlota} equipos</strong> (${propias} propios${alq > 0 ? ` + ${alq} alquilados` : ''}). `
-  texto += `Disponibilidad propia: <strong>${dispPropia}%</strong> `
-  if (alq > 0) texto += `| Disponibilidad en cancha: <strong>${dispCancha}%</strong>. `
-  else texto += `. `
-  texto += `Equipos operativos: <strong>${ops}</strong>, `
-  texto += `parciales: <strong>${parcialCount}</strong>, `
-  texto += `no operativos: <strong>${noOpCount}</strong>. `
-  texto += `Cobertura de inspección: <strong>${cobertura}%</strong>. `
-  if (rezago > 2) {
-    texto += `<br><strong>Alerta de rezago:</strong> Última inspección con ${rezago} días de antigüedad.`
-  }
+  texto += `Disponibilidad propia: <strong>${dispPropia}%</strong> | Disponibilidad en cancha: <strong>${dispCancha}%</strong>. `
+  texto += `Equipos operativos: <strong>${ops}</strong>, parciales: <strong>${parcialCount}</strong>, no operativos: <strong>${noOpCount}</strong>. `
+  texto += `Cobertura de inspección: <strong>${cobertura}%</strong>.`
 
   const alqInfo = informeFlotaAlquilada.value
   if (alqInfo.total > 0) {
-    texto += ` Flota alquilada: ${alqInfo.op} de ${alqInfo.total} operativos (${alqInfo.dispPct}% disponibilidad).`
+    texto += ` Flota alquilada: <strong>${alqInfo.op} de ${alqInfo.total} operativos (${alqInfo.dispPct}% disponibilidad)</strong>.`
+  }
+
+  if (salenHoy > 0) {
+    texto += ` Proyección de altas: <strong>${salenHoy} equipo(s) programados para salir hoy</strong> de taller.`
+  }
+
+  if (rezago > 2) {
+    texto += `<br><strong>Alerta de Rezago:</strong> La última inspección cargada presenta ${rezago} días de antigüedad frente a la fecha actual.`
   }
 
   return texto
 })
 
-// Tendencia AM vs PM por planta (mismo día)
+// Día siguiente (D+1) para la proyección operativa
+const siguienteDiaDate = computed(() => {
+  if (!effectiveCorteDate.value) return null
+  let next = new Date(Date.UTC(effectiveCorteDate.value.getUTCFullYear(), effectiveCorteDate.value.getUTCMonth(), effectiveCorteDate.value.getUTCDate() + 1))
+  if (next.getUTCDay() === 0) {
+    next = new Date(next.getTime() + 86400000)
+  }
+  return next
+})
+
+const siguienteDiaIso = computed(() => siguienteDiaDate.value ? getDateKey(siguienteDiaDate.value) : '')
+const siguienteDiaLabel = computed(() => {
+  if (!siguienteDiaDate.value) return 'D+1'
+  return diasSemana[siguienteDiaDate.value.getUTCDay()]
+})
+
+// Tendencia AM vs PM vs Proyección D+1 por planta (mismo día y proyección siguiente día)
 const tendenciaSedesAmPm = computed(() => {
   const records = activePlacasRows.value
   const targetIso = effectiveCorteIso.value
   if (!targetIso) return []
 
-  const map = new Map<string, { amSum: number; amN: number; pmSum: number; pmN: number }>()
+  const nextIso = siguienteDiaIso.value
+  const map = new Map<string, { amSum: number; amN: number; pmSum: number; pmN: number; proySum: number; proyN: number }>()
 
   for (const r of records) {
     const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
@@ -1568,7 +2131,10 @@ const tendenciaSedesAmPm = computed(() => {
 
     const info = getInspectionDetails(r)
     const loc = info.loc || 'Planta'
-    if (!map.has(loc)) map.set(loc, { amSum: 0, amN: 0, pmSum: 0, pmN: 0 })
+    const locUpper = loc.toUpperCase()
+    if (locUpper.includes('LOGISTICA') || locUpper.includes('LOGÍSTICA')) continue
+
+    if (!map.has(loc)) map.set(loc, { amSum: 0, amN: 0, pmSum: 0, pmN: 0, proySum: 0, proyN: 0 })
     const item = map.get(loc)!
 
     const revAm = Number(r['Rev_AM'] ?? r['rev_am'] ?? NaN)
@@ -1582,15 +2148,68 @@ const tendenciaSedesAmPm = computed(() => {
       item.pmSum += revPm
       item.pmN++
     }
+
+    // Proyección D+1: base es PM (o AM).
+    // Si el equipo tiene Fecha_Salida o Fecha_Salida_Ajustada para el día siguiente o antes, cuenta como operativo (1.0).
+    const fSalidaRaw = r['Fecha_Salida'] ?? r['Fecha Salida']
+    const fSalidaAjustadaRaw = r['Fecha_Salida_Ajustada'] ?? r['Fecha Salida Ajustada']
+    const fSalida = parseSerialDate(fSalidaRaw)
+    const fSalidaAjustada = parseSerialDate(fSalidaAjustadaRaw)
+
+    // Tomar la fecha de salida más temprana entre las dos (la que recuperaría antes el equipo)
+    let fEfectiva: Date | null = null
+    if (fSalida && fSalidaAjustada) {
+      fEfectiva = fSalidaAjustada.getTime() <= fSalida.getTime() ? fSalidaAjustada : fSalida
+    } else {
+      fEfectiva = fSalidaAjustada ?? fSalida
+    }
+    const fEfectivaIso = fEfectiva ? getDateKey(fEfectiva) : ''
+
+    let proyScore = !isNaN(revPm) && revPm >= 0 ? revPm : (!isNaN(revAm) && revAm >= 0 ? revAm : info.score)
+    if (proyScore < 1.0 && fEfectivaIso && nextIso && fEfectivaIso <= nextIso) {
+      proyScore = 1.0
+    }
+
+    item.proySum += proyScore
+    item.proyN++
   }
 
-  const colors = ['#4338ca', '#dc2626', '#0369a1', '#7e22ce', '#16a34a', '#ea580c']
+  // Resolver color por coincidencia parcial del nombre de la sede
+  // Colores idénticos a los de plantUnits en Eficiencia de Mantenimiento
+  function resolveSedeColor(nombre: string, idx: number): string {
+    const n = nombre.toUpperCase()
+    const pk = plantaKey.value
+
+    if (pk === 'cuncia') {
+      // Cuncia: Cañaveral #3B82F6, Guayuriba #10B981, Línea 3 #F59E0B
+      if (n.includes('CA\u00d1AVERAL') || n.includes('CANAVERAL') || n.includes('CUNCIA')) return '#3B82F6'
+      if (n.includes('GUAYURIBA') || n.includes('GUATUB')) return '#10B981'
+      if (n.includes('LINEA 3') || n.includes('L\u00cdNEA 3') || n.includes('L3')) return '#F59E0B'
+    }
+    if (pk === 'acacias') {
+      // Acacías: Planta 1 #38a9f8, Planta 2 #10B981
+      if (n.includes('PLANTA 1') || n.includes(' 1') || n.endsWith('1')) return '#38a9f8'
+      if (n.includes('PLANTA 2') || n.includes(' 2') || n.endsWith('2')) return '#10B981'
+    }
+    if (pk === 'concretos') {
+      // Concretos: Acacías #38a9f8, Restrepo #3b4cb8, Villavicencio #ec4899
+      if (n.includes('ACACIA') || n.includes('ACACIAS') || n.includes('ACACÍAS')) return '#38a9f8'
+      if (n.includes('RESTREPO')) return '#3b4cb8'
+      if (n.includes('VILLA')) return '#ec4899'
+    }
+    // Fallback genérico con misma paleta
+    const fallbacks = ['#3B82F6', '#10B981', '#F59E0B', '#ec4899', '#3b4cb8', '#ea580c']
+    return fallbacks[idx % fallbacks.length]
+  }
+
   const list = Array.from(map.entries())
     .filter(([, v]) => v.amN > 0 || v.pmN > 0)
     .map(([nombre, v], i) => {
-      const pmPct = v.pmN > 0 ? Math.round((v.pmSum / v.pmN) * 100) : 0
       const amPct = v.amN > 0 ? Math.round((v.amSum / v.amN) * 100) : 0
-      return { nombre: nombre.toUpperCase(), pmPct, amPct, color: colors[i % colors.length] }
+      const pmPct = v.pmN > 0 ? Math.round((v.pmSum / v.pmN) * 100) : amPct
+      const proyPct = v.proyN > 0 ? Math.round((v.proySum / v.proyN) * 100) : pmPct
+      const nombreUp = nombre.toUpperCase()
+      return { nombre: nombreUp, amPct, pmPct, proyPct, color: resolveSedeColor(nombreUp, i) }
     })
 
   list.sort((a, b) => b.nombre.localeCompare(a.nombre))
@@ -1681,15 +2300,16 @@ function renderAllCharts() {
               formatter: (params: any) => {
                 const d = dataMap[params.name]
                 if (!d) return ''
-                const tot = d.op + d.alq + d.no + d.parc
-                return tot > 0 ? Math.round((d.op + d.alq + d.parc * 0.5) / tot * 100) + '%' : '0%'
+                // % disponibilidad: solo flota propia (excluye alquiladas)
+                const propiaBase = d.op + d.parc + d.no
+                return propiaBase > 0 ? Math.round((d.op + d.parc * 0.5) / propiaBase * 100) + '%' : '0%'
               },
               textStyle: { fontWeight: 'bold', fontSize: 11,
                 color: (params: any) => {
                   const d = dataMap[params.name]
                   if (!d) return '#999'
-                  const tot = d.op + d.alq + d.no + d.parc
-                  const disp = tot > 0 ? (d.op + d.alq + d.parc * 0.5) / tot * 100 : 0
+                  const propiaBase = d.op + d.parc + d.no
+                  const disp = propiaBase > 0 ? (d.op + d.parc * 0.5) / propiaBase * 100 : 0
                   return disp >= 80 ? '#16a34a' : disp >= 65 ? '#e8a020' : '#dc2626'
                 } }
             }
@@ -1754,15 +2374,16 @@ function renderAllCharts() {
               formatter: (params: any) => {
                 const d = sedeMap.get(params.name)
                 if (!d) return ''
-                const tot = d.op + d.alq + d.no + d.parc
-                return tot > 0 ? Math.round((d.op + d.alq + d.parc * 0.5) / tot * 100) + '%' : '0%'
+                // % disponibilidad: solo flota propia (excluye alquiladas)
+                const propiaBase = d.op + d.parc + d.no
+                return propiaBase > 0 ? Math.round((d.op + d.parc * 0.5) / propiaBase * 100) + '%' : '0%'
               },
               textStyle: { fontWeight: 'bold', fontSize: 11,
                 color: (params: any) => {
                   const d = sedeMap.get(params.name)
                   if (!d) return '#999'
-                  const tot = d.op + d.alq + d.no + d.parc
-                  const disp = tot > 0 ? (d.op + d.alq + d.parc * 0.5) / tot * 100 : 0
+                  const propiaBase = d.op + d.parc + d.no
+                  const disp = propiaBase > 0 ? (d.op + d.parc * 0.5) / propiaBase * 100 : 0
                   return disp >= 80 ? '#16a34a' : disp >= 65 ? '#e8a020' : '#dc2626'
                 } }
             }
@@ -1771,27 +2392,28 @@ function renderAllCharts() {
       })
     }
 
-    // ── 4. Línea tendencia AM vs PM por sede ──
+    // ── 4. Línea tendencia AM vs PM vs Proyección D+1 por sede ──
     if (chartTendenciaRef.value) {
       const chart = echarts.init(chartTendenciaRef.value, null, { renderer: 'canvas' })
       chartInstances.push(chart)
       const sedesData = tendenciaSedesAmPm.value
       if (sedesData.length > 0) {
-        const fallbackColors = ['#4338ca', '#dc2626', '#0369a1', '#7e22ce', '#16a34a', '#ea580c']
+        const fallbackColors = ['#2b2256', '#16a34a', '#0369a1', '#7e22ce', '#ea580c', '#dc2626']
         const allVals: number[] = []
-        sedesData.forEach(p => { allVals.push(p.pmPct, p.amPct) })
+        sedesData.forEach(p => { allVals.push(p.pmPct, p.amPct, p.proyPct) })
         const vMin = Math.min(...allVals)
         const vMax = Math.max(...allVals)
         let yTop = Math.max(0, Math.floor((vMin - 6) / 5) * 5)
         let yBottom = Math.min(100, Math.ceil((vMax + 6) / 5) * 5)
         if (yBottom - yTop < 20) { yTop = Math.max(0, yTop - 5); yBottom = Math.min(100, yBottom + 5) }
+        const nextNom = siguienteDiaLabel.value
         const seriesTend = sedesData.map((p, i) => {
           const color = p.color || fallbackColors[i % fallbackColors.length]
           const lift = (i - (sedesData.length - 1) / 2) * 9
           return {
             name: p.nombre,
             type: 'line',
-            data: [Number(p.amPct), Number(p.pmPct)],
+            data: [Number(p.amPct), Number(p.pmPct), Number(p.proyPct)],
             smooth: false,
             symbol: 'circle',
             symbolSize: 10,
@@ -1801,7 +2423,7 @@ function renderAllCharts() {
             itemStyle: { color, borderWidth: 3, borderColor: '#ffffff' },
             label: { show: true, formatter: (x: any) => x.value != null ? x.value + '%' : '',
               position: 'top', distance: 2, offset: [0, lift - 10],
-              backgroundColor: 'rgba(255,255,255,0.92)', padding: [2, 5], borderRadius: 3,
+              backgroundColor: 'rgba(255,255,255,0.95)', padding: [2, 5], borderRadius: 3,
               borderColor: color, borderWidth: 1,
               textStyle: { fontWeight: 'bold', fontSize: 11, color } }
           }
@@ -1811,8 +2433,8 @@ function renderAllCharts() {
           color: seriesTend.map(s => (s.itemStyle as any).color),
           legend: { top: 6, right: 10, itemWidth: 28, itemHeight: 14, itemGap: 16,
             textStyle: { fontSize: 11, color: CP, fontWeight: 'bold' } },
-          grid: { top: 60, bottom: 32, left: 60, right: 30 },
-          xAxis: { type: 'category', data: ['AM (Mañana)', 'PM (Tarde)'], boundaryGap: true,
+          grid: { top: 70, bottom: 40, left: 60, right: 30 },
+          xAxis: { type: 'category', data: ['AM (Mañana)', 'PM (Tarde)', `Proy. D+1 (${nextNom})`], boundaryGap: true,
             axisLine: { lineStyle: { color: '#999', width: 1.5 } },
             axisTick: { show: false },
             axisLabel: { margin: 12, textStyle: { color: CP, fontWeight: 'bold', fontSize: 12 } } },
@@ -1825,7 +2447,7 @@ function renderAllCharts() {
       }
     }
 
-    // ── 5. Línea tendencia mensual ──
+    // ── 5. Línea tendencia mensual — color Órdenes Diarias (#3B82F6) ──
     if (chartMensualRef.value) {
       const chart = echarts.init(chartMensualRef.value, null, { renderer: 'canvas' })
       chartInstances.push(chart)
@@ -1833,13 +2455,60 @@ function renderAllCharts() {
       if (trend && trend.points.length > 0) {
         const fechas = trend.points.map(p => p.dateLabel)
         const pcts = trend.points.map(p => p.pct)
+        const minVal = Math.max(0, Math.min(...pcts) - 12)
+        const AZUL_OT = '#3B82F6'
         chart.setOption({
           animation: false,
-          grid: { top: 20, bottom: 30, left: 40, right: 20 },
-          xAxis: { type: 'category', data: fechas, axisLabel: { fontSize: 8 } },
-          yAxis: { type: 'value', min: 0, max: 100, axisLabel: { formatter: '{value}%', fontSize: 8 } },
-          series: [{ type: 'line', data: pcts, itemStyle: { color: CP }, areaStyle: { color: '#e5e0ef' },
-            label: { show: true, formatter: '{c}%', fontSize: 8 } }]
+          grid: { top: 46, bottom: 46, left: 58, right: 38 },
+          xAxis: {
+            type: 'category',
+            data: fechas,
+            axisLine: { lineStyle: { color: '#ccc', width: 1.5 } },
+            axisTick: { alignWithLabel: true, lineStyle: { color: '#ccc' } },
+            axisLabel: { fontSize: 10, fontWeight: 'bold', color: '#555', rotate: fechas.length > 18 ? 35 : 0 }
+          },
+          yAxis: {
+            type: 'value',
+            min: minVal,
+            max: 100,
+            interval: 10,
+            axisLine: { show: false },
+            axisTick: { show: false },
+            axisLabel: { formatter: '{value}%', fontSize: 11, fontWeight: 'bold', color: '#444' },
+            splitLine: { lineStyle: { color: '#e8f0fe', type: 'dashed', width: 1.5 } }
+          },
+          series: [{
+            type: 'line',
+            data: pcts,
+            smooth: true,
+            symbol: 'circle',
+            symbolSize: 8,
+            lineStyle: { width: 3.5, color: AZUL_OT },
+            itemStyle: { color: AZUL_OT, borderWidth: 2, borderColor: '#fff' },
+            areaStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: 'rgba(59, 130, 246, 0.38)' },
+                { offset: 1, color: 'rgba(59, 130, 246, 0.03)' }
+              ])
+            },
+            markLine: {
+              silent: true,
+              symbol: 'none',
+              data: [{
+                yAxis: 85,
+                lineStyle: { color: '#16a34a', type: 'dashed', width: 2.5 },
+                label: { formatter: 'Meta 85%', position: 'insideEndTop', color: '#16a34a', fontSize: 11, fontWeight: 'bold' }
+              }]
+            },
+            label: {
+              show: true,
+              position: 'top',
+              formatter: '{c}%',
+              fontSize: 10,
+              fontWeight: 'bold',
+              color: AZUL_OT
+            }
+          }]
         })
       }
     }
@@ -1860,8 +2529,8 @@ function renderAllCharts() {
         }]
       })
     }
-    renderCump(chartCumpAyerRef.value, cumplimientoGlobalPctAnterior.value)
-    renderCump(chartCumpHoyRef.value, cumplimientoGlobalPct.value)
+    renderCump(chartCumpAyerRef.value, cumplimientoGlobalPctPrevio1.value)
+    renderCump(chartCumpHoyRef.value, cumplimientoGlobalPctPrevio2.value)
   })
 }
 
@@ -2706,7 +3375,7 @@ const incidenciaMantenimientoFullOpt = computed(() => buildIncidenciaOption(inci
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
   box-sizing: border-box;
   page-break-after: always;
   break-after: page;
@@ -2752,8 +3421,10 @@ const incidenciaMantenimientoFullOpt = computed(() => buildIncidenciaOption(inci
   gap: 12px;
 }
 .report-logo {
-  height: 38px;
+  height: 48px;
+  max-width: 190px;
   object-fit: contain;
+  display: block;
 }
 .report-logo-mini {
   height: 24px;
@@ -2785,29 +3456,35 @@ const incidenciaMantenimientoFullOpt = computed(() => buildIncidenciaOption(inci
 
 .report-title-section {
   text-align: center;
-  margin: 2px 0 6px;
+  margin: 4px 0 12px;
+  width: 100%;
 }
 .report-title-section h1 {
-  font-size: 16px;
+  font-size: 21px;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
   color: var(--text-primary);
-  margin: 0 0 4px;
+  margin: 0 0 6px;
 }
 .report-intro {
   font-size: 12px;
-  color: var(--text-secondary);
-  max-width: 760px;
-  margin: 0 auto;
-  line-height: 1.45;
+  color: var(--text-secondary, #475569);
+  width: 100%;
+  max-width: 100%;
+  margin: 6px 0 0 0;
+  line-height: 1.65;
+  text-align: justify;
+  box-sizing: border-box;
 }
 
 .compact-kpi {
-  margin: 2px 0 6px !important;
+  margin: 4px 0 12px !important;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .compact-grid {
@@ -3053,6 +3730,8 @@ text.dona {
   padding: 14px 18px;
   border-radius: 6px;
   border-left: 3px solid var(--navy, #172954);
+  width: 100%;
+  box-sizing: border-box;
 }
 .zoho-analysis-label {
   font-size: 10px;
@@ -3066,6 +3745,7 @@ text.dona {
   font-size: 12px;
   color: var(--text-primary, #475569);
   line-height: 1.6;
+  text-align: justify;
 }
 .zoho-block-title {
   font-size: 13px;
@@ -3131,6 +3811,7 @@ text.dona {
 .p-verde { background: #e9f4ed; color: #1f7a3d; }
 .p-ambar { background: #fbf3e0; color: #b8860b; }
 .p-gris { background: #eef1f4; color: #5b6b82; }
+.p-azul { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
 
 .aviso {
   display: flex;

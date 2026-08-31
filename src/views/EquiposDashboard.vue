@@ -402,7 +402,14 @@
         <div class="report-page">
           <header class="report-header">
             <div class="report-header-brand">
-              <img src="/Logos/Logo_Gravicon_Azul.png" alt="Gravicon" class="report-logo" />
+              <img
+                src="https://gravicon2026.sirv.com/Pagina%20Gravicon/images/Logos/gravicon_logo.png"
+                @error="($event.target as HTMLImageElement).src = '/Logos/Logo-Gravicon-Nuevo.png'"
+                alt="Gravicon"
+                class="report-logo"
+                crossorigin="anonymous"
+                loading="eager"
+              />
               <div class="report-header-text">
                 <h2>Mantenimiento {{ plantaLabel }} Gravicon</h2>
                 <span>GRAVAS Y CONCRETOS S.A. · {{ isConcretos ? 'Concretos' : 'Agregados' }} · {{ repTipoLabel }}</span>
@@ -418,8 +425,16 @@
           <div class="report-title-section">
             <h1>Informe Ejecutivo de Órdenes de Trabajo</h1>
             <p class="report-intro">
-              Análisis consolidado de costos, volumen de atención, intervenciones por {{ repSectionLabelVehiculo.toLowerCase() }}, desempeño de proveedores y distribución del mantenimiento correctivo vs. preventivo para <strong>{{ plantaLabel }}</strong>.
+              Análisis consolidado y diagnóstico integral de costos, volumen de intervenciones técnicas por {{ repSectionLabelVehiculo.toLowerCase() }}, evaluación del desempeño de proveedores y balance estratégico entre mantenimiento correctivo y preventivo para <strong>{{ plantaLabel }}</strong>.
             </p>
+          </div>
+
+          <!-- Análisis Operativo Directivo estilo Zoho (Encima de los KPIs) -->
+          <div class="report-section-block">
+            <div class="zoho-analysis-box">
+              <div class="zoho-analysis-label">Análisis Operativo Directivo — Gestión de Órdenes de Trabajo</div>
+              <div class="zoho-analysis-text" v-html="informeAnalisisTexto"></div>
+            </div>
           </div>
 
           <!-- Tarjetas KPI Oficiales -->
@@ -445,14 +460,6 @@
             <KpiCard label="OT con Solicitud (SOPLED/Interno)" accent="#10B981" icon="package" :value="otConSopledPct + '%'" />
             <KpiCard label="Gasto Interno" accent="#2563EB" icon="package" :value="$$short(repCostosProv.interno)" />
             <KpiCard label="Gasto Externo" accent="#F59E0B" icon="users" :value="$$short(repCostosProv.externo)" />
-          </div>
-
-          <!-- Análisis Operativo Directivo estilo Zoho -->
-          <div class="report-section-block">
-            <div class="zoho-analysis-box">
-              <div class="zoho-analysis-label">Análisis Operativo Directivo — Gestión de Órdenes de Trabajo</div>
-              <div class="zoho-analysis-text" v-html="informeAnalisisTexto"></div>
-            </div>
           </div>
 
           <!-- Nota de Estado / Alertas -->
@@ -5301,7 +5308,7 @@ const sistemasExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(comput
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
   box-sizing: border-box;
   page-break-after: always;
   break-after: page;
@@ -5339,8 +5346,11 @@ const sistemasExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(comput
   gap: 12px;
 }
 .report-logo {
-  height: 38px;
+  height: 48px;
+  max-width: 200px;
+  width: auto;
   object-fit: contain;
+  display: block;
 }
 .report-header-text h2 {
   font-size: 14px;
@@ -5368,7 +5378,8 @@ const sistemasExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(comput
 
 .report-title-section {
   text-align: center;
-  margin: 2px 0 6px;
+  margin: 4px 0 12px;
+  width: 100%;
 }
 .report-title-section h1 {
   font-size: 16px;
@@ -5376,21 +5387,26 @@ const sistemasExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(comput
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-primary);
-  margin: 0 0 4px;
+  margin: 0 0 6px;
 }
 .report-intro {
   font-size: 12px;
-  color: var(--text-secondary);
-  max-width: 760px;
-  margin: 0 auto;
-  line-height: 1.45;
+  color: var(--text-secondary, #475569);
+  width: 100%;
+  max-width: 100%;
+  margin: 6px 0 0 0;
+  line-height: 1.65;
+  text-align: justify;
+  box-sizing: border-box;
 }
 
 .compact-kpi {
-  margin: 2px 0 6px !important;
+  margin: 4px 0 12px !important;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .report-nota {
@@ -5434,9 +5450,11 @@ const sistemasExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(comput
 
 .zoho-analysis-box {
   background-color: var(--card-bg-hover, #f8fafc);
-  padding: 12px 16px;
+  padding: 14px 18px;
   border-radius: 6px;
   border-left: 3px solid var(--navy, #172954);
+  width: 100%;
+  box-sizing: border-box;
 }
 .zoho-analysis-label {
   font-size: 10px;
@@ -5450,6 +5468,7 @@ const sistemasExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(comput
   font-size: 12px;
   color: var(--text-primary, #475569);
   line-height: 1.6;
+  text-align: justify;
 }
 
 .data-card {
