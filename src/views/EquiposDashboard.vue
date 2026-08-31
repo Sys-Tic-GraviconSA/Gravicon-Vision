@@ -4543,7 +4543,8 @@ const placaDetailTableRows = computed<Record<string, unknown>[]>(() => placaDeta
   _ot: r,
 })))
 function onPlacaClick(params: any) {
-  const placa = String(params?.name ?? params?.data?.name ?? '').trim()
+  const p = Array.isArray(params) ? params[0] : params
+  const placa = String(p?.name ?? p?.data?.name ?? '').trim()
   if (!placa || placa === '(Sin Placa del Vehículo)') return
   selectedPlaca.value = placa
   showPlacaDetail.value = true
@@ -4587,8 +4588,9 @@ const mesDetailTableRows = computed<Record<string, unknown>[]>(() => mesDetailRo
   _ot: r,
 })))
 function onEficienciaClick(params: any) {
-  const mes = String(params?.name ?? params?.axisValue ?? '').trim()
-  const serie = String(params?.seriesName ?? '').trim()
+  const p = Array.isArray(params) ? params[0] : params
+  const mes = String(p?.name ?? p?.axisValue ?? '').trim()
+  const serie = String(p?.seriesName ?? '').trim()
   if (!mes) return
   const plantas = ['Acacias', 'Restrepo', 'Villavicencio']
   selectedMesLabel.value = mes
@@ -4596,7 +4598,8 @@ function onEficienciaClick(params: any) {
   showMesDetail.value = true
 }
 function onCostosGeneralesClick(params: any) {
-  const mes = String(params?.name ?? params?.axisValue ?? '').trim()
+  const p = Array.isArray(params) ? params[0] : params
+  const mes = String(p?.name ?? p?.axisValue ?? '').trim()
   if (!mes) return
   selectedMesLabel.value = mes
   selectedMesPlanta.value = null
@@ -4652,11 +4655,11 @@ const rankingDetailTableRows = computed<Record<string, unknown>[]>(() => ranking
   _ot: r,
 })))
 function onRankingClick(field: string, params: any) {
-  const raw = params?.name ?? params?.data?.name ?? params?.axisValue ?? ''
+  const p = Array.isArray(params) ? params[0] : params
+  const raw = p?.name ?? p?.data?.name ?? p?.axisValue ?? ''
   const val = String(raw ?? '').trim()
   if (!val || val.startsWith('(Sin')) return
-  // Para barras horizontales, params.name es el label; para verticales también
-  const label = String(params?.name ?? val).trim()
+  const label = String(p?.name ?? val).trim()
   if (!label) return
   selectedRankingField.value = field
   selectedRankingValue.value = label
