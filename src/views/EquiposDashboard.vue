@@ -67,6 +67,7 @@
       <nav class="sub-tab-bar">
         <button class="sub-tab-btn" :class="{ active: subTab === 'dashboard' }" @click="subTab = 'dashboard'">Órdenes de Trabajo</button>
         <button class="sub-tab-btn" :class="{ active: subTab === 'almacen' }" @click="subTab = 'almacen'">Almacén</button>
+        <button class="sub-tab-btn" :class="{ active: subTab === 'gerencial' }" @click="subTab = 'gerencial'">Gerencial</button>
       </nav>
 
       <template v-if="subTab === 'dashboard'">
@@ -86,6 +87,26 @@
       </div>
 
       <template v-if="dashboardView === 'resumen'">
+      <div class="section-quick-nav">
+        <span class="quick-nav-label">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+          Ir a sección:
+        </span>
+        <button class="quick-nav-btn" @click="scrollToSec('sec-general')">
+          <span class="quick-nav-dot" style="background:#15223c"></span>
+          General
+        </button>
+        <button class="quick-nav-btn" @click="scrollToSec('sec-internos')">
+          <span class="quick-nav-dot" style="background:#3B82F6"></span>
+          Costos Internos
+        </button>
+        <button class="quick-nav-btn" @click="scrollToSec('sec-externos')">
+          <span class="quick-nav-dot" style="background:#10B981"></span>
+          Costos Externos
+        </button>
+      </div>
+
+      <div id="sec-general" class="section-anchor"></div>
       <div class="kpi-row">
         <KpiCard :value="$$(totalGeneral)" label="Costo Total General" accent="#15223c" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${intPct}%)</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${extPct}%)</span></div>`" />
         <KpiCard :value="$$(servicios)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intServ)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extServ)}</strong></div>`" />
@@ -172,24 +193,25 @@
       <ChartCard title="Órdenes Diarias" description="Abiertas y cerradas con sus costos" :option="ordenesDiariasOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fecha', p)" />
     </div>
 
+    <div id="sec-internos" class="section-anchor"></div>
     <div class="section-divider"></div>
 
     <h3 class="section-title"><span class="title-bar"></span>Costos Internos</h3>
     <p class="section-sub">Proveedores: Mantenimiento Maquinaria</p>
 
     <div class="kpi-row">
-      <KpiCard :value="$$(intTotal)" label="Costo Total Interno" accent="#15223c" icon="dollar" />
-      <KpiCard :value="$$(intServ)" label="Servicios Internos" accent="#3B82F6" icon="settings" />
-      <KpiCard :value="$$(intIns)" label="Insumos Internos" accent="#EF4444" icon="package" />
-      <KpiCard :value="intPct + '%'" label="% del Gasto Total" accent="#10B981" icon="chart-bar" />
-      <KpiCard :value="$$(intCostoM3)" label="Costo por m³ Interno" :accent="intCostoM3 > 3000 ? '#EF4444' : '#10B981'" :meta="'Meta: $3.000/m³'" icon="target" />
-      <KpiCard :value="String(intCount)" label="Órdenes Internas" accent="#06B6D4" icon="list" />
-      <KpiCard :value="String(otsIntEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.abiertas)}</span>`" />
-      <KpiCard :value="String(otsIntEstadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.cerradas)}</span>`" />
-      <KpiCard :value="otsIntPctCierre + '%'" label="% Cierre" accent="#3B82F6" icon="zap" />
-      <KpiCard :value="otsIntDuracionEstimadaProm + ' h'" label="Duración Estimada Promedio" accent="#8B5CF6" icon="clock" />
-      <KpiCard :value="otsIntTiempoRealProm + ' h'" label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" />
-      <KpiCard :value="otsIntConSopledPct + '%'" label="OT con Solicitud (SOPLED/Interno)" accent="#10B981" icon="package" />
+      <KpiCard :value="$$(intTotal)" label="Costo Total Interno" accent="#15223c" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Gasto</span> <strong>${intPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del total general</span></div>`" />
+      <KpiCard :value="$$(intServ)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intTotal > 0 ? ((intServ / intTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto interno</span></div>`" />
+      <KpiCard :value="$$(intIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-int'>Int</span> <strong>${intTotal > 0 ? ((intIns / intTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto interno</span></div>`" />
+      <KpiCard :value="fmt(totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
+      <KpiCard :value="$$(intCostoM3)" label="Costo por m³" :accent="intCostoM3 > 3000 ? '#EF4444' : '#10B981'" :meta="'Meta: $3.000/m³'" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
+      <KpiCard :value="String(intCount)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${totalOrdenes > 0 ? ((intCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
+      <KpiCard :value="String(otsIntEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-int'>Costo</span> <strong>${$$(otsIntEstadoCostos.abiertas)}</strong></div>`" />
+      <KpiCard :value="String(otsIntEstadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-int'>Costo</span> <strong>${$$(otsIntEstadoCostos.cerradas)}</strong></div>`" />
+      <KpiCard :value="otsIntPctCierre + '%'" label="% Cierre" accent="#3B82F6" icon="zap" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>OTs</span> <strong>${otsIntEstadoCounts.cerradas} / ${otsIntEstadoCounts.abiertas + otsIntEstadoCounts.cerradas}</strong></div>`" />
+      <KpiCard :value="otsIntDuracionEstimadaProm + ' h'" label="Duración Estimada Promedio" accent="#8B5CF6" icon="clock" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#8B5CF6'></span><span class='kpi-label-int'>OTs</span> <strong>${intCount} OTs</strong></div>`" />
+      <KpiCard :value="otsIntTiempoRealProm + ' h'" label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#06B6D4'></span><span class='kpi-label-int'>Cierre</span> <strong>${otsIntPctCierre}% cerradas</strong></div>`" />
+      <KpiCard :value="otsIntConSopledPct + '%'" label="OT con Solicitud (SOPLED/Interno)" accent="#10B981" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-int'>SOPLED</span> <strong>${otsIntSopled} pedidos</strong></div>`" />
     </div>
 
       <div class="ots-bar">
@@ -202,60 +224,86 @@
         </div>
       </div>
 
-      <div class="charts-grid cols-1">
+    <!-- Eficiencia de Mantenimiento y Costos Generales para Concretos (Internos) -->
+    <template v-if="isConcretos">
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
+        <ChartCard
+          title="Eficiencia de Mantenimiento y Costo Unitario (m³) — Interno"
+          description="Costos de mantenimiento interno por planta (Acacías, Restrepo, Villavicencio) y costo unitario por m³ producido"
+          :option="eficienciaMttoConcretosIntOpt"
+          :expand-option="eficienciaMttoConcretosIntExpandOpt"
+          :height="480"
+          tall
+          clickable
+          @chart-click="(p:any)=>onEficienciaClick(p, 'int')"
+        />
+      </div>
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
+        <ChartCard
+          title="Costos Internos y Costo Unitario (m³)"
+          description="Costos mensuales de servicios e insumos internos junto con el costo unitario por m³ producido"
+          :option="costosGeneralesM3IntOpt"
+          :expand-option="costosGeneralesM3IntExpandOpt"
+          :height="480"
+          tall
+          clickable
+          @chart-click="(p:any)=>onCostosGeneralesClick(p, 'int')"
+        />
+      </div>
+    </template>
+    <div v-else class="charts-grid cols-2" style="margin-bottom:22px">
+      <ChartCard title="Costos Mensuales (Internos)" :option="costosMensualIntOpt" />
       <ChartCard title="Costo por m³ - Interno" :option="costosM3IntOpt" />
     </div>
 
     <div class="charts-grid cols-1" style="margin-top:22px">
-      <ChartCard title="Ranking Top 10 — Costos Internos por Placa" description="Top 10 placas internas con mayor costo" :option="vehiculoIntOpt" :height="500" tall clickable @chart-click="(p:any)=>onPlacaClick(p, 'int')" />
-    </div>
-    <div class="charts-grid cols-1" style="margin-top:22px">
-      <ChartCard title="Ranking Top 10 — Costos Internos por Proveedor" description="Top 10 proveedores internos" :option="intProveedorOpt" :height="500" tall clickable @chart-click="(p:any)=>onRankingClick('PROVEEDOR', p, 'int')" />
+      <ChartCard title="Ranking Top 10 — Costos Internos por Placa" description="Top 10 placas internas con mayor costo" :option="vehiculoIntOpt" :expand-option="vehiculoIntExpandOpt" :height="500" tall clickable @chart-click="(p:any)=>onPlacaClick(p, 'int')" />
     </div>
 
       <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Clase de Mantenimiento" description="Órdenes clasificadas por clase de mantenimiento" :option="claseMantenimientoIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Clase Mantenimiento', p, 'int')" />
-        <ChartCard title="Motivos de No Ejecución" description="Solo órdenes que registran un motivo de no ejecución" :option="motivosNoEjecucionIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Motivo No Ejecución', p, 'int')" />
+        <ChartCard title="Clase de Mantenimiento" description="Órdenes clasificadas por clase de mantenimiento" :option="claseMantenimientoIntOpt" :expand-option="claseMantIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Clase Mantenimiento', p, 'int')" />
+        <ChartCard title="Motivos de No Ejecución" description="Solo órdenes que registran un motivo de no ejecución" :option="motivosNoEjecucionIntOpt" :expand-option="motivosNoEjIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Motivo No Ejecución', p, 'int')" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Órdenes por Localización" description="Órdenes según la localización registrada" :option="localizacionIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Localización', p, 'int')" />
-        <ChartCard title="Prioridad" description="Órdenes por nivel de prioridad" :option="prioridadIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Prioridad', p, 'int')" />
+        <ChartCard title="Órdenes por Localización" description="Órdenes según la localización registrada" :option="localizacionIntOpt" :expand-option="localizacionIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Localización', p, 'int')" />
+        <ChartCard title="Prioridad" description="Órdenes por nivel de prioridad" :option="prioridadIntOpt" :expand-option="prioridadIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Prioridad', p, 'int')" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Fuente de Novedad" description="Órdenes según la fuente de novedad registrada" :option="fuenteNovedadIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fuente_Novedad', p, 'int')" />
+        <ChartCard title="Fuente de Novedad" description="Órdenes según la fuente de novedad registrada" :option="fuenteNovedadIntOpt" :expand-option="fuenteNovedadIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fuente_Novedad', p, 'int')" />
         <ChartCard title="Jornada" description="Distribución de órdenes internas por jornada (Día / Noche)" :option="jornadaIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Jornada', p, 'int')" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Responsables de Cierre con Más Órdenes" description="Quienes más cierran órdenes de trabajo" :option="responsablesCierreIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Responsable Cierre', p, 'int')" />
-        <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Sistema', p, 'int')" />
+        <ChartCard title="Responsables de Cierre con Más Órdenes" description="Quienes más cierran órdenes de trabajo" :option="responsablesCierreIntOpt" :expand-option="responsablesCierreIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Responsable Cierre', p, 'int')" />
+        <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasIntOpt" :expand-option="sistemasIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Sistema', p, 'int')" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Personal de Intervención" description="Técnicos de Gravicon con más intervenciones" :option="personalIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Personal', p, 'int')" />
-        <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Solicitante', p, 'int')" />
+        <ChartCard title="Personal de Intervención (Interno)" description="Técnicos de Gravicon con más intervenciones" :option="personalIntOpt" :expand-option="personalIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Personal', p, 'int')" />
+        <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesIntOpt" :expand-option="solicitantesIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Solicitante', p, 'int')" />
       </div>
 
      <div class="charts-grid cols-1" style="margin-bottom:22px">
       <ChartCard title="Órdenes Diarias" description="Abiertas y cerradas con sus costos (Internas)" :option="ordenesDiariasIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fecha', p, 'int')" />
     </div>
 
+    <div id="sec-externos" class="section-anchor"></div>
     <div class="section-divider"></div>
 
     <h3 class="section-title"><span class="title-bar"></span>Costos Externos</h3>
     <p class="section-sub">Proveedores diferentes a Mantenimiento Maquinaria</p>
 
     <div class="kpi-row">
-      <KpiCard :value="$$(extTotal)" label="Costo Total Externo" accent="#15223c" icon="dollar" />
-      <KpiCard :value="$$(extServ)" label="Servicios Externos" accent="#3B82F6" icon="settings" />
-      <KpiCard :value="$$(extIns)" label="Insumos Externos" accent="#EF4444" icon="package" />
-      <KpiCard :value="extPct + '%'" label="% del Gasto Total" accent="#10B981" icon="chart-bar" />
-      <KpiCard :value="$$(extCostoM3)" label="Costo por m³ Externo" :accent="extCostoM3 > 3000 ? '#EF4444' : '#10B981'" :meta="'Meta: $3.000/m³'" icon="target" />
-      <KpiCard :value="String(extCount)" label="Órdenes Externas" accent="#06B6D4" icon="list" />
-      <KpiCard :value="String(otsExtEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.abiertas)}</span>`" />
-      <KpiCard :value="String(otsExtEstadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.cerradas)}</span>`" />
-      <KpiCard :value="otsExtPctCierre + '%'" label="% Cierre" accent="#3B82F6" icon="zap" />
-      <KpiCard :value="otsExtDuracionEstimadaProm + ' h'" label="Duración Estimada Promedio" accent="#8B5CF6" icon="clock" />
-      <KpiCard :value="otsExtTiempoRealProm + ' h'" label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" />
-      <KpiCard :value="otsExtConSopledPct + '%'" label="OT con Solicitud (SOPLED/Interno)" accent="#10B981" icon="package" />
+      <KpiCard :value="$$(extTotal)" label="Costo Total Externo" accent="#15223c" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Gasto</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del total general</span></div>`" />
+      <KpiCard :value="$$(extServ)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-ext'>Ext</span> <strong>${extTotal > 0 ? ((extServ / extTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto externo</span></div>`" />
+      <KpiCard :value="$$(extIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Ext</span> <strong>${extTotal > 0 ? ((extIns / extTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto externo</span></div>`" />
+      <KpiCard :value="fmt(totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
+      <KpiCard :value="$$(extCostoM3)" label="Costo por m³" :accent="extCostoM3 > 3000 ? '#EF4444' : '#10B981'" :meta="'Meta: $3.000/m³'" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
+      <KpiCard :value="String(extCount)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${totalOrdenes > 0 ? ((extCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
+      <KpiCard :value="String(otsExtEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Costo</span> <strong>${$$(otsExtEstadoCostos.abiertas)}</strong></div>`" />
+      <KpiCard :value="String(otsExtEstadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Costo</span> <strong>${$$(otsExtEstadoCostos.cerradas)}</strong></div>`" />
+      <KpiCard :value="otsExtPctCierre + '%'" label="% Cierre" accent="#3B82F6" icon="zap" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-ext'>OTs</span> <strong>${otsExtEstadoCounts.cerradas} / ${otsExtEstadoCounts.abiertas + otsExtEstadoCounts.cerradas}</strong></div>`" />
+      <KpiCard :value="otsExtDuracionEstimadaProm + ' h'" label="Duración Estimada Promedio" accent="#8B5CF6" icon="clock" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#8B5CF6'></span><span class='kpi-label-ext'>OTs</span> <strong>${extCount} OTs</strong></div>`" />
+      <KpiCard :value="otsExtTiempoRealProm + ' h'" label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#06B6D4'></span><span class='kpi-label-ext'>Cierre</span> <strong>${otsExtPctCierre}% cerradas</strong></div>`" />
+      <KpiCard :value="otsExtConSopledPct + '%'" label="OT con Solicitud (SOPLED/Interno)" accent="#10B981" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>SOPLED</span> <strong>${otsExtSopled} pedidos</strong></div>`" />
     </div>
 
       <div class="ots-bar">
@@ -268,32 +316,63 @@
         </div>
       </div>
 
-    <div class="charts-grid cols-1">
+    <!-- Eficiencia de Mantenimiento y Costos Generales para Concretos (Externos) -->
+    <template v-if="isConcretos">
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
+        <ChartCard
+          title="Eficiencia de Mantenimiento y Costo Unitario (m³) — Externo"
+          description="Costos de mantenimiento externo por planta (Acacías, Restrepo, Villavicencio) y costo unitario por m³ producido"
+          :option="eficienciaMttoConcretosExtOpt"
+          :expand-option="eficienciaMttoConcretosExtExpandOpt"
+          :height="480"
+          tall
+          clickable
+          @chart-click="(p:any)=>onEficienciaClick(p, 'ext')"
+        />
+      </div>
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
+        <ChartCard
+          title="Costos Externos y Costo Unitario (m³)"
+          description="Costos mensuales de servicios e insumos externos junto con el costo unitario por m³ producido"
+          :option="costosGeneralesM3ExtOpt"
+          :expand-option="costosGeneralesM3ExtExpandOpt"
+          :height="480"
+          tall
+          clickable
+          @chart-click="(p:any)=>onCostosGeneralesClick(p, 'ext')"
+        />
+      </div>
+    </template>
+    <div v-else class="charts-grid cols-2" style="margin-bottom:22px">
+      <ChartCard title="Costos Mensuales (Externos)" :option="costosMensualExtOpt" />
       <ChartCard title="Costo por m³ - Externo" :option="costosM3ExtOpt" />
     </div>
 
     <div class="charts-grid cols-1" style="margin-top:22px">
-      <ChartCard title="Ranking Top 10 — Costos Externos por Placa" description="Top 10 placas externas con mayor costo" :option="vehiculoExtOpt" :height="500" tall clickable @chart-click="(p:any)=>onPlacaClick(p, 'ext')" />
+      <ChartCard title="Ranking Top 10 — Costos Externos por Placa" description="Top 10 placas externas con mayor costo" :option="vehiculoExtOpt" :expand-option="vehiculoExtExpandOpt" :height="500" tall clickable @chart-click="(p:any)=>onPlacaClick(p, 'ext')" />
+    </div>
+    <div class="charts-grid cols-1" style="margin-top:22px">
+      <ChartCard title="Ranking Top 10 — Costos Externos por Proveedor" description="Top 10 proveedores externos con mayor costo" :option="extProveedorOpt" :expand-option="extProveedorExpandOpt" :height="500" tall clickable @chart-click="(p:any)=>onRankingClick('PROVEEDOR', p, 'ext')" />
     </div>
 
       <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Clase de Mantenimiento" description="Órdenes clasificadas por clase de mantenimiento" :option="claseMantenimientoExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Clase Mantenimiento', p, 'ext')" />
-        <ChartCard title="Motivos de No Ejecución" description="Solo órdenes que registran un motivo de no ejecución" :option="motivosNoEjecucionExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Motivo No Ejecución', p, 'ext')" />
+        <ChartCard title="Clase de Mantenimiento" description="Órdenes clasificadas por clase de mantenimiento" :option="claseMantenimientoExtOpt" :expand-option="claseMantExtExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Clase Mantenimiento', p, 'ext')" />
+        <ChartCard title="Motivos de No Ejecución" description="Solo órdenes que registran un motivo de no ejecución" :option="motivosNoEjecucionExtOpt" :expand-option="motivosNoEjExtExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Motivo No Ejecución', p, 'ext')" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Órdenes por Localización" description="Órdenes según la localización registrada" :option="localizacionExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Localización', p, 'ext')" />
-        <ChartCard title="Prioridad" description="Órdenes por nivel de prioridad" :option="prioridadExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Prioridad', p, 'ext')" />
+        <ChartCard title="Órdenes por Localización" description="Órdenes según la localización registrada" :option="localizacionExtOpt" :expand-option="localizacionExtExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Localización', p, 'ext')" />
+        <ChartCard title="Prioridad" description="Órdenes por nivel de prioridad" :option="prioridadExtOpt" :expand-option="prioridadExtExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Prioridad', p, 'ext')" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Fuente de Novedad" description="Órdenes según la fuente de novedad registrada" :option="fuenteNovedadExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fuente_Novedad', p, 'ext')" />
+        <ChartCard title="Fuente de Novedad" description="Órdenes según la fuente de novedad registrada" :option="fuenteNovedadExtOpt" :expand-option="fuenteNovedadExtExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fuente_Novedad', p, 'ext')" />
         <ChartCard title="Jornada" description="Distribución de órdenes externas por jornada (Día / Noche)" :option="jornadaExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Jornada', p, 'ext')" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Responsables de Cierre con Más Órdenes" description="Quienes más cierran órdenes de trabajo" :option="responsablesCierreExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Responsable Cierre', p, 'ext')" />
-        <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Sistema', p, 'ext')" />
+        <ChartCard title="Responsables de Cierre con Más Órdenes" description="Quienes más cierran órdenes de trabajo" :option="responsablesCierreExtOpt" :expand-option="responsablesCierreExtExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Responsable Cierre', p, 'ext')" />
+        <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasExtOpt" :expand-option="sistemasExtExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Sistema', p, 'ext')" />
       </div>
       <div class="charts-grid cols-1" style="margin-bottom:22px">
-        <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Solicitante', p, 'ext')" />
+        <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesExtOpt" :expand-option="solicitantesExtExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Solicitante', p, 'ext')" />
       </div>
 
     <div class="charts-grid cols-1" style="margin-bottom:22px">
@@ -915,6 +994,249 @@
     </div>
     </template>
 
+    <template v-if="subTab === 'gerencial'">
+      <div class="section-quick-nav">
+        <span class="quick-nav-label">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+          Ir a sección:
+        </span>
+        <button class="quick-nav-btn" @click="scrollToSec('sec-ger-general')">
+          <span class="quick-nav-dot" style="background:#15223c"></span>
+          General
+        </button>
+        <button class="quick-nav-btn" @click="scrollToSec('sec-ger-internos')">
+          <span class="quick-nav-dot" style="background:#3B82F6"></span>
+          Costos Internos
+        </button>
+        <button class="quick-nav-btn" @click="scrollToSec('sec-ger-externos')">
+          <span class="quick-nav-dot" style="background:#10B981"></span>
+          Costos Externos
+        </button>
+      </div>
+
+      <!-- ==================== SECCIÓN 1: GENERAL ==================== -->
+      <div id="sec-ger-general" class="section-anchor"></div>
+      <div class="kpi-row">
+        <KpiCard :value="$$(totalGeneral)" label="Costo Total General" accent="#15223c" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${intPct}%)</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${extPct}%)</span></div>`" />
+        <KpiCard :value="$$(servicios)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intServ)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extServ)}</strong></div>`" />
+        <KpiCard :value="$$(insumos)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intIns)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extIns)}</strong></div>`" />
+        <KpiCard :value="fmt(totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
+        <KpiCard :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > 3000 ? '#EF4444' : '#10B981'" :meta="'Meta: $3.000/m³'" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3)}/m³</strong></div>`" />
+        <KpiCard :value="String(totalOrdenes)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCount}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCount}</strong></div>`" />
+        <KpiCard :value="String(estadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.abiertas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.abiertas)}</span></div>`" />
+        <KpiCard :value="String(estadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.cerradas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.cerradas)}</span></div>`" />
+      </div>
+
+      <div class="ots-bar">
+        <div class="ots-stats">
+          <span><strong>{{ totalSubs }}</strong> sub-órdenes</span>
+          <span class="ots-dot"></span>
+          <span><strong>{{ totalSopled }}</strong> SOPLED</span>
+          <span class="ots-dot"></span>
+          <span>Costo total <strong>{{ $$(otsCostoTotal) }}</strong></span>
+        </div>
+      </div>
+
+      <template v-if="isConcretos">
+        <div class="charts-grid cols-1" style="margin-bottom:22px">
+          <ChartCard
+            title="Eficiencia de Mantenimiento y Costo Unitario (m³)"
+            description="Costos de mantenimiento por planta (Acacías, Restrepo, Villavicencio) y costo unitario por m³ producido"
+            :option="eficienciaMttoConcretosOpt"
+            :expand-option="eficienciaMttoConcretosExpandOpt"
+            :height="480"
+            tall
+            clickable
+            @chart-click="onEficienciaClick"
+          />
+        </div>
+        <div class="charts-grid cols-1" style="margin-bottom:22px">
+          <ChartCard
+            title="Costos Generales y Costo Unitario (m³)"
+            description="Costos mensuales de servicios e insumos junto con el costo unitario por m³ producido"
+            :option="costosGeneralesM3Opt"
+            :expand-option="costosGeneralesM3ExpandOpt"
+            :height="480"
+            tall
+            clickable
+            @chart-click="onCostosGeneralesClick"
+          />
+        </div>
+      </template>
+      <div v-else class="charts-grid cols-2" style="margin-bottom:22px">
+        <ChartCard title="Costos Mensuales" :option="costosMensualOpt" />
+        <ChartCard title="Costo por m³ - Tendencia" :option="costoM3Opt" />
+      </div>
+
+      <div class="charts-grid cols-1" style="margin-top:22px">
+        <ChartCard title="Ranking Top 10 — Costos de Mantenimiento por Placa" description="Top 10 placas con mayor costo acumulado" :option="vehiculoGenOpt" :expand-option="vehiculoGenExpandOpt" :height="500" tall clickable @chart-click="onPlacaClick" />
+      </div>
+
+      <div class="charts-grid cols-2" style="margin-bottom:22px">
+        <ChartCard title="Personal de Intervención (Interno)" description="Técnicos de Gravicon con más intervenciones" :option="personalInternoOpt" :expand-option="personalInternoExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Personal', p)" />
+        <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesOpt" :expand-option="solicitantesExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Solicitante', p)" />
+      </div>
+
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
+        <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasOpt" :expand-option="sistemasExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Sistema', p)" />
+      </div>
+
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
+        <ChartCard title="Órdenes Diarias" description="Abiertas y cerradas con sus costos" :option="ordenesDiariasOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fecha', p)" />
+      </div>
+
+      <!-- ==================== SECCIÓN 2: COSTOS INTERNOS ==================== -->
+      <div id="sec-ger-internos" class="section-anchor"></div>
+      <div class="section-divider"></div>
+
+      <h3 class="section-title"><span class="title-bar"></span>Costos Internos</h3>
+      <p class="section-sub">Proveedores: Mantenimiento Maquinaria</p>
+
+      <div class="kpi-row">
+        <KpiCard :value="$$(intTotal)" label="Costo Total Interno" accent="#15223c" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Gasto</span> <strong>${intPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del total general</span></div>`" />
+        <KpiCard :value="$$(intServ)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intTotal > 0 ? ((intServ / intTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto interno</span></div>`" />
+        <KpiCard :value="$$(intIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-int'>Int</span> <strong>${intTotal > 0 ? ((intIns / intTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto interno</span></div>`" />
+        <KpiCard :value="fmt(totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
+        <KpiCard :value="$$(intCostoM3)" label="Costo por m³" :accent="intCostoM3 > 3000 ? '#EF4444' : '#10B981'" :meta="'Meta: $3.000/m³'" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
+        <KpiCard :value="String(intCount)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${totalOrdenes > 0 ? ((intCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
+        <KpiCard :value="String(otsIntEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-int'>Costo</span> <strong>${$$(otsIntEstadoCostos.abiertas)}</strong></div>`" />
+        <KpiCard :value="String(otsIntEstadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-int'>Costo</span> <strong>${$$(otsIntEstadoCostos.cerradas)}</strong></div>`" />
+      </div>
+
+      <div class="ots-bar">
+        <div class="ots-stats">
+          <span><strong>{{ otsIntSubs }}</strong> sub-órdenes</span>
+          <span class="ots-dot"></span>
+          <span><strong>{{ otsIntSopled }}</strong> SOPLED</span>
+          <span class="ots-dot"></span>
+          <span>Costo total <strong>{{ $$(otsIntCostoTotal) }}</strong></span>
+        </div>
+      </div>
+
+      <template v-if="isConcretos">
+        <div class="charts-grid cols-1" style="margin-bottom:22px">
+          <ChartCard
+            title="Eficiencia de Mantenimiento y Costo Unitario (m³) — Interno"
+            description="Costos de mantenimiento interno por planta (Acacías, Restrepo, Villavicencio) y costo unitario por m³ producido"
+            :option="eficienciaMttoConcretosIntOpt"
+            :expand-option="eficienciaMttoConcretosIntExpandOpt"
+            :height="480"
+            tall
+            clickable
+            @chart-click="(p:any)=>onEficienciaClick(p, 'int')"
+          />
+        </div>
+        <div class="charts-grid cols-1" style="margin-bottom:22px">
+          <ChartCard
+            title="Costos Internos y Costo Unitario (m³)"
+            description="Costos mensuales de servicios e insumos internos junto con el costo unitario por m³ producido"
+            :option="costosGeneralesM3IntOpt"
+            :expand-option="costosGeneralesM3IntExpandOpt"
+            :height="480"
+            tall
+            clickable
+            @chart-click="(p:any)=>onCostosGeneralesClick(p, 'int')"
+          />
+        </div>
+      </template>
+      <div v-else class="charts-grid cols-2" style="margin-bottom:22px">
+        <ChartCard title="Costos Mensuales (Internos)" :option="costosMensualIntOpt" />
+        <ChartCard title="Costo por m³ - Interno" :option="costosM3IntOpt" />
+      </div>
+
+      <div class="charts-grid cols-1" style="margin-top:22px">
+        <ChartCard title="Ranking Top 10 — Costos Internos por Placa" description="Top 10 placas internas con mayor costo" :option="vehiculoIntOpt" :expand-option="vehiculoIntExpandOpt" :height="500" tall clickable @chart-click="(p:any)=>onPlacaClick(p, 'int')" />
+      </div>
+
+      <div class="charts-grid cols-2" style="margin-bottom:22px">
+        <ChartCard title="Personal de Intervención (Interno)" description="Técnicos de Gravicon con más intervenciones" :option="personalIntOpt" :expand-option="personalIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Personal', p, 'int')" />
+        <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesIntOpt" :expand-option="solicitantesIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Solicitante', p, 'int')" />
+      </div>
+
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
+        <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasIntOpt" :expand-option="sistemasIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Sistema', p, 'int')" />
+      </div>
+
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
+        <ChartCard title="Órdenes Diarias" description="Abiertas y cerradas con sus costos (Internas)" :option="ordenesDiariasIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fecha', p, 'int')" />
+      </div>
+
+      <!-- ==================== SECCIÓN 3: COSTOS EXTERNOS ==================== -->
+      <div id="sec-ger-externos" class="section-anchor"></div>
+      <div class="section-divider"></div>
+
+      <h3 class="section-title"><span class="title-bar"></span>Costos Externos</h3>
+      <p class="section-sub">Proveedores diferentes a Mantenimiento Maquinaria</p>
+
+      <div class="kpi-row">
+        <KpiCard :value="$$(extTotal)" label="Costo Total Externo" accent="#15223c" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Gasto</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del total general</span></div>`" />
+        <KpiCard :value="$$(extServ)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-ext'>Ext</span> <strong>${extTotal > 0 ? ((extServ / extTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto externo</span></div>`" />
+        <KpiCard :value="$$(extIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Ext</span> <strong>${extTotal > 0 ? ((extIns / extTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto externo</span></div>`" />
+        <KpiCard :value="fmt(totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
+        <KpiCard :value="$$(extCostoM3)" label="Costo por m³" :accent="extCostoM3 > 3000 ? '#EF4444' : '#10B981'" :meta="'Meta: $3.000/m³'" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
+        <KpiCard :value="String(extCount)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${totalOrdenes > 0 ? ((extCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
+        <KpiCard :value="String(otsExtEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Costo</span> <strong>${$$(otsExtEstadoCostos.abiertas)}</strong></div>`" />
+        <KpiCard :value="String(otsExtEstadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Costo</span> <strong>${$$(otsExtEstadoCostos.cerradas)}</strong></div>`" />
+      </div>
+
+      <div class="ots-bar">
+        <div class="ots-stats">
+          <span><strong>{{ otsExtSubs }}</strong> sub-órdenes</span>
+          <span class="ots-dot"></span>
+          <span><strong>{{ otsExtSopled }}</strong> SOPLED</span>
+          <span class="ots-dot"></span>
+          <span>Costo total <strong>{{ $$(otsExtCostoTotal) }}</strong></span>
+        </div>
+      </div>
+
+      <template v-if="isConcretos">
+        <div class="charts-grid cols-1" style="margin-bottom:22px">
+          <ChartCard
+            title="Eficiencia de Mantenimiento y Costo Unitario (m³) — Externo"
+            description="Costos de mantenimiento externo por planta (Acacías, Restrepo, Villavicencio) y costo unitario por m³ producido"
+            :option="eficienciaMttoConcretosExtOpt"
+            :expand-option="eficienciaMttoConcretosExtExpandOpt"
+            :height="480"
+            tall
+            clickable
+            @chart-click="(p:any)=>onEficienciaClick(p, 'ext')"
+          />
+        </div>
+        <div class="charts-grid cols-1" style="margin-bottom:22px">
+          <ChartCard
+            title="Costos Externos y Costo Unitario (m³)"
+            description="Costos mensuales de servicios e insumos externos junto con el costo unitario por m³ producido"
+            :option="costosGeneralesM3ExtOpt"
+            :expand-option="costosGeneralesM3ExtExpandOpt"
+            :height="480"
+            tall
+            clickable
+            @chart-click="(p:any)=>onCostosGeneralesClick(p, 'ext')"
+          />
+        </div>
+      </template>
+      <div v-else class="charts-grid cols-2" style="margin-bottom:22px">
+        <ChartCard title="Costos Mensuales (Externos)" :option="costosMensualExtOpt" />
+        <ChartCard title="Costo por m³ - Externo" :option="costosM3ExtOpt" />
+      </div>
+
+      <div class="charts-grid cols-1" style="margin-top:22px">
+        <ChartCard title="Ranking Top 10 — Costos Externos por Placa" description="Top 10 placas externas con mayor costo" :option="vehiculoExtOpt" :expand-option="vehiculoExtExpandOpt" :height="500" tall clickable @chart-click="(p:any)=>onPlacaClick(p, 'ext')" />
+      </div>
+      <div class="charts-grid cols-1" style="margin-top:22px">
+        <ChartCard title="Ranking Top 10 — Costos Externos por Proveedor" description="Top 10 proveedores externos con mayor costo" :option="extProveedorOpt" :expand-option="extProveedorExpandOpt" :height="500" tall clickable @chart-click="(p:any)=>onRankingClick('PROVEEDOR', p, 'ext')" />
+      </div>
+
+      <div class="charts-grid cols-2" style="margin-bottom:22px">
+        <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasExtOpt" :expand-option="sistemasExtExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Sistema', p, 'ext')" />
+        <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesExtOpt" :expand-option="solicitantesExtExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Solicitante', p, 'ext')" />
+      </div>
+
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
+        <ChartCard title="Órdenes Diarias" description="Abiertas y cerradas con sus costos (Externas)" :option="ordenesDiariasExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fecha', p, 'ext')" />
+      </div>
+    </template>
+
     <Teleport to="body">
       <div v-if="detalleOT" class="modal-overlay" @click.self="detalleOT = null">
         <div class="modal-panel ot-modal-panel">
@@ -1375,9 +1697,13 @@ const isConcretos = computed(() => props.planta?.toLowerCase() === 'concretos')
 
 const tipoTab = ref('planta')
 const tipoTabs = ref<{ id: string; label: string; count: number }[]>([])
-const subTab = ref('dashboard')
+const subTab = ref<'dashboard' | 'almacen' | 'gerencial'>('dashboard')
 const dashboardView = ref<'resumen' | 'ordenes' | 'informe'>('resumen')
 const almacenView = ref<'graficos' | 'solicitudes'>('graficos')
+function scrollToSec(id: string) {
+  const el = document.getElementById(id)
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 function rowCosto(r: Record<string, unknown>): number {
   return (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0)
 }
@@ -1751,9 +2077,9 @@ function rankByMultiValue(items: Record<string, unknown>[], field: string, limit
 }
 
 /** Sistemas más intervenidos: cuenta apariciones en las sub-órdenes de cada OT. */
-const sistemasRanking = computed(() => {
+function computeSistemasRanking(rows: Record<string, unknown>[], limit = Infinity): [string, number][] {
   const map = new Map<string, number>()
-  for (const r of dataFilteredMain.value) {
+  for (const r of rows) {
     if (isAcpm(r)) continue
     const subs = r['_subOrdenes']
     if (!Array.isArray(subs)) continue
@@ -1764,8 +2090,9 @@ const sistemasRanking = computed(() => {
       map.set(label, (map.get(label) || 0) + 1)
     }
   }
-  return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10)
-})
+  return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit)
+}
+const sistemasRanking = computed(() => computeSistemasRanking(dataFilteredMain.value, 10))
 
 /** Costo total por Localización */
 const costoTotalLocalizacion = computed(() => {
@@ -1799,9 +2126,9 @@ const motivosNoEjecucionRanking = computed(() => rankBy(dataFilteredMain.value.f
  * Personal de intervención: participaciones + horas (Duración_Estimada) + costo total.
  * Costo = Costo servicios + Costos Insumos.
  */
-const personalInternoRanking = computed((): { label: string; n: number; horas: number; costo: number }[] => {
+function computePersonalRanking(rows: Record<string, unknown>[], limit = Infinity): { label: string; n: number; horas: number; costo: number }[] {
   const map = new Map<string, { n: number; horas: number; costo: number }>()
-  for (const r of dataFilteredMain.value.filter(isInterno)) {
+  for (const r of rows) {
     const horas = Number(r['Duración (horas)']) || 0
 
     const personalDetalles = r['_personalDetalles']
@@ -1831,8 +2158,9 @@ const personalInternoRanking = computed((): { label: string; n: number; horas: n
       }
     }
   }
-  return [...map.entries()].map(([label, e]) => ({ label, ...e })).sort((a, b) => b.n - a.n).slice(0, 10)
-})
+  return [...map.entries()].map(([label, e]) => ({ label, ...e })).sort((a, b) => b.n - a.n).slice(0, limit)
+}
+const personalInternoRanking = computed(() => computePersonalRanking(dataFilteredMain.value.filter(isInterno), 10))
 
 interface AlmacenItem { referencia: string; descripcion: string; und: string; solicitudes: number; cantidadTotal: number }
 
@@ -3351,6 +3679,8 @@ const ordenesDiariasExt = computed(() => buildDiarias(partition.value.ext))
 const ordenesDiariasExtOpt = computed(() => buildDiariasOpt(ordenesDiariasExt.value))
 
 const dataFilteredNoAcpm = computed(() => dataFilteredMain.value.filter(r => !isAcpm(r)))
+const intRows = computed(() => partition.value.int)
+const extRows = computed(() => partition.value.ext)
 
 const generalKpi = computed(() => {
   let serv = 0, ins = 0
@@ -3422,104 +3752,122 @@ const insumos = computed(() => generalKpi.value.ins)
 const costoM3 = computed(() => totalProd.value > 0 ? generalKpi.value.total / totalProd.value : 0)
 const totalOrdenes = computed(() => generalKpi.value.count)
 
+function buildCostosMensualOption(monthlyData: ReturnType<typeof aggMonthly>) {
+  return markRaw({
+    color: [palette[1], '#EF4444'],
+    tooltip: {
+      trigger: 'axis' as const,
+      formatter: (params: any) => {
+        const arr = Array.isArray(params) ? params : [params]
+        const mes = arr[0]?.name ?? ''
+        let serv = 0, ins = 0
+        for (const p of arr) {
+          const v = Number(p.value) || 0
+          if (p.seriesName === 'Servicios') serv = v
+          else ins = v
+        }
+        const total = serv + ins
+        return `<b>${mes}</b><br/>` +
+          `<span style="color:${palette[1]}">\u25CF</span> Servicios: <b>$${Math.round(serv).toLocaleString('es-CO')}</b><br/>` +
+          `<span style="color:#EF4444">\u25CF</span> Insumos: <b>$${Math.round(ins).toLocaleString('es-CO')}</b><br/>` +
+          `<span style="color:#1f2937">\u25CF</span> Total: <b>$${Math.round(total).toLocaleString('es-CO')}</b>`
+      },
+    },
+    grid: { left: 60, right: 30, bottom: 60, top: 50, containLabel: true },
+    xAxis: { type: 'category' as const, data: monthlyData.labels, axisLabel: { fontWeight: 600 as const, color: chartTextColor.value } },
+    yAxis: { type: 'value' as const, axisLabel: { show: false }, splitLine: { show: false } },
+    series: [
+      {
+        name: 'Servicios',
+        type: 'bar',
+        barMaxWidth: 32,
+        data: monthlyData.serv,
+        itemStyle: { color: palette[1], borderRadius: [4, 4, 0, 0] },
+        emphasis: { focus: 'series' },
+        label: {
+          show: true,
+          position: 'top',
+          fontSize: 9.5,
+          fontWeight: 600 as const,
+          color: theme.value === 'light' ? '#475569' : '#cbd5e1',
+          formatter: (p: any) => {
+            const v = Number(p.value) || 0
+            return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
+          },
+        },
+      },
+      {
+        name: 'Insumos',
+        type: 'bar',
+        barMaxWidth: 32,
+        data: monthlyData.ins,
+        itemStyle: { color: '#EF4444', borderRadius: [4, 4, 0, 0] },
+        emphasis: { focus: 'series' },
+        label: {
+          show: true,
+          position: 'top',
+          fontSize: 9.5,
+          fontWeight: 600 as const,
+          color: theme.value === 'light' ? '#475569' : '#cbd5e1',
+          formatter: (p: any) => {
+            const v = Number(p.value) || 0
+            return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
+          },
+        },
+      },
+    ],
+    legend: { bottom: 0, textStyle: { fontWeight: 600, color: chartTextColor.value } },
+  })
+}
+
+function buildCostoM3TrendOption(costM3Data: ReturnType<typeof aggMonthly>, color = palette[4]) {
+  return markRaw({
+    color: [color],
+    tooltip: {
+      trigger: 'axis' as const,
+      formatter: (params: any) => {
+        const p = Array.isArray(params) ? params[0] : params
+        const mes = p.name ?? ''
+        const valor = Number(p.value) || 0
+        const idx = costM3Data.labels.indexOf(mes)
+        const vals = costM3Data.vals || []
+        let diff = ''
+        if (idx > 0 && vals[idx - 1]) {
+          const anterior = Number(vals[idx - 1]) || 0
+          if (anterior > 0) {
+            const pct = ((valor - anterior) / anterior * 100).toFixed(1)
+            const flecha = Number(pct) > 0 ? '↑' : Number(pct) < 0 ? '↓' : '→'
+            diff = `<br/>vs Mes Anterior: <b>${Number(pct) > 0 ? '+' : ''}${pct}% ${flecha}</b>`
+          }
+        }
+        return `<b>${mes}</b><br/>Costo/m³: <b>$${Math.round(valor).toLocaleString('es-CO')}</b>${diff}`
+      },
+    },
+    grid: { left: 60, right: 30, bottom: 60, top: 50, containLabel: true },
+    xAxis: { type: 'category' as const, data: costM3Data.labels, axisLabel: { fontWeight: 600 as const, color: chartTextColor.value } },
+    yAxis: { type: 'value' as const, interval: 1000, max: Math.max(Math.max(...(costM3Data.vals || [3000]), 3000) * 1.15, 3500), axisLabel: { show: false }, splitLine: { show: false } },
+    series: [{
+      type: 'line', smooth: true, data: costM3Data.vals, areaStyle: { opacity: 0.3 },
+      label: labelLineCurrency.value,
+    }],
+  })
+}
+
 const monthlyGen = computed(() => aggMonthly(dataFilteredNoAcpm.value))
-const costosMensualOpt = computed(() => markRaw({
-  color: [palette[1], '#EF4444'],
-  tooltip: {
-    trigger: 'axis' as const,
-    formatter: (params: any) => {
-      const arr = Array.isArray(params) ? params : [params]
-      const mes = arr[0]?.name ?? ''
-      let serv = 0, ins = 0
-      for (const p of arr) {
-        const v = Number(p.value) || 0
-        if (p.seriesName === 'Servicios') serv = v
-        else ins = v
-      }
-      const total = serv + ins
-      return `<b>${mes}</b><br/>` +
-        `<span style="color:${palette[1]}">\u25CF</span> Servicios: <b>$${Math.round(serv).toLocaleString('es-CO')}</b><br/>` +
-        `<span style="color:#EF4444">\u25CF</span> Insumos: <b>$${Math.round(ins).toLocaleString('es-CO')}</b><br/>` +
-        `<span style="color:#1f2937">\u25CF</span> Total: <b>$${Math.round(total).toLocaleString('es-CO')}</b>`
-    },
-  },
-  grid: { left: 60, right: 30, bottom: 60, top: 50, containLabel: true },
-  xAxis: { type: 'category' as const, data: monthlyGen.value.labels, axisLabel: { fontWeight: 600 as const, color: chartTextColor.value } },
-  yAxis: { type: 'value' as const, axisLabel: { show: false }, splitLine: { show: false } },
-  series: [
-    {
-      name: 'Servicios',
-      type: 'bar',
-      barMaxWidth: 32,
-      data: monthlyGen.value.serv,
-      itemStyle: { color: palette[1], borderRadius: [4, 4, 0, 0] },
-      emphasis: { focus: 'series' },
-      label: {
-        show: true,
-        position: 'top',
-        fontSize: 9.5,
-        fontWeight: 600 as const,
-        color: theme.value === 'light' ? '#475569' : '#cbd5e1',
-        formatter: (p: any) => {
-          const v = Number(p.value) || 0
-          return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
-        },
-      },
-    },
-    {
-      name: 'Insumos',
-      type: 'bar',
-      barMaxWidth: 32,
-      data: monthlyGen.value.ins,
-      itemStyle: { color: '#EF4444', borderRadius: [4, 4, 0, 0] },
-      emphasis: { focus: 'series' },
-      label: {
-        show: true,
-        position: 'top',
-        fontSize: 9.5,
-        fontWeight: 600 as const,
-        color: theme.value === 'light' ? '#475569' : '#cbd5e1',
-        formatter: (p: any) => {
-          const v = Number(p.value) || 0
-          return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
-        },
-      },
-    },
-  ],
-  legend: { bottom: 0, textStyle: { fontWeight: 600, color: chartTextColor.value } },
-}))
+const monthlyInt = computed(() => aggMonthly(intRows.value))
+const monthlyExt = computed(() => aggMonthly(extRows.value))
+
+const costosMensualOpt = computed(() => buildCostosMensualOption(monthlyGen.value))
+const costosMensualIntOpt = computed(() => buildCostosMensualOption(monthlyInt.value))
+const costosMensualExtOpt = computed(() => buildCostosMensualOption(monthlyExt.value))
 
 const costM3Gen = computed(() => aggMonthly(dataFilteredNoAcpm.value, prodMapByMonth.value, true))
-const costoM3Opt = computed(() => markRaw({
-  color: [palette[4]],
-  tooltip: {
-    trigger: 'axis' as const,
-    formatter: (params: any) => {
-      const p = Array.isArray(params) ? params[0] : params
-      const mes = p.name ?? ''
-      const valor = Number(p.value) || 0
-      const idx = costM3Gen.value.labels.indexOf(mes)
-      const vals = costM3Gen.value.vals || []
-      let diff = ''
-      if (idx > 0 && vals[idx - 1]) {
-        const anterior = Number(vals[idx - 1]) || 0
-        if (anterior > 0) {
-          const pct = ((valor - anterior) / anterior * 100).toFixed(1)
-          const flecha = Number(pct) > 0 ? '↑' : Number(pct) < 0 ? '↓' : '→'
-          diff = `<br/>vs Mes Anterior: <b>${Number(pct) > 0 ? '+' : ''}${pct}% ${flecha}</b>`
-        }
-      }
-      return `<b>${mes}</b><br/>Costo/m³: <b>$${Math.round(valor).toLocaleString('es-CO')}</b>${diff}`
-    },
-  },
-  grid: { left: 60, right: 30, bottom: 60, top: 50, containLabel: true },
-  xAxis: { type: 'category' as const, data: costM3Gen.value.labels, axisLabel: { fontWeight: 600 as const, color: chartTextColor.value } },
-  yAxis: { type: 'value' as const, interval: 1000, max: Math.max(Math.max(...(costM3Gen.value.vals || [3000]), 3000) * 1.15, 3500), axisLabel: { show: false }, splitLine: { show: false } },
-  series: [{
-    type: 'line', smooth: true, data: costM3Gen.value.vals, areaStyle: { opacity: 0.3 },
-    label: labelLineCurrency.value,
-  }],
-}))
+const costM3Int = computed(() => aggMonthly(intRows.value, prodMapByMonth.value, true))
+const costM3Ext = computed(() => aggMonthly(extRows.value, prodMapByMonth.value, true))
+
+const costoM3Opt = computed(() => buildCostoM3TrendOption(costM3Gen.value, palette[4]))
+const costosM3IntOpt = computed(() => buildCostoM3TrendOption(costM3Int.value, palette[4]))
+const costosM3ExtOpt = computed(() => buildCostoM3TrendOption(costM3Ext.value, palette[4]))
 
 // ================= GRÁFICA EXCLUSIVA: EFICIENCIA DE MANTENIMIENTO Y COSTO UNITARIO (CONCRETOS) =================
 const MESES_ES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
@@ -3564,7 +3912,7 @@ interface PlantaMonthItem {
   costoM3: number
 }
 
-const concretoMonthlyEfficiency = computed(() => {
+function computeConcretoMonthlyEfficiency(sourceMaintenanceRows: Record<string, unknown>[]) {
   const monthMap = new Map<string, {
     key: string
     label: string
@@ -3591,9 +3939,6 @@ const concretoMonthlyEfficiency = computed(() => {
     prodM3: 0,
     costoM3: 0,
   })
-
-  // 1. Mantenimiento OTs — respeta todos los filtros (fecha, línea, vehículo, proveedor, estado, personal) y excluye ACPM
-  const sourceMaintenanceRows = dataFilteredNoAcpm.value
 
   for (const r of sourceMaintenanceRows) {
     const f = r['FECHA'] ?? r['Fecha']
@@ -3647,9 +3992,7 @@ const concretoMonthlyEfficiency = computed(() => {
     else item.totalAbiertas += 1
   }
 
-  // 2. Producción Concreto por Planta — respeta filtros de fecha/línea y excluye mezclas de agregados
   const sourceProdRows = prodFiltered.value
-
   for (const r of sourceProdRows) {
     const f = (r as Record<string, unknown>)['Fecha'] ?? (r as Record<string, unknown>)['FECHA']
     const d = parseConcretoRowDate(f)
@@ -3682,18 +4025,12 @@ const concretoMonthlyEfficiency = computed(() => {
 
     const m3 = Number((r as Record<string, unknown>)['Total de M³']) || Number((r as Record<string, unknown>)['Cant. Concreto']) || 0
     item.prodM3 += m3
-
     const pPlanta = String((r as Record<string, unknown>)['Planta'] ?? (r as Record<string, unknown>)['PLANTA'] ?? '').toLowerCase()
-    if (pPlanta.includes('acacia')) {
-      item.acacias.prodM3 += m3
-    } else if (pPlanta.includes('restrepo')) {
-      item.restrepo.prodM3 += m3
-    } else {
-      item.villavicencio.prodM3 += m3
-    }
+    if (pPlanta.includes('acacia')) item.acacias.prodM3 += m3
+    else if (pPlanta.includes('restrepo')) item.restrepo.prodM3 += m3
+    else item.villavicencio.prodM3 += m3
   }
 
-  // Filtrar exclusivamente los meses que contienen registros reales en base de datos
   const sorted = [...monthMap.values()]
     .filter(s => s.totalMtto > 0 || s.prodM3 > 0)
     .sort((a, b) => a.key.localeCompare(b.key))
@@ -3705,16 +4042,17 @@ const concretoMonthlyEfficiency = computed(() => {
     s.costoUnitario = s.prodM3 > 0 ? +(s.totalMtto / s.prodM3).toFixed(2) : 0
   }
 
-  return {
-    labels: sorted.map(s => s.label),
-    months: sorted,
-  }
-})
+  return { labels: sorted.map(s => s.label), months: sorted }
+}
 
-function buildEficienciaMttoConcretosOption(_isExpand = false) {
-  const data = concretoMonthlyEfficiency.value
+type ConcretoMonthlyEfficiencyData = ReturnType<typeof computeConcretoMonthlyEfficiency>
+
+const concretoMonthlyEfficiency = computed(() => computeConcretoMonthlyEfficiency(dataFilteredNoAcpm.value))
+const concretoMonthlyEfficiencyInt = computed(() => computeConcretoMonthlyEfficiency(intRows.value))
+const concretoMonthlyEfficiencyExt = computed(() => computeConcretoMonthlyEfficiency(extRows.value))
+
+function buildEficienciaMttoConcretosOption(data: ConcretoMonthlyEfficiencyData, _isExpand = false) {
   const isLight = theme.value === 'light'
-
   return markRaw({
     textStyle: { fontFamily: 'Lato, sans-serif' },
     animation: true,
@@ -3727,7 +4065,6 @@ function buildEficienciaMttoConcretosOption(_isExpand = false) {
       formatter: (params: any) => {
         const item = params.data
         if (!item) return ''
-
         if (params.seriesName === 'Costo Mtto por m³') {
           return `<b>Costo Mtto por m³ — ${item.monthLabel}</b><br/>` +
             `<span style="color:#172554">\u25CF</span> Costo Mtto/m³: <b>$${item.value.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b><br/>` +
@@ -3737,7 +4074,6 @@ function buildEficienciaMttoConcretosOption(_isExpand = false) {
             `<span style="color:#10B981">\u25CF</span> Volumen Producido: <b>${Math.round(item.prodM3).toLocaleString('es-CO')} m³</b><br/>` +
             `<span style="color:#8B5CF6">\u25CF</span> Total Órdenes: <b>${item.totalOTs}</b> (Cerradas: <b>${item.totalCerradas}</b>, Abiertas: <b>${item.totalAbiertas}</b>)`
         }
-
         const dotColor = params.color || '#3B82F6'
         const cM3Str = item.costoM3 > 0 ? `$${item.costoM3.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '$0,00'
         return `<b>Planta ${item.planta} — ${item.monthLabel}</b><br/>` +
@@ -3750,18 +4086,8 @@ function buildEficienciaMttoConcretosOption(_isExpand = false) {
       },
     },
     legend: {
-      top: 8,
-      left: 12,
-      itemGap: 18,
-      icon: 'circle',
-      itemWidth: 10,
-      itemHeight: 10,
-      textStyle: {
-        fontFamily: 'Lato, sans-serif',
-        fontWeight: 600 as const,
-        color: chartTextColor.value,
-        fontSize: 11,
-      },
+      top: 8, left: 12, itemGap: 18, icon: 'circle', itemWidth: 10, itemHeight: 10,
+      textStyle: { fontFamily: 'Lato, sans-serif', fontWeight: 600 as const, color: chartTextColor.value, fontSize: 11 },
       data: [
         { name: 'Acacias', itemStyle: { color: '#38a9f8' } },
         { name: 'Restrepo', itemStyle: { color: '#3b4cb8' } },
@@ -3771,227 +4097,98 @@ function buildEficienciaMttoConcretosOption(_isExpand = false) {
     },
     grid: { left: 60, right: 30, bottom: 60, top: 50, containLabel: true },
     xAxis: {
-      type: 'category' as const,
-      data: data.labels,
+      type: 'category' as const, data: data.labels,
       axisLine: { lineStyle: { color: isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)' } },
       axisTick: { show: false },
-      axisLabel: {
-        fontFamily: 'Lato, sans-serif',
-        fontWeight: 600 as const,
-        color: chartTextColor.value,
-        fontSize: 11,
-        margin: 12,
-      },
+      axisLabel: { fontFamily: 'Lato, sans-serif', fontWeight: 600 as const, color: chartTextColor.value, fontSize: 11, margin: 12 },
     },
     yAxis: [
       {
-        type: 'value' as const,
-        axisLabel: { show: false },
-        axisLine: { show: false },
-        axisTick: { show: false },
-        splitLine: {
-          show: true,
-          lineStyle: {
-            color: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
-            type: 'dashed' as const,
-          },
-        },
+        type: 'value' as const, axisLabel: { show: false }, axisLine: { show: false }, axisTick: { show: false },
+        splitLine: { show: true, lineStyle: { color: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)', type: 'dashed' as const } },
         max: (val: any) => Math.ceil((val.max || 1000000) * 1.2),
       },
       {
-        type: 'value' as const,
-        position: 'right' as const,
-        axisLabel: { show: false },
-        axisLine: { show: false },
-        axisTick: { show: false },
-        splitLine: { show: false },
+        type: 'value' as const, position: 'right' as const, axisLabel: { show: false }, axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false },
         max: (val: any) => Math.ceil((val.max || 20000) * 1.25),
       },
     ],
     series: [
       {
-        name: 'Acacias',
-        type: 'bar' as const,
-        yAxisIndex: 0,
-        barMaxWidth: 36,
-        itemStyle: {
-          color: '#38a9f8',
-          borderRadius: [4, 4, 0, 0],
-        },
-        emphasis: {
-          focus: 'series' as const,
-          itemStyle: {
-            shadowBlur: 10,
-            shadowColor: 'rgba(0, 0, 0, 0.25)',
-          },
-        },
+        name: 'Acacias', type: 'bar' as const, yAxisIndex: 0, barMaxWidth: 30,
+        itemStyle: { color: '#38a9f8', borderRadius: [4, 4, 0, 0] },
+        emphasis: { focus: 'series' as const, itemStyle: { shadowBlur: 10, shadowColor: 'rgba(56, 169, 248, 0.4)' } },
         label: {
-          ...labelLine.value,
-          position: 'top' as const,
-          distance: 4,
-          formatter: (p: any) => {
-            const v = Number(p.value) || 0
-            return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
-          },
+          ...labelLine.value, position: 'top' as const, distance: 4,
+          formatter: (p: any) => { const v = Number(p.value) || 0; return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : '' },
         },
         data: data.months.map(m => ({
-          value: m.acacias.costo,
-          monthLabel: m.label,
-          planta: 'Acacías',
-          serv: m.acacias.serv,
-          ins: m.acacias.ins,
-          ots: m.acacias.ots,
-          abiertas: m.acacias.abiertas,
-          cerradas: m.acacias.cerradas,
-          prodM3: m.acacias.prodM3,
-          costoM3: m.acacias.costoM3,
+          value: m.acacias.costo, planta: 'Acacías', monthLabel: m.label, serv: m.acacias.serv, ins: m.acacias.ins,
+          ots: m.acacias.ots, abiertas: m.acacias.abiertas, cerradas: m.acacias.cerradas, prodM3: m.acacias.prodM3, costoM3: m.acacias.costoM3,
         })),
       },
       {
-        name: 'Restrepo',
-        type: 'bar' as const,
-        yAxisIndex: 0,
-        barMaxWidth: 36,
-        itemStyle: {
-          color: '#3b4cb8',
-          borderRadius: [4, 4, 0, 0],
-        },
-        emphasis: {
-          focus: 'series' as const,
-          itemStyle: {
-            shadowBlur: 10,
-            shadowColor: 'rgba(0, 0, 0, 0.25)',
-          },
-        },
+        name: 'Restrepo', type: 'bar' as const, yAxisIndex: 0, barMaxWidth: 30,
+        itemStyle: { color: '#3b4cb8', borderRadius: [4, 4, 0, 0] },
+        emphasis: { focus: 'series' as const, itemStyle: { shadowBlur: 10, shadowColor: 'rgba(59, 76, 184, 0.4)' } },
         label: {
-          ...labelLine.value,
-          position: 'top' as const,
-          distance: 4,
-          formatter: (p: any) => {
-            const v = Number(p.value) || 0
-            return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
-          },
+          ...labelLine.value, position: 'top' as const, distance: 4,
+          formatter: (p: any) => { const v = Number(p.value) || 0; return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : '' },
         },
         data: data.months.map(m => ({
-          value: m.restrepo.costo,
-          monthLabel: m.label,
-          planta: 'Restrepo',
-          serv: m.restrepo.serv,
-          ins: m.restrepo.ins,
-          ots: m.restrepo.ots,
-          abiertas: m.restrepo.abiertas,
-          cerradas: m.restrepo.cerradas,
-          prodM3: m.restrepo.prodM3,
-          costoM3: m.restrepo.costoM3,
+          value: m.restrepo.costo, planta: 'Restrepo', monthLabel: m.label, serv: m.restrepo.serv, ins: m.restrepo.ins,
+          ots: m.restrepo.ots, abiertas: m.restrepo.abiertas, cerradas: m.restrepo.cerradas, prodM3: m.restrepo.prodM3, costoM3: m.restrepo.costoM3,
         })),
       },
       {
-        name: 'Villavicencio',
-        type: 'bar' as const,
-        yAxisIndex: 0,
-        barMaxWidth: 36,
-        itemStyle: {
-          color: '#ec4899',
-          borderRadius: [4, 4, 0, 0],
-        },
-        emphasis: {
-          focus: 'series' as const,
-          itemStyle: {
-            shadowBlur: 10,
-            shadowColor: 'rgba(0, 0, 0, 0.25)',
-          },
-        },
+        name: 'Villavicencio', type: 'bar' as const, yAxisIndex: 0, barMaxWidth: 30,
+        itemStyle: { color: '#ec4899', borderRadius: [4, 4, 0, 0] },
+        emphasis: { focus: 'series' as const, itemStyle: { shadowBlur: 10, shadowColor: 'rgba(236, 72, 153, 0.4)' } },
         label: {
-          ...labelLine.value,
-          position: 'top' as const,
-          distance: 4,
-          formatter: (p: any) => {
-            const v = Number(p.value) || 0
-            return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
-          },
+          ...labelLine.value, position: 'top' as const, distance: 4,
+          formatter: (p: any) => { const v = Number(p.value) || 0; return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : '' },
         },
         data: data.months.map(m => ({
-          value: m.villavicencio.costo,
-          monthLabel: m.label,
-          planta: 'Villavicencio',
-          serv: m.villavicencio.serv,
-          ins: m.villavicencio.ins,
-          ots: m.villavicencio.ots,
-          abiertas: m.villavicencio.abiertas,
-          cerradas: m.villavicencio.cerradas,
-          prodM3: m.villavicencio.prodM3,
-          costoM3: m.villavicencio.costoM3,
+          value: m.villavicencio.costo, planta: 'Villavicencio', monthLabel: m.label, serv: m.villavicencio.serv, ins: m.villavicencio.ins,
+          ots: m.villavicencio.ots, abiertas: m.villavicencio.abiertas, cerradas: m.villavicencio.cerradas, prodM3: m.villavicencio.prodM3, costoM3: m.villavicencio.costoM3,
         })),
       },
       {
-        name: 'Costo Mtto por m³',
-        type: 'line' as const,
-        yAxisIndex: 1,
-        smooth: 0.35,
-        symbol: 'circle' as const,
-        symbolSize: 8,
-        showSymbol: true,
-        emphasis: {
-          scale: 1.4,
-          focus: 'series' as const,
-          itemStyle: {
-            shadowBlur: 12,
-            shadowColor: isLight ? 'rgba(23, 37, 84, 0.4)' : 'rgba(96, 165, 250, 0.5)',
-          },
-        },
-        lineStyle: {
-          width: 2.5,
-          color: isLight ? '#172554' : '#60a5fa',
-        },
-        itemStyle: {
-          color: isLight ? '#172554' : '#60a5fa',
-        },
+        name: 'Costo Mtto por m³', type: 'line' as const, yAxisIndex: 1, smooth: 0.35, symbol: 'circle' as const, symbolSize: 8, showSymbol: true,
+        emphasis: { scale: 1.4, focus: 'series' as const, itemStyle: { shadowBlur: 12, shadowColor: isLight ? 'rgba(23, 37, 84, 0.4)' : 'rgba(96, 165, 250, 0.5)' } },
+        lineStyle: { width: 2.5, color: isLight ? '#172554' : '#60a5fa' }, itemStyle: { color: isLight ? '#172554' : '#60a5fa' },
         label: {
-          ...labelLine.value,
-          position: 'top' as const,
-          distance: 8,
-          formatter: (p: any) => {
-            const v = Number(p.value) || 0
-            return v > 0 ? `$ ${v.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''
-          },
+          ...labelLine.value, position: 'top' as const, distance: 8,
+          formatter: (p: any) => { const v = Number(p.value) || 0; return v > 0 ? `$ ${v.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '' },
         },
         data: data.months.map(m => ({
-          value: m.costoUnitario,
-          monthLabel: m.label,
-          costoUnitario: m.costoUnitario,
-          totalMtto: m.totalMtto,
-          totalServ: m.totalServ,
-          totalIns: m.totalIns,
-          totalOTs: m.totalOTs,
-          totalAbiertas: m.totalAbiertas,
-          totalCerradas: m.totalCerradas,
-          prodM3: m.prodM3,
+          value: m.costoUnitario, monthLabel: m.label, costoUnitario: m.costoUnitario, totalMtto: m.totalMtto, totalServ: m.totalServ,
+          totalIns: m.totalIns, totalOTs: m.totalOTs, totalAbiertas: m.totalAbiertas, totalCerradas: m.totalCerradas, prodM3: m.prodM3,
         })),
       },
     ],
   })
 }
 
-const eficienciaMttoConcretosOpt = computed(() => buildEficienciaMttoConcretosOption(false))
-const eficienciaMttoConcretosExpandOpt = computed(() => buildEficienciaMttoConcretosOption(true))
+const eficienciaMttoConcretosOpt = computed(() => buildEficienciaMttoConcretosOption(concretoMonthlyEfficiency.value, false))
+const eficienciaMttoConcretosExpandOpt = computed(() => buildEficienciaMttoConcretosOption(concretoMonthlyEfficiency.value, true))
 
-function buildCostosGeneralesM3Option(_isExpand = false) {
-  const data = concretoMonthlyEfficiency.value
+const eficienciaMttoConcretosIntOpt = computed(() => buildEficienciaMttoConcretosOption(concretoMonthlyEfficiencyInt.value, false))
+const eficienciaMttoConcretosIntExpandOpt = computed(() => buildEficienciaMttoConcretosOption(concretoMonthlyEfficiencyInt.value, true))
+
+const eficienciaMttoConcretosExtOpt = computed(() => buildEficienciaMttoConcretosOption(concretoMonthlyEfficiencyExt.value, false))
+const eficienciaMttoConcretosExtExpandOpt = computed(() => buildEficienciaMttoConcretosOption(concretoMonthlyEfficiencyExt.value, true))
+
+function buildCostosGeneralesM3Option(data: ConcretoMonthlyEfficiencyData, _isExpand = false) {
   const isLight = theme.value === 'light'
-
   return markRaw({
     textStyle: { fontFamily: 'Lato, sans-serif' },
-    animation: true,
-    animationDuration: 900,
-    animationEasing: 'cubicOut',
-    animationDurationUpdate: 500,
-    animationEasingUpdate: 'cubicInOut',
+    animation: true, animationDuration: 900, animationEasing: 'cubicOut', animationDurationUpdate: 500, animationEasingUpdate: 'cubicInOut',
     tooltip: {
       trigger: 'item' as const,
       formatter: (params: any) => {
         const item = params.data
         if (!item) return ''
-
         if (params.seriesName === 'Costo Mtto por m³') {
           return `<b>Costo Mtto por m³ — ${item.monthLabel}</b><br/>` +
             `<span style="color:#172554">\u25CF</span> Costo Mtto/m³: <b>$${item.value.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b><br/>` +
@@ -4001,7 +4198,6 @@ function buildCostosGeneralesM3Option(_isExpand = false) {
             `<span style="color:#10B981">\u25CF</span> Volumen Producido: <b>${Math.round(item.prodM3).toLocaleString('es-CO')} m³</b><br/>` +
             `<span style="color:#8B5CF6">\u25CF</span> Total Órdenes: <b>${item.totalOTs}</b> (Cerradas: <b>${item.totalCerradas}</b>, Abiertas: <b>${item.totalAbiertas}</b>)`
         }
-
         const dotColor = params.color || (params.seriesName === 'Servicios' ? palette[1] : '#EF4444')
         return `<b>${params.seriesName} — ${item.monthLabel}</b><br/>` +
           `<span style="color:${dotColor}">\u25CF</span> Costo ${params.seriesName}: <b>$${Math.round(item.value).toLocaleString('es-CO')}</b><br/>` +
@@ -4011,18 +4207,8 @@ function buildCostosGeneralesM3Option(_isExpand = false) {
       },
     },
     legend: {
-      top: 8,
-      left: 12,
-      itemGap: 18,
-      icon: 'circle',
-      itemWidth: 10,
-      itemHeight: 10,
-      textStyle: {
-        fontFamily: 'Lato, sans-serif',
-        fontWeight: 600 as const,
-        color: chartTextColor.value,
-        fontSize: 11,
-      },
+      top: 8, left: 12, itemGap: 18, icon: 'circle', itemWidth: 10, itemHeight: 10,
+      textStyle: { fontFamily: 'Lato, sans-serif', fontWeight: 600 as const, color: chartTextColor.value, fontSize: 11 },
       data: [
         { name: 'Total', itemStyle: { color: '#15223c' } },
         { name: 'Servicios', itemStyle: { color: palette[1] } },
@@ -4032,211 +4218,88 @@ function buildCostosGeneralesM3Option(_isExpand = false) {
     },
     grid: { left: 60, right: 30, bottom: 60, top: 50, containLabel: true },
     xAxis: {
-      type: 'category' as const,
-      data: data.labels,
+      type: 'category' as const, data: data.labels,
       axisLine: { lineStyle: { color: isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)' } },
       axisTick: { show: false },
-      axisLabel: {
-        fontFamily: 'Lato, sans-serif',
-        fontWeight: 600 as const,
-        color: chartTextColor.value,
-        fontSize: 11,
-        margin: 12,
-      },
+      axisLabel: { fontFamily: 'Lato, sans-serif', fontWeight: 600 as const, color: chartTextColor.value, fontSize: 11, margin: 12 },
     },
     yAxis: [
       {
-        type: 'value' as const,
-        axisLabel: { show: false },
-        axisLine: { show: false },
-        axisTick: { show: false },
-        splitLine: {
-          show: true,
-          lineStyle: {
-            color: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
-            type: 'dashed' as const,
-          },
-        },
+        type: 'value' as const, axisLabel: { show: false }, axisLine: { show: false }, axisTick: { show: false },
+        splitLine: { show: true, lineStyle: { color: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)', type: 'dashed' as const } },
         max: (val: any) => Math.ceil((val.max || 1000000) * 1.2),
       },
       {
-        type: 'value' as const,
-        position: 'right' as const,
-        axisLabel: { show: false },
-        axisLine: { show: false },
-        axisTick: { show: false },
-        splitLine: { show: false },
+        type: 'value' as const, position: 'right' as const, axisLabel: { show: false }, axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false },
         max: (val: any) => Math.ceil((val.max || 20000) * 1.25),
       },
     ],
     series: [
       {
-        name: 'Total',
-        type: 'bar' as const,
-        yAxisIndex: 0,
-        barMaxWidth: 36,
-        itemStyle: {
-          color: '#15223c',
-          borderRadius: [4, 4, 0, 0],
-        },
-        emphasis: {
-          focus: 'series' as const,
-          itemStyle: {
-            shadowBlur: 10,
-            shadowColor: 'rgba(0, 0, 0, 0.25)',
-          },
-        },
+        name: 'Total', type: 'bar' as const, yAxisIndex: 0, barMaxWidth: 36,
+        itemStyle: { color: '#15223c', borderRadius: [4, 4, 0, 0] },
+        emphasis: { focus: 'series' as const, itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0, 0, 0, 0.25)' } },
         label: {
-          ...labelLine.value,
-          position: 'top' as const,
-          distance: 4,
-          formatter: (p: any) => {
-            const v = Number(p.value) || 0
-            return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
-          },
+          ...labelLine.value, position: 'top' as const, distance: 4,
+          formatter: (p: any) => { const v = Number(p.value) || 0; return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : '' },
         },
         data: data.months.map(m => ({
-          value: m.totalMtto,
-          monthLabel: m.label,
-          totalServ: m.totalServ,
-          totalIns: m.totalIns,
-          totalMtto: m.totalMtto,
-          totalOTs: m.totalOTs,
-          totalAbiertas: m.totalAbiertas,
-          totalCerradas: m.totalCerradas,
-          prodM3: m.prodM3,
-          costoM3: m.costoUnitario,
+          value: m.totalMtto, monthLabel: m.label, totalServ: m.totalServ, totalIns: m.totalIns, totalMtto: m.totalMtto,
+          totalOTs: m.totalOTs, totalAbiertas: m.totalAbiertas, totalCerradas: m.totalCerradas, prodM3: m.prodM3, costoM3: m.costoUnitario,
         })),
       },
       {
-        name: 'Servicios',
-        type: 'bar' as const,
-        yAxisIndex: 0,
-        barMaxWidth: 36,
-        itemStyle: {
-          color: palette[1],
-          borderRadius: [4, 4, 0, 0],
-        },
-        emphasis: {
-          focus: 'series' as const,
-          itemStyle: {
-            shadowBlur: 10,
-            shadowColor: 'rgba(0, 0, 0, 0.25)',
-          },
-        },
+        name: 'Servicios', type: 'bar' as const, yAxisIndex: 0, barMaxWidth: 36,
+        itemStyle: { color: palette[1], borderRadius: [4, 4, 0, 0] },
+        emphasis: { focus: 'series' as const, itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0, 0, 0, 0.25)' } },
         label: {
-          ...labelLine.value,
-          position: 'top' as const,
-          distance: 4,
-          formatter: (p: any) => {
-            const v = Number(p.value) || 0
-            return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
-          },
+          ...labelLine.value, position: 'top' as const, distance: 4,
+          formatter: (p: any) => { const v = Number(p.value) || 0; return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : '' },
         },
         data: data.months.map(m => ({
-          value: m.totalServ,
-          monthLabel: m.label,
-          totalServ: m.totalServ,
-          totalIns: m.totalIns,
-          totalMtto: m.totalMtto,
-          totalOTs: m.totalOTs,
-          totalAbiertas: m.totalAbiertas,
-          totalCerradas: m.totalCerradas,
-          prodM3: m.prodM3,
-          costoM3: m.costoUnitario,
+          value: m.totalServ, monthLabel: m.label, totalServ: m.totalServ, totalIns: m.totalIns, totalMtto: m.totalMtto,
+          totalOTs: m.totalOTs, totalAbiertas: m.totalAbiertas, totalCerradas: m.totalCerradas, prodM3: m.prodM3, costoM3: m.costoUnitario,
         })),
       },
       {
-        name: 'Insumos',
-        type: 'bar' as const,
-        yAxisIndex: 0,
-        barMaxWidth: 36,
-        itemStyle: {
-          color: '#EF4444',
-          borderRadius: [4, 4, 0, 0],
-        },
-        emphasis: {
-          focus: 'series' as const,
-          itemStyle: {
-            shadowBlur: 10,
-            shadowColor: 'rgba(0, 0, 0, 0.25)',
-          },
-        },
+        name: 'Insumos', type: 'bar' as const, yAxisIndex: 0, barMaxWidth: 36,
+        itemStyle: { color: '#EF4444', borderRadius: [4, 4, 0, 0] },
+        emphasis: { focus: 'series' as const, itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0, 0, 0, 0.25)' } },
         label: {
-          ...labelLine.value,
-          position: 'top' as const,
-          distance: 4,
-          formatter: (p: any) => {
-            const v = Number(p.value) || 0
-            return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
-          },
+          ...labelLine.value, position: 'top' as const, distance: 4,
+          formatter: (p: any) => { const v = Number(p.value) || 0; return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : '' },
         },
         data: data.months.map(m => ({
-          value: m.totalIns,
-          monthLabel: m.label,
-          totalServ: m.totalServ,
-          totalIns: m.totalIns,
-          totalMtto: m.totalMtto,
-          totalOTs: m.totalOTs,
-          totalAbiertas: m.totalAbiertas,
-          totalCerradas: m.totalCerradas,
-          prodM3: m.prodM3,
-          costoM3: m.costoUnitario,
+          value: m.totalIns, monthLabel: m.label, totalServ: m.totalServ, totalIns: m.totalIns, totalMtto: m.totalMtto,
+          totalOTs: m.totalOTs, totalAbiertas: m.totalAbiertas, totalCerradas: m.totalCerradas, prodM3: m.prodM3, costoM3: m.costoUnitario,
         })),
       },
       {
-        name: 'Costo Mtto por m³',
-        type: 'line' as const,
-        yAxisIndex: 1,
-        smooth: 0.35,
-        symbol: 'circle' as const,
-        symbolSize: 8,
-        showSymbol: true,
-        emphasis: {
-          scale: 1.4,
-          focus: 'series' as const,
-          itemStyle: {
-            shadowBlur: 12,
-            shadowColor: isLight ? 'rgba(23, 37, 84, 0.4)' : 'rgba(96, 165, 250, 0.5)',
-          },
-        },
-        lineStyle: {
-          width: 2.5,
-          color: isLight ? '#172554' : '#60a5fa',
-        },
-        itemStyle: {
-          color: isLight ? '#172554' : '#60a5fa',
-        },
+        name: 'Costo Mtto por m³', type: 'line' as const, yAxisIndex: 1, smooth: 0.35, symbol: 'circle' as const, symbolSize: 8, showSymbol: true,
+        emphasis: { scale: 1.4, focus: 'series' as const, itemStyle: { shadowBlur: 12, shadowColor: isLight ? 'rgba(23, 37, 84, 0.4)' : 'rgba(96, 165, 250, 0.5)' } },
+        lineStyle: { width: 2.5, color: isLight ? '#172554' : '#60a5fa' }, itemStyle: { color: isLight ? '#172554' : '#60a5fa' },
         label: {
-          ...labelLine.value,
-          position: 'top' as const,
-          distance: 8,
-          formatter: (p: any) => {
-            const v = Number(p.value) || 0
-            return v > 0 ? `$ ${v.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''
-          },
+          ...labelLine.value, position: 'top' as const, distance: 8,
+          formatter: (p: any) => { const v = Number(p.value) || 0; return v > 0 ? `$ ${v.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '' },
         },
         data: data.months.map(m => ({
-          value: m.costoUnitario,
-          monthLabel: m.label,
-          costoUnitario: m.costoUnitario,
-          totalMtto: m.totalMtto,
-          totalServ: m.totalServ,
-          totalIns: m.totalIns,
-          totalOTs: m.totalOTs,
-          totalAbiertas: m.totalAbiertas,
-          totalCerradas: m.totalCerradas,
-          prodM3: m.prodM3,
+          value: m.costoUnitario, monthLabel: m.label, costoUnitario: m.costoUnitario, totalMtto: m.totalMtto, totalServ: m.totalServ,
+          totalIns: m.totalIns, totalOTs: m.totalOTs, totalAbiertas: m.totalAbiertas, totalCerradas: m.totalCerradas, prodM3: m.prodM3,
         })),
       },
     ],
   })
 }
 
-const costosGeneralesM3Opt = computed(() => buildCostosGeneralesM3Option(false))
-const costosGeneralesM3ExpandOpt = computed(() => buildCostosGeneralesM3Option(true))
+const costosGeneralesM3Opt = computed(() => buildCostosGeneralesM3Option(concretoMonthlyEfficiency.value, false))
+const costosGeneralesM3ExpandOpt = computed(() => buildCostosGeneralesM3Option(concretoMonthlyEfficiency.value, true))
 
-const intRows = computed(() => partition.value.int)
+const costosGeneralesM3IntOpt = computed(() => buildCostosGeneralesM3Option(concretoMonthlyEfficiencyInt.value, false))
+const costosGeneralesM3IntExpandOpt = computed(() => buildCostosGeneralesM3Option(concretoMonthlyEfficiencyInt.value, true))
+
+const costosGeneralesM3ExtOpt = computed(() => buildCostosGeneralesM3Option(concretoMonthlyEfficiencyExt.value, false))
+const costosGeneralesM3ExtExpandOpt = computed(() => buildCostosGeneralesM3Option(concretoMonthlyEfficiencyExt.value, true))
+
 const intKpi = computed(() => {
   let serv = 0, ins = 0
   for (const r of intRows.value) { serv += Number(r['Costo servicios']) || 0; ins += Number(r['Costos Insumos']) || 0 }
@@ -4310,41 +4373,18 @@ const otsIntSopled = computed(() => {
   for (const r of intRows.value) { const s = r['_sopled']; if (Array.isArray(s)) n += s.length }
   return n
 })
-const sistemasIntRanking = computed(() => {
-  const map = new Map<string, number>()
-  for (const r of intRows.value) {
-    const subs = r['_subOrdenes']
-    if (!Array.isArray(subs)) continue
-    for (const s of subs) {
-      const label = String(s?.sistemaTexto || s?.sistema || '').trim()
-      if (!label) continue
-      map.set(label, (map.get(label) || 0) + 1)
-    }
-  }
-  return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10)
-})
+const sistemasIntRanking = computed(() => computeSistemasRanking(intRows.value, 10))
 const localizacionIntRanking = computed(() => rankBy(intRows.value, 'Localización', 12))
 const prioridadIntRanking = computed(() => rankBy(intRows.value, 'Prioridad', 6))
 const fuenteNovedadIntRanking = computed(() => rankBy(intRows.value, 'Fuente_Novedad', 10))
 const tiposTrabajoIntRanking = computed(() => rankBy(intRows.value, 'Tipo Trabajo', 10))
 const claseMantenimientoIntRanking = computed(() => rankBy(intRows.value, 'Clase Mantenimiento', 10))
 const motivosNoEjecucionIntRanking = computed(() => rankBy(intRows.value.filter(r => String(r['Motivo No Ejecución'] ?? '').trim()), 'Motivo No Ejecución', 10))
-const personalIntRanking = computed(() => rankByMultiValue(intRows.value, 'Personal', 10))
+const personalIntRanking = computed(() => computePersonalRanking(intRows.value, 10))
 const solicitantesIntRanking = computed(() => rankBy(intRows.value, 'Solicitante', 10))
 const responsablesCierreIntRanking = computed(() => rankBy(intRows.value, 'Responsable Cierre', 10))
 const jornadaIntRanking = computed(() => rankBy(intRows.value, 'Jornada', 6))
 
-const costM3Int = computed(() => aggMonthly(intRows.value, prodMapByMonth.value, true))
-const costosM3IntOpt = computed(() => markRaw({
-  color: ['#EF4444'],
-  tooltip: { trigger: 'axis' as const, valueFormatter: (v: number) => '$' + Math.round(v).toLocaleString('es-CO') + '/m³' },
-  grid: { left: 60, right: 30, bottom: 60, top: 50, containLabel: true },
-  xAxis: { type: 'category' as const, data: costM3Int.value.labels, axisLabel: { fontWeight: 600 as const, color: chartTextColor.value } },
-  yAxis: { type: 'value' as const, interval: 1000, max: Math.max(Math.max(...(costM3Int.value.vals || [3000]), 3000) * 1.15, 3500), axisLabel: { show: false }, splitLine: { show: false } },
-  series: [{ name: 'Costo Interno/m³', type: 'line', smooth: true, data: costM3Int.value.vals, areaStyle: { opacity: 0.3 }, label: labelLineCurrency.value }],
-}))
-
-const extRows = computed(() => partition.value.ext)
 const extKpi = computed(() => {
   let serv = 0, ins = 0
   for (const r of extRows.value) { serv += Number(r['Costo servicios']) || 0; ins += Number(r['Costos Insumos']) || 0 }
@@ -4418,19 +4458,7 @@ const otsExtSopled = computed(() => {
   for (const r of extRows.value) { const s = r['_sopled']; if (Array.isArray(s)) n += s.length }
   return n
 })
-const sistemasExtRanking = computed(() => {
-  const map = new Map<string, number>()
-  for (const r of extRows.value) {
-    const subs = r['_subOrdenes']
-    if (!Array.isArray(subs)) continue
-    for (const s of subs) {
-      const label = String(s?.sistemaTexto || s?.sistema || '').trim()
-      if (!label) continue
-      map.set(label, (map.get(label) || 0) + 1)
-    }
-  }
-  return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10)
-})
+const sistemasExtRanking = computed(() => computeSistemasRanking(extRows.value, 10))
 const localizacionExtRanking = computed(() => rankBy(extRows.value, 'Localización', 12))
 const prioridadExtRanking = computed(() => rankBy(extRows.value, 'Prioridad', 6))
 const fuenteNovedadExtRanking = computed(() => rankBy(extRows.value, 'Fuente_Novedad', 10))
@@ -4440,16 +4468,6 @@ const motivosNoEjecucionExtRanking = computed(() => rankBy(extRows.value.filter(
 const solicitantesExtRanking = computed(() => rankBy(extRows.value, 'Solicitante', 10))
 const responsablesCierreExtRanking = computed(() => rankBy(extRows.value, 'Responsable Cierre', 10))
 const jornadaExtRanking = computed(() => rankBy(extRows.value, 'Jornada', 6))
-
-const costM3Ext = computed(() => aggMonthly(extRows.value, prodMapByMonth.value, true))
-const costosM3ExtOpt = computed(() => markRaw({
-  color: ['#EF4444'],
-  tooltip: { trigger: 'axis' as const, valueFormatter: (v: number) => '$' + Math.round(v).toLocaleString('es-CO') + '/m³' },
-  grid: { left: 60, right: 30, bottom: 60, top: 50, containLabel: true },
-  xAxis: { type: 'category' as const, data: costM3Ext.value.labels, axisLabel: { fontWeight: 600 as const, color: chartTextColor.value } },
-  yAxis: { type: 'value' as const, interval: 1000, max: Math.max(Math.max(...(costM3Ext.value.vals || [3000]), 3000) * 1.15, 3500), axisLabel: { show: false }, splitLine: { show: false } },
-  series: [{ name: 'Costo Externo/m³', type: 'line', smooth: true, data: costM3Ext.value.vals, areaStyle: { opacity: 0.3 }, label: labelLineCurrency.value }],
-}))
 
 
 function buildBarOpt(data: Record<string, unknown>[], groupBy: 'Tipo de Vehículo' | 'Placa del Vehículo' | 'PROVEEDOR', limit?: number) {
@@ -4513,7 +4531,12 @@ const vehiculoGenOpt = computed(() => markRaw(buildBarOpt(dataFilteredNoAcpm.val
 const vehiculoIntOpt = computed(() => markRaw(buildBarOpt(intRows.value, 'Placa del Vehículo')))
 const vehiculoExtOpt = computed(() => markRaw(buildBarOpt(extRows.value, 'Placa del Vehículo')))
 
-const intProveedorOpt = computed(() => markRaw(buildBarOpt(intRows.value, 'PROVEEDOR')))
+const vehiculoGenExpandOpt = computed(() => markRaw(buildBarOpt(dataFilteredNoAcpm.value, 'Placa del Vehículo', Infinity)))
+const vehiculoIntExpandOpt = computed(() => markRaw(buildBarOpt(intRows.value, 'Placa del Vehículo', Infinity)))
+const vehiculoExtExpandOpt = computed(() => markRaw(buildBarOpt(extRows.value, 'Placa del Vehículo', Infinity)))
+
+const extProveedorOpt = computed(() => markRaw(buildBarOpt(extRows.value, 'PROVEEDOR')))
+const extProveedorExpandOpt = computed(() => markRaw(buildBarOpt(extRows.value, 'PROVEEDOR', Infinity)))
 
 // ——— Detalle por placa al hacer click en Costos por Placa ———
 const selectedPlaca = ref<string | null>(null)
@@ -4767,8 +4790,8 @@ const tiposTrabajoOpt = computed(() => markRaw(buildCountPieOpt(tiposTrabajoRank
 const claseMantenimientoOpt = computed(() => markRaw(buildCountPieOpt(claseMantenimientoRanking.value, false)))
 const motivosNoEjecucionOpt = computed(() => markRaw(buildCountPieOpt(motivosNoEjecucionRanking.value, false)))
 const jornadaOpt = computed(() => markRaw(buildCountPieOpt(jornadaRanking.value, false)))
-const personalInternoOpt = computed(() => {
-  const items = personalInternoRanking.value
+
+function buildPersonalOption(items: { label: string; n: number; horas: number; costo: number }[]) {
   const labels = items.map(e => e.label)
   const data = items.map((e, i) => ({ value: e.n, horas: e.horas, costo: e.costo, itemStyle: { color: palette[i % palette.length] } }))
   const valueTexts = items.map(e => e.n.toLocaleString('es-CO'))
@@ -4800,7 +4823,11 @@ const personalInternoOpt = computed(() => {
       itemStyle: { borderRadius: [0, 4, 4, 0] as [number, number, number, number] },
     }],
   })
-})
+}
+
+const personalInternoOpt = computed(() => buildPersonalOption(personalInternoRanking.value))
+const personalInternoExpandOpt = computed(() => buildPersonalOption(computePersonalRanking(dataFilteredMain.value.filter(isInterno))))
+
 const almacenSolicitudesOpt = computed(() => markRaw(buildPieOpt(almacenSolicitudesRanking.value, 'Productos Más Solicitados (Frecuencia)', 0, false)))
 const almacenSolicitantesOpt = computed(() => markRaw(buildCountBarColorOpt(almacenSolicitantesRanking.value, 'Solicitudes')))
 const almacenApruebaOpt = computed(() => markRaw(buildCountPieOpt(almacenApruebaRanking.value, false)))
@@ -4814,7 +4841,8 @@ const fuenteNovedadIntOpt = computed(() => markRaw(buildCountPieOpt(fuenteNoveda
 const tiposTrabajoIntOpt = computed(() => markRaw(buildCountPieOpt(tiposTrabajoIntRanking.value, false)))
 const claseMantenimientoIntOpt = computed(() => markRaw(buildCountPieOpt(claseMantenimientoIntRanking.value, false)))
 const motivosNoEjecucionIntOpt = computed(() => markRaw(buildCountPieOpt(motivosNoEjecucionIntRanking.value, false)))
-const personalIntOpt = computed(() => markRaw(buildCountBarColorOpt(personalIntRanking.value, 'Órdenes')))
+const personalIntOpt = computed(() => buildPersonalOption(personalIntRanking.value))
+const personalIntExpandOpt = computed(() => buildPersonalOption(computePersonalRanking(intRows.value)))
 const solicitantesIntOpt = computed(() => markRaw(buildCountBarColorOpt(solicitantesIntRanking.value, 'Órdenes')))
 const responsablesCierreIntOpt = computed(() => markRaw(buildCountPieOpt(responsablesCierreIntRanking.value, false)))
 const jornadaIntOpt = computed(() => markRaw(buildCountPieOpt(jornadaIntRanking.value, false)))
@@ -4831,85 +4859,101 @@ const responsablesCierreExtOpt = computed(() => markRaw(buildCountPieOpt(respons
 const jornadaExtOpt = computed(() => markRaw(buildCountPieOpt(jornadaExtRanking.value, false)))
 
 /* ── Expand: opciones sin límite para el modal ── */
-const vehiculoGenExpandOpt = computed(() => markRaw(buildBarOpt(dataFilteredNoAcpm.value, 'Placa del Vehículo', Infinity)))
 const localizacionExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(dataFilteredMain.value, 'Localización'), 'Órdenes')))
+const localizacionIntExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(intRows.value, 'Localización'), 'Órdenes')))
+const localizacionExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(extRows.value, 'Localización'), 'Órdenes')))
+
 const prioridadExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(dataFilteredMain.value, 'Prioridad'), 'Órdenes')))
+const prioridadIntExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(intRows.value, 'Prioridad'), 'Órdenes')))
+const prioridadExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(extRows.value, 'Prioridad'), 'Órdenes')))
+
 const fuenteNovedadExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(dataFilteredMain.value, 'Fuente_Novedad'), 'Órdenes')))
+const fuenteNovedadIntExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(intRows.value, 'Fuente_Novedad'), 'Órdenes')))
+const fuenteNovedadExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(extRows.value, 'Fuente_Novedad'), 'Órdenes')))
+
 const tiposTrabajoExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(dataFilteredMain.value, 'Tipo Trabajo'), 'Órdenes')))
 void tiposTrabajoOpt; void tiposTrabajoIntOpt; void tiposTrabajoExtOpt; void tiposTrabajoExpandOpt
-const claseMantExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(dataFilteredMain.value, 'Clase Mantenimiento'), 'Órdenes')))
-const motivosNoEjExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(dataFilteredMain.value.filter(r => String(r['Motivo No Ejecución'] ?? '').trim()), 'Motivo No Ejecución'), 'Órdenes')))
-const personalInternoExpandOpt = computed(() => {
-  const map = new Map<string, { n: number; horas: number; costo: number }>()
-  for (const r of dataFilteredMain.value.filter(isInterno)) {
-    const horas = Number(r['Duración (horas)']) || 0
 
-    const personalDetalles = r['_personalDetalles']
-    if (Array.isArray(personalDetalles) && personalDetalles.length > 0) {
-      const nPersonas = personalDetalles.length
-      for (const p of personalDetalles) {
-        const label = String(p.nombre || '').trim()
-        if (!label) continue
-        const e = map.get(label) || { n: 0, horas: 0, costo: 0 }
-        e.n++
-        e.horas += nPersonas > 0 ? horas / nPersonas : horas
-        e.costo += Number(p.costo) || 0
-        map.set(label, e)
-      }
-    } else {
-      const raw = String(r['Personal'] ?? '').trim()
-      if (!raw) continue
-      const personas = raw.split(',').map(s => s.trim()).filter(Boolean)
-      const costoTotal = Number(r['Costo servicios']) || 0
-      const nPersonas = personas.length || 1
-      for (const label of personas) {
-        const e = map.get(label) || { n: 0, horas: 0, costo: 0 }
-        e.n++
-        e.horas += horas / nPersonas
-        e.costo += costoTotal / nPersonas
-        map.set(label, e)
-      }
-    }
-  }
-  const items = [...map.entries()].map(([label, e]) => ({ label, ...e })).sort((a, b) => b.n - a.n)
-  const labels = items.map(e => e.label)
-  const data = items.map((e, i) => ({ value: e.n, horas: e.horas, costo: e.costo, itemStyle: { color: palette[i % palette.length] } }))
-  const valueTexts = items.map(e => e.n.toLocaleString('es-CO'))
-  const layout = hBarLayout(labels, hBarValueSpace(valueTexts, 34), viewportW.value)
-  return markRaw({
-    color: palette,
-    tooltip: {
-      trigger: 'axis' as const,
-      formatter: (params: any) => {
-        const p = Array.isArray(params) ? params[0] : params
-        const idx = p?.dataIndex ?? 0
-        const item = items[idx]
-        if (!item) return ''
-        return `<b>${item.label}</b><br/>` +
-          `Participaciones: <b>${item.n}</b><br/>` +
-          `Horas reales: <b>${Math.round(item.horas)} h</b><br/>` +
-          `Precio servicios: <b>$${Math.round(item.costo).toLocaleString('es-CO')}</b>`
-      },
-    },
-    grid: hBarGrid(layout.labelSpace, layout.valueSpace),
-    xAxis: { type: 'value' as const, axisLabel: { show: false }, splitLine: { show: false } },
-    yAxis: { type: 'category' as const, data: labels, axisLabel: hBarAxisLabel(layout.labelSpace) },
-    series: [{
-      name: 'Participaciones',
-      type: 'bar',
-      data,
-      barWidth: '65%',
-      label: { show: true, position: 'right' as const, fontWeight: 600 as const, fontSize: 11, color: chartTextColor.value },
-      itemStyle: { borderRadius: [0, 4, 4, 0] as [number, number, number, number] },
-    }],
-  })
-})
+const claseMantExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(dataFilteredMain.value, 'Clase Mantenimiento'), 'Órdenes')))
+const claseMantIntExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(intRows.value, 'Clase Mantenimiento'), 'Órdenes')))
+const claseMantExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(extRows.value, 'Clase Mantenimiento'), 'Órdenes')))
+
+const motivosNoEjExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(dataFilteredMain.value.filter(r => String(r['Motivo No Ejecución'] ?? '').trim()), 'Motivo No Ejecución'), 'Órdenes')))
+const motivosNoEjIntExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(intRows.value.filter(r => String(r['Motivo No Ejecución'] ?? '').trim()), 'Motivo No Ejecución'), 'Órdenes')))
+const motivosNoEjExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(extRows.value.filter(r => String(r['Motivo No Ejecución'] ?? '').trim()), 'Motivo No Ejecución'), 'Órdenes')))
+
 const solicitantesExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(dataFilteredMain.value, 'Solicitante'), 'Órdenes')))
+const solicitantesIntExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(intRows.value, 'Solicitante'), 'Órdenes')))
+const solicitantesExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(extRows.value, 'Solicitante'), 'Órdenes')))
+
 const responsablesCierreExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(dataFilteredMain.value, 'Responsable Cierre'), 'Órdenes')))
-const sistemasExpandOpt = computed(() => markRaw(buildCountBarColorOpt(sistemasRanking.value.map(([l, n]) => [l, n] as [string, number]), 'Intervenciones')))
+const responsablesCierreIntExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(intRows.value, 'Responsable Cierre'), 'Órdenes')))
+const responsablesCierreExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(extRows.value, 'Responsable Cierre'), 'Órdenes')))
+
+const sistemasExpandOpt = computed(() => markRaw(buildCountBarColorOpt(computeSistemasRanking(dataFilteredMain.value), 'Intervenciones')))
+const sistemasIntExpandOpt = computed(() => markRaw(buildCountBarColorOpt(computeSistemasRanking(intRows.value), 'Intervenciones')))
+const sistemasExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(computeSistemasRanking(extRows.value), 'Intervenciones')))
 </script>
 
 <style scoped>
+/* ── Quick Navigation Bar ── */
+.section-quick-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  margin-bottom: 18px;
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--card-border, #e5e7eb);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: blur(12px);
+}
+.quick-nav-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #6b7280);
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+}
+.quick-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid var(--card-border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--bg-alt, #f8fafc);
+  color: var(--text-primary, #1f2937);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s ease;
+  white-space: nowrap;
+}
+.quick-nav-btn:hover {
+  background: rgba(56, 39, 245, .08);
+  border-color: rgba(56, 39, 245, .3);
+  color: #3827f5;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(56, 39, 245, .12);
+}
+.quick-nav-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.section-anchor {
+  scroll-margin-top: 60px;
+}
+
 .page-header {
   display: flex;
   align-items: center;
