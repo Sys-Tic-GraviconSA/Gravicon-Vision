@@ -184,8 +184,8 @@
       <KpiCard :value="intPct + '%'" label="% del Gasto Total" accent="#10B981" icon="chart-bar" />
       <KpiCard :value="$$(intCostoM3)" label="Costo por m³ Interno" :accent="intCostoM3 > 3000 ? '#EF4444' : '#10B981'" :meta="'Meta: $3.000/m³'" icon="target" />
       <KpiCard :value="String(intCount)" label="Órdenes Internas" accent="#06B6D4" icon="list" />
-      <KpiCard :value="String(otsIntEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" />
-      <KpiCard :value="String(otsIntEstadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" />
+      <KpiCard :value="String(otsIntEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.abiertas)}</span>`" />
+      <KpiCard :value="String(otsIntEstadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.cerradas)}</span>`" />
       <KpiCard :value="otsIntPctCierre + '%'" label="% Cierre" accent="#3B82F6" icon="zap" />
       <KpiCard :value="otsIntDuracionEstimadaProm + ' h'" label="Duración Estimada Promedio" accent="#8B5CF6" icon="clock" />
       <KpiCard :value="otsIntTiempoRealProm + ' h'" label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" />
@@ -207,10 +207,10 @@
     </div>
 
     <div class="charts-grid cols-1" style="margin-top:22px">
-      <ChartCard title="Costos Internos por Placa de la Planta" :option="vehiculoIntOpt" :height="500" tall clickable @chart-click="(p:any)=>onPlacaClick(p, 'int')" />
+      <ChartCard title="Ranking Top 10 — Costos Internos por Placa" description="Top 10 placas internas con mayor costo" :option="vehiculoIntOpt" :height="500" tall clickable @chart-click="(p:any)=>onPlacaClick(p, 'int')" />
     </div>
     <div class="charts-grid cols-1" style="margin-top:22px">
-      <ChartCard title="Costos Internos por Proveedor" :option="intProveedorOpt" :height="500" tall clickable @chart-click="(p:any)=>onRankingClick('PROVEEDOR', p, 'int')" />
+      <ChartCard title="Ranking Top 10 — Costos Internos por Proveedor" description="Top 10 proveedores internos" :option="intProveedorOpt" :height="500" tall clickable @chart-click="(p:any)=>onRankingClick('PROVEEDOR', p, 'int')" />
     </div>
 
       <div class="charts-grid cols-2" style="margin-bottom:22px">
@@ -221,15 +221,13 @@
         <ChartCard title="Órdenes por Localización" description="Órdenes según la localización registrada" :option="localizacionIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Localización', p, 'int')" />
         <ChartCard title="Prioridad" description="Órdenes por nivel de prioridad" :option="prioridadIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Prioridad', p, 'int')" />
       </div>
-      <div class="charts-grid cols-1" style="margin-bottom:22px">
+      <div class="charts-grid cols-2" style="margin-bottom:22px">
         <ChartCard title="Fuente de Novedad" description="Órdenes según la fuente de novedad registrada" :option="fuenteNovedadIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fuente_Novedad', p, 'int')" />
+        <ChartCard title="Jornada" description="Distribución de órdenes internas por jornada (Día / Noche)" :option="jornadaIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Jornada', p, 'int')" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
         <ChartCard title="Responsables de Cierre con Más Órdenes" description="Quienes más cierran órdenes de trabajo" :option="responsablesCierreIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Responsable Cierre', p, 'int')" />
         <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Sistema', p, 'int')" />
-      </div>
-      <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Jornada" description="Distribución de órdenes internas por jornada (Día / Noche)" :option="jornadaIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Jornada', p, 'int')" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
         <ChartCard title="Personal de Intervención" description="Técnicos de Gravicon con más intervenciones" :option="personalIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Personal', p, 'int')" />
@@ -252,8 +250,8 @@
       <KpiCard :value="extPct + '%'" label="% del Gasto Total" accent="#10B981" icon="chart-bar" />
       <KpiCard :value="$$(extCostoM3)" label="Costo por m³ Externo" :accent="extCostoM3 > 3000 ? '#EF4444' : '#10B981'" :meta="'Meta: $3.000/m³'" icon="target" />
       <KpiCard :value="String(extCount)" label="Órdenes Externas" accent="#06B6D4" icon="list" />
-      <KpiCard :value="String(otsExtEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" />
-      <KpiCard :value="String(otsExtEstadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" />
+      <KpiCard :value="String(otsExtEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.abiertas)}</span>`" />
+      <KpiCard :value="String(otsExtEstadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.cerradas)}</span>`" />
       <KpiCard :value="otsExtPctCierre + '%'" label="% Cierre" accent="#3B82F6" icon="zap" />
       <KpiCard :value="otsExtDuracionEstimadaProm + ' h'" label="Duración Estimada Promedio" accent="#8B5CF6" icon="clock" />
       <KpiCard :value="otsExtTiempoRealProm + ' h'" label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" />
@@ -275,7 +273,7 @@
     </div>
 
     <div class="charts-grid cols-1" style="margin-top:22px">
-      <ChartCard title="Costos Externos por Placa de la Planta" :option="vehiculoExtOpt" :height="500" tall clickable @chart-click="(p:any)=>onPlacaClick(p, 'ext')" />
+      <ChartCard title="Ranking Top 10 — Costos Externos por Placa" description="Top 10 placas externas con mayor costo" :option="vehiculoExtOpt" :height="500" tall clickable @chart-click="(p:any)=>onPlacaClick(p, 'ext')" />
     </div>
 
       <div class="charts-grid cols-2" style="margin-bottom:22px">
@@ -286,16 +284,16 @@
         <ChartCard title="Órdenes por Localización" description="Órdenes según la localización registrada" :option="localizacionExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Localización', p, 'ext')" />
         <ChartCard title="Prioridad" description="Órdenes por nivel de prioridad" :option="prioridadExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Prioridad', p, 'ext')" />
       </div>
-      <div class="charts-grid cols-1" style="margin-bottom:22px">
+      <div class="charts-grid cols-2" style="margin-bottom:22px">
         <ChartCard title="Fuente de Novedad" description="Órdenes según la fuente de novedad registrada" :option="fuenteNovedadExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fuente_Novedad', p, 'ext')" />
+        <ChartCard title="Jornada" description="Distribución de órdenes externas por jornada (Día / Noche)" :option="jornadaExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Jornada', p, 'ext')" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
         <ChartCard title="Responsables de Cierre con Más Órdenes" description="Quienes más cierran órdenes de trabajo" :option="responsablesCierreExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Responsable Cierre', p, 'ext')" />
         <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Sistema', p, 'ext')" />
       </div>
-      <div class="charts-grid cols-2" style="margin-bottom:22px">
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
         <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Solicitante', p, 'ext')" />
-        <ChartCard title="Jornada" description="Distribución de órdenes externas por jornada (Día / Noche)" :option="jornadaExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Jornada', p, 'ext')" />
       </div>
 
     <div class="charts-grid cols-1" style="margin-bottom:22px">
