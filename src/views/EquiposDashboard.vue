@@ -3792,9 +3792,15 @@ function buildEficienciaMttoConcretosOption(isExpand = false) {
         label: {
           show: true,
           position: 'top' as const,
+          distance: 4,
           fontSize: 9.5,
           fontWeight: 600 as const,
-          color: isLight ? '#475569' : '#cbd5e1',
+          color: isLight ? '#334155' : '#e2e8f0',
+          backgroundColor: isLight ? 'rgba(255,255,255,.92)' : 'rgba(11,15,26,.88)',
+          padding: [2, 6] as [number, number],
+          borderRadius: 4,
+          borderColor: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)',
+          borderWidth: 1,
           formatter: (p: any) => {
             const v = Number(p.value) || 0
             return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
@@ -3832,9 +3838,15 @@ function buildEficienciaMttoConcretosOption(isExpand = false) {
         label: {
           show: true,
           position: 'top' as const,
+          distance: 4,
           fontSize: 9.5,
           fontWeight: 600 as const,
-          color: isLight ? '#475569' : '#cbd5e1',
+          color: isLight ? '#334155' : '#e2e8f0',
+          backgroundColor: isLight ? 'rgba(255,255,255,.92)' : 'rgba(11,15,26,.88)',
+          padding: [2, 6] as [number, number],
+          borderRadius: 4,
+          borderColor: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)',
+          borderWidth: 1,
           formatter: (p: any) => {
             const v = Number(p.value) || 0
             return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
@@ -3872,9 +3884,15 @@ function buildEficienciaMttoConcretosOption(isExpand = false) {
         label: {
           show: true,
           position: 'top' as const,
+          distance: 4,
           fontSize: 9.5,
           fontWeight: 600 as const,
-          color: isLight ? '#475569' : '#cbd5e1',
+          color: isLight ? '#334155' : '#e2e8f0',
+          backgroundColor: isLight ? 'rgba(255,255,255,.92)' : 'rgba(11,15,26,.88)',
+          padding: [2, 6] as [number, number],
+          borderRadius: 4,
+          borderColor: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)',
+          borderWidth: 1,
           formatter: (p: any) => {
             const v = Number(p.value) || 0
             return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
@@ -3923,6 +3941,11 @@ function buildEficienciaMttoConcretosOption(isExpand = false) {
           fontSize: 10.5,
           fontWeight: 700 as const,
           color: isLight ? '#0f172a' : '#f8fafc',
+          backgroundColor: isLight ? 'rgba(255,255,255,.95)' : 'rgba(15,23,42,.95)',
+          padding: [2, 6] as [number, number],
+          borderRadius: 4,
+          borderColor: isLight ? 'rgba(15,23,42,0.12)' : 'rgba(255,255,255,0.12)',
+          borderWidth: 1,
           formatter: (p: any) => {
             const v = Number(p.value) || 0
             return v > 0 ? `$ ${v.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''
@@ -4064,9 +4087,15 @@ function buildCostosGeneralesM3Option(isExpand = false) {
         label: {
           show: true,
           position: 'top' as const,
+          distance: 4,
           fontSize: 9.5,
           fontWeight: 600 as const,
-          color: isLight ? '#475569' : '#cbd5e1',
+          color: isLight ? '#334155' : '#e2e8f0',
+          backgroundColor: isLight ? 'rgba(255,255,255,.92)' : 'rgba(11,15,26,.88)',
+          padding: [2, 6] as [number, number],
+          borderRadius: 4,
+          borderColor: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)',
+          borderWidth: 1,
           formatter: (p: any) => {
             const v = Number(p.value) || 0
             return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
@@ -4104,9 +4133,15 @@ function buildCostosGeneralesM3Option(isExpand = false) {
         label: {
           show: true,
           position: 'top' as const,
+          distance: 4,
           fontSize: 9.5,
           fontWeight: 600 as const,
-          color: isLight ? '#475569' : '#cbd5e1',
+          color: isLight ? '#334155' : '#e2e8f0',
+          backgroundColor: isLight ? 'rgba(255,255,255,.92)' : 'rgba(11,15,26,.88)',
+          padding: [2, 6] as [number, number],
+          borderRadius: 4,
+          borderColor: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)',
+          borderWidth: 1,
           formatter: (p: any) => {
             const v = Number(p.value) || 0
             return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
@@ -4155,6 +4190,11 @@ function buildCostosGeneralesM3Option(isExpand = false) {
           fontSize: 10.5,
           fontWeight: 700 as const,
           color: isLight ? '#0f172a' : '#f8fafc',
+          backgroundColor: isLight ? 'rgba(255,255,255,.95)' : 'rgba(15,23,42,.95)',
+          padding: [2, 6] as [number, number],
+          borderRadius: 4,
+          borderColor: isLight ? 'rgba(15,23,42,0.12)' : 'rgba(255,255,255,0.12)',
+          borderWidth: 1,
           formatter: (p: any) => {
             const v = Number(p.value) || 0
             return v > 0 ? `$ ${v.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''
