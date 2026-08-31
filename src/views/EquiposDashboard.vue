@@ -169,7 +169,7 @@
       </div>
 
     <div class="charts-grid cols-1" style="margin-bottom:22px">
-      <ChartCard title="Órdenes Diarias" description="Abiertas y cerradas con sus costos" :option="ordenesDiariasOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fecha', p)" />
+      <ChartCard title="Órdenes Diarias" description="Abiertas y cerradas con sus costos" :option="ordenesDiariasOpt" :height="300" />
     </div>
 
     <div class="section-divider"></div>
