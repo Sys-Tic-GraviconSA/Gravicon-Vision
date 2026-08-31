@@ -278,7 +278,8 @@ const chartOpt = computed(() => {
     return `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}`
   })
   const total = monthData.value.map(r => Number(r['Total de M³']) || 0)
-  const promedio = kpi.value.promedio
+  const totalGeneral = props.data.reduce((s, r) => s + (Number(r['Total de M³']) || 0), 0)
+  const promedioGeneral = props.data.length > 0 ? Math.round(totalGeneral / props.data.length) : 0
   return {
     color: ['#2563eb', '#10B981'],
     textStyle: { fontFamily: 'Lato, sans-serif' },
@@ -286,13 +287,13 @@ const chartOpt = computed(() => {
       const p = Array.isArray(params) ? params[0] : params
       const idx = p?.dataIndex ?? 0
       const val = Number(total[idx] || 0)
-      return `<b>${labels[idx] || ''}</b><br/>Producción Total: <b>${fmt(val)} M³</b><br/>Promedio: <b>${fmt(promedio)} M³</b>`
+      return `<b>${labels[idx] || ''}</b><br/>Producción Total: <b>${fmt(val)} M³</b><br/>Promedio General: <b>${fmt(promedioGeneral)} M³</b>`
     }},
     grid: { left: 40, right: 20, bottom: 30, top: 20, containLabel: true },
     xAxis: { type: 'category' as const, data: labels, axisLabel: { color: chartTextColor.value, fontSize: 9 }, axisLine: { show: false } },
     yAxis: { type: 'value' as const, axisLabel: { show: false }, splitLine: { show: true, lineStyle: { color: '#f1f5f9' } } },
     series: [
-      { name: 'Producción Total (m³)', type: 'line' as const, smooth: true, data: total, areaStyle: { opacity: 0.08, color: '#2563eb' }, lineStyle: { width: 3, color: '#2563eb' }, symbolSize: 4, itemStyle: { color: '#1d4ed8', borderColor: '#fff', borderWidth: 2 }, markLine: { symbol: 'none', label: { show: true, position: 'end' as const, formatter: `Promedio ${fmt(promedio)} M³`, color: '#10B981', fontSize: 10, fontWeight: 600 as const, backgroundColor: 'rgba(255,255,255,.9)', padding: [2,6] as [number,number], borderRadius: 4 }, lineStyle: { color: '#10B981', type: 'dashed' as const, width: 1.5 }, data: [{ yAxis: promedio }] } },
+      { name: 'Producción Total (m³)', type: 'line' as const, smooth: true, data: total, areaStyle: { opacity: 0.08, color: '#2563eb' }, lineStyle: { width: 3, color: '#2563eb' }, symbolSize: 4, itemStyle: { color: '#1d4ed8', borderColor: '#fff', borderWidth: 2 }, markLine: { symbol: 'none', label: { show: true, position: 'end' as const, formatter: `Promedio General ${fmt(promedioGeneral)} M³`, color: '#10B981', fontSize: 10, fontWeight: 600 as const, backgroundColor: 'rgba(255,255,255,.9)', padding: [2,6] as [number,number], borderRadius: 4 }, lineStyle: { color: '#10B981', type: 'dashed' as const, width: 1.5 }, data: [{ yAxis: promedioGeneral }] } },
     ],
   }
 })
