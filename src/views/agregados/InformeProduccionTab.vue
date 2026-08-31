@@ -57,20 +57,20 @@
         </div>
 
         <div class="kpi-section">
-          <h4 class="kpi-section-title">Meta Mensual</h4>
-          <div class="kpi-row kpi-row-3">
-            <KpiCard label="Meta Mensual M³" accent="#8B5CF6" icon="target">{{ fmt(kpi.metaMensual) }}</KpiCard>
-            <KpiCard label="Diferencia Meta" :accent="kpi.diferenciaMeta < 0 ? '#EF4444' : '#10B981'" icon="trending-up">{{ kpi.diferenciaMeta >= 0 ? '+' : '' }}{{ fmt(kpi.diferenciaMeta) }}</KpiCard>
-            <KpiCard label="% Cumpl. Meta" accent="#06B6D4" icon="check-circle">{{ kpi.cumplimientoMeta }}</KpiCard>
-          </div>
-        </div>
-
-        <div class="kpi-section">
           <h4 class="kpi-section-title">Proyectado Diario</h4>
           <div class="kpi-row kpi-row-3">
             <KpiCard label="M³ Proyectado" accent="#EC4899" icon="trending-up">{{ fmt(kpi.proyectado) }}</KpiCard>
             <KpiCard label="Diferencia Proy." :accent="kpi.diferenciaProy < 0 ? '#EF4444' : '#10B981'" icon="trending-up">{{ kpi.diferenciaProy >= 0 ? '+' : '' }}{{ fmt(kpi.diferenciaProy) }}</KpiCard>
             <KpiCard label="% Cumpl. Proy." accent="#F59E0B" icon="check-circle">{{ kpi.cumplimientoProy }}</KpiCard>
+          </div>
+        </div>
+
+        <div class="kpi-section">
+          <h4 class="kpi-section-title">Meta Mensual</h4>
+          <div class="kpi-row kpi-row-3">
+            <KpiCard label="Meta Mensual M³" accent="#8B5CF6" icon="target">{{ fmt(kpi.metaMensual) }}</KpiCard>
+            <KpiCard label="Diferencia Meta" :accent="kpi.diferenciaMeta < 0 ? '#EF4444' : '#10B981'" icon="trending-up">{{ kpi.diferenciaMeta >= 0 ? '+' : '' }}{{ fmt(kpi.diferenciaMeta) }}</KpiCard>
+            <KpiCard label="% Cumpl. Meta" accent="#06B6D4" icon="check-circle">{{ kpi.cumplimientoMeta }}</KpiCard>
           </div>
         </div>
 
