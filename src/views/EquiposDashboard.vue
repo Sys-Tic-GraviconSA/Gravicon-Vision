@@ -148,31 +148,31 @@
     </div>
 
       <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Clase de Mantenimiento" description="Órdenes clasificadas por clase de mantenimiento" :option="claseMantenimientoOpt" :expand-option="claseMantExpandOpt" :height="300" />
-        <ChartCard title="Motivos de No Ejecución" description="Solo órdenes que registran un motivo de no ejecución" :option="motivosNoEjecucionOpt" :expand-option="motivosNoEjExpandOpt" :height="300" />
+        <ChartCard title="Clase de Mantenimiento" description="Órdenes clasificadas por clase de mantenimiento" :option="claseMantenimientoOpt" :expand-option="claseMantExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Clase Mantenimiento', p)" />
+        <ChartCard title="Motivos de No Ejecución" description="Solo órdenes que registran un motivo de no ejecución" :option="motivosNoEjecucionOpt" :expand-option="motivosNoEjExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Motivo No Ejecución', p)" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Órdenes por Localización" description="Órdenes según la localización registrada" :option="localizacionOpt" :expand-option="localizacionExpandOpt" :height="300" />
-        <ChartCard title="Prioridad" description="Órdenes por nivel de prioridad" :option="prioridadOpt" :expand-option="prioridadExpandOpt" :height="300" />
+        <ChartCard title="Órdenes por Localización" description="Órdenes según la localización registrada" :option="localizacionOpt" :expand-option="localizacionExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Localización', p)" />
+        <ChartCard title="Prioridad" description="Órdenes por nivel de prioridad" :option="prioridadOpt" :expand-option="prioridadExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Prioridad', p)" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Fuente de Novedad" description="Órdenes según la fuente de novedad registrada" :option="fuenteNovedadOpt" :expand-option="fuenteNovedadExpandOpt" :height="300" />
-        <ChartCard title="Tipos de Trabajo" description="Órdenes de trabajo según el tipo registrado" :option="tiposTrabajoOpt" :expand-option="tiposTrabajoExpandOpt" :height="300" />
+        <ChartCard title="Fuente de Novedad" description="Órdenes según la fuente de novedad registrada" :option="fuenteNovedadOpt" :expand-option="fuenteNovedadExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fuente_Novedad', p)" />
+        <ChartCard title="Tipos de Trabajo" description="Órdenes de trabajo según el tipo registrado" :option="tiposTrabajoOpt" :expand-option="tiposTrabajoExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Tipo Trabajo', p)" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Responsables de Cierre con Más Órdenes" description="Quienes más cierran órdenes de trabajo" :option="responsablesCierreOpt" :expand-option="responsablesCierreExpandOpt" :height="300" />
-        <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasOpt" :expand-option="sistemasExpandOpt" :height="300" />
+        <ChartCard title="Responsables de Cierre con Más Órdenes" description="Quienes más cierran órdenes de trabajo" :option="responsablesCierreOpt" :expand-option="responsablesCierreExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Responsable Cierre', p)" />
+        <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasOpt" :expand-option="sistemasExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Sistema', p)" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Personal de Intervención (Interno)" description="Técnicos de Gravicon con más intervenciones" :option="personalInternoOpt" :expand-option="personalInternoExpandOpt" :height="300" />
-        <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesOpt" :expand-option="solicitantesExpandOpt" :height="300" />
+        <ChartCard title="Personal de Intervención (Interno)" description="Técnicos de Gravicon con más intervenciones" :option="personalInternoOpt" :expand-option="personalInternoExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Personal', p)" />
+        <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesOpt" :expand-option="solicitantesExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Solicitante', p)" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Jornada" description="Distribución de órdenes por jornada (Día / Noche)" :option="jornadaOpt" :height="300" />
+        <ChartCard title="Jornada" description="Distribución de órdenes por jornada (Día / Noche)" :option="jornadaOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Jornada', p)" />
       </div>
 
     <div class="charts-grid cols-1" style="margin-bottom:22px">
-      <ChartCard title="Órdenes Diarias" description="Abiertas y cerradas con sus costos" :option="ordenesDiariasOpt" :height="300" />
+      <ChartCard title="Órdenes Diarias" description="Abiertas y cerradas con sus costos" :option="ordenesDiariasOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fecha', p)" />
     </div>
 
     <div class="section-divider"></div>
@@ -1317,6 +1317,24 @@
           </div>
           <div class="placa-detail-table-wrap" style="padding: 12px;">
             <DataTable :title="`Órdenes — ${selectedMesLabel}${selectedMesPlanta ? ' — ' + selectedMesPlanta : ''} — haz clic en una fila para ver detalle`" :data="mesDetailTableRows" :page-size="10" :columnWidths="otColWidths" :excludeFields="['_ot', '_rowKey']" :badgeFields="['Estado']" :defaultVisible="['Nº Orden de Trabajo', 'Fecha y Hora', 'Estado', 'PLANTA', 'PROVEEDOR', 'Placa del Vehículo']" small selectColumns exportColumns clickable @row-click="openOtDetail" />
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Modal detalle por ranking — click en cualquier gráfica (mismo estilo que Costos por Placa) -->
+    <Teleport to="body">
+      <div v-if="showRankingDetail" class="placa-detail-overlay" @click.self="closeRankingDetail">
+        <div class="placa-detail-panel">
+          <div class="placa-detail-top">
+            <div>
+              <h3 class="placa-detail-title">Órdenes — {{ selectedRankingField }}: {{ selectedRankingValue }}</h3>
+              <p class="placa-detail-sub">{{ rankingDetailRows.length }} órdenes · Total {{ $$(rankingDetailTotal) }}</p>
+            </div>
+            <button class="placa-detail-close" @click="closeRankingDetail">✕</button>
+          </div>
+          <div class="placa-detail-table-wrap" style="padding: 12px;">
+            <DataTable :title="`Órdenes — ${selectedRankingField}: ${selectedRankingValue} — haz clic en una fila para ver detalle`" :data="rankingDetailTableRows" :page-size="10" :columnWidths="otColWidths" :excludeFields="['_ot', '_rowKey']" :badgeFields="['Estado']" :defaultVisible="['Nº Orden de Trabajo', 'Fecha y Hora', 'Estado', 'PLANTA', 'PROVEEDOR', 'Placa del Vehículo']" small selectColumns exportColumns clickable @row-click="openOtDetail" />
           </div>
         </div>
       </div>
@@ -4564,6 +4582,66 @@ function onCostosGeneralesClick(params: any) {
   showMesDetail.value = true
 }
 function closeMesDetail() { showMesDetail.value = false }
+
+// — Detalle genérico por ranking al clicar en cualquier gráfica (mismo estilo que Costos por Placa)
+const selectedRankingField = ref<string | null>(null)
+const selectedRankingValue = ref<string | null>(null)
+const showRankingDetail = ref(false)
+function fechaToDiariasLabel(serial: number): string {
+  if (!serial) return ''
+  const d = new Date((serial - 25569) * 86400 * 1000)
+  return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+}
+const rankingDetailRows = computed(() => {
+  if (!selectedRankingField.value || selectedRankingValue.value == null) return []
+  const field = selectedRankingField.value!
+  const val = selectedRankingValue.value!
+  return dataFilteredNoAcpm.value.filter(r => {
+    if (field === 'Sistema') {
+      const subs = r['_subOrdenes'] as any[]
+      if (!Array.isArray(subs)) return false
+      return subs.some(s => String(s?.sistemaTexto || s?.sistema || '').trim() === val)
+    }
+    if (field === 'Personal') {
+      const raw = String(r['Personal'] ?? '').trim()
+      if (!raw) return false
+      return raw.split(',').map(s => s.trim()).includes(val)
+    }
+    if (field === 'Fecha') {
+      const lbl = fechaToDiariasLabel(Number(r['FECHA']))
+      return lbl === val
+    }
+    return String(r[field] ?? '').trim() === val
+  })
+})
+const rankingDetailTotal = computed(() => {
+  let t = 0
+  for (const r of rankingDetailRows.value) t += (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0)
+  return t
+})
+const rankingDetailTableRows = computed<Record<string, unknown>[]>(() => rankingDetailRows.value.map(r => ({
+  'Nº Orden de Trabajo': r['Nº Orden de Trabajo'] ?? '',
+  'Fecha y Hora': otDateTime(r as Record<string, unknown>),
+  'Estado': r['Estado'] ?? '',
+  'PLANTA': r['PLANTA'] ?? '',
+  'PROVEEDOR': r['PROVEEDOR'] ?? '',
+  'Placa del Vehículo': r['Placa del Vehículo'] ?? '',
+  'Costo Total': (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0),
+  ...r as Record<string, unknown>,
+  _ot: r,
+})))
+function onRankingClick(field: string, params: any) {
+  const raw = params?.name ?? params?.data?.name ?? params?.axisValue ?? ''
+  const val = String(raw ?? '').trim()
+  if (!val || val.startsWith('(Sin')) return
+  // Para barras horizontales, params.name es el label; para verticales también
+  const label = String(params?.name ?? val).trim()
+  if (!label) return
+  selectedRankingField.value = field
+  selectedRankingValue.value = label
+  showRankingDetail.value = true
+}
+function closeRankingDetail() { showRankingDetail.value = false }
 
 /** Gráfica de barras horizontal por conteo (rankings de sistemas, proveedores, responsables). */
 /** Barras horizontales por conteo con un color distinto por barra. */
