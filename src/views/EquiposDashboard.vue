@@ -3985,6 +3985,7 @@ function buildCostosGeneralesM3Option(_isExpand = false) {
         fontSize: 11,
       },
       data: [
+        { name: 'Total', itemStyle: { color: '#15223c' } },
         { name: 'Servicios', itemStyle: { color: palette[1] } },
         { name: 'Insumos', itemStyle: { color: '#EF4444' } },
         { name: 'Costo Mtto por m³', itemStyle: { color: isLight ? '#172554' : '#60a5fa' } },
@@ -4031,6 +4032,44 @@ function buildCostosGeneralesM3Option(_isExpand = false) {
     ],
     series: [
       {
+        name: 'Total',
+        type: 'bar' as const,
+        yAxisIndex: 0,
+        barMaxWidth: 36,
+        itemStyle: {
+          color: '#15223c',
+          borderRadius: [4, 4, 0, 0],
+        },
+        emphasis: {
+          focus: 'series' as const,
+          itemStyle: {
+            shadowBlur: 10,
+            shadowColor: 'rgba(0, 0, 0, 0.25)',
+          },
+        },
+        label: {
+          ...labelLine.value,
+          position: 'top' as const,
+          distance: 4,
+          formatter: (p: any) => {
+            const v = Number(p.value) || 0
+            return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
+          },
+        },
+        data: data.months.map(m => ({
+          value: m.totalMtto,
+          monthLabel: m.label,
+          totalServ: m.totalServ,
+          totalIns: m.totalIns,
+          totalMtto: m.totalMtto,
+          totalOTs: m.totalOTs,
+          totalAbiertas: m.totalAbiertas,
+          totalCerradas: m.totalCerradas,
+          prodM3: m.prodM3,
+          costoM3: m.costoUnitario,
+        })),
+      },
+      {
         name: 'Servicios',
         type: 'bar' as const,
         yAxisIndex: 0,
@@ -4050,7 +4089,6 @@ function buildCostosGeneralesM3Option(_isExpand = false) {
           ...labelLine.value,
           position: 'top' as const,
           distance: 4,
-          fontSize: 9.5,
           formatter: (p: any) => {
             const v = Number(p.value) || 0
             return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
@@ -4089,7 +4127,6 @@ function buildCostosGeneralesM3Option(_isExpand = false) {
           ...labelLine.value,
           position: 'top' as const,
           distance: 4,
-          fontSize: 9.5,
           formatter: (p: any) => {
             const v = Number(p.value) || 0
             return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
