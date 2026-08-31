@@ -121,6 +121,8 @@
           :expand-option="eficienciaMttoConcretosExpandOpt"
           :height="480"
           tall
+          clickable
+          @chart-click="onEficienciaClick"
         />
       </div>
       <div class="charts-grid cols-1" style="margin-bottom:22px">
@@ -131,6 +133,8 @@
           :expand-option="costosGeneralesM3ExpandOpt"
           :height="480"
           tall
+          clickable
+          @chart-click="onCostosGeneralesClick"
         />
       </div>
     </template>
@@ -1295,6 +1299,24 @@
           </div>
           <div class="placa-detail-table-wrap" style="padding: 12px;">
             <DataTable :title="`Órdenes — ${selectedPlaca} — haz clic en una fila para ver detalle`" :data="placaDetailTableRows" :page-size="10" :columnWidths="otColWidths" :excludeFields="['_ot', '_rowKey']" :badgeFields="['Estado']" :defaultVisible="['Nº Orden de Trabajo', 'Fecha y Hora', 'Estado', 'Jornada', 'PLANTA', 'PROVEEDOR', 'Tipo de Vehículo', 'Placa del Vehículo', 'Costo Total', 'Motivo No Ejecución', 'Observaciones']" small selectColumns exportColumns clickable @row-click="openOtDetail" />
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Modal detalle por mes/planta — click en Eficiencia y Costos Generales (mismo estilo que Costos por Placa) -->
+    <Teleport to="body">
+      <div v-if="showMesDetail" class="placa-detail-overlay" @click.self="closeMesDetail">
+        <div class="placa-detail-panel">
+          <div class="placa-detail-top">
+            <div>
+              <h3 class="placa-detail-title">Órdenes — {{ selectedMesLabel }}<template v-if="selectedMesPlanta"> — {{ selectedMesPlanta }}</template></h3>
+              <p class="placa-detail-sub">{{ mesDetailRows.length }} órdenes · Total {{ $$(mesDetailTotal) }}</p>
+            </div>
+            <button class="placa-detail-close" @click="closeMesDetail">✕</button>
+          </div>
+          <div class="placa-detail-table-wrap" style="padding: 12px;">
+            <DataTable :title="`Órdenes — ${selectedMesLabel}${selectedMesPlanta ? ' — ' + selectedMesPlanta : ''} — haz clic en una fila para ver detalle`" :data="mesDetailTableRows" :page-size="10" :columnWidths="otColWidths" :excludeFields="['_ot', '_rowKey']" :badgeFields="['Estado']" :defaultVisible="['Nº Orden de Trabajo', 'Fecha y Hora', 'Estado', 'PLANTA', 'PROVEEDOR', 'Placa del Vehículo']" small selectColumns exportColumns clickable @row-click="openOtDetail" />
           </div>
         </div>
       </div>
@@ -4488,6 +4510,60 @@ function onPlacaClick(params: any) {
   showPlacaDetail.value = true
 }
 function closePlacaDetail() { showPlacaDetail.value = false }
+
+// — Detalle por mes/planta al clicar en Eficiencia y Costos Generales (mismo estilo que Costos por Placa)
+const selectedMesLabel = ref<string | null>(null)
+const selectedMesPlanta = ref<string | null>(null)
+const showMesDetail = ref(false)
+function otMonthLabelForDetail(r: Record<string, unknown>): string {
+  const d = parseConcretoRowDate(r['FECHA'] ?? r['Fecha'])
+  if (!d) return ''
+  return `${d.getUTCFullYear()} ${MESES_ES[d.getUTCMonth()]}`
+}
+const mesDetailRows = computed(() => {
+  if (!selectedMesLabel.value) return []
+  return dataFilteredNoAcpm.value.filter(r => {
+    if (otMonthLabelForDetail(r) !== selectedMesLabel.value) return false
+    if (selectedMesPlanta.value) {
+      const planta = getConcretoPlantaName(r as Record<string, unknown>)
+      if (planta.toLowerCase() !== selectedMesPlanta.value!.toLowerCase()) return false
+    }
+    return true
+  })
+})
+const mesDetailTotal = computed(() => {
+  let t = 0
+  for (const r of mesDetailRows.value) t += (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0)
+  return t
+})
+const mesDetailTableRows = computed<Record<string, unknown>[]>(() => mesDetailRows.value.map(r => ({
+  'Nº Orden de Trabajo': r['Nº Orden de Trabajo'] ?? '',
+  'Fecha y Hora': otDateTime(r as Record<string, unknown>),
+  'Estado': r['Estado'] ?? '',
+  'PLANTA': r['PLANTA'] ?? '',
+  'PROVEEDOR': r['PROVEEDOR'] ?? '',
+  'Placa del Vehículo': r['Placa del Vehículo'] ?? '',
+  'Costo Total': (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0),
+  ...r as Record<string, unknown>,
+  _ot: r,
+})))
+function onEficienciaClick(params: any) {
+  const mes = String(params?.name ?? params?.axisValue ?? '').trim()
+  const serie = String(params?.seriesName ?? '').trim()
+  if (!mes) return
+  const plantas = ['Acacias', 'Restrepo', 'Villavicencio']
+  selectedMesLabel.value = mes
+  selectedMesPlanta.value = plantas.includes(serie) ? serie : null
+  showMesDetail.value = true
+}
+function onCostosGeneralesClick(params: any) {
+  const mes = String(params?.name ?? params?.axisValue ?? '').trim()
+  if (!mes) return
+  selectedMesLabel.value = mes
+  selectedMesPlanta.value = null
+  showMesDetail.value = true
+}
+function closeMesDetail() { showMesDetail.value = false }
 
 /** Gráfica de barras horizontal por conteo (rankings de sistemas, proveedores, responsables). */
 /** Barras horizontales por conteo con un color distinto por barra. */
