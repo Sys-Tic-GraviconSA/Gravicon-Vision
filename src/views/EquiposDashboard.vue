@@ -144,7 +144,7 @@
     </div>
 
     <div class="charts-grid cols-1" style="margin-top:22px">
-      <ChartCard title="Costos por Placa de la Planta" :option="vehiculoGenOpt" :expand-option="vehiculoGenExpandOpt" :height="500" tall clickable @chart-click="onPlacaClick" />
+      <ChartCard title="Ranking Top 10 — Costos de Mantenimiento por Placa" description="Top 10 placas con mayor costo acumulado" :option="vehiculoGenOpt" :expand-option="vehiculoGenExpandOpt" :height="500" tall clickable @chart-click="onPlacaClick" />
     </div>
 
       <div class="charts-grid cols-2" style="margin-bottom:22px">
@@ -155,8 +155,9 @@
         <ChartCard title="Órdenes por Localización" description="Órdenes según la localización registrada" :option="localizacionOpt" :expand-option="localizacionExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Localización', p)" />
         <ChartCard title="Prioridad" description="Órdenes por nivel de prioridad" :option="prioridadOpt" :expand-option="prioridadExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Prioridad', p)" />
       </div>
-      <div class="charts-grid cols-1" style="margin-bottom:22px">
+      <div class="charts-grid cols-2" style="margin-bottom:22px">
         <ChartCard title="Fuente de Novedad" description="Órdenes según la fuente de novedad registrada" :option="fuenteNovedadOpt" :expand-option="fuenteNovedadExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fuente_Novedad', p)" />
+        <ChartCard title="Jornada" description="Distribución de órdenes por jornada (Día / Noche)" :option="jornadaOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Jornada', p)" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
         <ChartCard title="Responsables de Cierre con Más Órdenes" description="Quienes más cierran órdenes de trabajo" :option="responsablesCierreOpt" :expand-option="responsablesCierreExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Responsable Cierre', p)" />
@@ -165,9 +166,6 @@
       <div class="charts-grid cols-2" style="margin-bottom:22px">
         <ChartCard title="Personal de Intervención (Interno)" description="Técnicos de Gravicon con más intervenciones" :option="personalInternoOpt" :expand-option="personalInternoExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Personal', p)" />
         <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesOpt" :expand-option="solicitantesExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Solicitante', p)" />
-      </div>
-      <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Jornada" description="Distribución de órdenes por jornada (Día / Noche)" :option="jornadaOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Jornada', p)" />
       </div>
 
     <div class="charts-grid cols-1" style="margin-bottom:22px">
