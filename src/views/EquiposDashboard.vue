@@ -202,42 +202,42 @@
         </div>
       </div>
 
-    <div class="charts-grid cols-1">
+      <div class="charts-grid cols-1">
       <ChartCard title="Costo por m³ - Interno" :option="costosM3IntOpt" />
     </div>
 
     <div class="charts-grid cols-1" style="margin-top:22px">
-      <ChartCard title="Costos Internos por Placa de la Planta" :option="vehiculoIntOpt" :height="500" tall />
+      <ChartCard title="Costos Internos por Placa de la Planta" :option="vehiculoIntOpt" :height="500" tall clickable @chart-click="(p:any)=>onPlacaClick(p, 'int')" />
     </div>
     <div class="charts-grid cols-1" style="margin-top:22px">
-      <ChartCard title="Costos Internos por Proveedor" :option="intProveedorOpt" :height="500" tall />
+      <ChartCard title="Costos Internos por Proveedor" :option="intProveedorOpt" :height="500" tall clickable @chart-click="(p:any)=>onRankingClick('PROVEEDOR', p, 'int')" />
     </div>
 
       <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Clase de Mantenimiento" description="Órdenes clasificadas por clase de mantenimiento" :option="claseMantenimientoIntOpt" :height="300" />
-        <ChartCard title="Motivos de No Ejecución" description="Solo órdenes que registran un motivo de no ejecución" :option="motivosNoEjecucionIntOpt" :height="300" />
+        <ChartCard title="Clase de Mantenimiento" description="Órdenes clasificadas por clase de mantenimiento" :option="claseMantenimientoIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Clase Mantenimiento', p, 'int')" />
+        <ChartCard title="Motivos de No Ejecución" description="Solo órdenes que registran un motivo de no ejecución" :option="motivosNoEjecucionIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Motivo No Ejecución', p, 'int')" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Órdenes por Localización" description="Órdenes según la localización registrada" :option="localizacionIntOpt" :height="300" />
-        <ChartCard title="Prioridad" description="Órdenes por nivel de prioridad" :option="prioridadIntOpt" :height="300" />
+        <ChartCard title="Órdenes por Localización" description="Órdenes según la localización registrada" :option="localizacionIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Localización', p, 'int')" />
+        <ChartCard title="Prioridad" description="Órdenes por nivel de prioridad" :option="prioridadIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Prioridad', p, 'int')" />
       </div>
       <div class="charts-grid cols-1" style="margin-bottom:22px">
-        <ChartCard title="Fuente de Novedad" description="Órdenes según la fuente de novedad registrada" :option="fuenteNovedadIntOpt" :height="300" />
+        <ChartCard title="Fuente de Novedad" description="Órdenes según la fuente de novedad registrada" :option="fuenteNovedadIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fuente_Novedad', p, 'int')" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Responsables de Cierre con Más Órdenes" description="Quienes más cierran órdenes de trabajo" :option="responsablesCierreIntOpt" :height="300" />
-        <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasIntOpt" :height="300" />
+        <ChartCard title="Responsables de Cierre con Más Órdenes" description="Quienes más cierran órdenes de trabajo" :option="responsablesCierreIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Responsable Cierre', p, 'int')" />
+        <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Sistema', p, 'int')" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Jornada" description="Distribución de órdenes internas por jornada (Día / Noche)" :option="jornadaIntOpt" :height="300" />
+        <ChartCard title="Jornada" description="Distribución de órdenes internas por jornada (Día / Noche)" :option="jornadaIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Jornada', p, 'int')" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Personal de Intervención" description="Técnicos de Gravicon con más intervenciones" :option="personalIntOpt" :height="300" />
-        <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesIntOpt" :height="300" />
+        <ChartCard title="Personal de Intervención" description="Técnicos de Gravicon con más intervenciones" :option="personalIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Personal', p, 'int')" />
+        <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Solicitante', p, 'int')" />
       </div>
 
-    <div class="charts-grid cols-1" style="margin-bottom:22px">
-      <ChartCard title="Órdenes Diarias" description="Abiertas y cerradas con sus costos (Internas)" :option="ordenesDiariasIntOpt" :height="300" />
+     <div class="charts-grid cols-1" style="margin-bottom:22px">
+      <ChartCard title="Órdenes Diarias" description="Abiertas y cerradas con sus costos (Internas)" :option="ordenesDiariasIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fecha', p, 'int')" />
     </div>
 
     <div class="section-divider"></div>
@@ -275,31 +275,31 @@
     </div>
 
     <div class="charts-grid cols-1" style="margin-top:22px">
-      <ChartCard title="Costos Externos por Placa de la Planta" :option="vehiculoExtOpt" :height="500" tall />
+      <ChartCard title="Costos Externos por Placa de la Planta" :option="vehiculoExtOpt" :height="500" tall clickable @chart-click="(p:any)=>onPlacaClick(p, 'ext')" />
     </div>
 
       <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Clase de Mantenimiento" description="Órdenes clasificadas por clase de mantenimiento" :option="claseMantenimientoExtOpt" :height="300" />
-        <ChartCard title="Motivos de No Ejecución" description="Solo órdenes que registran un motivo de no ejecución" :option="motivosNoEjecucionExtOpt" :height="300" />
+        <ChartCard title="Clase de Mantenimiento" description="Órdenes clasificadas por clase de mantenimiento" :option="claseMantenimientoExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Clase Mantenimiento', p, 'ext')" />
+        <ChartCard title="Motivos de No Ejecución" description="Solo órdenes que registran un motivo de no ejecución" :option="motivosNoEjecucionExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Motivo No Ejecución', p, 'ext')" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Órdenes por Localización" description="Órdenes según la localización registrada" :option="localizacionExtOpt" :height="300" />
-        <ChartCard title="Prioridad" description="Órdenes por nivel de prioridad" :option="prioridadExtOpt" :height="300" />
+        <ChartCard title="Órdenes por Localización" description="Órdenes según la localización registrada" :option="localizacionExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Localización', p, 'ext')" />
+        <ChartCard title="Prioridad" description="Órdenes por nivel de prioridad" :option="prioridadExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Prioridad', p, 'ext')" />
       </div>
       <div class="charts-grid cols-1" style="margin-bottom:22px">
-        <ChartCard title="Fuente de Novedad" description="Órdenes según la fuente de novedad registrada" :option="fuenteNovedadExtOpt" :height="300" />
+        <ChartCard title="Fuente de Novedad" description="Órdenes según la fuente de novedad registrada" :option="fuenteNovedadExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fuente_Novedad', p, 'ext')" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Responsables de Cierre con Más Órdenes" description="Quienes más cierran órdenes de trabajo" :option="responsablesCierreExtOpt" :height="300" />
-        <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasExtOpt" :height="300" />
+        <ChartCard title="Responsables de Cierre con Más Órdenes" description="Quienes más cierran órdenes de trabajo" :option="responsablesCierreExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Responsable Cierre', p, 'ext')" />
+        <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Sistema', p, 'ext')" />
       </div>
       <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesExtOpt" :height="300" />
-        <ChartCard title="Jornada" description="Distribución de órdenes externas por jornada (Día / Noche)" :option="jornadaExtOpt" :height="300" />
+        <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Solicitante', p, 'ext')" />
+        <ChartCard title="Jornada" description="Distribución de órdenes externas por jornada (Día / Noche)" :option="jornadaExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Jornada', p, 'ext')" />
       </div>
 
     <div class="charts-grid cols-1" style="margin-bottom:22px">
-      <ChartCard title="Órdenes Diarias" description="Abiertas y cerradas con sus costos (Externas)" :option="ordenesDiariasExtOpt" :height="300" />
+      <ChartCard title="Órdenes Diarias" description="Abiertas y cerradas con sus costos (Externas)" :option="ordenesDiariasExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fecha', p, 'ext')" />
     </div>
 
     </template>
@@ -4519,10 +4519,12 @@ const intProveedorOpt = computed(() => markRaw(buildBarOpt(intRows.value, 'PROVE
 
 // ——— Detalle por placa al hacer click en Costos por Placa ———
 const selectedPlaca = ref<string | null>(null)
+const selectedPlacaScope = ref<'general'|'int'|'ext'>('general')
 const showPlacaDetail = ref(false)
 const placaDetailRows = computed(() => {
   if (!selectedPlaca.value) return []
-  return dataFilteredNoAcpm.value.filter(r => String(r['Placa del Vehículo'] ?? '').trim() === selectedPlaca.value)
+  const base = selectedPlacaScope.value === 'int' ? intRows.value : selectedPlacaScope.value === 'ext' ? extRows.value : dataFilteredNoAcpm.value
+  return base.filter(r => String(r['Placa del Vehículo'] ?? '').trim() === selectedPlaca.value)
 })
 const placaDetailTotal = computed(() => {
   let t = 0
@@ -4542,11 +4544,12 @@ const placaDetailTableRows = computed<Record<string, unknown>[]>(() => placaDeta
   ...r as Record<string, unknown>,
   _ot: r,
 })))
-function onPlacaClick(params: any) {
+function onPlacaClick(params: any, scope: 'general'|'int'|'ext' = 'general') {
   const p = Array.isArray(params) ? params[0] : params
   const placa = String(p?.name ?? p?.data?.name ?? '').trim()
   if (!placa || placa === '(Sin Placa del Vehículo)') return
   selectedPlaca.value = placa
+  selectedPlacaScope.value = scope
   showPlacaDetail.value = true
 }
 function closePlacaDetail() { showPlacaDetail.value = false }
@@ -4554,6 +4557,7 @@ function closePlacaDetail() { showPlacaDetail.value = false }
 // — Detalle por mes/planta al clicar en Eficiencia y Costos Generales (mismo estilo que Costos por Placa)
 const selectedMesLabel = ref<string | null>(null)
 const selectedMesPlanta = ref<string | null>(null)
+const selectedMesScope = ref<'general'|'int'|'ext'>('general')
 const showMesDetail = ref(false)
 function otMonthLabelForDetail(r: Record<string, unknown>): string {
   const d = parseConcretoRowDate(r['FECHA'] ?? r['Fecha'])
@@ -4562,7 +4566,8 @@ function otMonthLabelForDetail(r: Record<string, unknown>): string {
 }
 const mesDetailRows = computed(() => {
   if (!selectedMesLabel.value) return []
-  return dataFilteredNoAcpm.value.filter(r => {
+  const base = selectedMesScope.value === 'int' ? intRows.value : selectedMesScope.value === 'ext' ? extRows.value : dataFilteredNoAcpm.value
+  return base.filter(r => {
     if (otMonthLabelForDetail(r) !== selectedMesLabel.value) return false
     if (selectedMesPlanta.value) {
       const planta = getConcretoPlantaName(r as Record<string, unknown>)
@@ -4587,7 +4592,7 @@ const mesDetailTableRows = computed<Record<string, unknown>[]>(() => mesDetailRo
   ...r as Record<string, unknown>,
   _ot: r,
 })))
-function onEficienciaClick(params: any) {
+function onEficienciaClick(params: any, scope: 'general'|'int'|'ext' = 'general') {
   const p = Array.isArray(params) ? params[0] : params
   const mes = String(p?.name ?? p?.axisValue ?? '').trim()
   const serie = String(p?.seriesName ?? '').trim()
@@ -4595,14 +4600,16 @@ function onEficienciaClick(params: any) {
   const plantas = ['Acacias', 'Restrepo', 'Villavicencio']
   selectedMesLabel.value = mes
   selectedMesPlanta.value = plantas.includes(serie) ? serie : null
+  selectedMesScope.value = scope
   showMesDetail.value = true
 }
-function onCostosGeneralesClick(params: any) {
+function onCostosGeneralesClick(params: any, scope: 'general'|'int'|'ext' = 'general') {
   const p = Array.isArray(params) ? params[0] : params
   const mes = String(p?.name ?? p?.axisValue ?? '').trim()
   if (!mes) return
   selectedMesLabel.value = mes
   selectedMesPlanta.value = null
+  selectedMesScope.value = scope
   showMesDetail.value = true
 }
 function closeMesDetail() { showMesDetail.value = false }
@@ -4610,6 +4617,7 @@ function closeMesDetail() { showMesDetail.value = false }
 // — Detalle genérico por ranking al clicar en cualquier gráfica (mismo estilo que Costos por Placa)
 const selectedRankingField = ref<string | null>(null)
 const selectedRankingValue = ref<string | null>(null)
+const selectedRankingScope = ref<'general'|'int'|'ext'>('general')
 const showRankingDetail = ref(false)
 function fechaToDiariasLabel(serial: number): string {
   if (!serial) return ''
@@ -4620,7 +4628,9 @@ const rankingDetailRows = computed(() => {
   if (!selectedRankingField.value || selectedRankingValue.value == null) return []
   const field = selectedRankingField.value!
   const val = String(selectedRankingValue.value!).trim().toLowerCase()
-  return dataFilteredNoAcpm.value.filter(r => {
+  const scope = selectedRankingScope.value
+  const base = scope === 'int' ? intRows.value : scope === 'ext' ? extRows.value : dataFilteredNoAcpm.value
+  return base.filter(r => {
     if (field === 'Sistema') {
       const subs = r['_subOrdenes'] as any[]
       if (!Array.isArray(subs)) return false
@@ -4654,7 +4664,7 @@ const rankingDetailTableRows = computed<Record<string, unknown>[]>(() => ranking
   ...r as Record<string, unknown>,
   _ot: r,
 })))
-function onRankingClick(field: string, params: any) {
+function onRankingClick(field: string, params: any, scope: 'general'|'int'|'ext' = 'general') {
   const p = Array.isArray(params) ? params[0] : params
   const raw = p?.name ?? p?.data?.name ?? p?.axisValue ?? ''
   const val = String(raw ?? '').trim()
@@ -4663,6 +4673,7 @@ function onRankingClick(field: string, params: any) {
   if (!label) return
   selectedRankingField.value = field
   selectedRankingValue.value = label
+  selectedRankingScope.value = scope
   showRankingDetail.value = true
 }
 function closeRankingDetail() { showRankingDetail.value = false }
