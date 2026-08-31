@@ -124,36 +124,30 @@
         </div>
       </div>
 
-    <!-- Eficiencia de Mantenimiento y Costos Generales para Concretos -->
-    <template v-if="isConcretos">
-      <div class="charts-grid cols-1" style="margin-bottom:22px">
-        <ChartCard
-          title="Eficiencia de Mantenimiento y Costo Unitario (m³)"
-          description="Costos de mantenimiento por planta (Acacías, Restrepo, Villavicencio) y costo unitario por m³ producido"
-          :option="eficienciaMttoConcretosOpt"
-          :expand-option="eficienciaMttoConcretosExpandOpt"
-          :height="480"
-          tall
-          clickable
-          @chart-click="onEficienciaClick"
-        />
-      </div>
-      <div class="charts-grid cols-1" style="margin-bottom:22px">
-        <ChartCard
-          title="Costos Generales y Costo Unitario (m³)"
-          description="Costos mensuales de servicios e insumos junto con el costo unitario por m³ producido"
-          :option="costosGeneralesM3Opt"
-          :expand-option="costosGeneralesM3ExpandOpt"
-          :height="480"
-          tall
-          clickable
-          @chart-click="onCostosGeneralesClick"
-        />
-      </div>
-    </template>
-    <div v-else class="charts-grid cols-2" style="margin-bottom:22px">
-      <ChartCard title="Costos Mensuales" :option="costosMensualOpt" />
-      <ChartCard title="Costo por m³ - Tendencia" :option="costoM3Opt" />
+    <!-- Eficiencia de Mantenimiento y Costos Generales -->
+    <div class="charts-grid cols-1" style="margin-bottom:22px">
+      <ChartCard
+        title="Eficiencia de Mantenimiento y Costo Unitario (m³)"
+        :description="isConcretos ? 'Costos de mantenimiento por planta (Acacías, Restrepo, Villavicencio) y costo unitario por m³ producido' : isAcacias ? 'Costos de mantenimiento por planta (Planta 1, Planta 2) y costo unitario por m³ producido' : 'Costos de mantenimiento por línea (Cañaveral, Guayuriba, Línea 3) y costo unitario por m³ producido'"
+        :option="eficienciaMttoOpt"
+        :expand-option="eficienciaMttoExpandOpt"
+        :height="480"
+        tall
+        clickable
+        @chart-click="onEficienciaClick"
+      />
+    </div>
+    <div class="charts-grid cols-1" style="margin-bottom:22px">
+      <ChartCard
+        title="Costos Generales y Costo Unitario (m³)"
+        description="Costos mensuales de servicios e insumos junto con el costo unitario por m³ producido"
+        :option="costosGeneralesM3Opt"
+        :expand-option="costosGeneralesM3ExpandOpt"
+        :height="480"
+        tall
+        clickable
+        @chart-click="onCostosGeneralesClick"
+      />
     </div>
 
     <div class="charts-grid cols-1" style="margin-top:22px">
@@ -216,36 +210,30 @@
         </div>
       </div>
 
-    <!-- Eficiencia de Mantenimiento y Costos Generales para Concretos (Internos) -->
-    <template v-if="isConcretos">
-      <div class="charts-grid cols-1" style="margin-bottom:22px">
-        <ChartCard
-          title="Eficiencia de Mantenimiento y Costo Unitario (m³) — Interno"
-          description="Costos de mantenimiento interno por planta (Acacías, Restrepo, Villavicencio) y costo unitario por m³ producido"
-          :option="eficienciaMttoConcretosIntOpt"
-          :expand-option="eficienciaMttoConcretosIntExpandOpt"
-          :height="480"
-          tall
-          clickable
-          @chart-click="(p:any)=>onEficienciaClick(p, 'int')"
-        />
-      </div>
-      <div class="charts-grid cols-1" style="margin-bottom:22px">
-        <ChartCard
-          title="Costos Internos y Costo Unitario (m³)"
-          description="Costos mensuales de servicios e insumos internos junto con el costo unitario por m³ producido"
-          :option="costosGeneralesM3IntOpt"
-          :expand-option="costosGeneralesM3IntExpandOpt"
-          :height="480"
-          tall
-          clickable
-          @chart-click="(p:any)=>onCostosGeneralesClick(p, 'int')"
-        />
-      </div>
-    </template>
-    <div v-else class="charts-grid cols-2" style="margin-bottom:22px">
-      <ChartCard title="Costos Mensuales (Internos)" :option="costosMensualIntOpt" />
-      <ChartCard title="Costo por m³ - Interno" :option="costosM3IntOpt" />
+    <!-- Eficiencia de Mantenimiento y Costos Generales (Internos) -->
+    <div class="charts-grid cols-1" style="margin-bottom:22px">
+      <ChartCard
+        title="Eficiencia de Mantenimiento y Costo Unitario (m³) — Interno"
+        :description="isConcretos ? 'Costos de mantenimiento interno por planta (Acacías, Restrepo, Villavicencio) y costo unitario por m³ producido' : isAcacias ? 'Costos de mantenimiento interno por planta (Planta 1, Planta 2) y costo unitario por m³ producido' : 'Costos de mantenimiento interno por línea (Cañaveral, Guayuriba, Línea 3) y costo unitario por m³ producido'"
+        :option="eficienciaMttoIntOpt"
+        :expand-option="eficienciaMttoIntExpandOpt"
+        :height="480"
+        tall
+        clickable
+        @chart-click="(p:any)=>onEficienciaClick(p, 'int')"
+      />
+    </div>
+    <div class="charts-grid cols-1" style="margin-bottom:22px">
+      <ChartCard
+        title="Costos Internos y Costo Unitario (m³)"
+        description="Costos mensuales de servicios e insumos internos junto con el costo unitario por m³ producido"
+        :option="costosGeneralesM3IntOpt"
+        :expand-option="costosGeneralesM3IntExpandOpt"
+        :height="480"
+        tall
+        clickable
+        @chart-click="(p:any)=>onCostosGeneralesClick(p, 'int')"
+      />
     </div>
 
     <div class="charts-grid cols-1" style="margin-top:22px">
@@ -293,7 +281,7 @@
       <KpiCard :value="String(otsExtEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Costo</span> <strong>${$$(otsExtEstadoCostos.abiertas)}</strong></div>`" />
       <KpiCard :value="String(otsExtEstadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Costo</span> <strong>${$$(otsExtEstadoCostos.cerradas)}</strong></div>`" />
       <KpiCard :value="otsExtPctCierre + '%'" label="% Cierre" accent="#3B82F6" icon="zap" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-ext'>OTs</span> <strong>${otsExtEstadoCounts.cerradas} / ${otsExtEstadoCounts.abiertas + otsExtEstadoCounts.cerradas}</strong></div>`" />
-      <KpiCard :value="otsExtDuracionEstimadaProm + ' h'" label="Duración Estimada Promedio" accent="#8B5CF6" icon="clock" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#8B5CF6'></span><span class='kpi-label-ext'>OTs</span> <strong>${extCount} OTs</strong></div>`" />
+      <KpiCard :value="otsExtDuracionEstimadaProm + ' h'" label="Duración Estimada Promedio" accent="#8B5CF6" icon="clock" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#8B5CF6'></span><span class='kpi-label-int'>OTs</span> <strong>${extCount} OTs</strong></div>`" />
       <KpiCard :value="otsExtTiempoRealProm + ' h'" label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#06B6D4'></span><span class='kpi-label-ext'>Cierre</span> <strong>${otsExtPctCierre}% cerradas</strong></div>`" />
       <KpiCard :value="otsExtConSopledPct + '%'" label="OT con Solicitud (SOPLED/Interno)" accent="#10B981" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>SOPLED</span> <strong>${otsExtSopled} pedidos</strong></div>`" />
     </div>
@@ -308,36 +296,30 @@
         </div>
       </div>
 
-    <!-- Eficiencia de Mantenimiento y Costos Generales para Concretos (Externos) -->
-    <template v-if="isConcretos">
-      <div class="charts-grid cols-1" style="margin-bottom:22px">
-        <ChartCard
-          title="Eficiencia de Mantenimiento y Costo Unitario (m³) — Externo"
-          description="Costos de mantenimiento externo por planta (Acacías, Restrepo, Villavicencio) y costo unitario por m³ producido"
-          :option="eficienciaMttoConcretosExtOpt"
-          :expand-option="eficienciaMttoConcretosExtExpandOpt"
-          :height="480"
-          tall
-          clickable
-          @chart-click="(p:any)=>onEficienciaClick(p, 'ext')"
-        />
-      </div>
-      <div class="charts-grid cols-1" style="margin-bottom:22px">
-        <ChartCard
-          title="Costos Externos y Costo Unitario (m³)"
-          description="Costos mensuales de servicios e insumos externos junto con el costo unitario por m³ producido"
-          :option="costosGeneralesM3ExtOpt"
-          :expand-option="costosGeneralesM3ExtExpandOpt"
-          :height="480"
-          tall
-          clickable
-          @chart-click="(p:any)=>onCostosGeneralesClick(p, 'ext')"
-        />
-      </div>
-    </template>
-    <div v-else class="charts-grid cols-2" style="margin-bottom:22px">
-      <ChartCard title="Costos Mensuales (Externos)" :option="costosMensualExtOpt" />
-      <ChartCard title="Costo por m³ - Externo" :option="costosM3ExtOpt" />
+    <!-- Eficiencia de Mantenimiento y Costos Generales (Externos) -->
+    <div class="charts-grid cols-1" style="margin-bottom:22px">
+      <ChartCard
+        title="Eficiencia de Mantenimiento y Costo Unitario (m³) — Externo"
+        :description="isConcretos ? 'Costos de mantenimiento externo por planta (Acacías, Restrepo, Villavicencio) y costo unitario por m³ producido' : isAcacias ? 'Costos de mantenimiento externo por planta (Planta 1, Planta 2) y costo unitario por m³ producido' : 'Costos de mantenimiento externo por línea (Cañaveral, Guayuriba, Línea 3) y costo unitario por m³ producido'"
+        :option="eficienciaMttoExtOpt"
+        :expand-option="eficienciaMttoExtExpandOpt"
+        :height="480"
+        tall
+        clickable
+        @chart-click="(p:any)=>onEficienciaClick(p, 'ext')"
+      />
+    </div>
+    <div class="charts-grid cols-1" style="margin-bottom:22px">
+      <ChartCard
+        title="Costos Externos y Costo Unitario (m³)"
+        description="Costos mensuales de servicios e insumos externos junto con el costo unitario por m³ producido"
+        :option="costosGeneralesM3ExtOpt"
+        :expand-option="costosGeneralesM3ExtExpandOpt"
+        :height="480"
+        tall
+        clickable
+        @chart-click="(p:any)=>onCostosGeneralesClick(p, 'ext')"
+      />
     </div>
 
     <div class="charts-grid cols-1" style="margin-top:22px">
@@ -1010,35 +992,29 @@
         </div>
       </div>
 
-      <template v-if="isConcretos">
-        <div class="charts-grid cols-1" style="margin-bottom:22px">
-          <ChartCard
-            title="Eficiencia de Mantenimiento y Costo Unitario (m³)"
-            description="Costos de mantenimiento por planta (Acacías, Restrepo, Villavicencio) y costo unitario por m³ producido"
-            :option="eficienciaMttoConcretosOpt"
-            :expand-option="eficienciaMttoConcretosExpandOpt"
-            :height="480"
-            tall
-            clickable
-            @chart-click="onEficienciaClick"
-          />
-        </div>
-        <div class="charts-grid cols-1" style="margin-bottom:22px">
-          <ChartCard
-            title="Costos Generales y Costo Unitario (m³)"
-            description="Costos mensuales de servicios e insumos junto con el costo unitario por m³ producido"
-            :option="costosGeneralesM3Opt"
-            :expand-option="costosGeneralesM3ExpandOpt"
-            :height="480"
-            tall
-            clickable
-            @chart-click="onCostosGeneralesClick"
-          />
-        </div>
-      </template>
-      <div v-else class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Costos Mensuales" :option="costosMensualOpt" />
-        <ChartCard title="Costo por m³ - Tendencia" :option="costoM3Opt" />
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
+        <ChartCard
+          title="Eficiencia de Mantenimiento y Costo Unitario (m³)"
+          :description="isConcretos ? 'Costos de mantenimiento por planta (Acacías, Restrepo, Villavicencio) y costo unitario por m³ producido' : isAcacias ? 'Costos de mantenimiento por planta (Planta 1, Planta 2) y costo unitario por m³ producido' : 'Costos de mantenimiento por línea (Cañaveral, Guayuriba, Línea 3) y costo unitario por m³ producido'"
+          :option="eficienciaMttoOpt"
+          :expand-option="eficienciaMttoExpandOpt"
+          :height="480"
+          tall
+          clickable
+          @chart-click="onEficienciaClick"
+        />
+      </div>
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
+        <ChartCard
+          title="Costos Generales y Costo Unitario (m³)"
+          description="Costos mensuales de servicios e insumos junto con el costo unitario por m³ producido"
+          :option="costosGeneralesM3Opt"
+          :expand-option="costosGeneralesM3ExpandOpt"
+          :height="480"
+          tall
+          clickable
+          @chart-click="onCostosGeneralesClick"
+        />
       </div>
 
       <div class="charts-grid cols-1" style="margin-top:22px">
@@ -1086,35 +1062,29 @@
         </div>
       </div>
 
-      <template v-if="isConcretos">
-        <div class="charts-grid cols-1" style="margin-bottom:22px">
-          <ChartCard
-            title="Eficiencia de Mantenimiento y Costo Unitario (m³) — Interno"
-            description="Costos de mantenimiento interno por planta (Acacías, Restrepo, Villavicencio) y costo unitario por m³ producido"
-            :option="eficienciaMttoConcretosIntOpt"
-            :expand-option="eficienciaMttoConcretosIntExpandOpt"
-            :height="480"
-            tall
-            clickable
-            @chart-click="(p:any)=>onEficienciaClick(p, 'int')"
-          />
-        </div>
-        <div class="charts-grid cols-1" style="margin-bottom:22px">
-          <ChartCard
-            title="Costos Internos y Costo Unitario (m³)"
-            description="Costos mensuales de servicios e insumos internos junto con el costo unitario por m³ producido"
-            :option="costosGeneralesM3IntOpt"
-            :expand-option="costosGeneralesM3IntExpandOpt"
-            :height="480"
-            tall
-            clickable
-            @chart-click="(p:any)=>onCostosGeneralesClick(p, 'int')"
-          />
-        </div>
-      </template>
-      <div v-else class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Costos Mensuales (Internos)" :option="costosMensualIntOpt" />
-        <ChartCard title="Costo por m³ - Interno" :option="costosM3IntOpt" />
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
+        <ChartCard
+          title="Eficiencia de Mantenimiento y Costo Unitario (m³) — Interno"
+          :description="isConcretos ? 'Costos de mantenimiento interno por planta (Acacías, Restrepo, Villavicencio) y costo unitario por m³ producido' : isAcacias ? 'Costos de mantenimiento interno por planta (Planta 1, Planta 2) y costo unitario por m³ producido' : 'Costos de mantenimiento interno por línea (Cañaveral, Guayuriba, Línea 3) y costo unitario por m³ producido'"
+          :option="eficienciaMttoIntOpt"
+          :expand-option="eficienciaMttoIntExpandOpt"
+          :height="480"
+          tall
+          clickable
+          @chart-click="(p:any)=>onEficienciaClick(p, 'int')"
+        />
+      </div>
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
+        <ChartCard
+          title="Costos Internos y Costo Unitario (m³)"
+          description="Costos mensuales de servicios e insumos internos junto con el costo unitario por m³ producido"
+          :option="costosGeneralesM3IntOpt"
+          :expand-option="costosGeneralesM3IntExpandOpt"
+          :height="480"
+          tall
+          clickable
+          @chart-click="(p:any)=>onCostosGeneralesClick(p, 'int')"
+        />
       </div>
 
       <div class="charts-grid cols-1" style="margin-top:22px">
@@ -1162,35 +1132,29 @@
         </div>
       </div>
 
-      <template v-if="isConcretos">
-        <div class="charts-grid cols-1" style="margin-bottom:22px">
-          <ChartCard
-            title="Eficiencia de Mantenimiento y Costo Unitario (m³) — Externo"
-            description="Costos de mantenimiento externo por planta (Acacías, Restrepo, Villavicencio) y costo unitario por m³ producido"
-            :option="eficienciaMttoConcretosExtOpt"
-            :expand-option="eficienciaMttoConcretosExtExpandOpt"
-            :height="480"
-            tall
-            clickable
-            @chart-click="(p:any)=>onEficienciaClick(p, 'ext')"
-          />
-        </div>
-        <div class="charts-grid cols-1" style="margin-bottom:22px">
-          <ChartCard
-            title="Costos Externos y Costo Unitario (m³)"
-            description="Costos mensuales de servicios e insumos externos junto con el costo unitario por m³ producido"
-            :option="costosGeneralesM3ExtOpt"
-            :expand-option="costosGeneralesM3ExtExpandOpt"
-            :height="480"
-            tall
-            clickable
-            @chart-click="(p:any)=>onCostosGeneralesClick(p, 'ext')"
-          />
-        </div>
-      </template>
-      <div v-else class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Costos Mensuales (Externos)" :option="costosMensualExtOpt" />
-        <ChartCard title="Costo por m³ - Externo" :option="costosM3ExtOpt" />
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
+        <ChartCard
+          title="Eficiencia de Mantenimiento y Costo Unitario (m³) — Externo"
+          :description="isConcretos ? 'Costos de mantenimiento externo por planta (Acacías, Restrepo, Villavicencio) y costo unitario por m³ producido' : isAcacias ? 'Costos de mantenimiento externo por planta (Planta 1, Planta 2) y costo unitario por m³ producido' : 'Costos de mantenimiento externo por línea (Cañaveral, Guayuriba, Línea 3) y costo unitario por m³ producido'"
+          :option="eficienciaMttoExtOpt"
+          :expand-option="eficienciaMttoExtExpandOpt"
+          :height="480"
+          tall
+          clickable
+          @chart-click="(p:any)=>onEficienciaClick(p, 'ext')"
+        />
+      </div>
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
+        <ChartCard
+          title="Costos Externos y Costo Unitario (m³)"
+          description="Costos mensuales de servicios e insumos externos junto con el costo unitario por m³ producido"
+          :option="costosGeneralesM3ExtOpt"
+          :expand-option="costosGeneralesM3ExtExpandOpt"
+          :height="480"
+          tall
+          clickable
+          @chart-click="(p:any)=>onCostosGeneralesClick(p, 'ext')"
+        />
       </div>
 
       <div class="charts-grid cols-1" style="margin-top:22px">
@@ -2667,10 +2631,6 @@ const labelLine = computed(() => ({
   borderRadius: 4,
   overflow: 'breakAll' as const,
 }))
-const labelLineCurrency = computed(() => ({
-  ...labelLine.value,
-  formatter: (p: any) => '$' + Math.round(Number(p.value)).toLocaleString('es-CO'),
-}))
 
 const mant = useMantenimientoStore()
 const prod = useProduccionStore()
@@ -3664,11 +3624,6 @@ const generalKpi = computed(() => {
   return { serv, ins, total: serv + ins, count: dataFilteredNoAcpm.value.length }
 })
 
-function monthLabelFromSerial(s: number): string {
-  const d = new Date((s - 25569) * 86400 * 1000)
-  return d.toLocaleDateString('es-CO', { month: 'short', year: '2-digit', timeZone: 'UTC' })
-}
-
 const totalProd = computed(() => {
   let t = 0
   for (const r of prodFiltered.value) {
@@ -3677,189 +3632,76 @@ const totalProd = computed(() => {
   return t
 })
 
-const prodMapByMonth = computed(() => {
-  const map = new Map<string, number>()
-  for (const r of prodFiltered.value) {
-    const f = Number((r as Record<string, unknown>)['Fecha'])
-    if (!f) continue
-    const key = monthLabelFromSerial(f)
-    const m3 = Number((r as Record<string, unknown>)['Total de M³']) || Number((r as Record<string, unknown>)['Cant. Concreto']) || 0
-    map.set(key, (map.get(key) || 0) + m3)
-  }
-  return map
-})
-
-function aggMonthly(rows: Record<string, unknown>[], prodMap?: Map<string, number>, includeProd = false) {
-  const map = new Map<string, { serv: number; ins: number; first: number }>()
-  for (const r of rows) {
-    const f = Number(r['FECHA'])
-    if (!f) continue
-    const key = monthLabelFromSerial(f)
-    const e = map.get(key)
-    if (e) {
-      e.serv += Number(r['Costo servicios']) || 0
-      e.ins += Number(r['Costos Insumos']) || 0
-      if (f < e.first) e.first = f
-    } else {
-      map.set(key, { serv: Number(r['Costo servicios']) || 0, ins: Number(r['Costos Insumos']) || 0, first: f })
-    }
-  }
-  const sorted = [...map.entries()].sort((a, b) => a[1].first - b[1].first)
-  const labels: string[] = []
-  const serv: number[] = []
-  const ins: number[] = []
-  const vals: number[] | undefined = includeProd && prodMap ? [] : undefined
-  for (const [k, v] of sorted) {
-    labels.push(k); serv.push(v.serv); ins.push(v.ins)
-    if (vals !== undefined && prodMap) {
-      const p = prodMap.get(k) || 0
-      vals.push(p > 0 ? (v.serv + v.ins) / p : 0)
-    }
-  }
-  return { labels, serv, ins, vals }
-}
-
 const totalGeneral = computed(() => generalKpi.value.total)
 const servicios = computed(() => generalKpi.value.serv)
 const insumos = computed(() => generalKpi.value.ins)
 const costoM3 = computed(() => totalProd.value > 0 ? generalKpi.value.total / totalProd.value : 0)
 const totalOrdenes = computed(() => generalKpi.value.count)
 
-function buildCostosMensualOption(monthlyData: ReturnType<typeof aggMonthly>) {
-  return markRaw({
-    color: [palette[1], '#EF4444'],
-    tooltip: {
-      trigger: 'axis' as const,
-      formatter: (params: any) => {
-        const arr = Array.isArray(params) ? params : [params]
-        const mes = arr[0]?.name ?? ''
-        let serv = 0, ins = 0
-        for (const p of arr) {
-          const v = Number(p.value) || 0
-          if (p.seriesName === 'Servicios') serv = v
-          else ins = v
-        }
-        const total = serv + ins
-        return `<b>${mes}</b><br/>` +
-          `<span style="color:${palette[1]}">\u25CF</span> Servicios: <b>$${Math.round(serv).toLocaleString('es-CO')}</b><br/>` +
-          `<span style="color:#EF4444">\u25CF</span> Insumos: <b>$${Math.round(ins).toLocaleString('es-CO')}</b><br/>` +
-          `<span style="color:#1f2937">\u25CF</span> Total: <b>$${Math.round(total).toLocaleString('es-CO')}</b>`
-      },
-    },
-    grid: { left: 60, right: 30, bottom: 60, top: 50, containLabel: true },
-    xAxis: { type: 'category' as const, data: monthlyData.labels, axisLabel: { fontWeight: 600 as const, color: chartTextColor.value } },
-    yAxis: { type: 'value' as const, axisLabel: { show: false }, splitLine: { show: false } },
-    series: [
-      {
-        name: 'Servicios',
-        type: 'bar',
-        barMaxWidth: 32,
-        data: monthlyData.serv,
-        itemStyle: { color: palette[1], borderRadius: [4, 4, 0, 0] },
-        emphasis: { focus: 'series' },
-        label: {
-          show: true,
-          position: 'top',
-          fontSize: 9.5,
-          fontWeight: 600 as const,
-          color: theme.value === 'light' ? '#475569' : '#cbd5e1',
-          formatter: (p: any) => {
-            const v = Number(p.value) || 0
-            return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
-          },
-        },
-      },
-      {
-        name: 'Insumos',
-        type: 'bar',
-        barMaxWidth: 32,
-        data: monthlyData.ins,
-        itemStyle: { color: '#EF4444', borderRadius: [4, 4, 0, 0] },
-        emphasis: { focus: 'series' },
-        label: {
-          show: true,
-          position: 'top',
-          fontSize: 9.5,
-          fontWeight: 600 as const,
-          color: theme.value === 'light' ? '#475569' : '#cbd5e1',
-          formatter: (p: any) => {
-            const v = Number(p.value) || 0
-            return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
-          },
-        },
-      },
-    ],
-    legend: { bottom: 0, textStyle: { fontWeight: 600, color: chartTextColor.value } },
-  })
-}
-
-function buildCostoM3TrendOption(costM3Data: ReturnType<typeof aggMonthly>, color = palette[4]) {
-  return markRaw({
-    color: [color],
-    tooltip: {
-      trigger: 'axis' as const,
-      formatter: (params: any) => {
-        const p = Array.isArray(params) ? params[0] : params
-        const mes = p.name ?? ''
-        const valor = Number(p.value) || 0
-        const idx = costM3Data.labels.indexOf(mes)
-        const vals = costM3Data.vals || []
-        let diff = ''
-        if (idx > 0 && vals[idx - 1]) {
-          const anterior = Number(vals[idx - 1]) || 0
-          if (anterior > 0) {
-            const pct = ((valor - anterior) / anterior * 100).toFixed(1)
-            const flecha = Number(pct) > 0 ? '↑' : Number(pct) < 0 ? '↓' : '→'
-            diff = `<br/>vs Mes Anterior: <b>${Number(pct) > 0 ? '+' : ''}${pct}% ${flecha}</b>`
-          }
-        }
-        return `<b>${mes}</b><br/>Costo/m³: <b>$${Math.round(valor).toLocaleString('es-CO')}</b>${diff}`
-      },
-    },
-    grid: { left: 60, right: 30, bottom: 60, top: 50, containLabel: true },
-    xAxis: { type: 'category' as const, data: costM3Data.labels, axisLabel: { fontWeight: 600 as const, color: chartTextColor.value } },
-    yAxis: { type: 'value' as const, interval: 1000, max: Math.max(Math.max(...(costM3Data.vals || [3000]), 3000) * 1.15, 3500), axisLabel: { show: false }, splitLine: { show: false } },
-    series: [{
-      type: 'line', smooth: true, data: costM3Data.vals, areaStyle: { opacity: 0.3 },
-      label: labelLineCurrency.value,
-    }],
-  })
-}
-
-const monthlyGen = computed(() => aggMonthly(dataFilteredNoAcpm.value))
-const monthlyInt = computed(() => aggMonthly(intRows.value))
-const monthlyExt = computed(() => aggMonthly(extRows.value))
-
-const costosMensualOpt = computed(() => buildCostosMensualOption(monthlyGen.value))
-const costosMensualIntOpt = computed(() => buildCostosMensualOption(monthlyInt.value))
-const costosMensualExtOpt = computed(() => buildCostosMensualOption(monthlyExt.value))
-
-const costM3Gen = computed(() => aggMonthly(dataFilteredNoAcpm.value, prodMapByMonth.value, true))
-const costM3Int = computed(() => aggMonthly(intRows.value, prodMapByMonth.value, true))
-const costM3Ext = computed(() => aggMonthly(extRows.value, prodMapByMonth.value, true))
-
-const costoM3Opt = computed(() => buildCostoM3TrendOption(costM3Gen.value, palette[4]))
-const costosM3IntOpt = computed(() => buildCostoM3TrendOption(costM3Int.value, palette[4]))
-const costosM3ExtOpt = computed(() => buildCostoM3TrendOption(costM3Ext.value, palette[4]))
-
-// ================= GRÁFICA EXCLUSIVA: EFICIENCIA DE MANTENIMIENTO Y COSTO UNITARIO (CONCRETOS) =================
+// ================= GRÁFICA: EFICIENCIA DE MANTENIMIENTO Y COSTO UNITARIO =================
 const MESES_ES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
-function getConcretoPlantaName(r: Record<string, unknown>): 'Acacias' | 'Restrepo' | 'Villavicencio' {
-  const loc = String(r['Localización'] ?? r['LOCALIZACIÓN'] ?? r['PLANTA'] ?? r['Planta'] ?? '').toLowerCase()
-  if (loc.includes('acacia')) return 'Acacias'
-  if (loc.includes('restrepo')) return 'Restrepo'
-  if (loc.includes('villa') || loc.includes('villavicencio')) return 'Villavicencio'
-
-  const combined = (String(r['PROVEEDOR'] ?? '') + ' ' + String(r['Observaciones'] ?? '') + ' ' + String(r['Placa del Vehículo'] ?? '')).toLowerCase()
-  if (combined.includes('acacia')) return 'Acacias'
-  if (combined.includes('restrepo')) return 'Restrepo'
-  if (combined.includes('villa') || combined.includes('villavicencio')) return 'Villavicencio'
-
-  return 'Villavicencio'
+interface PlantUnitConfig {
+  key: string
+  label: string
+  color: string
 }
 
-function parseConcretoRowDate(f: unknown): Date | null {
+const plantUnits = computed<PlantUnitConfig[]>(() => {
+  if (isConcretos.value) {
+    return [
+      { key: 'acacias', label: 'Acacías', color: '#38a9f8' },
+      { key: 'restrepo', label: 'Restrepo', color: '#3b4cb8' },
+      { key: 'villavicencio', label: 'Villavicencio', color: '#ec4899' },
+    ]
+  }
+  if (isAcacias.value) {
+    return [
+      { key: 'planta 1', label: 'Planta 1', color: '#38a9f8' },
+      { key: 'planta 2', label: 'Planta 2', color: '#10B981' },
+    ]
+  }
+  // Default Cuncia:
+  return [
+    { key: 'canaveral', label: 'Cañaveral', color: '#3B82F6' },
+    { key: 'guayuriba', label: 'Guayuriba', color: '#10B981' },
+    { key: 'linea 3', label: 'Línea 3', color: '#F59E0B' },
+  ]
+})
+
+function getPlantOrLineKey(r: Record<string, unknown>): string {
+  if (isConcretos.value) {
+    const loc = String(r['Localización'] ?? r['LOCALIZACIÓN'] ?? r['PLANTA'] ?? r['Planta'] ?? '').toLowerCase()
+    if (loc.includes('acacia')) return 'acacias'
+    if (loc.includes('restrepo')) return 'restrepo'
+    if (loc.includes('villa') || loc.includes('villavicencio')) return 'villavicencio'
+
+    const combined = (String(r['PROVEEDOR'] ?? '') + ' ' + String(r['Observaciones'] ?? '') + ' ' + String(r['Placa del Vehículo'] ?? '')).toLowerCase()
+    if (combined.includes('acacia')) return 'acacias'
+    if (combined.includes('restrepo')) return 'restrepo'
+    if (combined.includes('villa') || combined.includes('villavicencio')) return 'villavicencio'
+
+    return 'villavicencio'
+  }
+  if (isAcacias.value) {
+    const loc = (String(r['Localización'] ?? r['LOCALIZACIÓN'] ?? '') + ' ' + String(r['Observaciones'] ?? '')).toLowerCase()
+    if (loc.includes('planta 2') || loc.includes('linea 2') || loc.includes('línea 2') || loc.includes(' 2')) return 'planta 2'
+    return 'planta 1'
+  }
+  // Cuncia:
+  const loc = (String(r['Localización'] ?? r['LOCALIZACIÓN'] ?? '') + ' ' + String(r['Observaciones'] ?? '')).toLowerCase()
+  if (loc.includes('guatubi') || loc.includes('guatubí') || loc.includes('guayuriba')) return 'guayuriba'
+  if (loc.includes('linea 3') || loc.includes('línea 3') || loc.includes(' 3')) return 'linea 3'
+  return 'canaveral'
+}
+
+function getPlantOrLineLabel(r: Record<string, unknown>): string {
+  const k = getPlantOrLineKey(r)
+  const found = plantUnits.value.find(u => u.key === k)
+  return found ? found.label : toTitleCase(k)
+}
+
+function parseRowDate(f: unknown): Date | null {
   if (typeof f === 'number' && f > 30000) {
     return new Date((f - 25569) * 86400 * 1000)
   }
@@ -3874,7 +3716,10 @@ function parseConcretoRowDate(f: unknown): Date | null {
   return null
 }
 
-interface PlantaMonthItem {
+interface UnitMonthStats {
+  key: string
+  label: string
+  color: string
   costo: number
   serv: number
   ins: number
@@ -3885,37 +3730,47 @@ interface PlantaMonthItem {
   costoM3: number
 }
 
-function computeConcretoMonthlyEfficiency(sourceMaintenanceRows: Record<string, unknown>[]) {
-  const monthMap = new Map<string, {
-    key: string
-    label: string
-    acacias: PlantaMonthItem
-    restrepo: PlantaMonthItem
-    villavicencio: PlantaMonthItem
-    totalMtto: number
-    totalServ: number
-    totalIns: number
-    totalOTs: number
-    totalAbiertas: number
-    totalCerradas: number
-    prodM3: number
-    costoUnitario: number
-  }>()
+interface MonthEfficiencyItem {
+  key: string
+  label: string
+  units: Record<string, UnitMonthStats>
+  totalMtto: number
+  totalServ: number
+  totalIns: number
+  totalOTs: number
+  totalAbiertas: number
+  totalCerradas: number
+  prodM3: number
+  costoUnitario: number
+}
 
-  const createEmptyPlanta = (): PlantaMonthItem => ({
-    costo: 0,
-    serv: 0,
-    ins: 0,
-    ots: 0,
-    abiertas: 0,
-    cerradas: 0,
-    prodM3: 0,
-    costoM3: 0,
-  })
+function computeMonthlyEfficiency(sourceMaintenanceRows: Record<string, unknown>[]) {
+  const unitsDef = plantUnits.value
+  const monthMap = new Map<string, MonthEfficiencyItem>()
+
+  const createEmptyUnits = (): Record<string, UnitMonthStats> => {
+    const res: Record<string, UnitMonthStats> = {}
+    for (const u of unitsDef) {
+      res[u.key] = {
+        key: u.key,
+        label: u.label,
+        color: u.color,
+        costo: 0,
+        serv: 0,
+        ins: 0,
+        ots: 0,
+        abiertas: 0,
+        cerradas: 0,
+        prodM3: 0,
+        costoM3: 0,
+      }
+    }
+    return res
+  }
 
   for (const r of sourceMaintenanceRows) {
     const f = r['FECHA'] ?? r['Fecha']
-    const d = parseConcretoRowDate(f)
+    const d = parseRowDate(f)
     if (!d) continue
     const y = d.getUTCFullYear()
     const mIdx = d.getUTCMonth()
@@ -3928,9 +3783,7 @@ function computeConcretoMonthlyEfficiency(sourceMaintenanceRows: Record<string, 
       item = {
         key,
         label,
-        acacias: createEmptyPlanta(),
-        restrepo: createEmptyPlanta(),
-        villavicencio: createEmptyPlanta(),
+        units: createEmptyUnits(),
         totalMtto: 0,
         totalServ: 0,
         totalIns: 0,
@@ -3948,14 +3801,19 @@ function computeConcretoMonthlyEfficiency(sourceMaintenanceRows: Record<string, 
     const rowCost = (costServ + costIns) > 0 ? (costServ + costIns) : (Number(r['Costo Total']) || 0)
     const isCerrada = estadoClass(String(r['Estado'] ?? '')) === 'ok'
 
-    const planta = getConcretoPlantaName(r)
-    const target = planta === 'Acacias' ? item.acacias : planta === 'Restrepo' ? item.restrepo : item.villavicencio
-    target.costo += rowCost
-    target.serv += costServ
-    target.ins += costIns
-    target.ots += 1
-    if (isCerrada) target.cerradas += 1
-    else target.abiertas += 1
+    const uKey = getPlantOrLineKey(r)
+    let target = item.units[uKey]
+    if (!target) {
+      target = Object.values(item.units)[0]
+    }
+    if (target) {
+      target.costo += rowCost
+      target.serv += costServ
+      target.ins += costIns
+      target.ots += 1
+      if (isCerrada) target.cerradas += 1
+      else target.abiertas += 1
+    }
 
     item.totalMtto += rowCost
     item.totalServ += costServ
@@ -3968,7 +3826,7 @@ function computeConcretoMonthlyEfficiency(sourceMaintenanceRows: Record<string, 
   const sourceProdRows = prodFiltered.value
   for (const r of sourceProdRows) {
     const f = (r as Record<string, unknown>)['Fecha'] ?? (r as Record<string, unknown>)['FECHA']
-    const d = parseConcretoRowDate(f)
+    const d = parseRowDate(f)
     if (!d) continue
     const y = d.getUTCFullYear()
     const mIdx = d.getUTCMonth()
@@ -3981,9 +3839,7 @@ function computeConcretoMonthlyEfficiency(sourceMaintenanceRows: Record<string, 
       item = {
         key,
         label,
-        acacias: createEmptyPlanta(),
-        restrepo: createEmptyPlanta(),
-        villavicencio: createEmptyPlanta(),
+        units: createEmptyUnits(),
         totalMtto: 0,
         totalServ: 0,
         totalIns: 0,
@@ -3996,12 +3852,28 @@ function computeConcretoMonthlyEfficiency(sourceMaintenanceRows: Record<string, 
       monthMap.set(key, item)
     }
 
-    const m3 = Number((r as Record<string, unknown>)['Total de M³']) || Number((r as Record<string, unknown>)['Cant. Concreto']) || 0
-    item.prodM3 += m3
-    const pPlanta = String((r as Record<string, unknown>)['Planta'] ?? (r as Record<string, unknown>)['PLANTA'] ?? '').toLowerCase()
-    if (pPlanta.includes('acacia')) item.acacias.prodM3 += m3
-    else if (pPlanta.includes('restrepo')) item.restrepo.prodM3 += m3
-    else item.villavicencio.prodM3 += m3
+    const rowTotalM3 = Number((r as Record<string, unknown>)['Total de M³']) || Number((r as Record<string, unknown>)['Cant. Concreto']) || 0
+    item.prodM3 += rowTotalM3
+
+    if (isConcretos.value) {
+      const pPlanta = String((r as Record<string, unknown>)['Planta'] ?? (r as Record<string, unknown>)['PLANTA'] ?? '').toLowerCase()
+      if (pPlanta.includes('acacia') && item.units['acacias']) item.units['acacias'].prodM3 += rowTotalM3
+      else if (pPlanta.includes('restrepo') && item.units['restrepo']) item.units['restrepo'].prodM3 += rowTotalM3
+      else if (item.units['villavicencio']) item.units['villavicencio'].prodM3 += rowTotalM3
+    } else if (isAcacias.value) {
+      const p1 = Number((r as Record<string, unknown>)['Planta 1']) || 0
+      const p2 = Number((r as Record<string, unknown>)['Planta 2']) || 0
+      if (item.units['planta 1']) item.units['planta 1'].prodM3 += p1
+      if (item.units['planta 2']) item.units['planta 2'].prodM3 += p2
+    } else {
+      // Cuncia
+      const c = Number((r as Record<string, unknown>)['Cañaveral']) || Number((r as Record<string, unknown>)['Canaveral']) || 0
+      const g = Number((r as Record<string, unknown>)['Guayuriba']) || Number((r as Record<string, unknown>)['Guatubi']) || 0
+      const l3 = Number((r as Record<string, unknown>)['Linea 3']) || Number((r as Record<string, unknown>)['Línea 3']) || 0
+      if (item.units['canaveral']) item.units['canaveral'].prodM3 += c
+      if (item.units['guayuriba']) item.units['guayuriba'].prodM3 += g
+      if (item.units['linea 3']) item.units['linea 3'].prodM3 += l3
+    }
   }
 
   const sorted = [...monthMap.values()]
@@ -4009,23 +3881,100 @@ function computeConcretoMonthlyEfficiency(sourceMaintenanceRows: Record<string, 
     .sort((a, b) => a.key.localeCompare(b.key))
 
   for (const s of sorted) {
-    s.acacias.costoM3 = s.acacias.prodM3 > 0 ? +(s.acacias.costo / s.acacias.prodM3).toFixed(2) : 0
-    s.restrepo.costoM3 = s.restrepo.prodM3 > 0 ? +(s.restrepo.costo / s.restrepo.prodM3).toFixed(2) : 0
-    s.villavicencio.costoM3 = s.villavicencio.prodM3 > 0 ? +(s.villavicencio.costo / s.villavicencio.prodM3).toFixed(2) : 0
+    for (const u of Object.values(s.units)) {
+      u.costoM3 = u.prodM3 > 0 ? +(u.costo / u.prodM3).toFixed(2) : 0
+    }
     s.costoUnitario = s.prodM3 > 0 ? +(s.totalMtto / s.prodM3).toFixed(2) : 0
   }
 
-  return { labels: sorted.map(s => s.label), months: sorted }
+  return { labels: sorted.map(s => s.label), months: sorted, unitsDef }
 }
 
-type ConcretoMonthlyEfficiencyData = ReturnType<typeof computeConcretoMonthlyEfficiency>
+type MonthlyEfficiencyData = ReturnType<typeof computeMonthlyEfficiency>
 
-const concretoMonthlyEfficiency = computed(() => computeConcretoMonthlyEfficiency(dataFilteredNoAcpm.value))
-const concretoMonthlyEfficiencyInt = computed(() => computeConcretoMonthlyEfficiency(intRows.value))
-const concretoMonthlyEfficiencyExt = computed(() => computeConcretoMonthlyEfficiency(extRows.value))
+const monthlyEfficiency = computed(() => computeMonthlyEfficiency(dataFilteredNoAcpm.value))
+const monthlyEfficiencyInt = computed(() => computeMonthlyEfficiency(intRows.value))
+const monthlyEfficiencyExt = computed(() => computeMonthlyEfficiency(extRows.value))
 
-function buildEficienciaMttoConcretosOption(data: ConcretoMonthlyEfficiencyData, _isExpand = false) {
+function buildEficienciaMttoOption(data: MonthlyEfficiencyData, _isExpand = false) {
   const isLight = theme.value === 'light'
+  const units = data.unitsDef || plantUnits.value
+  const legendData = [
+    ...units.map(u => ({ name: u.label, itemStyle: { color: u.color } })),
+    { name: 'Costo Mtto por m³', itemStyle: { color: isLight ? '#172554' : '#60a5fa' } },
+  ]
+
+  const unitSeries = units.map(u => ({
+    name: u.label,
+    type: 'bar' as const,
+    yAxisIndex: 0,
+    barMaxWidth: 30,
+    itemStyle: { color: u.color, borderRadius: [4, 4, 0, 0] as [number, number, number, number] },
+    emphasis: { focus: 'series' as const, itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.3)' } },
+    label: {
+      ...labelLine.value,
+      position: 'top' as const,
+      distance: 4,
+      formatter: (p: any) => {
+        const v = Number(p.value) || 0
+        return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
+      },
+    },
+    data: data.months.map(m => {
+      const st = m.units[u.key] || { costo: 0, serv: 0, ins: 0, ots: 0, abiertas: 0, cerradas: 0, prodM3: 0, costoM3: 0 }
+      return {
+        value: st.costo,
+        planta: u.label,
+        monthLabel: m.label,
+        serv: st.serv,
+        ins: st.ins,
+        ots: st.ots,
+        abiertas: st.abiertas,
+        cerradas: st.cerradas,
+        prodM3: st.prodM3,
+        costoM3: st.costoM3,
+      }
+    }),
+  }))
+
+  const lineSeries = {
+    name: 'Costo Mtto por m³',
+    type: 'line' as const,
+    yAxisIndex: 1,
+    smooth: 0.35,
+    symbol: 'circle' as const,
+    symbolSize: 8,
+    showSymbol: true,
+    emphasis: {
+      scale: 1.4,
+      focus: 'series' as const,
+      itemStyle: { shadowBlur: 12, shadowColor: isLight ? 'rgba(23, 37, 84, 0.4)' : 'rgba(96, 165, 250, 0.5)' },
+    },
+    lineStyle: { width: 2.5, color: isLight ? '#172554' : '#60a5fa' },
+    itemStyle: { color: isLight ? '#172554' : '#60a5fa' },
+    label: {
+      ...labelLine.value,
+      position: 'top' as const,
+      distance: 8,
+      formatter: (p: any) => {
+        const v = Number(p.value) || 0
+        return v > 0 ? `$ ${v.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''
+      },
+    },
+    data: data.months.map(m => ({
+      value: m.costoUnitario,
+      monthLabel: m.label,
+      costoUnitario: m.costoUnitario,
+      totalMtto: m.totalMtto,
+      totalServ: m.totalServ,
+      totalIns: m.totalIns,
+      totalOTs: m.totalOTs,
+      totalAbiertas: m.totalAbiertas,
+      totalCerradas: m.totalCerradas,
+      prodM3: m.prodM3,
+    })),
+  }
+
   return markRaw({
     textStyle: { fontFamily: 'Lato, sans-serif' },
     animation: true,
@@ -4049,7 +3998,7 @@ function buildEficienciaMttoConcretosOption(data: ConcretoMonthlyEfficiencyData,
         }
         const dotColor = params.color || '#3B82F6'
         const cM3Str = item.costoM3 > 0 ? `$${item.costoM3.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '$0,00'
-        return `<b>Planta ${item.planta} — ${item.monthLabel}</b><br/>` +
+        return `<b>${isConcretos.value ? 'Planta' : 'Línea'} ${item.planta} — ${item.monthLabel}</b><br/>` +
           `<span style="color:${dotColor}">\u25CF</span> Costo Total: <b>$${Math.round(item.value).toLocaleString('es-CO')}</b><br/>` +
           `<span style="color:${palette[1]}">\u25CF</span> Servicios: <b>$${Math.round(item.serv).toLocaleString('es-CO')}</b><br/>` +
           `<span style="color:#EF4444">\u25CF</span> Insumos: <b>$${Math.round(item.ins).toLocaleString('es-CO')}</b><br/>` +
@@ -4059,100 +4008,56 @@ function buildEficienciaMttoConcretosOption(data: ConcretoMonthlyEfficiencyData,
       },
     },
     legend: {
-      top: 8, left: 12, itemGap: 18, icon: 'circle', itemWidth: 10, itemHeight: 10,
+      top: 8,
+      left: 12,
+      itemGap: 18,
+      icon: 'circle',
+      itemWidth: 10,
+      itemHeight: 10,
       textStyle: { fontFamily: 'Lato, sans-serif', fontWeight: 600 as const, color: chartTextColor.value, fontSize: 11 },
-      data: [
-        { name: 'Acacias', itemStyle: { color: '#38a9f8' } },
-        { name: 'Restrepo', itemStyle: { color: '#3b4cb8' } },
-        { name: 'Villavicencio', itemStyle: { color: '#ec4899' } },
-        { name: 'Costo Mtto por m³', itemStyle: { color: isLight ? '#172554' : '#60a5fa' } },
-      ],
+      data: legendData,
     },
     grid: { left: 60, right: 30, bottom: 60, top: 50, containLabel: true },
     xAxis: {
-      type: 'category' as const, data: data.labels,
+      type: 'category' as const,
+      data: data.labels,
       axisLine: { lineStyle: { color: isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)' } },
       axisTick: { show: false },
       axisLabel: { fontFamily: 'Lato, sans-serif', fontWeight: 600 as const, color: chartTextColor.value, fontSize: 11, margin: 12 },
     },
     yAxis: [
       {
-        type: 'value' as const, axisLabel: { show: false }, axisLine: { show: false }, axisTick: { show: false },
+        type: 'value' as const,
+        axisLabel: { show: false },
+        axisLine: { show: false },
+        axisTick: { show: false },
         splitLine: { show: true, lineStyle: { color: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)', type: 'dashed' as const } },
         max: (val: any) => Math.ceil((val.max || 1000000) * 1.2),
       },
       {
-        type: 'value' as const, position: 'right' as const, axisLabel: { show: false }, axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false },
+        type: 'value' as const,
+        position: 'right' as const,
+        axisLabel: { show: false },
+        axisLine: { show: false },
+        axisTick: { show: false },
+        splitLine: { show: false },
         max: (val: any) => Math.ceil((val.max || 20000) * 1.25),
       },
     ],
-    series: [
-      {
-        name: 'Acacias', type: 'bar' as const, yAxisIndex: 0, barMaxWidth: 30,
-        itemStyle: { color: '#38a9f8', borderRadius: [4, 4, 0, 0] },
-        emphasis: { focus: 'series' as const, itemStyle: { shadowBlur: 10, shadowColor: 'rgba(56, 169, 248, 0.4)' } },
-        label: {
-          ...labelLine.value, position: 'top' as const, distance: 4,
-          formatter: (p: any) => { const v = Number(p.value) || 0; return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : '' },
-        },
-        data: data.months.map(m => ({
-          value: m.acacias.costo, planta: 'Acacías', monthLabel: m.label, serv: m.acacias.serv, ins: m.acacias.ins,
-          ots: m.acacias.ots, abiertas: m.acacias.abiertas, cerradas: m.acacias.cerradas, prodM3: m.acacias.prodM3, costoM3: m.acacias.costoM3,
-        })),
-      },
-      {
-        name: 'Restrepo', type: 'bar' as const, yAxisIndex: 0, barMaxWidth: 30,
-        itemStyle: { color: '#3b4cb8', borderRadius: [4, 4, 0, 0] },
-        emphasis: { focus: 'series' as const, itemStyle: { shadowBlur: 10, shadowColor: 'rgba(59, 76, 184, 0.4)' } },
-        label: {
-          ...labelLine.value, position: 'top' as const, distance: 4,
-          formatter: (p: any) => { const v = Number(p.value) || 0; return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : '' },
-        },
-        data: data.months.map(m => ({
-          value: m.restrepo.costo, planta: 'Restrepo', monthLabel: m.label, serv: m.restrepo.serv, ins: m.restrepo.ins,
-          ots: m.restrepo.ots, abiertas: m.restrepo.abiertas, cerradas: m.restrepo.cerradas, prodM3: m.restrepo.prodM3, costoM3: m.restrepo.costoM3,
-        })),
-      },
-      {
-        name: 'Villavicencio', type: 'bar' as const, yAxisIndex: 0, barMaxWidth: 30,
-        itemStyle: { color: '#ec4899', borderRadius: [4, 4, 0, 0] },
-        emphasis: { focus: 'series' as const, itemStyle: { shadowBlur: 10, shadowColor: 'rgba(236, 72, 153, 0.4)' } },
-        label: {
-          ...labelLine.value, position: 'top' as const, distance: 4,
-          formatter: (p: any) => { const v = Number(p.value) || 0; return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : '' },
-        },
-        data: data.months.map(m => ({
-          value: m.villavicencio.costo, planta: 'Villavicencio', monthLabel: m.label, serv: m.villavicencio.serv, ins: m.villavicencio.ins,
-          ots: m.villavicencio.ots, abiertas: m.villavicencio.abiertas, cerradas: m.villavicencio.cerradas, prodM3: m.villavicencio.prodM3, costoM3: m.villavicencio.costoM3,
-        })),
-      },
-      {
-        name: 'Costo Mtto por m³', type: 'line' as const, yAxisIndex: 1, smooth: 0.35, symbol: 'circle' as const, symbolSize: 8, showSymbol: true,
-        emphasis: { scale: 1.4, focus: 'series' as const, itemStyle: { shadowBlur: 12, shadowColor: isLight ? 'rgba(23, 37, 84, 0.4)' : 'rgba(96, 165, 250, 0.5)' } },
-        lineStyle: { width: 2.5, color: isLight ? '#172554' : '#60a5fa' }, itemStyle: { color: isLight ? '#172554' : '#60a5fa' },
-        label: {
-          ...labelLine.value, position: 'top' as const, distance: 8,
-          formatter: (p: any) => { const v = Number(p.value) || 0; return v > 0 ? `$ ${v.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '' },
-        },
-        data: data.months.map(m => ({
-          value: m.costoUnitario, monthLabel: m.label, costoUnitario: m.costoUnitario, totalMtto: m.totalMtto, totalServ: m.totalServ,
-          totalIns: m.totalIns, totalOTs: m.totalOTs, totalAbiertas: m.totalAbiertas, totalCerradas: m.totalCerradas, prodM3: m.prodM3,
-        })),
-      },
-    ],
+    series: [...unitSeries, lineSeries],
   })
 }
 
-const eficienciaMttoConcretosOpt = computed(() => buildEficienciaMttoConcretosOption(concretoMonthlyEfficiency.value, false))
-const eficienciaMttoConcretosExpandOpt = computed(() => buildEficienciaMttoConcretosOption(concretoMonthlyEfficiency.value, true))
+const eficienciaMttoOpt = computed(() => buildEficienciaMttoOption(monthlyEfficiency.value, false))
+const eficienciaMttoExpandOpt = computed(() => buildEficienciaMttoOption(monthlyEfficiency.value, true))
 
-const eficienciaMttoConcretosIntOpt = computed(() => buildEficienciaMttoConcretosOption(concretoMonthlyEfficiencyInt.value, false))
-const eficienciaMttoConcretosIntExpandOpt = computed(() => buildEficienciaMttoConcretosOption(concretoMonthlyEfficiencyInt.value, true))
+const eficienciaMttoIntOpt = computed(() => buildEficienciaMttoOption(monthlyEfficiencyInt.value, false))
+const eficienciaMttoIntExpandOpt = computed(() => buildEficienciaMttoOption(monthlyEfficiencyInt.value, true))
 
-const eficienciaMttoConcretosExtOpt = computed(() => buildEficienciaMttoConcretosOption(concretoMonthlyEfficiencyExt.value, false))
-const eficienciaMttoConcretosExtExpandOpt = computed(() => buildEficienciaMttoConcretosOption(concretoMonthlyEfficiencyExt.value, true))
+const eficienciaMttoExtOpt = computed(() => buildEficienciaMttoOption(monthlyEfficiencyExt.value, false))
+const eficienciaMttoExtExpandOpt = computed(() => buildEficienciaMttoOption(monthlyEfficiencyExt.value, true))
 
-function buildCostosGeneralesM3Option(data: ConcretoMonthlyEfficiencyData, _isExpand = false) {
+function buildCostosGeneralesM3Option(data: MonthlyEfficiencyData, _isExpand = false) {
   const isLight = theme.value === 'light'
   return markRaw({
     textStyle: { fontFamily: 'Lato, sans-serif' },
@@ -4264,14 +4169,14 @@ function buildCostosGeneralesM3Option(data: ConcretoMonthlyEfficiencyData, _isEx
   })
 }
 
-const costosGeneralesM3Opt = computed(() => buildCostosGeneralesM3Option(concretoMonthlyEfficiency.value, false))
-const costosGeneralesM3ExpandOpt = computed(() => buildCostosGeneralesM3Option(concretoMonthlyEfficiency.value, true))
+const costosGeneralesM3Opt = computed(() => buildCostosGeneralesM3Option(monthlyEfficiency.value, false))
+const costosGeneralesM3ExpandOpt = computed(() => buildCostosGeneralesM3Option(monthlyEfficiency.value, true))
 
-const costosGeneralesM3IntOpt = computed(() => buildCostosGeneralesM3Option(concretoMonthlyEfficiencyInt.value, false))
-const costosGeneralesM3IntExpandOpt = computed(() => buildCostosGeneralesM3Option(concretoMonthlyEfficiencyInt.value, true))
+const costosGeneralesM3IntOpt = computed(() => buildCostosGeneralesM3Option(monthlyEfficiencyInt.value, false))
+const costosGeneralesM3IntExpandOpt = computed(() => buildCostosGeneralesM3Option(monthlyEfficiencyInt.value, true))
 
-const costosGeneralesM3ExtOpt = computed(() => buildCostosGeneralesM3Option(concretoMonthlyEfficiencyExt.value, false))
-const costosGeneralesM3ExtExpandOpt = computed(() => buildCostosGeneralesM3Option(concretoMonthlyEfficiencyExt.value, true))
+const costosGeneralesM3ExtOpt = computed(() => buildCostosGeneralesM3Option(monthlyEfficiencyExt.value, false))
+const costosGeneralesM3ExtExpandOpt = computed(() => buildCostosGeneralesM3Option(monthlyEfficiencyExt.value, true))
 
 const intKpi = computed(() => {
   let serv = 0, ins = 0
@@ -4554,7 +4459,7 @@ const selectedMesPlanta = ref<string | null>(null)
 const selectedMesScope = ref<'general'|'int'|'ext'>('general')
 const showMesDetail = ref(false)
 function otMonthLabelForDetail(r: Record<string, unknown>): string {
-  const d = parseConcretoRowDate(r['FECHA'] ?? r['Fecha'])
+  const d = parseRowDate(r['FECHA'] ?? r['Fecha'])
   if (!d) return ''
   return `${d.getUTCFullYear()} ${MESES_ES[d.getUTCMonth()]}`
 }
@@ -4564,8 +4469,8 @@ const mesDetailRows = computed(() => {
   return base.filter(r => {
     if (otMonthLabelForDetail(r) !== selectedMesLabel.value) return false
     if (selectedMesPlanta.value) {
-      const planta = getConcretoPlantaName(r as Record<string, unknown>)
-      if (planta.toLowerCase() !== selectedMesPlanta.value!.toLowerCase()) return false
+      const unit = getPlantOrLineLabel(r as Record<string, unknown>)
+      if (unit.toLowerCase() !== selectedMesPlanta.value!.toLowerCase()) return false
     }
     return true
   })
@@ -4591,9 +4496,9 @@ function onEficienciaClick(params: any, scope: 'general'|'int'|'ext' = 'general'
   const mes = String(p?.name ?? p?.axisValue ?? '').trim()
   const serie = String(p?.seriesName ?? '').trim()
   if (!mes) return
-  const plantas = ['Acacias', 'Restrepo', 'Villavicencio']
+  const currentUnits = plantUnits.value.map(u => u.label)
   selectedMesLabel.value = mes
-  selectedMesPlanta.value = plantas.includes(serie) ? serie : null
+  selectedMesPlanta.value = currentUnits.includes(serie) ? serie : null
   selectedMesScope.value = scope
   showMesDetail.value = true
 }
