@@ -29,11 +29,9 @@
         <header class="report-header">
           <div class="report-header-brand">
             <img
-              src="https://gravicon2026.sirv.com/Pagina%20Gravicon/images/Logos/gravicon_logo.png"
-              @error="($event.target as HTMLImageElement).src = '/Logos/Logo-Gravicon-Nuevo.png'"
+              src="/Logos/Logo-Gravicon-Nuevo.png"
               alt="Gravicon"
               class="report-logo"
-              crossorigin="anonymous"
               loading="eager"
             />
             <div class="report-header-text">
@@ -475,31 +473,20 @@ async function generarPdf() {
     root.classList.remove('dark')
     await new Promise(r => requestAnimationFrame(() => r(null)))
     try {
-      // Esperar a que logo e imágenes estén cargadas para evitar captura borrosa/incompleta
+      // Pre-carga de imágenes (logo) para evitar canvas tainted / huecos pálidos
       const imgs = Array.from(elemento.querySelectorAll('img')) as HTMLImageElement[]
-      await Promise.all(imgs.map(img => img.complete ? Promise.resolve(null) : new Promise<void>(res => { img.onload = () => res(); img.onerror = () => res(); setTimeout(() => res(), 1200) })))
-      // Forzar reflow del chart para que ECharts pinte a resolución completa antes de capturar
+      await Promise.all(imgs.map(img => img.complete && img.naturalWidth > 0 ? Promise.resolve(null) : new Promise<void>(res => { img.onload = () => res(); img.onerror = () => res(); setTimeout(() => res(), 1500) })))
       await new Promise(r => requestAnimationFrame(() => r(null)))
-      await new Promise(r => setTimeout(r, 150))
       const canvas = await html2canvas(elemento, {
-        scale: 3,
+        scale: 2,
         useCORS: true,
-        allowTaint: false,
         backgroundColor: '#ffffff',
         logging: false,
-        imageTimeout: 15000,
-        onclone: (clonedDoc: Document) => {
-          // Desactivar animaciones/transiciones en el clon para captura nítida
-          const style = clonedDoc.createElement('style')
-          style.textContent = '*{animation:none!important;transition:none!important} .chart-actions{display:none!important}'
-          clonedDoc.head.appendChild(style)
-        },
       })
       const imgW = 210
       const imgH = (canvas.height * imgW) / canvas.width
       const pdf = new jsPDF({ unit: 'mm', format: [imgW, imgH], orientation: 'portrait' })
-      // Usar PNG sin compresión FAST para máxima nitidez (SLOW = mejor calidad)
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, imgW, imgH, undefined, 'SLOW')
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, imgW, imgH, undefined, 'FAST')
       pdf.save(`Informe_Produccion_${props.config.plantName}_${selectedLabel.value.replace(/ /g, '_')}.pdf`)
     } finally {
       if (temaPrevio) {
