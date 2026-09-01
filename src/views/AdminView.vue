@@ -155,7 +155,7 @@ async function guardar() {
 .perm-check input { accent-color: var(--accent); width:16px; height:16px; }
 .admin-actions { display:flex; align-items:center; gap:12px; margin-top:12px; }
 .saved-msg { color:var(--success); font-size:12px; font-weight:600; }
-.preview-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
-.preview-chip { padding:4px 8px; border-radius:20px; background:var(--accent-light); color:var(--accent); font-size:11px; font-weight:500; }
-.preview-empty { font-size:12px; color:var(--text-tertiary); }
+.preview-chips { display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap:10px; margin-top:12px; }
+.preview-chip { display:flex; align-items:center; justify-content:center; text-align:center; min-height:64px; padding:10px; border:1px solid var(--card-border); border-radius:10px; background:var(--card-bg); color:var(--text-primary); font-size:11px; font-weight:600; line-height:1.3; box-shadow: 0 1px 4px rgba(0,0,0,.04); }
+.preview-empty { font-size:12px; color:var(--text-tertiary); text-align:center; padding:20px; border:1px dashed var(--card-border); border-radius:8px; }
 </style>
