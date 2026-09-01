@@ -300,25 +300,9 @@ const textoAnalisis = computed(() => {
     return `${l.label}: <strong>${fmt(lTot)} M³</strong> (${pct}%)`
   }).join(' · ')
 
-  // Observaciones destacadas del mes
-  const observacionesList = monthData.value
-    .map(r => {
-      const serial = Number(r['Fecha'] ?? r['fecha'] ?? r['FECHA'])
-      const d = serial ? serialToDate(serial) : null
-      const fStr = d ? `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}` : ''
-      const obs = getObservacion(r)
-      return (obs && obs !== '—' && obs !== '-') ? { fecha: fStr, obs } : null
-    })
-    .filter(Boolean) as { fecha: string; obs: string }[]
-
   let txt = `Consolidado Operativo <strong>${plant}</strong> — <strong>${periodo}</strong>: Volumen neto acumulado de <strong>${total} M³</strong> frente a una meta mensual de <strong>${meta} M³</strong> (cumplimiento del <strong>${cMeta}</strong>) y un proyectado diario acumulado de <strong>${proy} M³</strong> (efectividad del <strong>${cProy}</strong>). `
   txt += `Brecha neta frente a la meta: <strong>${difMeta} M³</strong> con un promedio diario de producción de <strong>${prom} M³ / día</strong> a lo largo de <strong>${diasCount} jornadas operativas</strong>. `
   txt += `<strong>Aporte por Línea de Producción:</strong> ${linesDesc}.`
-
-  if (observacionesList.length > 0) {
-    const ultimasObs = observacionesList.slice(-3).map(o => `[${o.fecha}] ${o.obs}`).join(' · ')
-    txt += `<br><strong>Novedades y Observaciones:</strong> ${ultimasObs}${observacionesList.length > 3 ? ` <em>(+${observacionesList.length - 3} en tabla)</em>` : ''}.`
-  }
 
   return txt
 })
