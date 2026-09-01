@@ -1,11 +1,11 @@
 <template>
   <div class="chart-card" :class="{ tall, loading: !hasData && !pendingOption }">
-    <div class="chart-header">
+    <div class="chart-header" v-if="title || description || (!hideActions && hasData)">
       <div class="chart-header-text">
-        <h3 class="chart-title">{{ title }}</h3>
+        <h3 v-if="title" class="chart-title">{{ title }}</h3>
         <p v-if="description" class="chart-desc">{{ description }}</p>
       </div>
-      <div class="chart-actions" v-if="hasData">
+      <div class="chart-actions" v-if="hasData && !hideActions">
         <button class="action-btn" title="Expandir" @click="openExpanded">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
         </button>
@@ -86,7 +86,8 @@ const props = withDefaults(defineProps<{
   height?: number
   tall?: boolean
   clickable?: boolean
-}>(), { tall: false, clickable: false })
+  hideActions?: boolean
+}>(), { tall: false, clickable: false, hideActions: false })
 
 const emit = defineEmits<{
   (e: 'chart-click', params: any): void

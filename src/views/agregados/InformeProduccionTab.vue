@@ -5,12 +5,19 @@
         <span class="icb-tag">Reporte Oficial de Producción</span>
         <span class="icb-title">Producción {{ config.plantName }} — {{ selectedLabel }}</span>
       </div>
-      <div class="icb-actions" style="display:flex; gap:8px; align-items:center;">
+      <div class="icb-actions">
         <select v-model="selectedMonthKey" class="month-select">
           <option v-for="m in availableMonths" :key="m.key" :value="m.key">{{ m.label }}</option>
         </select>
-        <button class="tb-btn primary" @click="generarPdf" :disabled="!hasData || generandoPdf">
-          <svg v-if="!generandoPdf" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <button class="tb-btn primary" @click="generarPdf" :disabled="!hasData || generandoPdf" title="Generar y descargar archivo PDF oficial">
+          <svg v-if="!generandoPdf" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          <svg v-else class="spinner-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="12"/>
+          </svg>
           <span v-if="generandoPdf">Generando PDF...</span>
           <span v-else>Descargar PDF</span>
         </button>
@@ -18,70 +25,94 @@
     </div>
 
     <div class="report-paper" v-if="hasData">
-      <div class="report-page">
+      <div class="report-document">
         <header class="report-header">
           <div class="report-header-brand">
-            <img src="/Logos/Logo_Gravicon_Azul.png" alt="Gravicon" class="report-logo" />
+            <img
+              src="https://gravicon2026.sirv.com/Pagina%20Gravicon/images/Logos/gravicon_logo.png"
+              @error="($event.target as HTMLImageElement).src = '/Logos/Logo-Gravicon-Nuevo.png'"
+              alt="Gravicon"
+              class="report-logo"
+              crossorigin="anonymous"
+              loading="eager"
+            />
             <div class="report-header-text">
               <h2>Producción {{ config.plantName }} Gravicon</h2>
               <span>GRAVAS Y CONCRETOS S.A. · Agregados · {{ selectedLabel }}</span>
             </div>
           </div>
           <div class="report-header-meta">
-            <div class="meta-item"><span>Periodo:</span> <strong>{{ selectedLabel }}</strong></div>
-            <div class="meta-item"><span>Código:</span> <strong>GRV-INF-PROD-{{ config.plantName.toUpperCase() }}-{{ selectedMonthKey.replace('/','') }}</strong></div>
-            <div class="meta-item page-counter"><span>Pág. 1 de 2</span></div>
+            <div class="meta-item"><span>Período:</span> <strong>{{ selectedLabel }}</strong></div>
+            <div class="meta-item"><span>Código:</span> <strong>GRV-INF-PROD-{{ config.plantName.toUpperCase() }}-{{ selectedMonthKey.replace('/','').replace('-','') }}</strong></div>
+            <div class="meta-item"><span>Estado:</span> <strong>Oficial Consolidado</strong></div>
           </div>
         </header>
 
         <div class="report-title-section">
-          <h1>Informe Diario de Producción</h1>
+          <h1>Informe Ejecutivo de Producción</h1>
           <p class="report-intro">
-            Consolidado operativo de <strong>{{ config.plantName }}</strong> para {{ selectedLabel }}. Volumen neto del mes: <strong>{{ fmt(kpi.total) }} M³</strong> frente a meta mensual de <strong>{{ fmt(kpi.metaMensual) }} M³</strong> y proyectado diario acumulado de <strong>{{ fmt(kpi.proyectado) }} M³</strong>. Cumplimiento meta <strong>{{ kpi.cumplimientoMeta }}</strong> · Proyectado <strong>{{ kpi.cumplimientoProy }}</strong>.
+            Análisis consolidado y diagnóstico integral del balance de producción diaria por línea de proceso, cumplimiento de metas corporativas y control de rendimientos operativos para la planta <strong>{{ config.plantName }}</strong> durante el período de <strong>{{ selectedLabel }}</strong>.
           </p>
         </div>
 
+        <!-- Análisis Operativo Directivo estilo Zoho -->
         <div class="report-section-block">
           <div class="zoho-analysis-box">
-            <div class="zoho-analysis-label">Análisis Operativo Directivo</div>
-            <div class="zoho-analysis-text">{{ textoAnalisis }}</div>
+            <div class="zoho-analysis-label">Análisis Operativo Directivo — Producción {{ config.plantName }}</div>
+            <div class="zoho-analysis-text" v-html="textoAnalisis"></div>
           </div>
         </div>
 
-        <div class="kpi-section">
-          <h4 class="kpi-section-title">Producción Total — {{ selectedLabel }}</h4>
-          <div class="kpi-row">
-            <KpiCard label="Total M³" accent="#3B82F6" icon="chart-bar">{{ fmt(kpi.total) }}</KpiCard>
-            <KpiCard v-for="l in config.lines" :key="l.key" :label="l.label" :accent="config.palette[config.lines.indexOf(l)]" icon="layers">{{ fmt(lineTotals[l.key] || 0) }}</KpiCard>
+        <!-- Contenedor Unificado de KPIs con espaciado homogéneo -->
+        <div class="kpis-wrapper">
+          <div class="kpi-section">
+            <h4 class="kpi-section-title">Producción Total — {{ selectedLabel }}</h4>
+            <div class="kpi-row">
+              <KpiCard label="Total M³" accent="#3B82F6" icon="chart-bar">{{ fmt(kpi.total) }}</KpiCard>
+              <KpiCard v-for="l in config.lines" :key="l.key" :label="l.label" :accent="config.palette[config.lines.indexOf(l)]" icon="layers">{{ fmt(lineTotals[l.key] || 0) }}</KpiCard>
+            </div>
+          </div>
+
+          <div class="kpi-section">
+            <h4 class="kpi-section-title">Proyectado Diario</h4>
+            <div class="kpi-row-3">
+              <KpiCard label="M³ Proyectado" accent="#EC4899" icon="trending-up">{{ fmt(kpi.proyectado) }}</KpiCard>
+              <KpiCard label="Diferencia Proy." :accent="kpi.diferenciaProy < 0 ? '#EF4444' : '#10B981'" icon="trending-up">{{ kpi.diferenciaProy >= 0 ? '+' : '' }}{{ fmt(kpi.diferenciaProy) }}</KpiCard>
+              <KpiCard label="% Cumpl. Proy." accent="#F59E0B" icon="check-circle">{{ kpi.cumplimientoProy }}</KpiCard>
+            </div>
+          </div>
+
+          <div class="kpi-section">
+            <h4 class="kpi-section-title">Meta Mensual</h4>
+            <div class="kpi-row-3">
+              <KpiCard label="Meta Mensual M³" accent="#8B5CF6" icon="target">{{ fmt(kpi.metaMensual) }}</KpiCard>
+              <KpiCard label="Diferencia Meta" :accent="kpi.diferenciaMeta < 0 ? '#EF4444' : '#10B981'" icon="trending-up">{{ kpi.diferenciaMeta >= 0 ? '+' : '' }}{{ fmt(kpi.diferenciaMeta) }}</KpiCard>
+              <KpiCard label="% Cumpl. Meta" accent="#06B6D4" icon="check-circle">{{ kpi.cumplimientoMeta }}</KpiCard>
+            </div>
           </div>
         </div>
 
-        <div class="kpi-section">
-          <h4 class="kpi-section-title">Proyectado Diario</h4>
-          <div class="kpi-row kpi-row-3">
-            <KpiCard label="M³ Proyectado" accent="#EC4899" icon="trending-up">{{ fmt(kpi.proyectado) }}</KpiCard>
-            <KpiCard label="Diferencia Proy." :accent="kpi.diferenciaProy < 0 ? '#EF4444' : '#10B981'" icon="trending-up">{{ kpi.diferenciaProy >= 0 ? '+' : '' }}{{ fmt(kpi.diferenciaProy) }}</KpiCard>
-            <KpiCard label="% Cumpl. Proy." accent="#F59E0B" icon="check-circle">{{ kpi.cumplimientoProy }}</KpiCard>
+        <!-- Nota de Estado / Alertas -->
+        <div v-if="kpi.cumplimientoMetaPct < 80" class="report-nota alerta">
+          <strong>Atención a Desempeño Operativo ({{ kpi.cumplimientoMeta }}):</strong>
+          El volumen acumulado del mes refleja una brecha de {{ fmt(Math.abs(kpi.diferenciaMeta)) }} M³ frente a la meta mensual programada.
+        </div>
+        <div v-else-if="kpi.cumplimientoMetaPct >= 100" class="report-nota">
+          <strong>Meta Cumplida:</strong> El volumen acumulado ha alcanzado o superado satisfactoriamente el 100% de la meta mensual ({{ kpi.cumplimientoMeta }}).
+        </div>
+        <div v-else class="report-nota">
+          <strong>Desempeño Operativo Estable:</strong> El volumen acumulado presenta un ritmo de cumplimiento favorable del {{ kpi.cumplimientoMeta }} frente a la meta programada.
+        </div>
+
+        <!-- Comportamiento Operativo Diario -->
+        <div class="report-section-block">
+          <h3 class="report-block-title"><span class="title-bar"></span>Comportamiento Operativo Diario</h3>
+          <div class="data-card" style="padding:14px 18px;">
+            <ChartCard title="" :option="chartOpt" :height="300" hide-actions />
           </div>
         </div>
 
-        <div class="kpi-section">
-          <h4 class="kpi-section-title">Meta Mensual</h4>
-          <div class="kpi-row kpi-row-3">
-            <KpiCard label="Meta Mensual M³" accent="#8B5CF6" icon="target">{{ fmt(kpi.metaMensual) }}</KpiCard>
-            <KpiCard label="Diferencia Meta" :accent="kpi.diferenciaMeta < 0 ? '#EF4444' : '#10B981'" icon="trending-up">{{ kpi.diferenciaMeta >= 0 ? '+' : '' }}{{ fmt(kpi.diferenciaMeta) }}</KpiCard>
-            <KpiCard label="% Cumpl. Meta" accent="#06B6D4" icon="check-circle">{{ kpi.cumplimientoMeta }}</KpiCard>
-          </div>
-        </div>
-
-        <footer class="report-footer">
-          <span>Informe de Producción — Gravicon</span>
-          <span>Documento Oficial | Pág. 1 de 2</span>
-        </footer>
-      </div>
-
-      <div class="report-page">
-        <div class="report-salto-superior"></div>
+        <!-- Historial de Operación Diaria -->
         <div class="report-section-block">
           <h3 class="report-block-title"><span class="title-bar"></span>Historial de Operación Diaria ({{ selectedLabel }})</h3>
           <div class="data-card">
@@ -89,30 +120,48 @@
               <table>
                 <thead>
                   <tr>
+                    <th class="idx-col">#</th>
                     <th>Fecha</th>
                     <th v-for="l in config.lines" :key="l.key" class="r">{{ l.label }}</th>
                     <th class="r">Total M³</th>
                     <th class="r">Proy. Día</th>
                     <th class="r">Dif. M³</th>
                     <th class="r">% Cump.</th>
+                    <th class="obs-header">Observaciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="row in tablaRows" :key="row.Fecha + row['Total de M³']">
-                    <td>{{ row.Fecha }}</td>
+                  <tr v-for="(row, idx) in tablaRows" :key="row.Fecha + row['Total de M³'] + idx">
+                    <td class="idx">{{ idx + 1 }}</td>
+                    <td class="bold date-col">{{ row.Fecha }}</td>
                     <td v-for="l in config.lines" :key="l.key" class="r">{{ fmt((row as any)[l.key]) }}</td>
-                    <td class="r bold">{{ fmt(row['Total de M³']) }}</td>
+                    <td class="r bold accent-text">{{ fmt(row['Total de M³']) }}</td>
                     <td class="r">{{ fmt(row['M³ Proyectado']) }}</td>
-                    <td class="r" :style="{ color: (row as any)['Diferencia'] >= 0 ? '#218c4d' : '#ef4444', fontWeight: 600 }">{{ fmt((row as any)['Diferencia']) }}</td>
-                    <td class="r bold">{{ row['% Cumplimiento'] ? Number(row['% Cumplimiento']).toFixed(1) + '%' : '0.0%' }}</td>
+                    <td class="r" :style="{ color: (row as any)['Diferencia'] >= 0 ? '#1f7a3d' : '#a90707', fontWeight: 700 }">
+                      {{ (row as any)['Diferencia'] >= 0 ? '+' : '' }}{{ fmt((row as any)['Diferencia']) }}
+                    </td>
+                    <td class="r">
+                      <span class="pill" :class="pillClassCumplimiento(row['% CumplimientoNum'])">
+                        {{ row['% Cumplimiento'] }}
+                      </span>
+                    </td>
+                    <td class="obs-cell" :title="row.Observaciones">{{ row.Observaciones || '—' }}</td>
                   </tr>
                   <tr class="table-total-row">
+                    <td class="idx bold">Σ</td>
                     <td class="bold">TOTAL</td>
                     <td v-for="l in config.lines" :key="l.key" class="r bold">{{ fmt((totales as any)[l.key] || 0) }}</td>
-                    <td class="r bold">{{ fmt(totales['Total de M³']) }}</td>
+                    <td class="r bold accent-text">{{ fmt(totales['Total de M³']) }}</td>
                     <td class="r bold">{{ fmt(totales['M³ Proyectado']) }}</td>
-                    <td class="r bold" :style="{ color: (totales as any)['Diferencia'] >= 0 ? '#218c4d' : '#ef4444' }">{{ fmt((totales as any)['Diferencia']) }}</td>
-                    <td class="r bold">{{ totales['% Cumplimiento'] }}</td>
+                    <td class="r bold" :style="{ color: (totales as any)['Diferencia'] >= 0 ? '#1f7a3d' : '#a90707' }">
+                      {{ (totales as any)['Diferencia'] >= 0 ? '+' : '' }}{{ fmt((totales as any)['Diferencia']) }}
+                    </td>
+                    <td class="r bold">
+                      <span class="pill" :class="pillClassCumplimiento(totales['% CumplimientoNum'])">
+                        {{ totales['% Cumplimiento'] }}
+                      </span>
+                    </td>
+                    <td class="obs-cell table-total-empty">—</td>
                   </tr>
                 </tbody>
               </table>
@@ -120,16 +169,9 @@
           </div>
         </div>
 
-        <div class="report-section-block">
-          <h3 class="report-block-title"><span class="title-bar"></span>Comportamiento Operativo</h3>
-          <div class="data-card" style="padding:16px;">
-            <ChartCard title="" :option="chartOpt" :height="260" />
-          </div>
-        </div>
-
         <footer class="report-footer">
-          <span>Informe de Producción — Gravicon</span>
-          <span>Documento Oficial | Pág. 2 de 2</span>
+          <span>Informe Ejecutivo de Producción — Gravas y Concretos S.A.</span>
+          <span>Documento Oficial Consolidado</span>
         </footer>
       </div>
     </div>
@@ -161,10 +203,16 @@ const chartTextColor = computed(() => theme.value === 'light' ? '#475569' : '#94
 
 const generandoPdf = ref(false)
 
+/** Extrae el valor de observación soportando 'observacion' (Supabase) y variantes */
+function getObservacion(r: Record<string, unknown>): string {
+  const val = r['observacion'] ?? r['Observacion'] ?? r['observaciones'] ?? r['Observaciones'] ?? r['OBSERVACION'] ?? r['OBSERVACIONES'] ?? r['Observación'] ?? r['Novedad'] ?? r['novedad'] ?? r['Novedades'] ?? r['novedades'] ?? r['Nota'] ?? r['nota'] ?? ''
+  return String(val ?? '').trim()
+}
+
 const availableMonths = computed(() => {
   const map = new Map<string, { label: string; first: number }>()
   for (const r of props.data) {
-    const fecha = Number(r['Fecha'])
+    const fecha = Number(r['Fecha'] ?? r['fecha'] ?? r['FECHA'])
     if (!fecha) continue
     const d = serialToDate(fecha)
     const key = d.toLocaleDateString('es-CO', { year: 'numeric', month: '2-digit', timeZone: 'UTC' })
@@ -184,7 +232,7 @@ const selectedLabel = computed(() => availableMonths.value.find(m=>m.key===selec
 const monthData = computed(() => {
   if (!selectedMonthKey.value) return props.data
   return props.data.filter(r => {
-    const fecha = Number(r['Fecha'])
+    const fecha = Number(r['Fecha'] ?? r['fecha'] ?? r['FECHA'])
     if (!fecha) return false
     const d = serialToDate(fecha)
     const key = d.toLocaleDateString('es-CO', { year: 'numeric', month: '2-digit', timeZone: 'UTC' })
@@ -199,19 +247,19 @@ const kpi = computed(() => {
   let total = 0, proyectado = 0, metaMensual = 0
   const metaByMonth = new Map<string, number>()
   for (const r of rows) {
-    total += Number(r['Total de M³']) || 0
-    proyectado += Number(r['M³ Proyectado']) || 0
-    const fecha = Number(r['Fecha'])
+    total += Number(r['Total de M³'] ?? r['total_m3']) || 0
+    proyectado += Number(r['M³ Proyectado'] ?? r['m3_proyectado']) || 0
+    const fecha = Number(r['Fecha'] ?? r['fecha'] ?? r['FECHA'])
     if (!fecha) continue
     const d = serialToDate(fecha)
     const key = d.toLocaleDateString('es-CO', { year: 'numeric', month: '2-digit', timeZone: 'UTC' })
-    if (!metaByMonth.has(key)) metaByMonth.set(key, Number(r['Meta Mensual M³']) || 0)
+    if (!metaByMonth.has(key)) metaByMonth.set(key, Number(r['Meta Mensual M³'] ?? r['meta_mensual_m3']) || 0)
   }
   for (const v of metaByMonth.values()) metaMensual += v
   const diferenciaMeta = total - metaMensual
   const diferenciaProy = total - proyectado
-  const cumplimientoMeta = metaMensual > 0 ? (total / metaMensual * 100) : 0
-  const cumplimientoProy = proyectado > 0 ? (total / proyectado * 100) : 0
+  const cumplimientoMetaPct = metaMensual > 0 ? (total / metaMensual * 100) : 0
+  const cumplimientoProyPct = proyectado > 0 ? (total / proyectado * 100) : 0
   const promedio = rows.length > 0 ? total / rows.length : 0
   return {
     total,
@@ -219,8 +267,10 @@ const kpi = computed(() => {
     metaMensual,
     diferenciaMeta,
     diferenciaProy,
-    cumplimientoMeta: cumplimientoMeta.toFixed(1)+'%',
-    cumplimientoProy: cumplimientoProy.toFixed(1)+'%',
+    cumplimientoMetaPct,
+    cumplimientoProyPct,
+    cumplimientoMeta: cumplimientoMetaPct.toFixed(1) + '%',
+    cumplimientoProy: cumplimientoProyPct.toFixed(1) + '%',
     promedio: Math.round(promedio),
   }
 })
@@ -232,28 +282,76 @@ const lineTotals = computed(() => {
 })
 
 const textoAnalisis = computed(() => {
-  if (!monthData.value.length) return 'Sin datos para el periodo.'
-  const totalHoy = monthData.value[monthData.value.length-1]
-  const obs = String(totalHoy['Observación'] ?? '')
-  let txt = `Consolidado Operativo ${props.config.plantName} — ${selectedLabel.value}: Volumen neto ${fmt(kpi.value.total)} M³ frente a meta mensual ${fmt(kpi.value.metaMensual)} M³. Cumplimiento meta ${kpi.value.cumplimientoMeta} · Proyectado ${kpi.value.cumplimientoProy}.`
-  if (obs) txt += ` Observación: ${obs}`
+  if (!monthData.value.length) return 'Sin datos para el periodo seleccionado.'
+  
+  const plant = props.config.plantName
+  const periodo = selectedLabel.value
+  const total = fmt(kpi.value.total)
+  const meta = fmt(kpi.value.metaMensual)
+  const proy = fmt(kpi.value.proyectado)
+  const cMeta = kpi.value.cumplimientoMeta
+  const cProy = kpi.value.cumplimientoProy
+  const difMeta = (kpi.value.diferenciaMeta >= 0 ? '+' : '') + fmt(kpi.value.diferenciaMeta)
+  const prom = fmt(kpi.value.promedio)
+  const diasCount = monthData.value.length
+
+  // Desglose por frentes / líneas
+  const linesDesc = props.config.lines.map(l => {
+    const lTot = lineTotals.value[l.key] || 0
+    const pct = kpi.value.total > 0 ? ((lTot / kpi.value.total) * 100).toFixed(1) : '0.0'
+    return `${l.label}: <strong>${fmt(lTot)} M³</strong> (${pct}%)`
+  }).join(' · ')
+
+  // Observaciones destacadas del mes
+  const observacionesList = monthData.value
+    .map(r => {
+      const serial = Number(r['Fecha'] ?? r['fecha'] ?? r['FECHA'])
+      const d = serial ? serialToDate(serial) : null
+      const fStr = d ? `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}` : ''
+      const obs = getObservacion(r)
+      return (obs && obs !== '—' && obs !== '-') ? { fecha: fStr, obs } : null
+    })
+    .filter(Boolean) as { fecha: string; obs: string }[]
+
+  let txt = `Consolidado Operativo <strong>${plant}</strong> — <strong>${periodo}</strong>: Volumen neto acumulado de <strong>${total} M³</strong> frente a una meta mensual de <strong>${meta} M³</strong> (cumplimiento del <strong>${cMeta}</strong>) y un proyectado diario acumulado de <strong>${proy} M³</strong> (efectividad del <strong>${cProy}</strong>). `
+  txt += `Brecha neta frente a la meta: <strong>${difMeta} M³</strong> con un promedio diario de producción de <strong>${prom} M³ / día</strong> a lo largo de <strong>${diasCount} jornadas operativas</strong>. `
+  txt += `<strong>Aporte por Línea de Producción:</strong> ${linesDesc}.`
+
+  if (observacionesList.length > 0) {
+    const ultimasObs = observacionesList.slice(-3).map(o => `[${o.fecha}] ${o.obs}`).join(' · ')
+    txt += `<br><strong>Novedades y Observaciones:</strong> ${ultimasObs}${observacionesList.length > 3 ? ` <em>(+${observacionesList.length - 3} en tabla)</em>` : ''}.`
+  }
+
   return txt
 })
 
 const tablaRows = computed(() => {
   return monthData.value.map(r => {
-    const serial = Number(r['Fecha'])
+    const serial = Number(r['Fecha'] ?? r['fecha'] ?? r['FECHA'])
     const d = serial ? serialToDate(serial) : null
     const fechaStr = d ? d.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }) : ''
-    const total = Number(r['Total de M³']) || 0
-    const proy = Number(r['M³ Proyectado']) || 0
+    const total = Number(r['Total de M³'] ?? r['total_m3']) || 0
+    const proy = Number(r['M³ Proyectado'] ?? r['m3_proyectado']) || 0
+    const obs = getObservacion(r)
+    
+    // Cálculo de % Cumplimiento en base 100
+    let cumpPct = 0
+    if (proy > 0) {
+      cumpPct = (total / proy) * 100
+    } else if (r['% Cumplimiento'] != null || r['cumplimiento'] != null) {
+      const rawCump = Number(r['% Cumplimiento'] ?? r['cumplimiento']) || 0
+      cumpPct = (rawCump > 0 && rawCump <= 1) ? rawCump * 100 : rawCump
+    }
+
     return {
       Fecha: fechaStr,
       ...Object.fromEntries(props.config.lines.map(l => [l.key, Number(r[l.key]) || 0])),
       'Total de M³': total,
       'M³ Proyectado': proy,
       'Diferencia': total - proy,
-      '% Cumplimiento': r['% Cumplimiento'] ?? 0,
+      '% CumplimientoNum': cumpPct,
+      '% Cumplimiento': cumpPct.toFixed(1) + '%',
+      Observaciones: obs,
     }
   })
 })
@@ -261,40 +359,103 @@ const tablaRows = computed(() => {
 const totales = computed(() => {
   const t: Record<string, any> = {}
   for (const l of props.config.lines) t[l.key] = monthData.value.reduce((s, r) => s + (Number(r[l.key]) || 0), 0)
-  const totalM3 = monthData.value.reduce((s, r) => s + (Number(r['Total de M³']) || 0), 0)
-  const totalProy = monthData.value.reduce((s, r) => s + (Number(r['M³ Proyectado']) || 0), 0)
+  const totalM3 = monthData.value.reduce((s, r) => s + (Number(r['Total de M³'] ?? r['total_m3']) || 0), 0)
+  const totalProy = monthData.value.reduce((s, r) => s + (Number(r['M³ Proyectado'] ?? r['m3_proyectado']) || 0), 0)
   t['Total de M³'] = totalM3
   t['M³ Proyectado'] = totalProy
   t['Diferencia'] = totalM3 - totalProy
-  t['% Cumplimiento'] = totalProy > 0 ? (totalM3/totalProy*100).toFixed(1)+'%' : '0.0%'
+  const cumpPct = totalProy > 0 ? (totalM3 / totalProy * 100) : 0
+  t['% CumplimientoNum'] = cumpPct
+  t['% Cumplimiento'] = totalProy > 0 ? cumpPct.toFixed(1) + '%' : '0.0%'
   return t
 })
 
+function pillClassCumplimiento(pctVal: any): string {
+  const num = Number(pctVal) || 0
+  if (num >= 95) return 'p-verde'
+  if (num >= 75) return 'p-ambar'
+  return 'p-rojo'
+}
+
 const chartOpt = computed(() => {
   const labels = monthData.value.map(r => {
-    const serial = Number(r['Fecha'])
+    const serial = Number(r['Fecha'] ?? r['fecha'] ?? r['FECHA'])
     if (!serial) return ''
     const d = serialToDate(serial)
-    return `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}`
+    return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}`
   })
-  const total = monthData.value.map(r => Number(r['Total de M³']) || 0)
-  const totalGeneral = props.data.reduce((s, r) => s + (Number(r['Total de M³']) || 0), 0)
+  const total = monthData.value.map(r => Number(r['Total de M³'] ?? r['total_m3']) || 0)
+  const totalGeneral = props.data.reduce((s, r) => s + (Number(r['Total de M³'] ?? r['total_m3']) || 0), 0)
   const promedioGeneral = props.data.length > 0 ? Math.round(totalGeneral / props.data.length) : 0
+  const promedioMes = monthData.value.length > 0 ? Math.round(kpi.value.total / monthData.value.length) : 0
+
   return {
-    color: ['#2563eb', '#10B981'],
-    textStyle: { fontFamily: 'Lato, sans-serif' },
-    tooltip: { trigger: 'axis' as const, formatter: (params:any) => {
-      const p = Array.isArray(params) ? params[0] : params
-      const idx = p?.dataIndex ?? 0
-      const val = Number(total[idx] || 0)
-      return `<b>${labels[idx] || ''}</b><br/>Producción Total: <b>${fmt(val)} M³</b><br/>Promedio General: <b>${fmt(promedioGeneral)} M³</b>`
-    }},
-    grid: { left: 40, right: 20, bottom: 30, top: 20, containLabel: true },
-    xAxis: { type: 'category' as const, data: labels, axisLabel: { color: chartTextColor.value, fontSize: 9 }, axisLine: { show: false } },
-    yAxis: { type: 'value' as const, axisLabel: { show: false }, splitLine: { show: true, lineStyle: { color: '#f1f5f9' } } },
+    color: ['#1d4ed8', '#10B981'],
+    textStyle: { fontFamily: 'Lato, Segoe UI, sans-serif' },
+    tooltip: {
+      trigger: 'axis' as const,
+      formatter: (params: any) => {
+        const p = Array.isArray(params) ? params[0] : params
+        const idx = p?.dataIndex ?? 0
+        const val = Number(total[idx] || 0)
+        return `<div style="font-size:12px; line-height:1.6;"><b>Día ${labels[idx] || ''}</b><br/>Producción Total: <b>${fmt(val)} M³</b><br/>Promedio del Mes: <b>${fmt(promedioMes)} M³</b><br/>Promedio General: <b>${fmt(promedioGeneral)} M³</b></div>`
+      }
+    },
+    grid: { left: 40, right: 30, bottom: 35, top: 40, containLabel: true },
+    xAxis: {
+      type: 'category' as const,
+      data: labels,
+      axisLabel: { color: chartTextColor.value, fontSize: 9.5, interval: 0, rotate: labels.length > 20 ? 45 : 0 },
+      axisLine: { lineStyle: { color: '#cbd5e1' } }
+    },
+    yAxis: {
+      type: 'value' as const,
+      max: (value: { max: number }) => Math.ceil(value.max * 1.15),
+      axisLabel: { color: chartTextColor.value, fontSize: 9.5, formatter: (val: number) => fmt(val) },
+      splitLine: { show: true, lineStyle: { color: '#f1f5f9' } }
+    },
     series: [
-      { name: 'Producción Total (m³)', type: 'line' as const, smooth: true, data: total, areaStyle: { opacity: 0.08, color: '#2563eb' }, lineStyle: { width: 3, color: '#2563eb' }, symbolSize: 4, itemStyle: { color: '#1d4ed8', borderColor: '#fff', borderWidth: 2 }, markLine: { symbol: 'none', label: { show: true, position: 'end' as const, formatter: `Promedio General ${fmt(promedioGeneral)} M³`, color: '#10B981', fontSize: 10, fontWeight: 600 as const, backgroundColor: 'rgba(255,255,255,.9)', padding: [2,6] as [number,number], borderRadius: 4 }, lineStyle: { color: '#10B981', type: 'dashed' as const, width: 1.5 }, data: [{ yAxis: promedioGeneral }] } },
-    ],
+      {
+        name: 'Producción Total (m³)',
+        type: 'line' as const,
+        smooth: 0.25,
+        data: total,
+        areaStyle: { opacity: 0.09, color: '#2563eb' },
+        lineStyle: { width: 2.5, color: '#1d4ed8' },
+        showSymbol: true,
+        symbol: 'circle',
+        symbolSize: 7,
+        itemStyle: { color: '#1d4ed8', borderColor: '#ffffff', borderWidth: 2 },
+        label: {
+          show: true,
+          position: 'top' as const,
+          distance: 5,
+          formatter: (p: any) => fmt(p.value),
+          fontSize: 8.5,
+          fontWeight: 700 as const,
+          color: '#1e3a8a',
+          backgroundColor: 'rgba(255, 255, 255, 0.92)',
+          padding: [1, 3] as [number, number],
+          borderRadius: 3,
+        },
+        markLine: {
+          symbol: 'none',
+          label: {
+            show: true,
+            position: 'end' as const,
+            formatter: `Prom: ${fmt(promedioMes)} M³`,
+            color: '#10b981',
+            fontSize: 9.5,
+            fontWeight: 700 as const,
+            backgroundColor: 'rgba(255,255,255,.92)',
+            padding: [2, 5] as [number, number],
+            borderRadius: 4
+          },
+          lineStyle: { color: '#10b981', type: 'dashed' as const, width: 1.8 },
+          data: [{ yAxis: promedioMes }]
+        }
+      }
+    ]
   }
 })
 
@@ -304,7 +465,7 @@ async function generarPdf() {
   try {
     await nextTick()
     await new Promise(r => setTimeout(r, 400))
-    const elemento = document.querySelector('.informe-produccion .report-paper') as HTMLElement
+    const elemento = (document.querySelector('.informe-produccion .report-document') || document.querySelector('.informe-produccion .report-paper')) as HTMLElement
     if (!elemento) return
     const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')])
     const root = document.documentElement
@@ -314,58 +475,463 @@ async function generarPdf() {
     root.classList.remove('dark')
     await new Promise(r => requestAnimationFrame(() => r(null)))
     try {
-      const canvas = await html2canvas(elemento, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false })
+      // Esperar a que logo e imágenes estén cargadas para evitar captura borrosa/incompleta
+      const imgs = Array.from(elemento.querySelectorAll('img')) as HTMLImageElement[]
+      await Promise.all(imgs.map(img => img.complete ? Promise.resolve(null) : new Promise<void>(res => { img.onload = () => res(); img.onerror = () => res(); setTimeout(() => res(), 1200) })))
+      // Forzar reflow del chart para que ECharts pinte a resolución completa antes de capturar
+      await new Promise(r => requestAnimationFrame(() => r(null)))
+      await new Promise(r => setTimeout(r, 150))
+      const canvas = await html2canvas(elemento, {
+        scale: 3,
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: '#ffffff',
+        logging: false,
+        imageTimeout: 15000,
+        onclone: (clonedDoc: Document) => {
+          // Desactivar animaciones/transiciones en el clon para captura nítida
+          const style = clonedDoc.createElement('style')
+          style.textContent = '*{animation:none!important;transition:none!important} .chart-actions{display:none!important}'
+          clonedDoc.head.appendChild(style)
+        },
+      })
       const imgW = 210
       const imgH = (canvas.height * imgW) / canvas.width
-      const pdf = new (jsPDF as any)({ unit: 'mm', format: [imgW, imgH], orientation: 'portrait' })
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, imgW, imgH, undefined, 'FAST')
-      pdf.save(`Produccion_${props.config.plantName}_${selectedLabel.value.replace(/ /g,'_')}.pdf`)
+      const pdf = new jsPDF({ unit: 'mm', format: [imgW, imgH], orientation: 'portrait' })
+      // Usar PNG sin compresión FAST para máxima nitidez (SLOW = mejor calidad)
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, imgW, imgH, undefined, 'SLOW')
+      pdf.save(`Informe_Produccion_${props.config.plantName}_${selectedLabel.value.replace(/ /g, '_')}.pdf`)
     } finally {
       if (temaPrevio) {
         root.setAttribute('data-theme', temaPrevio)
         if (temaPrevio === 'dark') { root.classList.add('dark'); root.classList.remove('light') }
       }
     }
-  } catch (e) { console.error(e) } finally { generandoPdf.value = false }
+  } catch (e) {
+    console.error('[generarPdf]', e)
+  } finally {
+    generandoPdf.value = false
+  }
 }
 </script>
 
 <style scoped>
-.informe-control-bar { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:var(--card-bg); border:1px solid var(--card-border); border-radius:12px; margin-bottom:16px; flex-wrap:wrap; gap:8px; }
-.icb-info { display:flex; flex-direction:column; }
-.icb-tag { font-size:10px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; }
-.icb-title { font-size:14px; font-weight:700; color:var(--text-primary); }
-.month-select { padding:6px 10px; border:1px solid var(--card-border); border-radius:8px; background:var(--bg); color:var(--text-primary); font-size:13px; }
-.report-paper { background:#fff; border:1px solid #cbd5e1; border-radius:12px; overflow:hidden; }
-.report-page { padding:24px 32px; }
-.report-header { display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:16px; margin-bottom:16px; }
-.report-header-brand { display:flex; align-items:center; gap:12px; }
-.report-logo { height:32px; }
-.report-header-text h2 { margin:0; font-size:16px; font-weight:700; color:#1e293b; }
-.report-header-text span { font-size:11px; color:#64748b; }
-.report-header-meta { text-align:right; font-size:11px; }
-.meta-item span { color:#94a3b8; margin-right:4px; }
-.report-title-section h1 { font-size:20px; font-weight:800; color:#1e293b; margin:0 0 8px; }
-.report-intro { font-size:13px; color:#475569; line-height:1.6; }
-.zoho-analysis-box { background:#f8fafc; padding:16px 20px; border-radius:6px; border-left:3px solid #1e3a8a; }
-.zoho-analysis-label { font-size:10px; font-weight:700; color:#64748b; text-transform:uppercase; margin-bottom:4px; }
-.zoho-analysis-text { font-size:13px; color:#475569; line-height:1.6; }
-.report-section-block { margin:20px 0; }
-.report-block-title { font-size:13px; font-weight:700; color:#1e293b; text-transform:uppercase; display:flex; align-items:center; gap:8px; }
-.title-bar { width:3px; height:16px; background:#1e3a8a; border-radius:2px; display:inline-block; }
-.data-card { background:#fff; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; }
-.table-wrap { overflow-x:auto; }
-.table-wrap table { width:100%; border-collapse:collapse; font-size:12px; }
-.table-wrap th { background:#f8fafc; color:#64748b; font-weight:600; text-transform:uppercase; font-size:10px; padding:8px 12px; text-align:left; border-bottom:1px solid #e2e8f0; }
-.table-wrap th.r, .table-wrap td.r { text-align:right; }
-.table-wrap td { padding:8px 12px; border-bottom:1px solid #f1f5f9; }
-.table-wrap td.bold { font-weight:700; }
-.table-total-row { background:#f1f5f9; font-weight:700; }
-.report-footer { display:flex; justify-content:space-between; font-size:10px; color:#94a3b8; border-top:1px solid #f1f5f9; padding-top:12px; margin-top:16px; }
-.informe-empty { text-align:center; padding:60px; color:var(--text-secondary); }
-.kpi-section { margin-bottom:16px; }
-.kpi-section-title { font-size:12px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; margin:0 0 8px 2px; }
-.kpi-row { display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; }
-.kpi-row-3 { grid-template-columns: repeat(3, 1fr); }
-@media (max-width: 768px) { .kpi-row, .kpi-row-3 { grid-template-columns: repeat(2, 1fr); } }
+.informe-produccion {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.informe-control-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--card-border, #e2e8f0);
+  border-radius: 8px;
+  padding: 12px 18px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.icb-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.icb-tag {
+  background: #172954;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+.icb-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+}
+.icb-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.month-select {
+  padding: 7px 12px;
+  border: 1.5px solid var(--card-border, #cbd5e1);
+  border-radius: 6px;
+  background: var(--card-bg, #ffffff);
+  color: var(--text-primary, #0f172a);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+}
+.month-select:focus {
+  border-color: #172954;
+}
+
+/* Botón corporativo oficial */
+.tb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+.tb-btn.primary {
+  background: #172954;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(23, 41, 84, 0.25);
+}
+.tb-btn.primary:hover:not(:disabled) {
+  background: #1e3a8a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(23, 41, 84, 0.35);
+}
+.tb-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.spinner-icon {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Contenedor Continuo tipo Documento Ejecutivo */
+.report-paper {
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+.report-document {
+  width: 100%;
+  padding: 32px 40px;
+  background: #ffffff;
+  color: #1a1a2e;
+  border: 1px solid var(--card-border, #e2e8f0);
+  border-radius: 6px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-sizing: border-box;
+  font-family: 'Lato', 'Segoe UI', Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* Membrete y encabezado */
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2.5px solid var(--navy, #172954);
+  padding-bottom: 12px;
+  position: relative;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.report-header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2.5px;
+  width: 80px;
+  height: 2.5px;
+  background: #a90707;
+}
+.report-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.report-logo {
+  height: 50px;
+  max-width: 200px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+.report-header-text h2 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--navy, #172954);
+  margin: 0;
+}
+.report-header-text span {
+  font-size: 12.5px;
+  color: var(--text-secondary, #64748b);
+}
+.report-header-meta {
+  text-align: right;
+  font-size: 12.5px;
+  color: var(--text-secondary, #64748b);
+  line-height: 1.4;
+}
+.report-header-meta strong {
+  color: var(--text-primary, #0f172a);
+}
+
+/* Título e introducción */
+.report-title-section {
+  text-align: center;
+  margin: 4px 0 8px;
+  width: 100%;
+}
+.report-title-section h1 {
+  font-size: 22px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-primary, #0f172a);
+  margin: 0 0 6px;
+}
+.report-intro {
+  font-size: 13px;
+  color: var(--text-secondary, #475569);
+  width: 100%;
+  max-width: 100%;
+  margin: 6px 0 0 0;
+  line-height: 1.65;
+  text-align: justify;
+  box-sizing: border-box;
+}
+
+/* Análisis Operativo Directivo estilo Zoho */
+.zoho-analysis-box {
+  background-color: var(--card-bg-hover, #f8fafc);
+  padding: 12px 16px;
+  border-radius: 6px;
+  border-left: 3.5px solid var(--navy, #172954);
+  width: 100%;
+  box-sizing: border-box;
+}
+.zoho-analysis-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary, #64748b);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  letter-spacing: 0.5px;
+}
+.zoho-analysis-text {
+  font-size: 12.5px;
+  color: var(--text-primary, #334155);
+  line-height: 1.55;
+  text-align: justify;
+}
+
+/* Bloques y títulos */
+.report-section-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.report-block-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--navy, #172954);
+  margin: 0;
+}
+.title-bar {
+  display: inline-block;
+  width: 4px;
+  height: 15px;
+  background: #2563eb;
+  border-radius: 2px;
+}
+
+.report-nota {
+  border-left: 3.5px solid var(--navy, #172954);
+  background: var(--card-bg-hover, #f8fafc);
+  padding: 10px 14px;
+  font-size: 12.5px;
+  color: var(--text-primary, #0f172a);
+  border-radius: 0 6px 6px 0;
+  line-height: 1.5;
+}
+.report-nota.alerta {
+  border-left-color: #a90707;
+  background: #fdf1f1;
+  color: #7f1d1d;
+}
+
+/* Tarjetas KPI */
+.kpis-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.kpi-section {
+  margin: 0;
+  padding: 0;
+}
+.kpi-section-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-secondary, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 5px 2px;
+}
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.kpi-row-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+/* Tablas de datos */
+.data-card {
+  background: #ffffff;
+  border: 1px solid var(--card-border, #e2e8f0);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+.table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-family: inherit;
+}
+.table-wrap th {
+  background: #f8fafc;
+  color: var(--navy, #172954);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 8px 12px;
+  border-bottom: 1.5px solid var(--card-border, #e2e8f0);
+  text-align: left;
+}
+.table-wrap th.r, .table-wrap td.r { text-align: right; }
+.table-wrap td {
+  padding: 6.5px 12px;
+  border-bottom: 1px solid var(--card-border, #f1f5f9);
+  vertical-align: middle;
+}
+.table-wrap tr:hover td { background: #f8fafc; }
+.table-total-row {
+  background: #f1f5f9;
+  font-weight: 700;
+}
+.table-total-row td {
+  border-top: 2px solid #cbd5e1;
+  border-bottom: none;
+  padding: 8px 12px;
+}
+.idx-col, .idx { width: 26px; text-align: center; color: var(--text-secondary, #94a3b8); font-size: 11px; }
+.bold { font-weight: 700; }
+.accent-text { color: var(--navy, #172954); font-size: 12.5px; }
+.date-col { white-space: nowrap; font-weight: 600; }
+
+/* Columna de Observaciones */
+.obs-header { min-width: 180px; }
+.obs-cell {
+  font-size: 11.5px;
+  color: var(--text-secondary, #475569);
+  max-width: 240px;
+  white-space: normal;
+  line-height: 1.4;
+}
+.table-total-empty { text-align: center; color: #94a3b8; }
+
+/* Pills de porcentaje */
+.pill {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+.p-rojo { background: #fdeaea; color: #a90707; }
+.p-verde { background: #e9f4ed; color: #1f7a3d; }
+.p-ambar { background: #fef7ea; color: #92400e; }
+
+/* Pie de informe */
+.report-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--card-border, #e2e8f0);
+  padding-top: 12px;
+  font-size: 11.5px;
+  color: var(--text-secondary, #94a3b8);
+  margin-top: 8px;
+}
+
+.informe-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  background: var(--card-bg, #ffffff);
+  border: 1px dashed var(--card-border, #cbd5e1);
+  border-radius: 8px;
+  gap: 8px;
+  color: var(--text-secondary, #64748b);
+}
+.placeholder-icon { font-size: 36px; }
+.placeholder-text { font-size: 15px; font-weight: 600; color: var(--text-primary, #0f172a); }
+.placeholder-sub { font-size: 12px; }
+
+@media (max-width: 768px) {
+  .report-document { padding: 16px; }
+  .kpi-row, .kpi-row-3 { grid-template-columns: repeat(2, 1fr); }
+  .report-header { flex-direction: column; align-items: flex-start; }
+  .report-header-meta { text-align: left; }
+}
+
+/* Ocultar acciones del gráfico dentro del documento oficial (evita que salgan en PDF/impresión) */
+.report-document :deep(.chart-actions) {
+  display: none !important;
+}
+.report-document :deep(.chart-header) {
+  margin-bottom: 0 !important;
+}
+.report-document :deep(.chart-card) {
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+@media print {
+  .informe-control-bar { display: none !important; }
+  .report-document { box-shadow: none; border: none; padding: 0; }
+  .chart-actions { display: none !important; }
+}
 </style>
+
