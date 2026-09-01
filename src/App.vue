@@ -70,8 +70,8 @@
               <strong style="font-size:12px; display:block; overflow:hidden; text-overflow:ellipsis;">{{ authStore.userEmail }}</strong>
               <span class="role-badge" :class="userRole==='admin'?'role-admin':''">{{ userRole }}</span>
             </div>
-            <router-link to="/admin" class="user-menu-item" @click="closeUserMenu">⚙️ Configuración</router-link>
-            <router-link to="/admin" class="user-menu-item" @click="closeUserMenu">🛡️ Panel Administrativo — {{ userRole }}</router-link>
+            <router-link to="/admin" class="user-menu-item" @click="closeUserMenu">Configuración</router-link>
+            <router-link to="/admin" class="user-menu-item" @click="closeUserMenu">Panel Administrativo — {{ userRole }}</router-link>
             <div class="user-menu-divider"></div>
             <button class="user-menu-item" @click="handleLogout" style="width:100%; text-align:left; background:none; border:none;">Cerrar sesión</button>
           </div>

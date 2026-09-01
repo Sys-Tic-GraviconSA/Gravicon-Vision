@@ -1,74 +1,127 @@
 <template>
   <div class="page-layout">
     <header class="page-header">
-      <h2 class="page-title">Panel Administrativo</h2>
+      <h2 class="page-title">Configuración</h2>
       <span class="badge-role" :class="roleClass">{{ userRole }}</span>
     </header>
 
     <div class="admin-grid">
       <div class="admin-card">
-        <h3>Mi Configuración</h3>
+        <h3>Mi Cuenta</h3>
         <div class="config-row"><span>Email</span><strong>{{ authStore.userEmail }}</strong></div>
-        <div class="config-row"><span>Rol</span><strong class="role-pill">{{ userRole }}</strong></div>
+        <div class="config-row"><span>Rol actual</span><strong class="role-pill">{{ userRole }}</strong></div>
         <div class="config-row"><span>ID</span><code>{{ authStore.user?.id?.slice(0,8) }}…</code></div>
+        <div class="config-actions">
+          <router-link to="/admin" class="action-btn" style="text-decoration:none">Panel Administrativo</router-link>
+        </div>
       </div>
 
       <div class="admin-card">
-        <h3>Permisos por Vista</h3>
-        <p class="admin-desc">Activa qué puede ver cada rol. (Conectado a <code>permisos_vista</code> — service_role)</p>
+        <h3>Administrar Permisos</h3>
+        <p class="admin-desc">Selecciona un usuario y define qué vistas puede ver. Todo queda dentro de Configuración.</p>
+
+        <div class="user-select-row">
+          <label>Usuario</label>
+          <select v-model="selectedUser" class="user-select">
+            <option v-for="u in usuarios" :key="u.email" :value="u.email">{{ u.email }} — {{ u.role }}</option>
+          </select>
+        </div>
+
         <div class="perm-table">
           <div class="perm-header">
             <span>Vista</span>
-            <span v-for="r in roles" :key="r" class="perm-role">{{ r }}</span>
+            <span class="perm-role">Permitir</span>
           </div>
           <label v-for="vista in vistas" :key="vista.key" class="perm-row">
             <span class="perm-vista">{{ vista.label }}</span>
-            <span v-for="r in roles" :key="r" class="perm-check">
-              <input type="checkbox" :checked="permMatrix[`${vista.key}:${r}`]" @change="togglePerm(vista.key, r)" />
+            <span class="perm-check">
+              <input type="checkbox" :checked="!!userPerms[selectedUser]?.[vista.key]" @change="toggleUserPerm(vista.key)" />
             </span>
           </label>
         </div>
-        <button class="action-btn" style="margin-top:12px" @click="guardar" :disabled="saving">{{ saving ? 'Guardando...' : 'Guardar' }}</button>
-        <span v-if="saved" class="saved-msg">✓ Guardado</span>
+
+        <div class="admin-actions">
+          <button class="action-btn" @click="guardar" :disabled="saving">{{ saving ? 'Guardando...' : 'Guardar permisos' }}</button>
+          <span v-if="saved" class="saved-msg">Guardado</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-card" style="margin-top:20px">
+      <h3>Vista previa — {{ selectedUser }}</h3>
+      <div class="preview-chips">
+        <span v-for="vista in vistas.filter(v=> userPerms[selectedUser]?.[v.key])" :key="vista.key" class="preview-chip">{{ vista.label }}</span>
+        <span v-if="!vistas.filter(v=> userPerms[selectedUser]?.[v.key]).length" class="preview-empty">Sin vistas permitidas</span>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useAuthStore } from '../stores/auth'
 
 const authStore = useAuthStore()
 const userRole = computed(() => (authStore.user as any)?.user_metadata?.role || (authStore.user as any)?.app_metadata?.role || 'usuario')
 const roleClass = computed(() => userRole.value === 'admin' ? 'role-admin' : 'role-user')
 
-const roles = ['admin', 'supervisor', 'operario', 'usuario']
 const vistas = [
-  { key: 'cuncia', label: 'Cuncia' },
-  { key: 'cuncia/produccion', label: 'Cuncia · Producción' },
-  { key: 'cuncia/mantenimiento', label: 'Cuncia · Mantenimiento' },
-  { key: 'cuncia/informe', label: 'Cuncia · Informe' },
-  { key: 'acacias', label: 'Acacias' },
-  { key: 'acacias/produccion', label: 'Acacias · Producción' },
-  { key: 'concretos', label: 'Concretos' },
+  { key: 'cuncia', label: 'Cuncia — General' },
+  { key: 'cuncia/produccion', label: 'Cuncia — Producción' },
+  { key: 'cuncia/produccion/informe', label: 'Cuncia — Producción / Informe' },
+  { key: 'cuncia/programacion', label: 'Cuncia — Programación' },
+  { key: 'cuncia/mantenimiento', label: 'Cuncia — Mantenimiento' },
+  { key: 'cuncia/mantenimiento/planta', label: 'Cuncia — Mant. Planta' },
+  { key: 'cuncia/mantenimiento/maquinaria', label: 'Cuncia — Mant. Maquinaria' },
+  { key: 'cuncia/mantenimiento/disponibilidad', label: 'Cuncia — Mant. Disponibilidad' },
+  { key: 'cuncia/mantenimiento/tareas', label: 'Cuncia — Mant. Tareas' },
+  { key: 'acacias', label: 'Acacias — General' },
+  { key: 'acacias/produccion', label: 'Acacias — Producción' },
+  { key: 'acacias/produccion/informe', label: 'Acacias — Producción / Informe' },
+  { key: 'acacias/programacion', label: 'Acacias — Programación' },
+  { key: 'acacias/mantenimiento', label: 'Acacias — Mantenimiento' },
+  { key: 'acacias/mantenimiento/planta', label: 'Acacias — Mant. Planta' },
+  { key: 'acacias/mantenimiento/maquinaria', label: 'Acacias — Mant. Maquinaria' },
+  { key: 'concretos', label: 'Concretos — General' },
+  { key: 'concretos/mantenimiento', label: 'Concretos — Mantenimiento' },
+  { key: 'concretos/mantenimiento/planta', label: 'Concretos — Mant. Planta (Villavicencio/Acacias/Restrepo)' },
   { key: 'clientes', label: 'Clientes' },
   { key: 'admin', label: 'Panel Admin' },
 ]
 
-const permMatrix = ref<Record<string, boolean>>({})
-for (const v of vistas) for (const r of roles) permMatrix.value[`${v.key}:${r}`] = r === 'admin' || r === 'usuario' ? true : false
+const usuarios = ref([
+  { email: 'admin@gravicon.com.co', role: 'admin' },
+  { email: 'supervisor@gravicon.com.co', role: 'supervisor' },
+  { email: 'operario@gravicon.com.co', role: 'operario' },
+  { email: authStore.userEmail, role: userRole.value },
+].filter((v,i,a)=> a.findIndex(x=>x.email===v.email)===i))
+
+const selectedUser = ref(usuarios.value[0]?.email || authStore.userEmail)
+watch(() => authStore.userEmail, (e) => {
+  if (e && !usuarios.value.find(u=>u.email===e)) usuarios.value.push({ email: e, role: userRole.value })
+})
+
+const userPerms = ref<Record<string, Record<string, boolean>>>({})
+function ensureUser(email: string) {
+  if (!userPerms.value[email]) {
+    userPerms.value[email] = {}
+    for (const v of vistas) userPerms.value[email][v.key] = true
+  }
+}
+for (const u of usuarios.value) ensureUser(u.email)
+watch(selectedUser, (e) => ensureUser(e))
+
+function toggleUserPerm(vistaKey: string) {
+  ensureUser(selectedUser.value)
+  userPerms.value[selectedUser.value][vistaKey] = !userPerms.value[selectedUser.value][vistaKey]
+}
 
 const saving = ref(false)
 const saved = ref(false)
-function togglePerm(vista: string, role: string) {
-  const k = `${vista}:${role}`
-  permMatrix.value[k] = !permMatrix.value[k]
-}
 async function guardar() {
   saving.value = true
-  // TODO: POST /api/admin/permisos con service_role — por ahora solo local
   await new Promise(r => setTimeout(r, 600))
+  // TODO: POST /api/admin/permisos { email: selectedUser, perms: userPerms[selectedUser] } con service_role
   saving.value = false
   saved.value = true
   setTimeout(() => saved.value = false, 2000)
@@ -86,16 +139,23 @@ async function guardar() {
 .admin-card h3 { font-size:14px; font-weight:700; margin:0 0 12px; color:var(--text-primary); }
 .config-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--card-border); font-size:13px; }
 .config-row span { color:var(--text-secondary); }
+.config-actions { margin-top:12px; }
 .role-pill { background:var(--accent-light); color:var(--accent); padding:2px 8px; border-radius:6px; font-size:11px; text-transform:uppercase; }
 .admin-desc { font-size:12px; color:var(--text-secondary); margin:0 0 12px; }
-.perm-table { display:flex; flex-direction:column; gap:2px; }
-.perm-header, .perm-row { display:grid; grid-template-columns: 1fr repeat(4, 60px); gap:8px; align-items:center; padding:6px 8px; border-radius:6px; font-size:12px; }
-.perm-header { background:var(--bg-alt); font-weight:700; color:var(--text-secondary); text-transform:uppercase; font-size:10px; }
+.user-select-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+.user-select-row label { font-size:12px; font-weight:600; color:var(--text-secondary); }
+.user-select { flex:1; padding:8px 10px; border:1px solid var(--card-border); border-radius:8px; background:var(--bg); color:var(--text-primary); font-size:13px; }
+.perm-table { display:flex; flex-direction:column; gap:2px; max-height:420px; overflow:auto; border:1px solid var(--card-border); border-radius:8px; padding:4px; }
+.perm-header, .perm-row { display:grid; grid-template-columns: 1fr 80px; gap:8px; align-items:center; padding:6px 8px; border-radius:6px; font-size:12px; }
+.perm-header { background:var(--bg-alt); font-weight:700; color:var(--text-secondary); text-transform:uppercase; font-size:10px; position:sticky; top:0; z-index:1; }
 .perm-row { background: transparent; cursor:pointer; }
 .perm-row:hover { background:var(--card-bg-hover); }
 .perm-vista { font-weight:500; }
-.perm-role { text-align:center; font-weight:600; }
 .perm-check { text-align:center; }
 .perm-check input { accent-color: var(--accent); width:16px; height:16px; }
-.saved-msg { margin-left:10px; color:var(--success); font-size:12px; font-weight:600; }
+.admin-actions { display:flex; align-items:center; gap:12px; margin-top:12px; }
+.saved-msg { color:var(--success); font-size:12px; font-weight:600; }
+.preview-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.preview-chip { padding:4px 8px; border-radius:20px; background:var(--accent-light); color:var(--accent); font-size:11px; font-weight:500; }
+.preview-empty { font-size:12px; color:var(--text-tertiary); }
 </style>
