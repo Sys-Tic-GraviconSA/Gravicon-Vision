@@ -477,11 +477,18 @@ async function generarPdf() {
       const imgs = Array.from(elemento.querySelectorAll('img')) as HTMLImageElement[]
       await Promise.all(imgs.map(img => img.complete && img.naturalWidth > 0 ? Promise.resolve(null) : new Promise<void>(res => { img.onload = () => res(); img.onerror = () => res(); setTimeout(() => res(), 1500) })))
       await new Promise(r => requestAnimationFrame(() => r(null)))
+      // Zoom: el PDF es imagen raster (canvas -> PNG). A más scale, más píxeles y menos borroso al ampliar.
+      // Con logo local same-origin y sin estilos universales, 2.5 es nítido sin volverse pálido (3 ya se veía washed).
       const canvas = await html2canvas(elemento, {
-        scale: 2,
+        scale: 2.5,
         useCORS: true,
         backgroundColor: '#ffffff',
         logging: false,
+        onclone: (clonedDoc: Document) => {
+          const style = clonedDoc.createElement('style')
+          style.textContent = '.chart-actions{display:none!important}'
+          clonedDoc.head.appendChild(style)
+        },
       })
       const imgW = 210
       const imgH = (canvas.height * imgW) / canvas.width
