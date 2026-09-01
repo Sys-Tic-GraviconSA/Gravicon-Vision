@@ -771,11 +771,11 @@ async function generarPdf() {
   color: #7f1d1d;
 }
 
-/* Tarjetas KPI — espaciado amplio para que no se vean ajustados/apretados */
+/* Tarjetas KPI */
 .kpis-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
   width: 100%;
 }
 .kpi-section {
@@ -788,30 +788,17 @@ async function generarPdf() {
   color: var(--text-secondary, #64748b);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin: 0 0 8px 2px;
+  margin: 0 0 5px 2px;
 }
 .kpi-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  gap: 10px;
 }
 .kpi-row-3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-/* Compactar KpiCard dentro del documento para que mantengan proporción en pantalla y PDF */
-.report-document :deep(.kpi-card) {
-  min-height: 88px;
-  padding: 14px 16px;
-  gap: 12px;
-}
-.report-document :deep(.kpi-card .kpi-value) {
-  font-size: 20px;
-}
-.report-document :deep(.kpi-card .kpi-icon) {
-  width: 34px;
-  height: 34px;
+  gap: 10px;
 }
 
 /* Tablas de datos */
