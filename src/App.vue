@@ -47,15 +47,33 @@
           <div v-if="!collapsed && openMenus.concreto" class="nav-children">
             <router-link to="/concretos" class="nav-child" active-class="active" @click="handleLinkClick">General</router-link>
           </div>
+
+          <router-link v-if="userRole==='admin'" to="/admin" class="nav-section" active-class="active" @click="handleLinkClick">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            <span v-if="!collapsed">Administración</span>
+          </router-link>
         </nav>
 
         <!-- Sidebar Footer with Avatar and Theme / Logout controls -->
-        <div class="sidebar-footer">
-          <div class="user-info" v-if="!collapsed">
+        <div class="sidebar-footer" style="position:relative">
+          <div class="user-info" v-if="!collapsed" @click="toggleUserMenu" style="cursor:pointer">
             <div class="user-avatar">{{ userInitial }}</div>
             <div class="user-details">
               <span class="user-name">{{ authStore.userEmail }}</span>
+              <span class="user-role" style="font-size:10px; color:var(--text-tertiary); text-transform:uppercase; display:block;">{{ userRole }}</span>
             </div>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:auto; opacity:.5; flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div v-if="collapsed" class="user-avatar" @click="toggleUserMenu" style="cursor:pointer; margin:0 auto;">{{ userInitial }}</div>
+          <div v-if="showUserMenu" class="user-menu">
+            <div class="user-menu-header">
+              <strong style="font-size:12px; display:block; overflow:hidden; text-overflow:ellipsis;">{{ authStore.userEmail }}</strong>
+              <span class="role-badge" :class="userRole==='admin'?'role-admin':''">{{ userRole }}</span>
+            </div>
+            <router-link to="/admin" class="user-menu-item" @click="closeUserMenu">⚙️ Configuración</router-link>
+            <router-link to="/admin" class="user-menu-item" @click="closeUserMenu">🛡️ Panel Administrativo — {{ userRole }}</router-link>
+            <div class="user-menu-divider"></div>
+            <button class="user-menu-item" @click="handleLogout" style="width:100%; text-align:left; background:none; border:none;">Cerrar sesión</button>
           </div>
           <div class="footer-actions" :class="{ collapsed }">
             <button class="theme-btn" @click="toggleTheme" :title="theme === 'light' ? 'Modo Oscuro' : 'Modo Claro'">
@@ -94,7 +112,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, computed, onMounted } from 'vue'
+import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { useTheme } from './composables/useTheme'
@@ -106,12 +124,22 @@ const { theme, toggleTheme } = useTheme()
 
 const collapsed = ref(false)
 
+function handleDocClick(e: MouseEvent) {
+  const target = e.target as HTMLElement
+  if (!target.closest('.sidebar-footer')) closeUserMenu()
+}
 onMounted(() => {
   collapsed.value = window.innerWidth <= 768
+  document.addEventListener('click', handleDocClick)
 })
+onUnmounted(() => document.removeEventListener('click', handleDocClick))
 const openMenus = reactive({ agr: true, concreto: true })
 
 const userInitial = computed(() => authStore.userEmail.charAt(0).toUpperCase())
+const userRole = computed(() => (authStore.user as any)?.user_metadata?.role || (authStore.user as any)?.app_metadata?.role || 'usuario')
+const showUserMenu = ref(false)
+function toggleUserMenu() { showUserMenu.value = !showUserMenu.value }
+function closeUserMenu() { showUserMenu.value = false }
 
 function toggle(key: 'agr' | 'concreto') {
   openMenus[key] = !openMenus[key]
@@ -297,6 +325,66 @@ async function handleLogout() {
   text-overflow: ellipsis;
   white-space: nowrap;
   display: block;
+}
+.user-menu {
+  position: absolute;
+  bottom: 100%;
+  left: 12px;
+  right: 12px;
+  margin-bottom: 8px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+  z-index: 10;
+}
+.sidebar.collapsed .user-menu {
+  left: 56px;
+  bottom: 12px;
+  right: auto;
+  width: 220px;
+}
+.user-menu-header {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--card-border);
+  margin-bottom: 4px;
+}
+.role-badge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--bg-alt);
+  color: var(--text-secondary);
+}
+.role-badge.role-admin {
+  background: #1e293b;
+  color: #fff;
+}
+.user-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background .15s;
+}
+.user-menu-item:hover {
+  background: var(--card-bg-hover);
+}
+.user-menu-divider {
+  height: 1px;
+  background: var(--card-border);
+  margin: 4px 0;
 }
 
 .footer-actions {
