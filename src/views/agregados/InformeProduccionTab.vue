@@ -368,7 +368,6 @@ const chartOpt = computed(() => {
   })
   const total = monthData.value.map(r => Number(r['Total de M³'] ?? r['total_m3']) || 0)
   const totalGeneral = props.data.reduce((s, r) => s + (Number(r['Total de M³'] ?? r['total_m3']) || 0), 0)
-  const promedioGeneral = props.data.length > 0 ? Math.round(totalGeneral / props.data.length) : 0
   const promedioMes = monthData.value.length > 0 ? Math.round(kpi.value.total / monthData.value.length) : 0
 
   return {
@@ -380,7 +379,7 @@ const chartOpt = computed(() => {
         const p = Array.isArray(params) ? params[0] : params
         const idx = p?.dataIndex ?? 0
         const val = Number(total[idx] || 0)
-        return `<div style="font-size:12px; line-height:1.6;"><b>Día ${labels[idx] || ''}</b><br/>Producción Total: <b>${fmt(val)} M³</b><br/>Promedio del Mes: <b>${fmt(promedioMes)} M³</b><br/>Promedio General: <b>${fmt(promedioGeneral)} M³</b></div>`
+        return `<div style="font-size:12px; line-height:1.6;"><b>Día ${labels[idx] || ''}</b><br/>Total del día: <b>${fmt(val)} M³</b><br/>Total general: <b>${fmt(totalGeneral)} M³</b></div>`
       }
     },
     grid: { left: 40, right: 30, bottom: 35, top: 40, containLabel: true },
