@@ -34,7 +34,8 @@ const routes = [
     ],
   },
   { path: '/clientes', name: 'clientes', component: () => import('../views/ClientesView.vue'), meta: { requiresAuth: true } },
-  { path: '/admin', name: 'admin', component: () => import('../views/AdminView.vue'), meta: { requiresAuth: true } },
+  { path: '/configuracion', name: 'configuracion', component: () => import('../views/AdminView.vue'), meta: { requiresAuth: true } },
+  { path: '/admin', redirect: '/configuracion' },
   {
     path: '/concretos',
     redirect: '/concretos',

@@ -8,12 +8,8 @@
     <div class="admin-grid">
       <div class="admin-card">
         <h3>Mi Cuenta</h3>
-        <div class="config-row"><span>Email</span><strong>{{ authStore.userEmail }}</strong></div>
-        <div class="config-row"><span>Rol actual</span><strong class="role-pill">{{ userRole }}</strong></div>
-        <div class="config-row"><span>ID</span><code>{{ authStore.user?.id?.slice(0,8) }}…</code></div>
-        <div class="config-actions">
-          <router-link to="/admin" class="action-btn" style="text-decoration:none">Panel Administrativo</router-link>
-        </div>
+        <div class="config-row"><span>Nombre</span><strong>{{ userName }}</strong></div>
+        <div class="config-row"><span>Correo</span><strong>{{ authStore.userEmail }}</strong></div>
       </div>
 
       <div class="admin-card">
@@ -30,9 +26,9 @@
         <div class="perm-table">
           <div class="perm-header">
             <span>Vista</span>
-            <span class="perm-role">Permitir</span>
+            <span class="perm-role" style="display:flex; align-items:center; justify-content:center; gap:6px;"><input type="checkbox" :checked="allChecked" @change="toggleAll" /> Permitir</span>
           </div>
-          <label v-for="vista in vistas" :key="vista.key" class="perm-row">
+          <label v-for="vista in filteredVistas" :key="vista.key" class="perm-row">
             <span class="perm-vista">{{ vista.label }}</span>
             <span class="perm-check">
               <input type="checkbox" :checked="!!userPerms[selectedUser]?.[vista.key]" @change="toggleUserPerm(vista.key)" />
@@ -50,20 +46,26 @@
     <div class="admin-card" style="margin-top:20px">
       <h3>Vista previa — {{ selectedUser }}</h3>
       <div class="preview-chips">
-        <span v-for="vista in vistas.filter(v=> userPerms[selectedUser]?.[v.key])" :key="vista.key" class="preview-chip">{{ vista.label }}</span>
-        <span v-if="!vistas.filter(v=> userPerms[selectedUser]?.[v.key]).length" class="preview-empty">Sin vistas permitidas</span>
+        <span v-for="vista in filteredVistas.filter(v=> userPerms[selectedUser]?.[v.key])" :key="vista.key" class="preview-chip">{{ vista.label }}</span>
+        <span v-if="!filteredVistas.filter(v=> userPerms[selectedUser]?.[v.key]).length" class="preview-empty">Sin vistas permitidas en filtro</span>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 
 const authStore = useAuthStore()
 const userRole = computed(() => (authStore.user as any)?.user_metadata?.role || (authStore.user as any)?.app_metadata?.role || 'usuario')
 const roleClass = computed(() => userRole.value === 'admin' ? 'role-admin' : 'role-user')
+const userName = computed(() => {
+  const email = authStore.userEmail
+  if (!email) return ''
+  const name = email.split('@')[0]
+  return name.split('.').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')
+})
 
 const vistas = [
   { key: 'cuncia', label: 'Cuncia — General' },
@@ -88,15 +90,35 @@ const vistas = [
   { key: 'clientes', label: 'Clientes' },
   { key: 'admin', label: 'Panel Admin' },
 ]
+const vistaSearch = ref('')
+const filteredVistas = computed(() => {
+  const q = vistaSearch.value.toLowerCase().trim()
+  if (!q) return vistas
+  return vistas.filter(v => v.label.toLowerCase().includes(q) || v.key.toLowerCase().includes(q))
+})
 
-const usuarios = ref([
-  { email: 'admin@gravicon.com.co', role: 'admin' },
-  { email: 'supervisor@gravicon.com.co', role: 'supervisor' },
-  { email: 'operario@gravicon.com.co', role: 'operario' },
+const usuarios = ref<{email:string, role:string}[]>([
   { email: authStore.userEmail, role: userRole.value },
 ].filter((v,i,a)=> a.findIndex(x=>x.email===v.email)===i))
-
 const selectedUser = ref(usuarios.value[0]?.email || authStore.userEmail)
+async function cargarUsuarios() {
+  try {
+    const token = authStore.accessToken
+    if (!token) return
+    const res = await fetch('/api/admin/users', { headers: { Authorization: `Bearer ${token}` } })
+    if (!res.ok) return
+    const data = await res.json()
+    const list = (data.users || []).map((u:any)=>({ email: u.email, role: u.role }))
+    // Merge with current user if not in list
+    for (const u of list) if (!usuarios.value.find(x=>x.email===u.email)) usuarios.value.push(u)
+    // Ensure all real users are in list
+    if (list.length) {
+      usuarios.value = list
+      if (!list.find((u:any)=>u.email===selectedUser.value)) selectedUser.value = list[0].email
+    }
+  } catch {}
+}
+onMounted(cargarUsuarios)
 watch(() => authStore.userEmail, (e) => {
   if (e && !usuarios.value.find(u=>u.email===e)) usuarios.value.push({ email: e, role: userRole.value })
 })
@@ -111,9 +133,17 @@ function ensureUser(email: string) {
 for (const u of usuarios.value) ensureUser(u.email)
 watch(selectedUser, (e) => ensureUser(e))
 
+const allChecked = computed(() => vistas.every(v => !!userPerms.value[selectedUser.value]?.[v.key]))
+function toggleAll() {
+  const target = !allChecked.value
+  ensureUser(selectedUser.value)
+  for (const v of vistas) userPerms.value[selectedUser.value][v.key] = target
+  guardar()
+}
 function toggleUserPerm(vistaKey: string) {
   ensureUser(selectedUser.value)
   userPerms.value[selectedUser.value][vistaKey] = !userPerms.value[selectedUser.value][vistaKey]
+  guardar()
 }
 
 const saving = ref(false)

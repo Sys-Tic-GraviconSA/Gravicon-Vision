@@ -248,6 +248,63 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
     }
   })
 
+  /** GET /api/admin/users - Lista usuarios reales de Supabase Auth (solo admin) */
+  router.get('/admin/users', authenticateRequest, async (req, res) => {
+    try {
+      const user = (req as any).user
+      const role = (user as any)?.user_metadata?.role || (user as any)?.app_metadata?.role
+      if (role !== 'admin') return res.status(403).json({ error: 'Forbidden: solo admin' })
+      const supabase = getSupabaseAdmin()
+      const { data, error } = await supabase.auth.admin.listUsers()
+      if (error) throw error
+      const users = data.users.map(u => ({ id: u.id, email: u.email, role: (u.user_metadata as any)?.role || (u.app_metadata as any)?.role || 'usuario', created_at: u.created_at }))
+      res.json({ users })
+    } catch (err) {
+      console.error('[admin-users]', err)
+      res.status(500).json({ error: 'Error interno' })
+    }
+  })
+
+  /** GET /api/admin/permisos?email= - Permisos de un usuario */
+  router.get('/admin/permisos', authenticateRequest, async (req, res) => {
+    try {
+      const email = String(req.query.email ?? '').trim()
+      if (!email) return res.status(400).json({ error: 'email requerido' })
+      const supabase = getSupabaseAdmin()
+      const { data, error } = await supabase.from('permisos_vista').select('vista,permitido').eq('email', email)
+      if (error) throw error
+      res.json({ perms: data ?? [] })
+    } catch (err) {
+      console.error('[admin-permisos-get]', err)
+      res.status(500).json({ error: 'Error interno' })
+    }
+  })
+
+  /** POST /api/admin/permisos - Guardar permisos (solo admin) */
+  router.post('/admin/permisos', authenticateRequest, async (req, res) => {
+    try {
+      const user = (req as any).user
+      const role = (user as any)?.user_metadata?.role || (user as any)?.app_metadata?.role
+      if (role !== 'admin') return res.status(403).json({ error: 'Forbidden: solo admin' })
+      const { email, perms } = req.body as { email: string; perms: Record<string, boolean> }
+      if (!email || !perms || typeof perms !== 'object') return res.status(400).json({ error: 'email y perms requeridos' })
+      const supabase = getSupabaseAdmin()
+      const { data: list } = await supabase.auth.admin.listUsers()
+      const target = list.users.find(u => u.email === email)
+      const user_id = target?.id ?? null
+      await (supabase as any).from('permisos_vista').delete().eq('email', email)
+      const rows = Object.entries(perms).map(([vista, permitido]) => ({ email, vista, permitido, user_id }))
+      if (rows.length) {
+        const { error } = await (supabase as any).from('permisos_vista').insert(rows as any)
+        if (error) throw error
+      }
+      res.json({ ok: true })
+    } catch (err) {
+      console.error('[admin-permisos-post]', err)
+      res.status(500).json({ error: 'Error interno' })
+    }
+  })
+
   /** GET /api/pdf-resolve - Resuelve redirecciones de enlaces PDF de Google Drive. */
   router.get('/pdf-resolve', async (req, res) => {
     const url = req.query.url
