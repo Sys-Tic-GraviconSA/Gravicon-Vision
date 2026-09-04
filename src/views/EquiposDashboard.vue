@@ -32,7 +32,7 @@
                 <button class="quick-nav-btn ghost" @click="scrollToSec('sec-ger-externos')">Externos</button>
               </div>
             </div>
-            <button class="action-btn" @click="loadData(true)" :disabled="loading">
+            <button class="action-btn" @click="loadData(true, false)" :disabled="loading">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
               {{ loading ? 'Cargando...' : 'Actualizar' }}
             </button>
@@ -3153,17 +3153,31 @@ async function generarInformePdf() {
   }
 }
 
-async function loadData(forceRefresh = false) {
-  fechaInicio.value = ''
-  fechaFin.value = ''
-  selectedVehiculos.value = new Set()
-  selectedProveedores.value = new Set()
-  selectedLineas.value = new Set()
-  selectedEstados.value = new Set()
-  selectedPersonalInterno.value = new Set()
-  selectedTipoCompra.value = new Set()
-  selectedCentroCosto.value = new Set()
-  selectedProceso.value = new Set()
+async function loadData(forceRefresh = false, resetFilters = true) {
+  // Solo resetea filtros si se pide explícitamente (carga inicial / cambio de planta). Actualizar debe mantenerlos.
+  const prevFechaInicio = fechaInicio.value
+  const prevFechaFin = fechaFin.value
+  const prevLineas = new Set(selectedLineas.value)
+  const prevVehiculos = new Set(selectedVehiculos.value)
+  const prevProveedores = new Set(selectedProveedores.value)
+  const prevEstados = new Set(selectedEstados.value)
+  const prevPersonal = new Set(selectedPersonalInterno.value)
+  const prevTipoCompra = new Set(selectedTipoCompra.value)
+  const prevCentroCosto = new Set(selectedCentroCosto.value)
+  const prevProceso = new Set(selectedProceso.value)
+
+  if (resetFilters) {
+    fechaInicio.value = ''
+    fechaFin.value = ''
+    selectedVehiculos.value = new Set()
+    selectedProveedores.value = new Set()
+    selectedLineas.value = new Set()
+    selectedEstados.value = new Set()
+    selectedPersonalInterno.value = new Set()
+    selectedTipoCompra.value = new Set()
+    selectedCentroCosto.value = new Set()
+    selectedProceso.value = new Set()
+  }
 
   const plantaKey = isConcretos.value ? 'concretos' : isAcacias.value ? 'acacias' : 'cuncia'
   if (isConcretos.value) {
@@ -3174,20 +3188,41 @@ async function loadData(forceRefresh = false) {
     await Promise.all([mant.fetchCuncia(forceRefresh), prod.fetchCuncia(), disp.fetchDisponibilidad(plantaKey, forceRefresh)])
   }
 
-  const data = allData.value
-  if (data?.length) {
-    // Sin filtro de fecha por defecto: mostrar todo sin filtrar
-    fechaInicio.value = ''
-    fechaFin.value = ''
+  if (resetFilters) {
+    const data = allData.value
+    if (data?.length) {
+      // Sin filtro de fecha por defecto: mostrar todo sin filtrar
+      fechaInicio.value = ''
+      fechaFin.value = ''
+    }
+    selectedLineas.value = new Set(lineasDisponibles.value)
+    selectedVehiculos.value = new Set(vehiculosDisponibles.value)
+    selectedProveedores.value = new Set(proveedoresDisponibles.value)
+    selectedEstados.value = new Set(estadosDisponibles.value)
+    selectedPersonalInterno.value = new Set(personalInternoOptions)
+    selectedTipoCompra.value = new Set(tipoCompraDisponibles.value)
+    selectedCentroCosto.value = new Set(centroCostoDisponibles.value)
+    selectedProceso.value = new Set(procesoDisponibles.value)
+  } else {
+    // Restaura filtros previos tras refrescar datos
+    fechaInicio.value = prevFechaInicio
+    fechaFin.value = prevFechaFin
+    // Si las opciones cambiaron (nuevos datos), mantiene selección válida; si no, conserva
+    if (prevLineas.size) selectedLineas.value = new Set([...prevLineas].filter(v => lineasDisponibles.value.includes(v)))
+    else selectedLineas.value = new Set(lineasDisponibles.value)
+    if (prevVehiculos.size) selectedVehiculos.value = new Set([...prevVehiculos].filter(v => vehiculosDisponibles.value.includes(v)))
+    else selectedVehiculos.value = new Set(vehiculosDisponibles.value)
+    if (prevProveedores.size) selectedProveedores.value = new Set([...prevProveedores].filter(v => proveedoresDisponibles.value.includes(v)))
+    else selectedProveedores.value = new Set(proveedoresDisponibles.value)
+    if (prevEstados.size) selectedEstados.value = new Set([...prevEstados].filter(v => estadosDisponibles.value.includes(v)))
+    else selectedEstados.value = new Set(estadosDisponibles.value)
+    if (prevPersonal.size) selectedPersonalInterno.value = new Set([...prevPersonal].filter(v => personalInternoOptions.includes(v)))
+    else selectedPersonalInterno.value = new Set(personalInternoOptions)
+    // TipoCompra/CentroCosto/Proceso solo existen en almacen, conserva si había filtro
+    if (prevTipoCompra.size) selectedTipoCompra.value = new Set([...prevTipoCompra].filter(v => tipoCompraDisponibles.value.includes(v)))
+    if (prevCentroCosto.size) selectedCentroCosto.value = new Set([...prevCentroCosto].filter(v => centroCostoDisponibles.value.includes(v)))
+    if (prevProceso.size) selectedProceso.value = new Set([...prevProceso].filter(v => procesoDisponibles.value.includes(v)))
   }
-  selectedLineas.value = new Set(lineasDisponibles.value)
-  selectedVehiculos.value = new Set(vehiculosDisponibles.value)
-  selectedProveedores.value = new Set(proveedoresDisponibles.value)
-  selectedEstados.value = new Set(estadosDisponibles.value)
-  selectedPersonalInterno.value = new Set(personalInternoOptions)
-  selectedTipoCompra.value = new Set(tipoCompraDisponibles.value)
-  selectedCentroCosto.value = new Set(centroCostoDisponibles.value)
-  selectedProceso.value = new Set(procesoDisponibles.value)
 
   const countTipo = (raw: Record<string, unknown>[], tipo: string) =>
     raw.filter(r => String(r['Tipo de Mantenimiento'] ?? '').trim().toUpperCase() === tipo).length
