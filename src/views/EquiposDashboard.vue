@@ -3444,13 +3444,13 @@ const procesoDisponibles = computed(() => {
   return [...set].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
 })
 
-/** Producción filtrada por fecha */
+/** Producción filtrada por fecha — hasta inclusive (31 23:59) */
 const prodFilteredByDate = computed(() => {
   const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
-  const until = fechaFin.value ? dateToSerial(fechaFin.value) : Infinity
+  const until = fechaFin.value ? dateToSerial(fechaFin.value) + 1 : Infinity
   return prodRows.value.filter(r => {
     const v = Number(r['Fecha'])
-    return typeof v === 'number' && !isNaN(v) && v >= since && v <= until
+    return typeof v === 'number' && !isNaN(v) && v >= since && v < until
   })
 })
 
@@ -3477,10 +3477,10 @@ const prodFiltered = computed(() => {
 
 const filteredData = computed(() => {
   const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
-  const until = fechaFin.value ? dateToSerial(fechaFin.value) : Infinity
+  const until = fechaFin.value ? dateToSerial(fechaFin.value) + 1 : Infinity
   return allData.value.filter(r => {
     const v = Number(r['FECHA'])
-    return typeof v === 'number' && !isNaN(v) && v >= since && v <= until
+    return typeof v === 'number' && !isNaN(v) && v >= since && v < until
   })
 })
 
@@ -3510,7 +3510,7 @@ const filteredDataExpanded = computed(() => {
   if (!range) return filteredData.value
   return allData.value.filter(r => {
     const v = Number(r['FECHA'])
-    return typeof v === 'number' && !isNaN(v) && v >= range.since && v <= range.until
+    return typeof v === 'number' && !isNaN(v) && v >= range.since && v < range.until + 1
   })
 })
 const prodFilteredByDateExpanded = computed(() => {
@@ -3518,7 +3518,7 @@ const prodFilteredByDateExpanded = computed(() => {
   if (!range) return prodFilteredByDate.value
   return prodRows.value.filter(r => {
     const v = Number(r['Fecha'])
-    return typeof v === 'number' && !isNaN(v) && v >= range.since && v <= range.until
+    return typeof v === 'number' && !isNaN(v) && v >= range.since && v < range.until + 1
   })
 })
 const prodFilteredExpanded = computed(() => {
