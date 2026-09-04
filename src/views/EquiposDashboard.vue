@@ -3409,8 +3409,29 @@ const procesoDisponibles = computed(() => {
   return [...set].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
 })
 
+/** Producción filtrada por fecha — si es filtro de mes completo (ej. 2026-08-01 → 2026-08-31) filtra por mes sin importar año para no dejar KPIs vacíos en agosto */
+function isFullMonthFilter(): boolean {
+  if (!fechaInicio.value || !fechaFin.value) return false
+  const s = new Date(fechaInicio.value + 'T00:00:00Z')
+  const e = new Date(fechaFin.value + 'T00:00:00Z')
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return false
+  if (s.getUTCFullYear() !== e.getUTCFullYear() || s.getUTCMonth() !== e.getUTCMonth()) return false
+  if (s.getUTCDate() !== 1) return false
+  const lastDay = new Date(Date.UTC(s.getUTCFullYear(), s.getUTCMonth()+1, 0)).getUTCDate()
+  return e.getUTCDate() === lastDay
+}
+function getMonthFromSerial(serial: number): number { return serialToDate(serial).getUTCMonth()+1 }
+
 /** Producción filtrada por fecha */
 const prodFilteredByDate = computed(() => {
+  if (isFullMonthFilter()) {
+    const filterMonth = new Date(fechaInicio.value + 'T00:00:00Z').getUTCMonth()+1
+    return prodRows.value.filter(r => {
+      const v = Number(r['Fecha'])
+      if (typeof v !== 'number' || isNaN(v)) return false
+      return getMonthFromSerial(v) === filterMonth
+    })
+  }
   const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
   const until = fechaFin.value ? dateToSerial(fechaFin.value) : Infinity
   return prodRows.value.filter(r => {
@@ -3441,6 +3462,14 @@ const prodFiltered = computed(() => {
 })
 
 const filteredData = computed(() => {
+  if (isFullMonthFilter()) {
+    const filterMonth = new Date(fechaInicio.value + 'T00:00:00Z').getUTCMonth()+1
+    return allData.value.filter(r => {
+      const v = Number(r['FECHA'])
+      if (typeof v !== 'number' || isNaN(v)) return false
+      return getMonthFromSerial(v) === filterMonth
+    })
+  }
   const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
   const until = fechaFin.value ? dateToSerial(fechaFin.value) : Infinity
   return allData.value.filter(r => {
@@ -3471,6 +3500,15 @@ const monthlyExpandedRange = computed<{since:number, until:number, originalSince
   return { since, until, originalSince, isMD: false }
 })
 const filteredDataExpanded = computed(() => {
+  if (isFullMonthFilter()) {
+    const m = new Date(fechaInicio.value + 'T00:00:00Z').getUTCMonth()+1
+    const monthsSet = new Set<number>([m, m-1<=0?m-1+12:m-1, m-2<=0?m-2+12:m-2])
+    return allData.value.filter(r => {
+      const v = Number(r['FECHA'])
+      if (typeof v !== 'number' || isNaN(v)) return false
+      return monthsSet.has(getMonthFromSerial(v))
+    })
+  }
   const range = monthlyExpandedRange.value
   if (!range) return filteredData.value
   return allData.value.filter(r => {
@@ -3479,6 +3517,15 @@ const filteredDataExpanded = computed(() => {
   })
 })
 const prodFilteredByDateExpanded = computed(() => {
+  if (isFullMonthFilter()) {
+    const m = new Date(fechaInicio.value + 'T00:00:00Z').getUTCMonth()+1
+    const monthsSet = new Set<number>([m, m-1<=0?m-1+12:m-1, m-2<=0?m-2+12:m-2])
+    return prodRows.value.filter(r => {
+      const v = Number(r['Fecha'])
+      if (typeof v !== 'number' || isNaN(v)) return false
+      return monthsSet.has(getMonthFromSerial(v))
+    })
+  }
   const range = monthlyExpandedRange.value
   if (!range) return prodFilteredByDate.value
   return prodRows.value.filter(r => {
@@ -4017,8 +4064,16 @@ function buildEficienciaMttoOption(data: MonthlyEfficiencyData, _isExpand = fals
   // Modo expandido (mes filtrado + 2 previos): barras de contexto atenuadas para evitar salto brusco
   const expanded = monthlyExpandedRange.value
   const isExpandedMode = !!expanded
+  const isFullMonth = isFullMonthFilter()
+  const filterMonthStr = isFullMonth ? fechaInicio.value.slice(5,7) : null
   const originalKey = isExpandedMode ? (()=>{const d=new Date(fechaInicio.value+'T00:00:00Z'); return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}`})() : null
-  const isContextMonth = (k:string) => isExpandedMode && originalKey ? k < originalKey : false
+  const isContextMonth = (k:string) => {
+    if (isFullMonth) {
+      const monthPart = k.slice(5,7)
+      return monthPart !== filterMonthStr
+    }
+    return isExpandedMode && originalKey ? k < originalKey : false
+  }
 
   const unitSeries = units.map(u => ({
     name: u.label,
@@ -4185,8 +4240,16 @@ function buildCostosGeneralesM3Option(data: MonthlyEfficiencyData, _isExpand = f
   const isLight = theme.value === 'light'
   const expanded = monthlyExpandedRange.value
   const isExpandedMode = !!expanded
+  const isFullMonth = isFullMonthFilter()
+  const filterMonthStr2 = isFullMonth ? fechaInicio.value.slice(5,7) : null
   const originalKey = isExpandedMode ? (()=>{const d=new Date(fechaInicio.value+'T00:00:00Z'); return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}`})() : null
-  const isContextMonth = (k:string) => isExpandedMode && originalKey ? k < originalKey : false
+  const isContextMonth = (k:string) => {
+    if (isFullMonth) {
+      const monthPart = k.slice(5,7)
+      return monthPart !== filterMonthStr2
+    }
+    return isExpandedMode && originalKey ? k < originalKey : false
+  }
   return markRaw({
     textStyle: { fontFamily: 'Lato, sans-serif' },
     animation: true, animationDuration: isExpandedMode ? 420 : 650, animationEasing: 'cubicOut', animationDurationUpdate: isExpandedMode ? 300 : 400, animationEasingUpdate: 'cubicInOut',
