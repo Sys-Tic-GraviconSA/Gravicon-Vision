@@ -3409,31 +3409,8 @@ const procesoDisponibles = computed(() => {
   return [...set].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
 })
 
-/** Producción filtrada por fecha — si es filtro de mes completo (ej. 2026-08-01 → 2026-08-31) filtra por mes sin importar año para no dejar KPIs vacíos en agosto */
-function isFullMonthFilter(): boolean {
-  if (!fechaInicio.value || !fechaFin.value) return false
-  const s = new Date(fechaInicio.value + 'T00:00:00Z')
-  const e = new Date(fechaFin.value + 'T00:00:00Z')
-  if (isNaN(s.getTime()) || isNaN(e.getTime())) return false
-  if (s.getUTCFullYear() !== e.getUTCFullYear() || s.getUTCMonth() !== e.getUTCMonth()) return false
-  if (s.getUTCDate() !== 1) return false
-  const lastDay = new Date(Date.UTC(s.getUTCFullYear(), s.getUTCMonth()+1, 0)).getUTCDate()
-  return e.getUTCDate() === lastDay
-}
-
-/** Producción filtrada por fecha — mes completo usa año+mes exacto para no mezclar años */
+/** Producción filtrada por fecha */
 const prodFilteredByDate = computed(() => {
-  if (isFullMonthFilter()) {
-    const d = new Date(fechaInicio.value + 'T00:00:00Z')
-    const filterYear = d.getUTCFullYear()
-    const filterMonth = d.getUTCMonth()+1
-    return prodRows.value.filter(r => {
-      const v = Number(r['Fecha'])
-      if (typeof v !== 'number' || isNaN(v)) return false
-      const rowDate = serialToDate(v)
-      return rowDate.getUTCFullYear() === filterYear && rowDate.getUTCMonth()+1 === filterMonth
-    })
-  }
   const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
   const until = fechaFin.value ? dateToSerial(fechaFin.value) : Infinity
   return prodRows.value.filter(r => {
@@ -3464,17 +3441,6 @@ const prodFiltered = computed(() => {
 })
 
 const filteredData = computed(() => {
-  if (isFullMonthFilter()) {
-    const d = new Date(fechaInicio.value + 'T00:00:00Z')
-    const filterYear = d.getUTCFullYear()
-    const filterMonth = d.getUTCMonth()+1
-    return allData.value.filter(r => {
-      const v = Number(r['FECHA'])
-      if (typeof v !== 'number' || isNaN(v)) return false
-      const rowDate = serialToDate(v)
-      return rowDate.getUTCFullYear() === filterYear && rowDate.getUTCMonth()+1 === filterMonth
-    })
-  }
   const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
   const until = fechaFin.value ? dateToSerial(fechaFin.value) : Infinity
   return allData.value.filter(r => {
@@ -3502,18 +3468,9 @@ const monthlyExpandedRange = computed<{since:number, until:number, originalSince
   const since = dateToSerial(expandedSinceStr)
   const until = dateToSerial(fechaFin.value)
   const originalSince = dateToSerial(fechaInicio.value)
-  return { since, until, originalSince, isMD: false }
+  return { since, until, originalSince }
 })
 const filteredDataExpanded = computed(() => {
-  if (isFullMonthFilter()) {
-    const range = monthlyExpandedRange.value
-    if (range) {
-      return allData.value.filter(r => {
-        const v = Number(r['FECHA'])
-        return typeof v === 'number' && !isNaN(v) && v >= range.since && v <= range.until
-      })
-    }
-  }
   const range = monthlyExpandedRange.value
   if (!range) return filteredData.value
   return allData.value.filter(r => {
@@ -3522,15 +3479,6 @@ const filteredDataExpanded = computed(() => {
   })
 })
 const prodFilteredByDateExpanded = computed(() => {
-  if (isFullMonthFilter()) {
-    const range = monthlyExpandedRange.value
-    if (range) {
-      return prodRows.value.filter(r => {
-        const v = Number(r['Fecha'])
-        return typeof v === 'number' && !isNaN(v) && v >= range.since && v <= range.until
-      })
-    }
-  }
   const range = monthlyExpandedRange.value
   if (!range) return prodFilteredByDate.value
   return prodRows.value.filter(r => {
