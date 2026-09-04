@@ -10,28 +10,8 @@
       <transition name="fade">
         <div v-if="openDate" class="dropdown-menu" :class="{ 'align-right': dateAlignRight }">
           <div class="search-wrapper">
-            <div class="date-row">
-              <span class="date-label">Desde</span>
-              <select v-model="startMonth" class="search-input sel-month">
-                <option value="">Mes</option>
-                <option v-for="m in meses" :key="'s-'+m.value" :value="m.value">{{ m.label }}</option>
-              </select>
-              <select v-model="startDay" class="search-input sel-day">
-                <option value="">Día</option>
-                <option v-for="d in 31" :key="'sd-'+d" :value="String(d).padStart(2,'0')">{{ String(d).padStart(2,'0') }}</option>
-              </select>
-            </div>
-            <div class="date-row">
-              <span class="date-label">Hasta</span>
-              <select v-model="endMonth" class="search-input sel-month">
-                <option value="">Mes</option>
-                <option v-for="m in meses" :key="'e-'+m.value" :value="m.value">{{ m.label }}</option>
-              </select>
-              <select v-model="endDay" class="search-input sel-day">
-                <option value="">Día</option>
-                <option v-for="d in 31" :key="'ed-'+d" :value="String(d).padStart(2,'0')">{{ String(d).padStart(2,'0') }}</option>
-              </select>
-            </div>
+            <input v-model="startDate" type="date" class="search-input" />
+            <input v-model="endDate" type="date" class="search-input" />
           </div>
         </div>
       </transition>
@@ -69,46 +49,20 @@ const emit = defineEmits<{
 const openDate = ref(false)
 const dateAlignRight = ref(false)
 const dateRef = ref<HTMLElement | null>(null)
-const startMonth = ref<string>("")
-const startDay = ref<string>("")
-const endMonth = ref<string>("")
-const endDay = ref<string>("")
+const startDate = ref<string | null>(null)
+const endDate = ref<string | null>(null)
 
-const meses = [
-  { value: '01', label: 'Ene' }, { value: '02', label: 'Feb' }, { value: '03', label: 'Mar' },
-  { value: '04', label: 'Abr' }, { value: '05', label: 'May' }, { value: '06', label: 'Jun' },
-  { value: '07', label: 'Jul' }, { value: '08', label: 'Ago' }, { value: '09', label: 'Sep' },
-  { value: '10', label: 'Oct' }, { value: '11', label: 'Nov' }, { value: '12', label: 'Dic' },
-]
-function fmtMonthDay(m: string, d: string) {
-  if (!m || !d) return null
-  // Año oculto en UI pero necesario para filtrar correctamente por agosto de año actual
-  // Se usa el año más reciente presente en los datos, fallback a año actual
-  let year = String(new Date().getFullYear())
-  if (props.data.length) {
-    let maxSerial = 0
-    for (const r of props.data) {
-      const v = Number((r as any)['FECHA'] ?? (r as any)['Fecha'])
-      if (typeof v === 'number' && !isNaN(v) && v > maxSerial) maxSerial = v
-    }
-    if (maxSerial > 0) {
-      const d = new Date((maxSerial - 25569) * 86400 * 1000)
-      if (!isNaN(d.getTime())) year = String(d.getUTCFullYear())
-    }
-  }
-  return `${year}-${m}-${d}`
+const mesesAbrev = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+function fmtBadgeDate(iso: string | null) {
+  if (!iso) return ''
+  const d = new Date(iso + 'T00:00:00Z')
+  if (isNaN(d.getTime())) return iso
+  return `${mesesAbrev[d.getUTCMonth()]} ${String(d.getUTCDate()).padStart(2,'0')}`
 }
-const startDate = computed<string | null>(() => fmtMonthDay(startMonth.value, startDay.value))
-const endDate = computed<string | null>(() => fmtMonthDay(endMonth.value, endDay.value))
-
 const badgeText = computed(() => {
   const s = startDate.value
   const e = endDate.value
-  if (s && e) {
-    const sm = meses.find(x=>x.value===s.slice(0,2))?.label ?? s.slice(0,2)
-    const em = meses.find(x=>x.value===e.slice(0,2))?.label ?? e.slice(0,2)
-    return `${sm} ${s.slice(3)} → ${em} ${e.slice(3)}`
-  }
+  if (s && e) return `${fmtBadgeDate(s)} → ${fmtBadgeDate(e)}`
   return 'Todas'
 })
 
@@ -147,10 +101,8 @@ watch(selectedProviders, (newSet) => {
 })
 
 function clearFilters(emitClear = true) {
-  startMonth.value = ""
-  startDay.value = ""
-  endMonth.value = ""
-  endDay.value = ""
+  startDate.value = null
+  endDate.value = null
 
   selectedProviders.value = new Set()
   openDate.value = false
