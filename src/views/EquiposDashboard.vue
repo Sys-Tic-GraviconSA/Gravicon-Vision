@@ -3409,33 +3409,8 @@ const procesoDisponibles = computed(() => {
   return [...set].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
 })
 
-// Helper para filtro mes/día sin año (MM-DD)
-function isMDStr(s: string): boolean { return /^\d{2}-\d{2}$/.test(s) }
-function mdVal(s: string): number { const [m,d]=s.split('-').map(Number); return m*100+d }
-function serialToMD(serial: number): number { const d=serialToDate(serial); return (d.getUTCMonth()+1)*100 + d.getUTCDate() }
-function inMDRange(rowMD:number, startMD:number|null, endMD:number|null): boolean {
-  if (startMD===null && endMD===null) return true
-  if (startMD!==null && endMD!==null) {
-    if (startMD <= endMD) return rowMD>=startMD && rowMD<=endMD
-    return rowMD>=startMD || rowMD<=endMD
-  }
-  if (startMD!==null) return rowMD>=startMD
-  return rowMD<=endMD!
-}
-
-/** Producción filtrada por fecha — soporta YYYY-MM-DD y MM-DD (sin año) */
+/** Producción filtrada por fecha */
 const prodFilteredByDate = computed(() => {
-  const isMD = isMDStr(fechaInicio.value) || isMDStr(fechaFin.value)
-  if (isMD) {
-    const sMD = isMDStr(fechaInicio.value) ? mdVal(fechaInicio.value) : null
-    const eMD = isMDStr(fechaFin.value) ? mdVal(fechaFin.value) : null
-    return prodRows.value.filter(r => {
-      const v = Number(r['Fecha'])
-      if (typeof v !== 'number' || isNaN(v)) return false
-      const rowMD = serialToMD(v)
-      return inMDRange(rowMD, sMD, eMD)
-    })
-  }
   const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
   const until = fechaFin.value ? dateToSerial(fechaFin.value) : Infinity
   return prodRows.value.filter(r => {
@@ -3466,17 +3441,6 @@ const prodFiltered = computed(() => {
 })
 
 const filteredData = computed(() => {
-  const isMD = isMDStr(fechaInicio.value) || isMDStr(fechaFin.value)
-  if (isMD) {
-    const sMD = isMDStr(fechaInicio.value) ? mdVal(fechaInicio.value) : null
-    const eMD = isMDStr(fechaFin.value) ? mdVal(fechaFin.value) : null
-    return allData.value.filter(r => {
-      const v = Number(r['FECHA'])
-      if (typeof v !== 'number' || isNaN(v)) return false
-      const rowMD = serialToMD(v)
-      return inMDRange(rowMD, sMD, eMD)
-    })
-  }
   const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
   const until = fechaFin.value ? dateToSerial(fechaFin.value) : Infinity
   return allData.value.filter(r => {
@@ -3486,25 +3450,10 @@ const filteredData = computed(() => {
 })
 
 // — Rango expandido para gráficas mensuales: mes filtrado + 2 meses atrás —
-// Solo se activa cuando el filtro es un único mes (mismo mes en desde/hasta)
+// Solo se activa cuando el filtro de fecha es un único mes (mismo año-mes en desde/hasta)
 // para evitar el efecto "re-movido/brusco" al filtrar rangos largos.
-// Soporta tanto YYYY-MM-DD como MM-DD (sin año).
-const monthlyExpandedRange = computed<{since:number, until:number, originalSince:number, isMD?:boolean, sinceMD?:number, untilMD?:number, originalSinceMD?:number} | null>(() => {
+const monthlyExpandedRange = computed<{since:number, until:number, originalSince:number} | null>(() => {
   if (!fechaInicio.value || !fechaFin.value) return null
-  const isMD = isMDStr(fechaInicio.value) && isMDStr(fechaFin.value)
-  if (isMD) {
-    const sm = Number(fechaInicio.value.slice(0,2))
-    const em = Number(fechaFin.value.slice(0,2))
-    if (sm !== em) return null // solo mes único para MM-DD
-    const m = sm
-    let expM = m - 2
-    if (expM <= 0) expM += 12
-    const sinceMD = expM*100 + 1
-    const untilMD = mdVal(fechaFin.value)
-    const originalSinceMD = mdVal(fechaInicio.value)
-    return { since: 0, until: 0, originalSince: 0, isMD: true, sinceMD, untilMD, originalSinceMD }
-  }
-  if (isMDStr(fechaInicio.value) || isMDStr(fechaFin.value)) return null
   const start = new Date(fechaInicio.value + 'T00:00:00Z')
   const end = new Date(fechaFin.value + 'T00:00:00Z')
   if (isNaN(start.getTime()) || isNaN(end.getTime())) return null
@@ -3524,14 +3473,6 @@ const monthlyExpandedRange = computed<{since:number, until:number, originalSince
 const filteredDataExpanded = computed(() => {
   const range = monthlyExpandedRange.value
   if (!range) return filteredData.value
-  if (range.isMD) {
-    return allData.value.filter(r => {
-      const v = Number(r['FECHA'])
-      if (typeof v !== 'number' || isNaN(v)) return false
-      const rowMD = serialToMD(v)
-      return inMDRange(rowMD, range.sinceMD!, range.untilMD!)
-    })
-  }
   return allData.value.filter(r => {
     const v = Number(r['FECHA'])
     return typeof v === 'number' && !isNaN(v) && v >= range.since && v <= range.until
@@ -3540,14 +3481,6 @@ const filteredDataExpanded = computed(() => {
 const prodFilteredByDateExpanded = computed(() => {
   const range = monthlyExpandedRange.value
   if (!range) return prodFilteredByDate.value
-  if (range.isMD) {
-    return prodRows.value.filter(r => {
-      const v = Number(r['Fecha'])
-      if (typeof v !== 'number' || isNaN(v)) return false
-      const rowMD = serialToMD(v)
-      return inMDRange(rowMD, range.sinceMD!, range.untilMD!)
-    })
-  }
   return prodRows.value.filter(r => {
     const v = Number(r['Fecha'])
     return typeof v === 'number' && !isNaN(v) && v >= range.since && v <= range.until
@@ -4084,17 +4017,8 @@ function buildEficienciaMttoOption(data: MonthlyEfficiencyData, _isExpand = fals
   // Modo expandido (mes filtrado + 2 previos): barras de contexto atenuadas para evitar salto brusco
   const expanded = monthlyExpandedRange.value
   const isExpandedMode = !!expanded
-  const isMDMode = !!expanded?.isMD
-  const originalKey = isExpandedMode ? (isMDMode ? fechaInicio.value.slice(0,2) : (()=>{const d=new Date(fechaInicio.value+'T00:00:00Z'); return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}`})()) : null
-  const contextMonthsSet = (()=>{ if (!isExpandedMode || !isMDMode) return null; const m=Number(fechaInicio.value.slice(0,2)); const set=new Set<string>(); for(let i=2;i>=1;i--){let cm=m-i; if(cm<=0) cm+=12; set.add(String(cm).padStart(2,'0'))} return set })()
-  const isContextMonth = (k:string) => {
-    if (!isExpandedMode || !originalKey) return false
-    if (isMDMode) {
-      const monthPart = k.slice(5,7)
-      return contextMonthsSet?.has(monthPart) ?? false
-    }
-    return k < originalKey
-  }
+  const originalKey = isExpandedMode ? (()=>{const d=new Date(fechaInicio.value+'T00:00:00Z'); return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}`})() : null
+  const isContextMonth = (k:string) => isExpandedMode && originalKey ? k < originalKey : false
 
   const unitSeries = units.map(u => ({
     name: u.label,
@@ -4261,17 +4185,8 @@ function buildCostosGeneralesM3Option(data: MonthlyEfficiencyData, _isExpand = f
   const isLight = theme.value === 'light'
   const expanded = monthlyExpandedRange.value
   const isExpandedMode = !!expanded
-  const isMDMode = !!expanded?.isMD
-  const originalKey = isExpandedMode ? (isMDMode ? fechaInicio.value.slice(0,2) : (()=>{const d=new Date(fechaInicio.value+'T00:00:00Z'); return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}`})()) : null
-  const contextMonthsSet = (()=>{ if (!isExpandedMode || !isMDMode) return null; const m=Number(fechaInicio.value.slice(0,2)); const set=new Set<string>(); for(let i=2;i>=1;i--){let cm=m-i; if(cm<=0) cm+=12; set.add(String(cm).padStart(2,'0'))} return set })()
-  const isContextMonth = (k:string) => {
-    if (!isExpandedMode || !originalKey) return false
-    if (isMDMode) {
-      const monthPart = k.slice(5,7)
-      return contextMonthsSet?.has(monthPart) ?? false
-    }
-    return k < originalKey
-  }
+  const originalKey = isExpandedMode ? (()=>{const d=new Date(fechaInicio.value+'T00:00:00Z'); return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}`})() : null
+  const isContextMonth = (k:string) => isExpandedMode && originalKey ? k < originalKey : false
   return markRaw({
     textStyle: { fontFamily: 'Lato, sans-serif' },
     animation: true, animationDuration: isExpandedMode ? 420 : 650, animationEasing: 'cubicOut', animationDurationUpdate: isExpandedMode ? 300 : 400, animationEasingUpdate: 'cubicInOut',
