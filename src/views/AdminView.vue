@@ -88,7 +88,7 @@ const vistas = [
   { key: 'concretos/mantenimiento', label: 'Concretos — Mantenimiento' },
   { key: 'concretos/mantenimiento/planta', label: 'Concretos — Mant. Planta (Villavicencio/Acacias/Restrepo)' },
   { key: 'clientes', label: 'Clientes' },
-  { key: 'admin', label: 'Panel Admin' },
+  { key: 'configuracion', label: 'Configuración' },
 ]
 const vistaSearch = ref('')
 const filteredVistas = computed(() => {

@@ -8,7 +8,7 @@
           <h2 class="page-title">{{ isConcretos ? 'Concretos' : 'Agregados' }} Mantenimiento {{ isConcretos ? (props.localizacion || '') : plantaLabel }}</h2>
           <div class="header-actions">
             <div class="filter-group">
-              <FilterBar :data="allData" date-field="FECHA" :showProvider="false" @dateRangeFilter="onDateRangeFilter" @clear="onClearFilters" />
+              <FilterBar ref="filterBarRef" :data="allData" date-field="FECHA" :showProvider="false" @dateRangeFilter="onDateRangeFilter" @clear="onClearFilters" />
               <template v-if="subTab === 'almacen'">
                 <MultiSelect v-model="selectedTipoCompra" :options="tipoCompraDisponibles" label="Tipo Compra" icon="filter" />
                 <MultiSelect v-model="selectedCentroCosto" :options="centroCostoDisponibles" label="Centro Costo" icon="filter" />
@@ -3409,8 +3409,33 @@ const procesoDisponibles = computed(() => {
   return [...set].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
 })
 
-/** Producción filtrada por fecha */
+// Helper para filtro mes/día sin año (MM-DD)
+function isMDStr(s: string): boolean { return /^\d{2}-\d{2}$/.test(s) }
+function mdVal(s: string): number { const [m,d]=s.split('-').map(Number); return m*100+d }
+function serialToMD(serial: number): number { const d=serialToDate(serial); return (d.getUTCMonth()+1)*100 + d.getUTCDate() }
+function inMDRange(rowMD:number, startMD:number|null, endMD:number|null): boolean {
+  if (startMD===null && endMD===null) return true
+  if (startMD!==null && endMD!==null) {
+    if (startMD <= endMD) return rowMD>=startMD && rowMD<=endMD
+    return rowMD>=startMD || rowMD<=endMD
+  }
+  if (startMD!==null) return rowMD>=startMD
+  return rowMD<=endMD!
+}
+
+/** Producción filtrada por fecha — soporta YYYY-MM-DD y MM-DD (sin año) */
 const prodFilteredByDate = computed(() => {
+  const isMD = isMDStr(fechaInicio.value) || isMDStr(fechaFin.value)
+  if (isMD) {
+    const sMD = isMDStr(fechaInicio.value) ? mdVal(fechaInicio.value) : null
+    const eMD = isMDStr(fechaFin.value) ? mdVal(fechaFin.value) : null
+    return prodRows.value.filter(r => {
+      const v = Number(r['Fecha'])
+      if (typeof v !== 'number' || isNaN(v)) return false
+      const rowMD = serialToMD(v)
+      return inMDRange(rowMD, sMD, eMD)
+    })
+  }
   const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
   const until = fechaFin.value ? dateToSerial(fechaFin.value) : Infinity
   return prodRows.value.filter(r => {
@@ -3441,11 +3466,104 @@ const prodFiltered = computed(() => {
 })
 
 const filteredData = computed(() => {
+  const isMD = isMDStr(fechaInicio.value) || isMDStr(fechaFin.value)
+  if (isMD) {
+    const sMD = isMDStr(fechaInicio.value) ? mdVal(fechaInicio.value) : null
+    const eMD = isMDStr(fechaFin.value) ? mdVal(fechaFin.value) : null
+    return allData.value.filter(r => {
+      const v = Number(r['FECHA'])
+      if (typeof v !== 'number' || isNaN(v)) return false
+      const rowMD = serialToMD(v)
+      return inMDRange(rowMD, sMD, eMD)
+    })
+  }
   const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
   const until = fechaFin.value ? dateToSerial(fechaFin.value) : Infinity
   return allData.value.filter(r => {
     const v = Number(r['FECHA'])
     return typeof v === 'number' && !isNaN(v) && v >= since && v <= until
+  })
+})
+
+// — Rango expandido para gráficas mensuales: mes filtrado + 2 meses atrás —
+// Solo se activa cuando el filtro es un único mes (mismo mes en desde/hasta)
+// para evitar el efecto "re-movido/brusco" al filtrar rangos largos.
+// Soporta tanto YYYY-MM-DD como MM-DD (sin año).
+const monthlyExpandedRange = computed<{since:number, until:number, originalSince:number, isMD?:boolean, sinceMD?:number, untilMD?:number, originalSinceMD?:number} | null>(() => {
+  if (!fechaInicio.value || !fechaFin.value) return null
+  const isMD = isMDStr(fechaInicio.value) && isMDStr(fechaFin.value)
+  if (isMD) {
+    const sm = Number(fechaInicio.value.slice(0,2))
+    const em = Number(fechaFin.value.slice(0,2))
+    if (sm !== em) return null // solo mes único para MM-DD
+    const m = sm
+    let expM = m - 2
+    if (expM <= 0) expM += 12
+    const sinceMD = expM*100 + 1
+    const untilMD = mdVal(fechaFin.value)
+    const originalSinceMD = mdVal(fechaInicio.value)
+    return { since: 0, until: 0, originalSince: 0, isMD: true, sinceMD, untilMD, originalSinceMD }
+  }
+  if (isMDStr(fechaInicio.value) || isMDStr(fechaFin.value)) return null
+  const start = new Date(fechaInicio.value + 'T00:00:00Z')
+  const end = new Date(fechaFin.value + 'T00:00:00Z')
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return null
+  // Solo mes único: si abarca varios meses, no expandimos (se ve muy remoído/brusco)
+  if (start.getUTCFullYear() !== end.getUTCFullYear() || start.getUTCMonth() !== end.getUTCMonth()) return null
+  const y = start.getUTCFullYear()
+  const m = start.getUTCMonth()
+  const expandedDate = new Date(Date.UTC(y, m - 2, 1))
+  const ey = expandedDate.getUTCFullYear()
+  const em = expandedDate.getUTCMonth() + 1
+  const expandedSinceStr = `${ey}-${String(em).padStart(2,'0')}-01`
+  const since = dateToSerial(expandedSinceStr)
+  const until = dateToSerial(fechaFin.value)
+  const originalSince = dateToSerial(fechaInicio.value)
+  return { since, until, originalSince, isMD: false }
+})
+const filteredDataExpanded = computed(() => {
+  const range = monthlyExpandedRange.value
+  if (!range) return filteredData.value
+  if (range.isMD) {
+    return allData.value.filter(r => {
+      const v = Number(r['FECHA'])
+      if (typeof v !== 'number' || isNaN(v)) return false
+      const rowMD = serialToMD(v)
+      return inMDRange(rowMD, range.sinceMD!, range.untilMD!)
+    })
+  }
+  return allData.value.filter(r => {
+    const v = Number(r['FECHA'])
+    return typeof v === 'number' && !isNaN(v) && v >= range.since && v <= range.until
+  })
+})
+const prodFilteredByDateExpanded = computed(() => {
+  const range = monthlyExpandedRange.value
+  if (!range) return prodFilteredByDate.value
+  if (range.isMD) {
+    return prodRows.value.filter(r => {
+      const v = Number(r['Fecha'])
+      if (typeof v !== 'number' || isNaN(v)) return false
+      const rowMD = serialToMD(v)
+      return inMDRange(rowMD, range.sinceMD!, range.untilMD!)
+    })
+  }
+  return prodRows.value.filter(r => {
+    const v = Number(r['Fecha'])
+    return typeof v === 'number' && !isNaN(v) && v >= range.since && v <= range.until
+  })
+})
+const prodFilteredExpanded = computed(() => {
+  const rows = prodFilteredByDateExpanded.value
+  if (isConcretos.value) return rows
+  const lines = prodLineNames.value
+  if (!lines.length) return rows
+  const activeProdLines = lines.filter(ln => selectedLineas.value.has(ln))
+  if (activeProdLines.length === 0 || activeProdLines.length === lines.length) return rows
+  return rows.map(r => {
+    let total = 0
+    for (const ln of activeProdLines) total += Number(r[ln]) || 0
+    return { ...r, 'Total de M³': total }
   })
 })
 
@@ -3520,6 +3638,48 @@ const dataFilteredMain = computed(() => {
   })
 })
 
+const dataFilteredMainExpanded = computed(() => {
+  const base = filteredDataExpanded.value
+  const hasVehiculoFilter = selectedVehiculos.value.size > 0 && selectedVehiculos.value.size !== vehiculosDisponibles.value.length
+  const hasProveedorFilter = selectedProveedores.value.size > 0 && selectedProveedores.value.size !== proveedoresDisponibles.value.length
+  const hasLineaFilter = selectedLineas.value.size > 0 && selectedLineas.value.size !== lineasDisponibles.value.length
+  const hasEstadoFilter = selectedEstados.value.size > 0 && selectedEstados.value.size !== estadosDisponibles.value.length
+  const hasPersonalFilter = selectedPersonalInterno.value.size > 0 && selectedPersonalInterno.value.size < personalInternoOptions.length
+  if (!hasVehiculoFilter && !hasProveedorFilter && !hasLineaFilter && !hasEstadoFilter && !hasPersonalFilter) return base
+  return base.filter(r => {
+    if (hasVehiculoFilter) {
+      const vehiculoVal = isConcretos.value
+        ? String(r['Tipo Vehículo'] ?? '').trim()
+        : String(r['Placa del Vehículo'] ?? '').trim()
+      if (!selectedVehiculos.value.has(toTitleCase(vehiculoVal))) return false
+    }
+    if (hasProveedorFilter && !selectedProveedores.value.has(toTitleCase(String(r['PROVEEDOR'] ?? '').trim()))) return false
+    if (hasLineaFilter && !selectedLineas.value.has(toTitleCase(normalizeLocalizacion(String(r['Localización'] ?? ''))))) return false
+    if (hasEstadoFilter && !selectedEstados.value.has(toTitleCase(String(r['Estado'] ?? '').trim()))) return false
+    if (hasPersonalFilter) {
+      const esInt = isInterno(r)
+      if (selectedPersonalInterno.value.has('Interno') && !esInt) return false
+      if (selectedPersonalInterno.value.has('Externo') && esInt) return false
+    }
+    return true
+  })
+})
+const partitionExpanded = computed(() => {
+  const int: Record<string, unknown>[] = []
+  const ext: Record<string, unknown>[] = []
+  const acpm: Record<string, unknown>[] = []
+  for (const r of dataFilteredMainExpanded.value) {
+    if (isAcpm(r)) { acpm.push(r); continue }
+    if (isInterno(r)) int.push(r)
+    else ext.push(r)
+  }
+  return { int, ext, acpm }
+})
+const dataFilteredNoAcpmExpanded = computed(() => dataFilteredMainExpanded.value.filter(r => !isAcpm(r)))
+const intRowsExpanded = computed(() => partitionExpanded.value.int)
+const extRowsExpanded = computed(() => partitionExpanded.value.ext)
+
+const filterBarRef = ref<any>(null)
 function onDateRangeFilter(range: { from: string | null; to: string | null }) {
   fechaInicio.value = range.from ?? ''
   fechaFin.value = range.to ?? ''
@@ -3528,6 +3688,8 @@ function onDateRangeFilter(range: { from: string | null; to: string | null }) {
 function onClearFilters() {
   fechaInicio.value = ''
   fechaFin.value = ''
+  // Limpia también el estado interno del FilterBar (mes/día) para evitar doble botón/desfase — sin re-emitir para evitar bucle
+  filterBarRef.value?.clearFilters?.(false)
   selectedLineas.value = new Set(lineasDisponibles.value)
   selectedVehiculos.value = new Set(vehiculosDisponibles.value)
   selectedProveedores.value = new Set(proveedoresDisponibles.value)
@@ -3751,7 +3913,7 @@ interface MonthEfficiencyItem {
   costoUnitario: number
 }
 
-function computeMonthlyEfficiency(sourceMaintenanceRows: Record<string, unknown>[]) {
+function computeMonthlyEfficiency(sourceMaintenanceRows: Record<string, unknown>[], prodRowsParam?: Record<string, unknown>[]) {
   const unitsDef = plantUnits.value
   const monthMap = new Map<string, MonthEfficiencyItem>()
 
@@ -3830,7 +3992,7 @@ function computeMonthlyEfficiency(sourceMaintenanceRows: Record<string, unknown>
     else item.totalAbiertas += 1
   }
 
-  const sourceProdRows = prodFiltered.value
+  const sourceProdRows = prodRowsParam ?? prodFiltered.value
   for (const r of sourceProdRows) {
     const f = (r as Record<string, unknown>)['Fecha'] ?? (r as Record<string, unknown>)['FECHA']
     const d = parseRowDate(f)
@@ -3899,9 +4061,18 @@ function computeMonthlyEfficiency(sourceMaintenanceRows: Record<string, unknown>
 
 type MonthlyEfficiencyData = ReturnType<typeof computeMonthlyEfficiency>
 
-const monthlyEfficiency = computed(() => computeMonthlyEfficiency(dataFilteredNoAcpm.value))
-const monthlyEfficiencyInt = computed(() => computeMonthlyEfficiency(intRows.value))
-const monthlyEfficiencyExt = computed(() => computeMonthlyEfficiency(extRows.value))
+const monthlyEfficiency = computed(() => {
+  if (monthlyExpandedRange.value) return computeMonthlyEfficiency(dataFilteredNoAcpmExpanded.value, prodFilteredExpanded.value as unknown as Record<string, unknown>[])
+  return computeMonthlyEfficiency(dataFilteredNoAcpm.value, prodFiltered.value as unknown as Record<string, unknown>[])
+})
+const monthlyEfficiencyInt = computed(() => {
+  if (monthlyExpandedRange.value) return computeMonthlyEfficiency(intRowsExpanded.value, prodFilteredExpanded.value as unknown as Record<string, unknown>[])
+  return computeMonthlyEfficiency(intRows.value, prodFiltered.value as unknown as Record<string, unknown>[])
+})
+const monthlyEfficiencyExt = computed(() => {
+  if (monthlyExpandedRange.value) return computeMonthlyEfficiency(extRowsExpanded.value, prodFilteredExpanded.value as unknown as Record<string, unknown>[])
+  return computeMonthlyEfficiency(extRows.value, prodFiltered.value as unknown as Record<string, unknown>[])
+})
 
 function buildEficienciaMttoOption(data: MonthlyEfficiencyData, _isExpand = false) {
   const isLight = theme.value === 'light'
@@ -3910,6 +4081,20 @@ function buildEficienciaMttoOption(data: MonthlyEfficiencyData, _isExpand = fals
     ...units.map(u => ({ name: u.label, itemStyle: { color: u.color } })),
     { name: 'Costo Mtto por m³', itemStyle: { color: isLight ? '#172554' : '#60a5fa' } },
   ]
+  // Modo expandido (mes filtrado + 2 previos): barras de contexto atenuadas para evitar salto brusco
+  const expanded = monthlyExpandedRange.value
+  const isExpandedMode = !!expanded
+  const isMDMode = !!expanded?.isMD
+  const originalKey = isExpandedMode ? (isMDMode ? fechaInicio.value.slice(0,2) : (()=>{const d=new Date(fechaInicio.value+'T00:00:00Z'); return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}`})()) : null
+  const contextMonthsSet = (()=>{ if (!isExpandedMode || !isMDMode) return null; const m=Number(fechaInicio.value.slice(0,2)); const set=new Set<string>(); for(let i=2;i>=1;i--){let cm=m-i; if(cm<=0) cm+=12; set.add(String(cm).padStart(2,'0'))} return set })()
+  const isContextMonth = (k:string) => {
+    if (!isExpandedMode || !originalKey) return false
+    if (isMDMode) {
+      const monthPart = k.slice(5,7)
+      return contextMonthsSet?.has(monthPart) ?? false
+    }
+    return k < originalKey
+  }
 
   const unitSeries = units.map(u => ({
     name: u.label,
@@ -3929,6 +4114,7 @@ function buildEficienciaMttoOption(data: MonthlyEfficiencyData, _isExpand = fals
     },
     data: data.months.map(m => {
       const st = m.units[u.key] || { costo: 0, serv: 0, ins: 0, ots: 0, abiertas: 0, cerradas: 0, prodM3: 0, costoM3: 0 }
+      const isCtx = isContextMonth(m.key)
       return {
         value: st.costo,
         planta: u.label,
@@ -3940,10 +4126,13 @@ function buildEficienciaMttoOption(data: MonthlyEfficiencyData, _isExpand = fals
         cerradas: st.cerradas,
         prodM3: st.prodM3,
         costoM3: st.costoM3,
+        // Atenúa contexto para que el mes filtrado resalte sin "re-movido" brusco
+        itemStyle: isCtx ? { color: u.color, opacity: 0.38, borderRadius: [4,4,0,0] as [number,number,number,number] } : undefined,
       }
     }),
   }))
 
+  const _isCtxLine = isContextMonth
   const lineSeries = {
     name: 'Costo Mtto por m³',
     type: 'line' as const,
@@ -3957,7 +4146,7 @@ function buildEficienciaMttoOption(data: MonthlyEfficiencyData, _isExpand = fals
       focus: 'series' as const,
       itemStyle: { shadowBlur: 12, shadowColor: isLight ? 'rgba(23, 37, 84, 0.4)' : 'rgba(96, 165, 250, 0.5)' },
     },
-    lineStyle: { width: 2.5, color: isLight ? '#172554' : '#60a5fa' },
+    lineStyle: { width: 2.5, color: isLight ? '#172554' : '#60a5fa', opacity: isExpandedMode ? 0.95 : 1 },
     itemStyle: { color: isLight ? '#172554' : '#60a5fa' },
     label: {
       ...labelLine.value,
@@ -3968,26 +4157,30 @@ function buildEficienciaMttoOption(data: MonthlyEfficiencyData, _isExpand = fals
         return v > 0 ? `$ ${v.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''
       },
     },
-    data: data.months.map(m => ({
-      value: m.costoUnitario,
-      monthLabel: m.label,
-      costoUnitario: m.costoUnitario,
-      totalMtto: m.totalMtto,
-      totalServ: m.totalServ,
-      totalIns: m.totalIns,
-      totalOTs: m.totalOTs,
-      totalAbiertas: m.totalAbiertas,
-      totalCerradas: m.totalCerradas,
-      prodM3: m.prodM3,
-    })),
+    data: data.months.map(m => {
+      const isCtx = _isCtxLine(m.key)
+      return {
+        value: m.costoUnitario,
+        monthLabel: m.label,
+        costoUnitario: m.costoUnitario,
+        totalMtto: m.totalMtto,
+        totalServ: m.totalServ,
+        totalIns: m.totalIns,
+        totalOTs: m.totalOTs,
+        totalAbiertas: m.totalAbiertas,
+        totalCerradas: m.totalCerradas,
+        prodM3: m.prodM3,
+        itemStyle: isCtx ? { opacity: 0.45 } : undefined,
+      }
+    }),
   }
 
   return markRaw({
     textStyle: { fontFamily: 'Lato, sans-serif' },
     animation: true,
-    animationDuration: 900,
+    animationDuration: isExpandedMode ? 420 : 650,
     animationEasing: 'cubicOut',
-    animationDurationUpdate: 500,
+    animationDurationUpdate: isExpandedMode ? 300 : 400,
     animationEasingUpdate: 'cubicInOut',
     tooltip: {
       trigger: 'item' as const,
@@ -4066,9 +4259,22 @@ const eficienciaMttoExtExpandOpt = computed(() => buildEficienciaMttoOption(mont
 
 function buildCostosGeneralesM3Option(data: MonthlyEfficiencyData, _isExpand = false) {
   const isLight = theme.value === 'light'
+  const expanded = monthlyExpandedRange.value
+  const isExpandedMode = !!expanded
+  const isMDMode = !!expanded?.isMD
+  const originalKey = isExpandedMode ? (isMDMode ? fechaInicio.value.slice(0,2) : (()=>{const d=new Date(fechaInicio.value+'T00:00:00Z'); return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}`})()) : null
+  const contextMonthsSet = (()=>{ if (!isExpandedMode || !isMDMode) return null; const m=Number(fechaInicio.value.slice(0,2)); const set=new Set<string>(); for(let i=2;i>=1;i--){let cm=m-i; if(cm<=0) cm+=12; set.add(String(cm).padStart(2,'0'))} return set })()
+  const isContextMonth = (k:string) => {
+    if (!isExpandedMode || !originalKey) return false
+    if (isMDMode) {
+      const monthPart = k.slice(5,7)
+      return contextMonthsSet?.has(monthPart) ?? false
+    }
+    return k < originalKey
+  }
   return markRaw({
     textStyle: { fontFamily: 'Lato, sans-serif' },
-    animation: true, animationDuration: 900, animationEasing: 'cubicOut', animationDurationUpdate: 500, animationEasingUpdate: 'cubicInOut',
+    animation: true, animationDuration: isExpandedMode ? 420 : 650, animationEasing: 'cubicOut', animationDurationUpdate: isExpandedMode ? 300 : 400, animationEasingUpdate: 'cubicInOut',
     tooltip: {
       trigger: 'item' as const,
       formatter: (params: any) => {
@@ -4128,10 +4334,12 @@ function buildCostosGeneralesM3Option(data: MonthlyEfficiencyData, _isExpand = f
           ...labelLine.value, position: 'top' as const, distance: 4,
           formatter: (p: any) => { const v = Number(p.value) || 0; return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : '' },
         },
-        data: data.months.map(m => ({
-          value: m.totalMtto, monthLabel: m.label, totalServ: m.totalServ, totalIns: m.totalIns, totalMtto: m.totalMtto,
+        data: data.months.map(m => {
+          const isCtx = isContextMonth(m.key)
+          return { value: m.totalMtto, monthLabel: m.label, totalServ: m.totalServ, totalIns: m.totalIns, totalMtto: m.totalMtto,
           totalOTs: m.totalOTs, totalAbiertas: m.totalAbiertas, totalCerradas: m.totalCerradas, prodM3: m.prodM3, costoM3: m.costoUnitario,
-        })),
+          itemStyle: isCtx ? { color: '#15223c', opacity: 0.38, borderRadius: [4,4,0,0] as [number,number,number,number] } : undefined }
+        }),
       },
       {
         name: 'Servicios', type: 'bar' as const, yAxisIndex: 0, barMaxWidth: 36,
@@ -4141,10 +4349,12 @@ function buildCostosGeneralesM3Option(data: MonthlyEfficiencyData, _isExpand = f
           ...labelLine.value, position: 'top' as const, distance: 4,
           formatter: (p: any) => { const v = Number(p.value) || 0; return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : '' },
         },
-        data: data.months.map(m => ({
-          value: m.totalServ, monthLabel: m.label, totalServ: m.totalServ, totalIns: m.totalIns, totalMtto: m.totalMtto,
+        data: data.months.map(m => {
+          const isCtx = isContextMonth(m.key)
+          return { value: m.totalServ, monthLabel: m.label, totalServ: m.totalServ, totalIns: m.totalIns, totalMtto: m.totalMtto,
           totalOTs: m.totalOTs, totalAbiertas: m.totalAbiertas, totalCerradas: m.totalCerradas, prodM3: m.prodM3, costoM3: m.costoUnitario,
-        })),
+          itemStyle: isCtx ? { color: palette[1], opacity: 0.38, borderRadius: [4,4,0,0] as [number,number,number,number] } : undefined }
+        }),
       },
       {
         name: 'Insumos', type: 'bar' as const, yAxisIndex: 0, barMaxWidth: 36,
@@ -4154,23 +4364,27 @@ function buildCostosGeneralesM3Option(data: MonthlyEfficiencyData, _isExpand = f
           ...labelLine.value, position: 'top' as const, distance: 4,
           formatter: (p: any) => { const v = Number(p.value) || 0; return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : '' },
         },
-        data: data.months.map(m => ({
-          value: m.totalIns, monthLabel: m.label, totalServ: m.totalServ, totalIns: m.totalIns, totalMtto: m.totalMtto,
+        data: data.months.map(m => {
+          const isCtx = isContextMonth(m.key)
+          return { value: m.totalIns, monthLabel: m.label, totalServ: m.totalServ, totalIns: m.totalIns, totalMtto: m.totalMtto,
           totalOTs: m.totalOTs, totalAbiertas: m.totalAbiertas, totalCerradas: m.totalCerradas, prodM3: m.prodM3, costoM3: m.costoUnitario,
-        })),
+          itemStyle: isCtx ? { color: '#EF4444', opacity: 0.38, borderRadius: [4,4,0,0] as [number,number,number,number] } : undefined }
+        }),
       },
       {
         name: 'Costo Mtto por m³', type: 'line' as const, yAxisIndex: 1, smooth: 0.35, symbol: 'circle' as const, symbolSize: 8, showSymbol: true,
         emphasis: { scale: 1.4, focus: 'series' as const, itemStyle: { shadowBlur: 12, shadowColor: isLight ? 'rgba(23, 37, 84, 0.4)' : 'rgba(96, 165, 250, 0.5)' } },
-        lineStyle: { width: 2.5, color: isLight ? '#172554' : '#60a5fa' }, itemStyle: { color: isLight ? '#172554' : '#60a5fa' },
+        lineStyle: { width: 2.5, color: isLight ? '#172554' : '#60a5fa', opacity: isExpandedMode ? 0.95 : 1 }, itemStyle: { color: isLight ? '#172554' : '#60a5fa' },
         label: {
           ...labelLine.value, position: 'top' as const, distance: 8,
           formatter: (p: any) => { const v = Number(p.value) || 0; return v > 0 ? `$ ${v.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '' },
         },
-        data: data.months.map(m => ({
-          value: m.costoUnitario, monthLabel: m.label, costoUnitario: m.costoUnitario, totalMtto: m.totalMtto, totalServ: m.totalServ,
+        data: data.months.map(m => {
+          const isCtx = isContextMonth(m.key)
+          return { value: m.costoUnitario, monthLabel: m.label, costoUnitario: m.costoUnitario, totalMtto: m.totalMtto, totalServ: m.totalServ,
           totalIns: m.totalIns, totalOTs: m.totalOTs, totalAbiertas: m.totalAbiertas, totalCerradas: m.totalCerradas, prodM3: m.prodM3,
-        })),
+          itemStyle: isCtx ? { opacity: 0.45 } : undefined }
+        }),
       },
     ],
   })

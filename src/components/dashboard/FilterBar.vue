@@ -4,14 +4,34 @@
       <button class="dropdown-toggle" @click="toggleOpenDate">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x="16" y="2" x2="16" y2="6"/><line x="8" y="2" x2="8" y2="6"/><line x="3" y="10" x2="21" y2="10"/></svg>
         <span>Fechas</span>
-        <span class="badge">{{ (startDate && endDate) ? `${startDate} → ${endDate}` : 'Todas' }}</span>
+        <span class="badge">{{ badgeText }}</span>
         <svg class="chevron" :class="{ open: openDate }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
       <transition name="fade">
         <div v-if="openDate" class="dropdown-menu" :class="{ 'align-right': dateAlignRight }">
           <div class="search-wrapper">
-            <input v-model="startDate" type="date" class="search-input" placeholder="Desde" />
-            <input v-model="endDate" type="date" class="search-input" placeholder="Hasta" />
+            <div class="date-row">
+              <span class="date-label">Desde</span>
+              <select v-model="startMonth" class="search-input sel-month">
+                <option value="">Mes</option>
+                <option v-for="m in meses" :key="'s-'+m.value" :value="m.value">{{ m.label }}</option>
+              </select>
+              <select v-model="startDay" class="search-input sel-day">
+                <option value="">Día</option>
+                <option v-for="d in 31" :key="'sd-'+d" :value="String(d).padStart(2,'0')">{{ String(d).padStart(2,'0') }}</option>
+              </select>
+            </div>
+            <div class="date-row">
+              <span class="date-label">Hasta</span>
+              <select v-model="endMonth" class="search-input sel-month">
+                <option value="">Mes</option>
+                <option v-for="m in meses" :key="'e-'+m.value" :value="m.value">{{ m.label }}</option>
+              </select>
+              <select v-model="endDay" class="search-input sel-day">
+                <option value="">Día</option>
+                <option v-for="d in 31" :key="'ed-'+d" :value="String(d).padStart(2,'0')">{{ String(d).padStart(2,'0') }}</option>
+              </select>
+            </div>
           </div>
         </div>
       </transition>
@@ -19,11 +39,6 @@
 
     <!-- Provider filter dropdown -->
     <MultiSelect v-if="showProvider" v-model="selectedProviders" :options="providers" label="Proveedor" icon="filter" />
-
-    <button v-if="hasActiveFilters" class="clear-btn" @click="clearFilters">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      Limpiar
-    </button>
   </div>
 </template>
 
@@ -54,8 +69,34 @@ const emit = defineEmits<{
 const openDate = ref(false)
 const dateAlignRight = ref(false)
 const dateRef = ref<HTMLElement | null>(null)
-const startDate = ref<string | null>(null)
-const endDate = ref<string | null>(null)
+const startMonth = ref<string>("")
+const startDay = ref<string>("")
+const endMonth = ref<string>("")
+const endDay = ref<string>("")
+
+const meses = [
+  { value: '01', label: 'Ene' }, { value: '02', label: 'Feb' }, { value: '03', label: 'Mar' },
+  { value: '04', label: 'Abr' }, { value: '05', label: 'May' }, { value: '06', label: 'Jun' },
+  { value: '07', label: 'Jul' }, { value: '08', label: 'Ago' }, { value: '09', label: 'Sep' },
+  { value: '10', label: 'Oct' }, { value: '11', label: 'Nov' }, { value: '12', label: 'Dic' },
+]
+function fmtMonthDay(m: string, d: string) {
+  if (!m || !d) return null
+  return `${m}-${d}`
+}
+const startDate = computed<string | null>(() => fmtMonthDay(startMonth.value, startDay.value))
+const endDate = computed<string | null>(() => fmtMonthDay(endMonth.value, endDay.value))
+
+const badgeText = computed(() => {
+  const s = startDate.value
+  const e = endDate.value
+  if (s && e) {
+    const sm = meses.find(x=>x.value===s.slice(0,2))?.label ?? s.slice(0,2)
+    const em = meses.find(x=>x.value===e.slice(0,2))?.label ?? e.slice(0,2)
+    return `${sm} ${s.slice(3)} → ${em} ${e.slice(3)}`
+  }
+  return 'Todas'
+})
 
 /** Evita que el menú se salga del viewport en pantallas angostas. */
 async function toggleOpenDate() {
@@ -91,18 +132,17 @@ watch(selectedProviders, (newSet) => {
   emit('proveedorFilter', newSet)
 })
 
-const hasActiveFilters = computed(() =>
-  (startDate.value !== null && endDate.value !== null) || selectedProviders.value.size > 0
-)
-
-function clearFilters() {
-  startDate.value = null
-  endDate.value = null
+function clearFilters(emitClear = true) {
+  startMonth.value = ""
+  startDay.value = ""
+  endMonth.value = ""
+  endDay.value = ""
 
   selectedProviders.value = new Set()
   openDate.value = false
-  emit('clear')
+  if (emitClear) emit('clear')
 }
+defineExpose({ clearFilters })
 
 function handleClickOutside(e: MouseEvent) {
   if (dateRef.value && !dateRef.value.contains(e.target as Node)) openDate.value = false
@@ -189,6 +229,21 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
   padding: 8px;
   flex-direction: column;
 }
+.date-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+.date-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  min-width: 36px;
+  text-transform: uppercase;
+}
+.sel-month { flex: 1.2; }
+.sel-day { flex: 0.8; min-width: 70px; }
 
 .search-input {
   flex: 1;
