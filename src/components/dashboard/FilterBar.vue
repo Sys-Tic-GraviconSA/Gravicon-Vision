@@ -82,7 +82,21 @@ const meses = [
 ]
 function fmtMonthDay(m: string, d: string) {
   if (!m || !d) return null
-  return `${m}-${d}`
+  // Año oculto en UI pero necesario para filtrar correctamente por agosto de año actual
+  // Se usa el año más reciente presente en los datos, fallback a año actual
+  let year = String(new Date().getFullYear())
+  if (props.data.length) {
+    let maxSerial = 0
+    for (const r of props.data) {
+      const v = Number((r as any)['FECHA'] ?? (r as any)['Fecha'])
+      if (typeof v === 'number' && !isNaN(v) && v > maxSerial) maxSerial = v
+    }
+    if (maxSerial > 0) {
+      const d = new Date((maxSerial - 25569) * 86400 * 1000)
+      if (!isNaN(d.getTime())) year = String(d.getUTCFullYear())
+    }
+  }
+  return `${year}-${m}-${d}`
 }
 const startDate = computed<string | null>(() => fmtMonthDay(startMonth.value, startDay.value))
 const endDate = computed<string | null>(() => fmtMonthDay(endMonth.value, endDay.value))
