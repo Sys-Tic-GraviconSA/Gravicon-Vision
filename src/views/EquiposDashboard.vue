@@ -17,6 +17,7 @@
               <template v-else>
                 <MultiSelect v-model="selectedLineas" :options="lineasDisponibles" :label="isConcretos ? 'Planta' : 'Línea'" icon="filter" />
                 <MultiSelect v-model="selectedVehiculos" :options="vehiculosDisponibles" label="Vehículos" icon="filter" />
+                <MultiSelect v-if="isConcretos" v-model="selectedPlacas" :options="placasDisponibles" label="Placa" icon="filter" />
                 <MultiSelect v-model="selectedProveedores" :options="proveedoresDisponibles" label="Proveedor" icon="user" />
                 <MultiSelect v-model="selectedEstados" :options="estadosDisponibles" label="Estado" icon="filter" />
                 <MultiSelect v-model="selectedPersonalInterno" :options="personalInternoOptions" label="Personal" icon="user" />
@@ -50,7 +51,7 @@
         </header>
       </div>
       <nav class="tab-bar">
-        <button v-for="t in tipoTabs" :key="t.id" class="tab-btn" :class="{ active: tipoTab === t.id }" @click="tipoTab = t.id">{{ t.label }}<template v-if="t.count > 0"> ({{ t.count }})</template></button>
+        <button v-for="t in tipoTabs" :key="t.id" class="tab-btn" :class="{ active: tipoTab === t.id }" @click="tipoTab = t.id">{{ t.label }}</button>
       </nav>
 
       <!-- Disponibilidad: vista propia al nivel de Planta/Maquinaria -->
@@ -61,6 +62,11 @@
           :fecha-inicio="fechaInicio"
           :fecha-fin="fechaFin"
         />
+      </template>
+
+      <!-- Inspección de Llantas: vista propia (solo Concretos) -->
+      <template v-else-if="tipoTab === 'inspeccion'">
+        <InspeccionLlantasTab :planta="planta" />
       </template>
 
       <!-- Tareas: vista propia al nivel de Planta/Maquinaria -->
@@ -104,7 +110,7 @@
         <KpiCard :value="$$(servicios)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intServ)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extServ)}</strong></div>`" />
         <KpiCard :value="$$(insumos)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intIns)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extIns)}</strong></div>`" />
         <KpiCard :value="fmt(totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
-        <KpiCard :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > 3000 ? '#EF4444' : '#10B981'" :meta="'Meta: $3.000/m³'" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3)}/m³</strong></div>`" />
+        <KpiCard :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > 22000 ? '#EF4444' : '#10B981'" :meta="'Meta: $22.000/m³'" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3)}/m³</strong></div>`" />
         <KpiCard :value="String(totalOrdenes)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCount}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCount}</strong></div>`" />
         <KpiCard :value="String(estadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.abiertas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.abiertas)}</span></div>`" />
         <KpiCard :value="String(estadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.cerradas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.cerradas)}</span></div>`" />
@@ -190,7 +196,7 @@
       <KpiCard :value="$$(intServ)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intTotal > 0 ? ((intServ / intTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto interno</span></div>`" />
       <KpiCard :value="$$(intIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-int'>Int</span> <strong>${intTotal > 0 ? ((intIns / intTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto interno</span></div>`" />
       <KpiCard :value="fmt(totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
-      <KpiCard :value="$$(intCostoM3)" label="Costo por m³" :accent="intCostoM3 > 3000 ? '#EF4444' : '#10B981'" :meta="'Meta: $3.000/m³'" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
+      <KpiCard :value="$$(intCostoM3)" label="Costo por m³" :accent="intCostoM3 > 22000 ? '#EF4444' : '#10B981'" :meta="'Meta: $22.000/m³'" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
       <KpiCard :value="String(intCount)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${totalOrdenes > 0 ? ((intCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
       <KpiCard :value="String(otsIntEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-int'>Costo</span> <strong>${$$(otsIntEstadoCostos.abiertas)}</strong></div>`" />
       <KpiCard :value="String(otsIntEstadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-int'>Costo</span> <strong>${$$(otsIntEstadoCostos.cerradas)}</strong></div>`" />
@@ -276,7 +282,7 @@
       <KpiCard :value="$$(extServ)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-ext'>Ext</span> <strong>${extTotal > 0 ? ((extServ / extTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto externo</span></div>`" />
       <KpiCard :value="$$(extIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Ext</span> <strong>${extTotal > 0 ? ((extIns / extTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto externo</span></div>`" />
       <KpiCard :value="fmt(totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
-      <KpiCard :value="$$(extCostoM3)" label="Costo por m³" :accent="extCostoM3 > 3000 ? '#EF4444' : '#10B981'" :meta="'Meta: $3.000/m³'" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
+      <KpiCard :value="$$(extCostoM3)" label="Costo por m³" :accent="extCostoM3 > 22000 ? '#EF4444' : '#10B981'" :meta="'Meta: $22.000/m³'" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
       <KpiCard :value="String(extCount)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${totalOrdenes > 0 ? ((extCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
       <KpiCard :value="String(otsExtEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Costo</span> <strong>${$$(otsExtEstadoCostos.abiertas)}</strong></div>`" />
       <KpiCard :value="String(otsExtEstadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Costo</span> <strong>${$$(otsExtEstadoCostos.cerradas)}</strong></div>`" />
@@ -443,11 +449,11 @@
             <KpiCard label="OT Abiertas" accent="#DC2626" icon="activity" :value="String(repAbiertas)" />
             <KpiCard label="OT Cerradas" accent="#16A34A" icon="check-circle" :value="String(repCerradas)" />
             <KpiCard label="Cerradas Mes" accent="#2563EB" icon="check-circle" :value="String(repCerradasMes)" />
-            <KpiCard label="Costo Acumulado" accent="#1D4ED8" icon="dollar" :value="$$short(repCostoTotal)" />
-            <KpiCard label="Costo Servicios" accent="#0EA5E9" icon="dollar" :value="$$short(repCostoServTotal)" />
-            <KpiCard label="Costo Insumos" accent="#F97316" icon="package" :value="$$short(repCostoInsumosTotal)" />
+            <KpiCard label="Costo Acumulado" accent="#1D4ED8" icon="dollar" :value="$$(repCostoTotal)" />
+            <KpiCard label="Costo Servicios" accent="#0EA5E9" icon="dollar" :value="$$(repCostoServTotal)" />
+            <KpiCard label="Costo Insumos" accent="#F97316" icon="package" :value="$$(repCostoInsumosTotal)" />
             <KpiCard label="Total Producción" accent="#10B981" icon="trending-up" :value="fmt(totalProd) + ' m³'" />
-            <KpiCard label="Costo por m³" :accent="costoM3 > 3000 ? '#EF4444' : '#10B981'" meta="Meta: $3.000/m³" icon="target" :value="$$(costoM3)" />
+            <KpiCard label="Costo por m³" :accent="costoM3 > 22000 ? '#EF4444' : '#10B981'" meta="Meta: $22.000/m³" icon="target" :value="$$(costoM3)" />
             <KpiCard
               label="% Cierre"
               :accent="repPctCierre >= 85 ? '#16A34A' : repPctCierre >= 60 ? '#F59E0B' : '#DC2626'"
@@ -458,8 +464,8 @@
             <KpiCard label="Duración Promedio" accent="#8B5CF6" icon="clock" :value="otDuracionEstimadaProm + ' h'" />
             <KpiCard label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" :value="otTiempoRealProm + ' h'" />
             <KpiCard label="OT con Solicitud (SOPLED/Interno)" accent="#10B981" icon="package" :value="otConSopledPct + '%'" />
-            <KpiCard label="Gasto Interno" accent="#2563EB" icon="package" :value="$$short(repCostosProv.interno)" />
-            <KpiCard label="Gasto Externo" accent="#F59E0B" icon="users" :value="$$short(repCostosProv.externo)" />
+            <KpiCard label="Gasto Interno" accent="#2563EB" icon="package" :value="$$(repCostosProv.interno)" />
+            <KpiCard label="Gasto Externo" accent="#F59E0B" icon="users" :value="$$(repCostosProv.externo)" />
           </div>
 
           <!-- Nota de Estado / Alertas -->
@@ -469,6 +475,76 @@
           </div>
           <div v-else class="report-nota">
             <strong>Estado de Cierre:</strong> El 100% de las órdenes de trabajo del corte seleccionado se encuentran cerradas y liquidadas.
+          </div>
+
+          <!-- Comparativo vs Período Anterior -->
+          <div v-if="repComparativo" class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Comparativo vs Período Anterior<template v-if="repComparativo.hasPrev"> ({{ repComparativo.prevDesde }} al {{ repComparativo.prevHasta }})</template></h3>
+            <div class="data-card">
+              <div v-if="repComparativo.hasPrev" class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Indicador</th>
+                      <th class="r" style="width: 140px">Período Anterior</th>
+                      <th class="r" style="width: 140px">Período Actual</th>
+                      <th class="r" style="width: 150px">Variación</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="bold">Nº Órdenes de Trabajo</td>
+                      <td class="r">{{ repComparativo.prev.n }}</td>
+                      <td class="r bold">{{ repComparativo.actual.n }}</td>
+                      <td class="r bold" :style="{ color: repDeltaColor(repComparativo.actual.n - repComparativo.prev.n) }">{{ repDeltaTxt(repComparativo.actual.n - repComparativo.prev.n) }} · {{ repDeltaPct(repComparativo.actual.n, repComparativo.prev.n) }}</td>
+                    </tr>
+                    <tr>
+                      <td class="bold">Costo Total</td>
+                      <td class="r">{{ $$(repComparativo.prev.total) }}</td>
+                      <td class="r bold">{{ $$(repComparativo.actual.total) }}</td>
+                      <td class="r bold" :style="{ color: repDeltaColor(repComparativo.actual.total - repComparativo.prev.total, 'down') }">{{ repDeltaTxt(repComparativo.actual.total - repComparativo.prev.total, true) }} · {{ repDeltaPct(repComparativo.actual.total, repComparativo.prev.total) }}</td>
+                    </tr>
+                    <tr>
+                      <td class="bold">Costo Servicios</td>
+                      <td class="r">{{ $$(repComparativo.prev.serv) }}</td>
+                      <td class="r bold">{{ $$(repComparativo.actual.serv) }}</td>
+                      <td class="r bold" :style="{ color: repDeltaColor(repComparativo.actual.serv - repComparativo.prev.serv, 'down') }">{{ repDeltaTxt(repComparativo.actual.serv - repComparativo.prev.serv, true) }} · {{ repDeltaPct(repComparativo.actual.serv, repComparativo.prev.serv) }}</td>
+                    </tr>
+                    <tr>
+                      <td class="bold">Costo Insumos</td>
+                      <td class="r">{{ $$(repComparativo.prev.ins) }}</td>
+                      <td class="r bold">{{ $$(repComparativo.actual.ins) }}</td>
+                      <td class="r bold" :style="{ color: repDeltaColor(repComparativo.actual.ins - repComparativo.prev.ins, 'down') }">{{ repDeltaTxt(repComparativo.actual.ins - repComparativo.prev.ins, true) }} · {{ repDeltaPct(repComparativo.actual.ins, repComparativo.prev.ins) }}</td>
+                    </tr>
+                    <tr>
+                      <td class="bold">% Preventivo</td>
+                      <td class="r">{{ repComparativo.prev.pctPrev }}%</td>
+                      <td class="r bold">{{ repComparativo.actual.pctPrev }}%</td>
+                      <td class="r bold" :style="{ color: repDeltaColor(repComparativo.actual.pctPrev - repComparativo.prev.pctPrev, 'up') }">{{ repDeltaTxt(repComparativo.actual.pctPrev - repComparativo.prev.pctPrev) }} pts</td>
+                    </tr>
+                    <tr>
+                      <td class="bold">% Cierre</td>
+                      <td class="r">{{ repComparativo.prev.pctCierre }}%</td>
+                      <td class="r bold">{{ repComparativo.actual.pctCierre }}%</td>
+                      <td class="r bold" :style="{ color: repDeltaColor(repComparativo.actual.pctCierre - repComparativo.prev.pctCierre, 'up') }">{{ repDeltaTxt(repComparativo.actual.pctCierre - repComparativo.prev.pctCierre) }} pts</td>
+                    </tr>
+                    <tr>
+                      <td class="bold">Tiempo medio Recepción → Cierre</td>
+                      <td class="r">{{ repComparativo.prev.tiempoCierre }} h</td>
+                      <td class="r bold">{{ repComparativo.actual.tiempoCierre }} h</td>
+                      <td class="r bold" :style="{ color: repDeltaColor(repComparativo.actual.tiempoCierre - repComparativo.prev.tiempoCierre, 'down') }">{{ repDeltaTxt(+(repComparativo.actual.tiempoCierre - repComparativo.prev.tiempoCierre).toFixed(1)) }} h</td>
+                    </tr>
+                    <tr>
+                      <td class="bold">Costo por m³</td>
+                      <td class="r">{{ repComparativo.prev.costoM3 ? $$(repComparativo.prev.costoM3) : '—' }}</td>
+                      <td class="r bold">{{ repComparativo.actual.costoM3 ? $$(repComparativo.actual.costoM3) : '—' }}</td>
+                      <td class="r bold" :style="{ color: repDeltaColor(repComparativo.actual.costoM3 - repComparativo.prev.costoM3, 'down') }">{{ repDeltaTxt(repComparativo.actual.costoM3 - repComparativo.prev.costoM3, true) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div v-else class="empty-table" style="padding: 10px;">Sin datos del período inmediatamente anterior ({{ repComparativo.prevDesde }} al {{ repComparativo.prevHasta }}) para comparar.</div>
+            </div>
           </div>
 
           <!-- Índice de Cierre y Apertura por Persona -->
@@ -542,6 +618,58 @@
                       <td class="r bold">{{ repRows.length }}</td>
                       <td class="r bold">{{ $$(repCostoTotal) }}</td>
                       <td class="r bold">100%</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tendencia de Costos por Mes -->
+          <div v-if="repTendenciaMensual.rows.length" class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Tendencia de Costos por Mes</h3>
+            <div v-if="repTendenciaMensual.rows.length > 1" style="font-size: 11px; color: #475569; margin-bottom: 6px;">
+              Promedio mensual: <strong>{{ $$(repTendenciaMensual.avg) }}</strong> ·
+              Mes más alto: <strong>{{ repTendenciaMensual.maxRow?.label }} ({{ $$(repTendenciaMensual.maxRow?.total || 0) }})</strong> ·
+              Mes más bajo: <strong>{{ repTendenciaMensual.minRow?.label }} ({{ $$(repTendenciaMensual.minRow?.total || 0) }})</strong>
+            </div>
+            <div class="data-card">
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Mes</th>
+                      <th class="r" style="width: 45px">OTs</th>
+                      <th class="r" style="width: 115px">Servicios</th>
+                      <th class="r" style="width: 115px">Insumos</th>
+                      <th class="r" style="width: 130px">Costo Total</th>
+                      <th style="width: 110px">Peso</th>
+                      <th class="r" style="width: 90px">Costo/m³</th>
+                      <th class="r" style="width: 55px">% Prev.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="m in repTendenciaMensual.rows" :key="m.label">
+                      <td class="bold accent-text">{{ m.label }}</td>
+                      <td class="r">{{ m.n }}</td>
+                      <td class="r">{{ $$(m.serv) }}</td>
+                      <td class="r">{{ $$(m.ins) }}</td>
+                      <td class="r bold">{{ $$(m.total) }}</td>
+                      <td>
+                        <div class="rank-track"><div class="rank-fill" :style="{ width: (repTendenciaMensual.maxCost ? (m.total / repTendenciaMensual.maxCost) * 100 : 0) + '%' }"></div></div>
+                      </td>
+                      <td class="r">{{ m.costoM3 ? $$(m.costoM3) : '—' }}</td>
+                      <td class="r">{{ m.pctPrev }}%</td>
+                    </tr>
+                    <tr class="table-total-row">
+                      <td class="bold">TOTAL</td>
+                      <td class="r bold">{{ repTendenciaMensual.totals.n }}</td>
+                      <td class="r bold">{{ $$(repTendenciaMensual.totals.serv) }}</td>
+                      <td class="r bold">{{ $$(repTendenciaMensual.totals.ins) }}</td>
+                      <td class="r bold">{{ $$(repTendenciaMensual.totals.total) }}</td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
                     </tr>
                   </tbody>
                 </table>
@@ -806,6 +934,41 @@
             </div>
           </div>
 
+          <!-- Top 10 Órdenes de Mayor Costo del Período -->
+          <div v-if="repTopOt.length" class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Top 10 Órdenes de Mayor Costo del Período</h3>
+            <div class="data-card">
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width: 22px">#</th>
+                      <th style="width: 80px">Nº Orden</th>
+                      <th style="width: 115px">Fecha y Hora</th>
+                      <th style="width: 90px">{{ repSectionLabelVehiculo }}</th>
+                      <th>Proveedor / Descripción</th>
+                      <th class="r" style="width: 110px">Servicios</th>
+                      <th class="r" style="width: 110px">Insumos</th>
+                      <th class="r" style="width: 120px">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(o, i) in repTopOt" :key="i">
+                      <td class="idx">{{ i + 1 }}</td>
+                      <td class="bold">{{ o.orden }}</td>
+                      <td>{{ o.fecha }}</td>
+                      <td class="bold accent-text">{{ o.placa }}</td>
+                      <td>{{ o.proveedor }}<br><span style="font-size: 10px; color: #64748b;">{{ o.desc }}</span></td>
+                      <td class="r">{{ $$(o.serv) }}</td>
+                      <td class="r">{{ $$(o.ins) }}</td>
+                      <td class="r bold" style="color: #dc2626;">{{ $$(o.total) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
           <!-- Ranking de Sistemas y Ranking de Almacén en 2 columnas -->
           <div class="report-section-block">
             <div class="charts-grid cols-2">
@@ -983,7 +1146,7 @@
         <KpiCard :value="$$(servicios)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intServ)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extServ)}</strong></div>`" />
         <KpiCard :value="$$(insumos)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intIns)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extIns)}</strong></div>`" />
         <KpiCard :value="fmt(totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
-        <KpiCard :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > 3000 ? '#EF4444' : '#10B981'" :meta="'Meta: $3.000/m³'" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3)}/m³</strong></div>`" />
+        <KpiCard :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > 22000 ? '#EF4444' : '#10B981'" :meta="'Meta: $22.000/m³'" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3)}/m³</strong></div>`" />
         <KpiCard :value="String(totalOrdenes)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCount}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCount}</strong></div>`" />
         <KpiCard :value="String(estadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.abiertas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.abiertas)}</span></div>`" />
         <KpiCard :value="String(estadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.cerradas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.cerradas)}</span></div>`" />
@@ -1053,7 +1216,7 @@
         <KpiCard :value="$$(intServ)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intTotal > 0 ? ((intServ / intTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto interno</span></div>`" />
         <KpiCard :value="$$(intIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-int'>Int</span> <strong>${intTotal > 0 ? ((intIns / intTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto interno</span></div>`" />
         <KpiCard :value="fmt(totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
-        <KpiCard :value="$$(intCostoM3)" label="Costo por m³" :accent="intCostoM3 > 3000 ? '#EF4444' : '#10B981'" :meta="'Meta: $3.000/m³'" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
+        <KpiCard :value="$$(intCostoM3)" label="Costo por m³" :accent="intCostoM3 > 22000 ? '#EF4444' : '#10B981'" :meta="'Meta: $22.000/m³'" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
         <KpiCard :value="String(intCount)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${totalOrdenes > 0 ? ((intCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
         <KpiCard :value="String(otsIntEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-int'>Costo</span> <strong>${$$(otsIntEstadoCostos.abiertas)}</strong></div>`" />
         <KpiCard :value="String(otsIntEstadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-int'>Costo</span> <strong>${$$(otsIntEstadoCostos.cerradas)}</strong></div>`" />
@@ -1123,7 +1286,7 @@
         <KpiCard :value="$$(extServ)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-ext'>Ext</span> <strong>${extTotal > 0 ? ((extServ / extTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto externo</span></div>`" />
         <KpiCard :value="$$(extIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Ext</span> <strong>${extTotal > 0 ? ((extIns / extTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto externo</span></div>`" />
         <KpiCard :value="fmt(totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
-        <KpiCard :value="$$(extCostoM3)" label="Costo por m³" :accent="extCostoM3 > 3000 ? '#EF4444' : '#10B981'" :meta="'Meta: $3.000/m³'" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
+        <KpiCard :value="$$(extCostoM3)" label="Costo por m³" :accent="extCostoM3 > 22000 ? '#EF4444' : '#10B981'" :meta="'Meta: $22.000/m³'" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
         <KpiCard :value="String(extCount)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${totalOrdenes > 0 ? ((extCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
         <KpiCard :value="String(otsExtEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Costo</span> <strong>${$$(otsExtEstadoCostos.abiertas)}</strong></div>`" />
         <KpiCard :value="String(otsExtEstadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Costo</span> <strong>${$$(otsExtEstadoCostos.cerradas)}</strong></div>`" />
@@ -1557,7 +1720,7 @@
             <button class="placa-detail-close" @click="closePlacaDetail">✕</button>
           </div>
           <div class="placa-detail-table-wrap" style="padding: 12px;">
-            <DataTable :title="`Órdenes — ${selectedPlaca} — haz clic en una fila para ver detalle`" :data="placaDetailTableRows" :page-size="10" :columnWidths="otColWidths" :excludeFields="['_ot', '_rowKey']" :badgeFields="['Estado']" :defaultVisible="['Nº Orden de Trabajo', 'Fecha y Hora', 'Estado', 'Jornada', 'PLANTA', 'PROVEEDOR', 'Tipo de Vehículo', 'Placa del Vehículo', 'Costo Total', 'Motivo No Ejecución', 'Observaciones']" small selectColumns exportColumns clickable @row-click="openOtDetail" />
+            <DataTable :title="`Órdenes — ${selectedPlaca} — haz clic en una fila para ver detalle`" :data="placaDetailTableRows" :page-size="10" :columnWidths="otColWidths" :excludeFields="['_ot', '_rowKey']" :badgeFields="['Estado']" :defaultVisible="['Nº Orden de Trabajo', 'Fecha y Hora', 'PROVEEDOR', 'Placa del Vehículo', 'Costo servicios', 'Costos Insumos', 'Observaciones']" small selectColumns exportColumns clickable @row-click="openOtDetail" />
           </div>
         </div>
       </div>
@@ -1618,6 +1781,7 @@ import { useConcretoStore } from '../stores/concreto'
 import ChartCard from '../components/dashboard/ChartCard.vue'
 import DisponibilidadTab from './mantenimiento/DisponibilidadTab.vue'
 import TareasTab from './mantenimiento/TareasTab.vue'
+import InspeccionLlantasTab from './mantenimiento/InspeccionLlantasTab.vue'
 import DataTable from '../components/dashboard/DataTable.vue'
 import FilterBar from '../components/dashboard/FilterBar.vue'
 import MultiSelect from '../components/ui/MultiSelect.vue'
@@ -1640,7 +1804,13 @@ const isAcacias = computed(() => props.planta?.toLowerCase() === 'acacias')
 const isConcretos = computed(() => props.planta?.toLowerCase() === 'concretos')
 
 const tipoTab = ref('planta')
-const tipoTabs = ref<{ id: string; label: string; count: number }[]>([])
+const tipoTabs = computed(() => [
+  { id: 'planta', label: 'Planta' },
+  { id: 'maquinaria', label: 'Maquinaria' },
+  { id: 'disponibilidad', label: 'Disponibilidad' },
+  ...(isConcretos.value ? [{ id: 'inspeccion', label: 'Inspección' }] : []),
+  { id: 'tareas', label: 'Tareas' },
+])
 const subTab = ref<'dashboard' | 'almacen' | 'gerencial'>('dashboard')
 const dashboardView = ref<'resumen' | 'ordenes' | 'informe'>('resumen')
 const almacenView = ref<'graficos' | 'solicitudes'>('graficos')
@@ -1917,7 +2087,6 @@ function openOtDetail(row: Record<string, unknown>) {
 const totalSubs = computed(() => {
   let n = 0
   for (const r of dataFilteredMain.value) {
-    if (isAcpm(r)) continue
     const subs = r['_subOrdenes']
     if (Array.isArray(subs)) n += subs.length
   }
@@ -1927,7 +2096,6 @@ const totalSubs = computed(() => {
 const totalSopled = computed(() => {
   let n = 0
   for (const r of dataFilteredMain.value) {
-    if (isAcpm(r)) continue
     const s = r['_sopled']
     if (Array.isArray(s)) n += s.length
   }
@@ -1937,7 +2105,6 @@ const totalSopled = computed(() => {
 const otsCostoTotal = computed(() => {
   let t = 0
   for (const r of dataFilteredMain.value) {
-    if (isAcpm(r)) continue
     t += Number(r['Costo servicios']) + Number(r['Costos Insumos'])
   }
   return t
@@ -1946,7 +2113,6 @@ const otsCostoTotal = computed(() => {
 const estadoCounts = computed(() => {
   let abiertas = 0, cerradas = 0
   for (const r of dataFilteredMain.value) {
-    if (isAcpm(r)) continue
     const cls = estadoClass(String(r['Estado'] ?? ''))
     if (cls === 'ok') cerradas++
     else if (cls === 'warn') abiertas++
@@ -1963,7 +2129,6 @@ const otPctCierre = computed(() => {
 const otDuracionEstimadaProm = computed(() => {
   let sum = 0, n = 0
   for (const r of dataFilteredMain.value) {
-    if (isAcpm(r)) continue
     const v = r['Duración (horas)']
     if (typeof v === 'number' && !isNaN(v)) { sum += v; n++ }
   }
@@ -1974,7 +2139,6 @@ const otDuracionEstimadaProm = computed(() => {
 const otTiempoRealProm = computed(() => {
   let sum = 0, n = 0
   for (const r of dataFilteredMain.value) {
-    if (isAcpm(r)) continue
     const rec = Number(r['Fecha Recepción'])
     const cie = Number(r['Fecha Cierre'])
     if (!isNaN(rec) && !isNaN(cie) && rec > 0 && cie > rec) { sum += (cie - rec) * 24; n++ }
@@ -1987,7 +2151,7 @@ const prioridadRanking = computed(() => rankBy(dataFilteredMain.value, 'Priorida
 const fuenteNovedadRanking = computed(() => rankBy(dataFilteredMain.value, 'Fuente_Novedad', 10))
 const jornadaRanking = computed(() => rankBy(dataFilteredMain.value, 'Jornada', 6))
 const otConSopledPct = computed(() => {
-  const base = dataFilteredMain.value.filter(r => !isAcpm(r))
+  const base = dataFilteredMain.value
   const n = base.length
   if (!n) return '0.0'
   const c = base.filter(r => Array.isArray(r['_sopled']) && (r['_sopled'] as any[]).length).length
@@ -2024,7 +2188,6 @@ function rankByMultiValue(items: Record<string, unknown>[], field: string, limit
 function computeSistemasRanking(rows: Record<string, unknown>[], limit = Infinity): [string, number][] {
   const map = new Map<string, number>()
   for (const r of rows) {
-    if (isAcpm(r)) continue
     const subs = r['_subOrdenes']
     if (!Array.isArray(subs)) continue
     for (const s of subs) {
@@ -2616,6 +2779,8 @@ const otColWidths: Record<string, string> = {
   'PROVEEDOR': '220px',
   'Tipo de Vehículo': '170px',
   'Placa del Vehículo': '110px',
+  'Costo servicios': '120px',
+  'Costos Insumos': '120px',
   'Costo Total': '120px',
   'Duración (horas)': '120px',
   'Motivo No Ejecución': '200px',
@@ -2650,6 +2815,7 @@ const error = computed(() => mant.error || prod.error)
 const fechaInicio = ref('')
 const fechaFin = ref('')
 const selectedVehiculos = ref<Set<string>>(new Set())
+const selectedPlacas = ref<Set<string>>(new Set())
 const selectedProveedores = ref<Set<string>>(new Set())
 const selectedEstados = ref<Set<string>>(new Set())
 const selectedPersonalInterno = ref<Set<string>>(new Set())
@@ -2940,7 +3106,7 @@ const repConclusiones = computed((): ConclusionGrupo[] => {
 
   const costos: string[] = []
   costos.push(`El costo acumulado del período ascendió a ${$$(repCostoTotal.value)}: ${$$(repCostosProv.value.interno)} (${repCostosProv.value.pctInt}%) en recursos internos de Gravicon y ${$$(repCostosProv.value.externo)} (${repCostosProv.value.pctExt}%) en proveedores externos.`)
-  costos.push(`Producción total del período: ${fmt(totalProd.value)} m³, con un costo de mantenimiento de ${$$(costoM3.value)}/m³ ${costoM3.value > 3000 ? '(por encima de la meta de $3.000/m³)' : '(dentro de la meta de $3.000/m³)'}.`)
+  costos.push(`Producción total del período: ${fmt(totalProd.value)} m³, con un costo de mantenimiento de ${$$(costoM3.value)}/m³ ${costoM3.value > 22000 ? '(por encima de la meta de $22.000/m³)' : '(dentro de la meta de $22.000/m³)'}.`)
   const topProv = repRankProveedores.value[0]
   if (topProv) costos.push(`El proveedor con mayor uso fue ${topProv.label}, con ${topProv.n} OT y ${$$(topProv.costo)} acumulados (${repPct(topProv.costo)}% del costo total).`)
   grupos.push({ titulo: 'Costos y Producción', items: costos })
@@ -2975,7 +3141,7 @@ const repConclusiones = computed((): ConclusionGrupo[] => {
   if (repFallasRecurrentes.value.length > 0) alertas.push(`Evaluar mantenimiento de fondo o reemplazo de los ${repFallasRecurrentes.value.length} equipo(s) con fallas recurrentes.`)
   const topMotivo = motivosNoEjecucionRanking.value[0]
   if (topMotivo) alertas.push(`El motivo de no ejecución más frecuente fue "${topMotivo[0]}" (${topMotivo[1]} caso(s)); se recomienda revisar la causa raíz.`)
-  if (costoM3.value > 3000) alertas.push(`El costo por m³ (${$$(costoM3.value)}) supera la meta institucional de $3.000/m³.`)
+  if (costoM3.value > 22000) alertas.push(`El costo por m³ (${$$(costoM3.value)}) supera la meta institucional de $22.000/m³.`)
   if (!alertas.length) alertas.push('No se identifican alertas críticas en el período: la gestión se mantiene dentro de los parámetros esperados.')
   grupos.push({ titulo: 'Alertas y Recomendaciones', items: alertas })
 
@@ -3159,6 +3325,7 @@ async function loadData(forceRefresh = false, resetFilters = true) {
   const prevFechaFin = fechaFin.value
   const prevLineas = new Set(selectedLineas.value)
   const prevVehiculos = new Set(selectedVehiculos.value)
+  const prevPlacas = new Set(selectedPlacas.value)
   const prevProveedores = new Set(selectedProveedores.value)
   const prevEstados = new Set(selectedEstados.value)
   const prevPersonal = new Set(selectedPersonalInterno.value)
@@ -3170,6 +3337,7 @@ async function loadData(forceRefresh = false, resetFilters = true) {
     fechaInicio.value = ''
     fechaFin.value = ''
     selectedVehiculos.value = new Set()
+    selectedPlacas.value = new Set()
     selectedProveedores.value = new Set()
     selectedLineas.value = new Set()
     selectedEstados.value = new Set()
@@ -3197,6 +3365,7 @@ async function loadData(forceRefresh = false, resetFilters = true) {
     }
     selectedLineas.value = new Set(lineasDisponibles.value)
     selectedVehiculos.value = new Set(vehiculosDisponibles.value)
+    selectedPlacas.value = new Set(placasDisponibles.value)
     selectedProveedores.value = new Set(proveedoresDisponibles.value)
     selectedEstados.value = new Set(estadosDisponibles.value)
     selectedPersonalInterno.value = new Set(personalInternoOptions)
@@ -3212,6 +3381,8 @@ async function loadData(forceRefresh = false, resetFilters = true) {
     else selectedLineas.value = new Set(lineasDisponibles.value)
     if (prevVehiculos.size) selectedVehiculos.value = new Set([...prevVehiculos].filter(v => vehiculosDisponibles.value.includes(v)))
     else selectedVehiculos.value = new Set(vehiculosDisponibles.value)
+    if (prevPlacas.size) selectedPlacas.value = new Set([...prevPlacas].filter(v => placasDisponibles.value.includes(v)))
+    else selectedPlacas.value = new Set(placasDisponibles.value)
     if (prevProveedores.size) selectedProveedores.value = new Set([...prevProveedores].filter(v => proveedoresDisponibles.value.includes(v)))
     else selectedProveedores.value = new Set(proveedoresDisponibles.value)
     if (prevEstados.size) selectedEstados.value = new Set([...prevEstados].filter(v => estadosDisponibles.value.includes(v)))
@@ -3224,15 +3395,6 @@ async function loadData(forceRefresh = false, resetFilters = true) {
     if (prevProceso.size) selectedProceso.value = new Set([...prevProceso].filter(v => procesoDisponibles.value.includes(v)))
   }
 
-  const countTipo = (raw: Record<string, unknown>[], tipo: string) =>
-    raw.filter(r => String(r['Tipo de Mantenimiento'] ?? '').trim().toUpperCase() === tipo).length
-  const raw = isConcretos.value ? (mant.concretosData?.rows ?? []) : isAcacias.value ? (mant.acaciasData?.rows ?? []) : (mant.cunciaData?.rows ?? [])
-  tipoTabs.value = [
-    { id: 'planta', label: 'Planta', count: countTipo(raw, 'PLANTA') },
-    { id: 'maquinaria', label: 'Maquinaria', count: countTipo(raw, 'MAQUINARIA') },
-    { id: 'disponibilidad', label: 'Disponibilidad', count: 0 },
-    { id: 'tareas', label: 'Tareas', count: 0 },
-  ]
 }
 
 onMounted(() => {
@@ -3246,6 +3408,7 @@ watch(() => props.planta, () => {
 watch(tipoTab, () => {
   void nextTick(() => {
     selectedVehiculos.value = new Set(vehiculosDisponibles.value)
+    selectedPlacas.value = new Set(placasDisponibles.value)
     selectedProveedores.value = new Set(proveedoresDisponibles.value)
     selectedLineas.value = new Set(lineasDisponibles.value)
     selectedEstados.value = new Set(estadosDisponibles.value)
@@ -3259,13 +3422,6 @@ watch(tipoTab, () => {
 function fmt(n: number) { return n.toLocaleString('es-CO') }
 function $$(n: number) {
   return n.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0 })
-}
-/** Versión abreviada para KPI cards: muestra $1.2M o $890K en lugar del valor completo */
-function $$short(n: number): string {
-  if (Math.abs(n) >= 1_000_000_000) return '$' + (n / 1_000_000_000).toLocaleString('es-CO', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'B'
-  if (Math.abs(n) >= 1_000_000) return '$' + (n / 1_000_000).toLocaleString('es-CO', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'M'
-  if (Math.abs(n) >= 1_000) return '$' + (n / 1_000).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + 'K'
-  return $$(n)
 }
 function rowServicios(r: Record<string, unknown>): number {
   return Number(r['Costo servicios']) || 0
@@ -3547,6 +3703,16 @@ const vehiculosDisponibles = computed(() => {
   return [...map].sort((a, b) => a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' }))
 })
 
+/** Placas disponibles (siempre desde la columna Placa del Vehículo, útil sobre todo en Concretos). */
+const placasDisponibles = computed(() => {
+  const map = new Set<string>()
+  for (const r of allData.value) {
+    const p = String(r['Placa del Vehículo'] ?? '').trim()
+    if (p) map.add(toTitleCase(p))
+  }
+  return [...map].sort((a, b) => a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' }))
+})
+
 const proveedoresDisponibles = computed(() => {
   const map = new Set<string>()
   for (const r of allData.value) {
@@ -3571,6 +3737,7 @@ const hasActiveFilters = computed(() => {
   if (fechaInicio.value || fechaFin.value) return true
   if (selectedLineas.value.size > 0 && selectedLineas.value.size !== lineasDisponibles.value.length) return true
   if (selectedVehiculos.value.size > 0 && selectedVehiculos.value.size !== vehiculosDisponibles.value.length) return true
+  if (selectedPlacas.value.size > 0 && selectedPlacas.value.size !== placasDisponibles.value.length) return true
   if (selectedProveedores.value.size > 0 && selectedProveedores.value.size !== proveedoresDisponibles.value.length) return true
   if (selectedEstados.value.size > 0 && selectedEstados.value.size !== estadosDisponibles.value.length) return true
   if (selectedPersonalInterno.value.size > 0 && selectedPersonalInterno.value.size < personalInternoOptions.length) return true
@@ -3582,11 +3749,12 @@ const hasActiveFilters = computed(() => {
 
 const dataFilteredMain = computed(() => {
   const hasVehiculoFilter = selectedVehiculos.value.size > 0 && selectedVehiculos.value.size !== vehiculosDisponibles.value.length
+  const hasPlacaFilter = selectedPlacas.value.size > 0 && selectedPlacas.value.size !== placasDisponibles.value.length
   const hasProveedorFilter = selectedProveedores.value.size > 0 && selectedProveedores.value.size !== proveedoresDisponibles.value.length
   const hasLineaFilter = selectedLineas.value.size > 0 && selectedLineas.value.size !== lineasDisponibles.value.length
   const hasEstadoFilter = selectedEstados.value.size > 0 && selectedEstados.value.size !== estadosDisponibles.value.length
   const hasPersonalFilter = selectedPersonalInterno.value.size > 0 && selectedPersonalInterno.value.size < personalInternoOptions.length
-   if (!hasVehiculoFilter && !hasProveedorFilter && !hasLineaFilter && !hasEstadoFilter && !hasPersonalFilter) return filteredData.value
+   if (!hasVehiculoFilter && !hasPlacaFilter && !hasProveedorFilter && !hasLineaFilter && !hasEstadoFilter && !hasPersonalFilter) return filteredData.value
    return filteredData.value.filter(r => {
     if (hasVehiculoFilter) {
       const vehiculoVal = isConcretos.value
@@ -3594,6 +3762,7 @@ const dataFilteredMain = computed(() => {
         : String(r['Placa del Vehículo'] ?? '').trim()
       if (!selectedVehiculos.value.has(toTitleCase(vehiculoVal))) return false
     }
+    if (hasPlacaFilter && !selectedPlacas.value.has(toTitleCase(String(r['Placa del Vehículo'] ?? '').trim()))) return false
     if (hasProveedorFilter && !selectedProveedores.value.has(toTitleCase(String(r['PROVEEDOR'] ?? '').trim()))) return false
     if (hasLineaFilter && !selectedLineas.value.has(toTitleCase(normalizeLocalizacion(String(r['Localización'] ?? ''))))) return false
     if (hasEstadoFilter && !selectedEstados.value.has(toTitleCase(String(r['Estado'] ?? '').trim()))) return false
@@ -3609,11 +3778,12 @@ const dataFilteredMain = computed(() => {
 const dataFilteredMainExpanded = computed(() => {
   const base = filteredDataExpanded.value
   const hasVehiculoFilter = selectedVehiculos.value.size > 0 && selectedVehiculos.value.size !== vehiculosDisponibles.value.length
+  const hasPlacaFilter = selectedPlacas.value.size > 0 && selectedPlacas.value.size !== placasDisponibles.value.length
   const hasProveedorFilter = selectedProveedores.value.size > 0 && selectedProveedores.value.size !== proveedoresDisponibles.value.length
   const hasLineaFilter = selectedLineas.value.size > 0 && selectedLineas.value.size !== lineasDisponibles.value.length
   const hasEstadoFilter = selectedEstados.value.size > 0 && selectedEstados.value.size !== estadosDisponibles.value.length
   const hasPersonalFilter = selectedPersonalInterno.value.size > 0 && selectedPersonalInterno.value.size < personalInternoOptions.length
-  if (!hasVehiculoFilter && !hasProveedorFilter && !hasLineaFilter && !hasEstadoFilter && !hasPersonalFilter) return base
+  if (!hasVehiculoFilter && !hasPlacaFilter && !hasProveedorFilter && !hasLineaFilter && !hasEstadoFilter && !hasPersonalFilter) return base
   return base.filter(r => {
     if (hasVehiculoFilter) {
       const vehiculoVal = isConcretos.value
@@ -3621,6 +3791,7 @@ const dataFilteredMainExpanded = computed(() => {
         : String(r['Placa del Vehículo'] ?? '').trim()
       if (!selectedVehiculos.value.has(toTitleCase(vehiculoVal))) return false
     }
+    if (hasPlacaFilter && !selectedPlacas.value.has(toTitleCase(String(r['Placa del Vehículo'] ?? '').trim()))) return false
     if (hasProveedorFilter && !selectedProveedores.value.has(toTitleCase(String(r['PROVEEDOR'] ?? '').trim()))) return false
     if (hasLineaFilter && !selectedLineas.value.has(toTitleCase(normalizeLocalizacion(String(r['Localización'] ?? ''))))) return false
     if (hasEstadoFilter && !selectedEstados.value.has(toTitleCase(String(r['Estado'] ?? '').trim()))) return false
@@ -3635,15 +3806,13 @@ const dataFilteredMainExpanded = computed(() => {
 const partitionExpanded = computed(() => {
   const int: Record<string, unknown>[] = []
   const ext: Record<string, unknown>[] = []
-  const acpm: Record<string, unknown>[] = []
   for (const r of dataFilteredMainExpanded.value) {
-    if (isAcpm(r)) { acpm.push(r); continue }
     if (isInterno(r)) int.push(r)
     else ext.push(r)
   }
-  return { int, ext, acpm }
+  return { int, ext }
 })
-const dataFilteredNoAcpmExpanded = computed(() => dataFilteredMainExpanded.value.filter(r => !isAcpm(r)))
+const dataFilteredNoAcpmExpanded = computed(() => dataFilteredMainExpanded.value)
 const intRowsExpanded = computed(() => partitionExpanded.value.int)
 const extRowsExpanded = computed(() => partitionExpanded.value.ext)
 
@@ -3660,6 +3829,7 @@ function onClearFilters() {
   filterBarRef.value?.clearFilters?.(false)
   selectedLineas.value = new Set(lineasDisponibles.value)
   selectedVehiculos.value = new Set(vehiculosDisponibles.value)
+  selectedPlacas.value = new Set(placasDisponibles.value)
   selectedProveedores.value = new Set(proveedoresDisponibles.value)
   selectedEstados.value = new Set(estadosDisponibles.value)
   selectedPersonalInterno.value = new Set(personalInternoOptions)
@@ -3679,20 +3849,14 @@ function isInterno(r: Record<string, unknown>): boolean {
   if (id === 'PROV-001' || id === 'PROV-002') return true
   return false
 }
-function isAcpm(r: Record<string, unknown>): boolean {
-  return String(r['Observaciones'] ?? '').trim().toUpperCase().includes('ACPM')
-}
-
 const partition = computed(() => {
   const int: Record<string, unknown>[] = []
   const ext: Record<string, unknown>[] = []
-  const acpm: Record<string, unknown>[] = []
   for (const r of dataFilteredMain.value) {
-    if (isAcpm(r)) { acpm.push(r); continue }
     if (isInterno(r)) int.push(r)
     else ext.push(r)
   }
-  return { int, ext, acpm }
+  return { int, ext }
 })
 
 function buildDiarias(rows: Record<string, unknown>[]) {
@@ -3748,7 +3912,7 @@ const ordenesDiariasIntOpt = computed(() => buildDiariasOpt(ordenesDiariasInt.va
 const ordenesDiariasExt = computed(() => buildDiarias(partition.value.ext))
 const ordenesDiariasExtOpt = computed(() => buildDiariasOpt(ordenesDiariasExt.value))
 
-const dataFilteredNoAcpm = computed(() => dataFilteredMain.value.filter(r => !isAcpm(r)))
+const dataFilteredNoAcpm = computed(() => dataFilteredMain.value)
 const intRows = computed(() => partition.value.int)
 const extRows = computed(() => partition.value.ext)
 
@@ -4041,6 +4205,133 @@ const monthlyEfficiencyExt = computed(() => {
   if (monthlyExpandedRange.value) return computeMonthlyEfficiency(extRowsExpanded.value, prodFilteredExpanded.value as unknown as Record<string, unknown>[])
   return computeMonthlyEfficiency(extRows.value, prodFiltered.value as unknown as Record<string, unknown>[])
 })
+
+// ==================== INFORME: BLOQUES DE VALOR AGREGADO ====================
+
+/** Ventana de fechas del informe (serial) + ventana equivalente inmediatamente anterior. */
+const repVentana = computed(() => {
+  const d = informeDesde.value ? dateToSerial(informeDesde.value) : informeMinSerial.value
+  const h = informeHasta.value ? dateToSerial(informeHasta.value) : informeMaxSerial.value
+  if (!d || !h || h < d) return null
+  const len = h - d + 1
+  return { desde: d, hasta: h, len, prevDesde: d - len, prevHasta: d - 1 }
+})
+
+/** Resumen de indicadores para un conjunto de OTs + producción (usado en el comparativo). */
+function repStatsBundle(otRows: Record<string, unknown>[], prodRowsArr: Record<string, unknown>[]) {
+  let serv = 0, ins = 0, cerradas = 0, prev = 0, m3 = 0, tSum = 0, tN = 0
+  for (const r of otRows) {
+    serv += Number(r['Costo servicios']) || 0
+    ins += Number(r['Costos Insumos']) || 0
+    if (estadoClass(String(r['Estado'] ?? '')) === 'ok') cerradas++
+    if (String(r['Clase Mantenimiento'] ?? '').toUpperCase().includes('PREVENTIVO')) prev++
+    const rec = Number(r['Fecha Recepción']); const cie = Number(r['Fecha Cierre'])
+    if (!isNaN(rec) && !isNaN(cie) && rec > 0 && cie > rec) { tSum += (cie - rec) * 24; tN++ }
+  }
+  for (const r of prodRowsArr) m3 += Number(r['Total de M³']) || Number(r['Cant. Concreto']) || 0
+  const n = otRows.length
+  const total = serv + ins
+  return {
+    n, serv, ins, total,
+    pctCierre: n ? Math.round((cerradas / n) * 100) : 0,
+    pctPrev: n ? Math.round((prev / n) * 100) : 0,
+    tiempoCierre: tN ? +(tSum / tN).toFixed(1) : 0,
+    costoM3: m3 > 0 ? Math.round(total / m3) : 0,
+  }
+}
+
+/** Comparativo del período del informe contra el período equivalente anterior. */
+const repComparativo = computed(() => {
+  const v = repVentana.value
+  if (!v) return null
+  const otIn = (r: Record<string, unknown>, a: number, b: number) => { const f = Number(r['FECHA']); return typeof f === 'number' && f >= a && f <= b }
+  const prIn = (r: Record<string, unknown>, a: number, b: number) => { const f = Number(r['Fecha']); return typeof f === 'number' && f >= a && f <= b }
+  const prod = prodRows.value as Record<string, unknown>[]
+  const actual = repStatsBundle(
+    allData.value.filter(r => otIn(r, v.desde, v.hasta)),
+    prod.filter(r => prIn(r, v.desde, v.hasta)),
+  )
+  const prev = repStatsBundle(
+    allData.value.filter(r => otIn(r, v.prevDesde, v.prevHasta)),
+    prod.filter(r => prIn(r, v.prevDesde, v.prevHasta)),
+  )
+  if (actual.n === 0 && prev.n === 0) return null
+  return {
+    actual, prev, hasPrev: prev.n > 0,
+    prevDesde: serialToDate(v.prevDesde).toISOString().slice(0, 10),
+    prevHasta: serialToDate(v.prevHasta).toISOString().slice(0, 10),
+  }
+})
+
+/** Formatea una variación numérica con flecha y signo. */
+function repDeltaTxt(d: number, money = false): string {
+  if (!d) return '– 0'
+  const val = money ? $$(Math.abs(d)) : fmt(Math.abs(d))
+  return `${d > 0 ? '▲ +' : '▼ −'}${val}`
+}
+function repDeltaPct(cur: number, prev: number): string {
+  if (!prev) return cur ? 'nuevo' : '—'
+  const p = Math.round(((cur - prev) / prev) * 100)
+  return (p > 0 ? '+' : '') + p + '%'
+}
+/** Color de la variación según si "subir" es bueno ('up'), malo ('down') o neutro ('none'). */
+function repDeltaColor(d: number, bien: 'up' | 'down' | 'none' = 'none'): string {
+  if (!d || bien === 'none') return d ? (d > 0 ? '#1d4ed8' : '#b45309') : '#64748b'
+  const positivo = bien === 'up' ? d > 0 : d < 0
+  return positivo ? '#16a34a' : '#dc2626'
+}
+
+/** Tendencia mes a mes de costos dentro del rango del informe. */
+const repTendenciaMensual = computed(() => {
+  const rows = monthlyEfficiency.value.months.map(m => ({
+    label: m.label,
+    n: m.totalOTs,
+    serv: m.totalServ,
+    ins: m.totalIns,
+    total: m.totalMtto,
+    costoM3: m.costoUnitario,
+    pctPrev: 0,
+  }))
+  const prevByMonth = new Map<string, { prev: number; tot: number }>()
+  for (const r of repRows.value) {
+    const d = parseRowDate(r['FECHA'])
+    if (!d) continue
+    const key = `${d.getUTCFullYear()} ${MESES_ES[d.getUTCMonth()]}`
+    const e = prevByMonth.get(key) ?? { prev: 0, tot: 0 }
+    e.tot++
+    if (String(r['Clase Mantenimiento'] ?? '').toUpperCase().includes('PREVENTIVO')) e.prev++
+    prevByMonth.set(key, e)
+  }
+  for (const row of rows) {
+    const e = prevByMonth.get(row.label)
+    row.pctPrev = e && e.tot ? Math.round((e.prev / e.tot) * 100) : 0
+  }
+  const totals = rows.reduce((a, r) => ({ n: a.n + r.n, serv: a.serv + r.serv, ins: a.ins + r.ins, total: a.total + r.total }), { n: 0, serv: 0, ins: 0, total: 0 })
+  const maxCost = rows.length ? Math.max(...rows.map(r => r.total)) : 0
+  const avg = rows.length ? Math.round(totals.total / rows.length) : 0
+  const maxRow = rows.length ? rows.reduce((a, b) => (b.total > a.total ? b : a)) : null
+  const minRow = rows.length ? rows.reduce((a, b) => (b.total < a.total ? b : a)) : null
+  return { rows, totals, maxCost, avg, maxRow, minRow }
+})
+
+/** Las 10 órdenes de trabajo de mayor costo del período. */
+const repTopOt = computed(() =>
+  [...repRows.value]
+    .map(r => {
+      const serv = Number(r['Costo servicios']) || 0
+      const ins = Number(r['Costos Insumos']) || 0
+      return {
+        orden: String(r['Nº Orden de Trabajo'] ?? ''),
+        fecha: otDateTime(r),
+        placa: String(r['Placa del Vehículo'] || vehTypeLabel(String(r['Tipo de Vehículo'] ?? ''))),
+        proveedor: String(r['PROVEEDOR'] ?? ''),
+        desc: String(r['Descripción'] ?? r['Observaciones'] ?? '').trim(),
+        serv, ins, total: serv + ins,
+      }
+    })
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 10),
+)
 
 function buildEficienciaMttoOption(data: MonthlyEfficiencyData, _isExpand = false) {
   const isLight = theme.value === 'light'
@@ -4559,15 +4850,25 @@ function buildBarOpt(data: Record<string, unknown>[], groupBy: 'Tipo de Vehícul
         const serv = Number(arr[0]?.value) || 0
         const ins = Number(arr[1]?.value) || 0
         const total = serv + ins
+        let extra = ''
+        if (groupBy === 'Placa del Veh\u00EDculo') {
+          const mm = m3PorPlaca.value.get(String(nombre).trim().toUpperCase()) || 0
+          if (mm > 0) {
+            const cM3 = Math.round(total / mm)
+            extra = `<br/><span style="color:${cM3 > 22000 ? '#EF4444' : '#10B981'}">\u25CF</span> Costo/m\u00B3: <b>$${cM3.toLocaleString('es-CO')}</b> <span style="color:#94a3b8;font-size:10px">(${mm.toLocaleString('es-CO')} m\u00B3)</span>`
+          }
+        }
         return `<b>${nombre}</b><br/>` +
           `<span style="color:${palette[1]}">\u25CF</span> Servicios: <b>$${Math.round(serv).toLocaleString('es-CO')}</b><br/>` +
           `<span style="color:#EF4444">\u25CF</span> Insumos: <b>$${Math.round(ins).toLocaleString('es-CO')}</b><br/>` +
-          `<span style="color:#1f2937">\u25CF</span> Total: <b>$${Math.round(total).toLocaleString('es-CO')}</b>`
+          `<span style="color:#1f2937">\u25CF</span> Total: <b>$${Math.round(total).toLocaleString('es-CO')}</b>` +
+          extra
       },
     },
     grid: hBarGrid(layout.labelSpace, layout.valueSpace),
     xAxis: { type: 'value' as const, axisLabel: { show: false }, splitLine: { show: false } },
-    yAxis: { type: 'category' as const, data: labels, axisLabel: hBarAxisLabel(layout.labelSpace) },
+    // inverse: la barra más alta arriba (tipo embudo), ya que los datos van ordenados de mayor a menor
+    yAxis: { type: 'category' as const, inverse: true, data: labels, axisLabel: hBarAxisLabel(layout.labelSpace) },
     series: [
       { name: 'Servicios', type: 'bar', data: serv, stack: 'total', barWidth: '70%', label: segLabel, itemStyle: { borderRadius: [0, 4, 4, 0] as [number, number, number, number] } },
       { name: 'Insumos', type: 'bar', data: ins, stack: 'total', barWidth: '70%', label: segLabel, itemStyle: { borderRadius: [0, 4, 4, 0] as [number, number, number, number] } },
@@ -4575,6 +4876,32 @@ function buildBarOpt(data: Record<string, unknown>[], groupBy: 'Tipo de Vehícul
     legend: { bottom: 0, textStyle: { fontWeight: 600, color: chartTextColor.value } },
   }
 }
+
+/** Extrae la placa "limpia" de un texto de mixer/bomba ("AUTOBOMBA WLR126" → "WLR126"). */
+function extraerPlacaEquipo(raw: string): string {
+  const s = String(raw ?? '').trim().toUpperCase()
+  if (!s) return ''
+  const m = s.match(/\b[A-Z]{2,3}[-\s]?\d{3,4}\b/) || s.match(/EQ\/MAQ-\d+/)
+  if (m) return m[0].replace(/[\s-]/g, '')
+  const parts = s.split(/\s+/)
+  return parts.length === 1 ? s : parts[parts.length - 1]
+}
+
+/** m³ producidos por placa de equipo (mixer o bomba) dentro del rango filtrado. Solo Concretos. */
+const m3PorPlaca = computed(() => {
+  const m3 = new Map<string, number>()
+  const add = (raw: string, val: number) => {
+    const p = extraerPlacaEquipo(raw)
+    if (!p || !val) return
+    m3.set(p, (m3.get(p) || 0) + val)
+  }
+  for (const r of prodFiltered.value as unknown as Record<string, unknown>[]) {
+    const cant = Number(r['Cant. Concreto']) || Number(r['concreto_cantidad']) || 0
+    add(String(r['Mixer'] ?? ''), cant)
+    add(String(r['Bomba'] ?? ''), cant)
+  }
+  return m3
+})
 
 const vehiculoGenOpt = computed(() => markRaw(buildBarOpt(dataFilteredNoAcpm.value, 'Placa del Vehículo')))
 const vehiculoIntOpt = computed(() => markRaw(buildBarOpt(intRows.value, 'Placa del Vehículo')))
@@ -4610,6 +4937,8 @@ const placaDetailTableRows = computed<Record<string, unknown>[]>(() => placaDeta
   'PROVEEDOR': r['PROVEEDOR'] ?? '',
   'Tipo de Vehículo': r['Tipo de Vehículo'] ?? '',
   'Placa del Vehículo': r['Placa del Vehículo'] ?? '',
+  'Costo servicios': Number(r['Costo servicios']) || 0,
+  'Costos Insumos': Number(r['Costos Insumos']) || 0,
   'Costo Total': (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0),
   ...r as Record<string, unknown>,
   _ot: r,
@@ -5038,12 +5367,24 @@ const sistemasExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(comput
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .filter-group {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* Evita que el badge de fechas ensanche la fila al pasar de "Todas" a un rango */
+.filter-group :deep(.badge) {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .filter-group .dropdown-toggle,

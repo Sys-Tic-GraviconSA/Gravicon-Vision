@@ -58,4 +58,5 @@ export const SPREADSHEETS: Record<string, string> = {
   produccion_concretos: requireEnv('SPREADSHEET_PRODUCCION_CONCRETOS'),
   ordenes_ot_concretos: requireEnv('SPREADSHEET_ORDENES_OT_CONCRETOS'),
   maestro_concretos: requireEnv('SPREADSHEET_MAESTRO_CONCRETOS'),
+  llantas: requireEnv('SPREADSHEET_LLANTAS'),
 };

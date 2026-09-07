@@ -106,6 +106,29 @@ export const useMantenimientoStore = defineStore('mantenimiento', () => {
   return { cunciaData, acaciasData, concretosData, loading, error, fetchCuncia, fetchAcacias, fetchConcretos }
 })
 
+/** Store: Llantas (FleetControl_Llantas) — inventario + inspecciones de llantas */
+export const useLlantasStore = defineStore('llantas', () => {
+  const data = shallowRef<{
+    inventario: Record<string, unknown>[]
+    inspecciones: Record<string, unknown>[]
+    subInspecciones: Record<string, unknown>[]
+    totalInventario: number
+    totalInspecciones: number
+  } | null>(null)
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+
+  async function fetchData(forceRefresh = false) {
+    loading.value = true; error.value = null
+    try {
+      data.value = await fetchApi(`/api/llantas/data${forceRefresh ? '?force=true' : ''}`)
+    } catch (e: any) { console.error('[llantas]', e); error.value = e.message }
+    finally { loading.value = false }
+  }
+
+  return { data, loading, error, fetchData }
+})
+
 /** Store: Clientes / Proyección — datos de proyecciones por cliente desde Supabase */
 export const useClientesStore = defineStore('clientes', () => {
   /** Datos crudos de proyecciones */

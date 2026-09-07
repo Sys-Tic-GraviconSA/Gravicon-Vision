@@ -79,7 +79,7 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
             </div>
-            <DataTable title="Producción Cuncia — Detalle Diario" :data="filteredTableData" :page-size="31" :percentFields="['% Cumplimiento']" :semaphoreFields="['% Cumplimiento']" small selectColumns exportColumns />
+            <DataTable title="Producción Cuncia — Detalle Diario" :data="filteredTableData" :page-size="31" :percentFields="['% Cumplimiento']" :semaphoreFields="['% Cumplimiento']" small selectColumns exportColumns :on-export="exportCunciaXlsx" />
           </div>
         </div>
       </template>
@@ -105,6 +105,7 @@ import ProgramacionView from '../agregados/ProgramacionView.vue'
 import EquiposDashboard from '../EquiposDashboard.vue'
 import { serialToDate } from '../../utils/dates'
 import { fmt } from '../../utils/format'
+import { buildXlsx, downloadXlsx } from '../../utils/xlsx'
 import type { PlantConfig } from '../agregados/ResumenTab.vue'
 
 const config: PlantConfig = {
@@ -240,6 +241,25 @@ const filteredTableData = computed(() => {
     Object.values(r).some(v => String(v).toLowerCase().includes(q))
   )
 })
+
+/** Exporta la tabla de detalle diario a un archivo .xlsx real (no CSV).
+ *  Nombre del archivo: "Produccion Cuncia - Mes Año". */
+function exportCunciaXlsx() {
+  const data = filteredTableData.value
+  const headers = data.length ? Object.keys(data[0]) : []
+  const rows = data.map(r => headers.map(h => (r as Record<string, unknown>)[h] ?? ''))
+
+  const m = availableMonths.value[currentMonthIdx.value]
+  let periodo = 'Periodo'
+  if (m) {
+    const d = serialToDate(m.first)
+    const mes = d.toLocaleDateString('es-CO', { month: 'long', timeZone: 'UTC' })
+    periodo = `${mes.charAt(0).toUpperCase()}${mes.slice(1)} ${d.getUTCFullYear()}`
+  }
+
+  const blob = buildXlsx([{ name: 'Detalle Diario', headers, rows }])
+  downloadXlsx(blob, `Produccion Cuncia - ${periodo}.xlsx`)
+}
 
 function onDateRangeFilter(range: { from: string | null; to: string | null }) {
   fechaInicio.value = range.from ?? ''

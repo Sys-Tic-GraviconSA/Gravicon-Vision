@@ -1,6 +1,7 @@
 import { Router, type RequestHandler } from 'express'
 import { analyzeAll, analyzeSpreadsheet, getSheetData, getSpreadsheetMeta } from '../api/_lib/sheets.js'
 import { buildMantenimientoOtRows } from '../api/_lib/mantenimiento-ot.js'
+import { buildLlantasData } from '../api/_lib/llantas.js'
 import { loadDisponibilidadData } from '../api/_lib/disponibilidad.js'
 import { loadCunciaProduccion, loadAcaciasProduccion } from '../api/_lib/produccion.js'
 import { SPREADSHEETS } from '../api/_lib/google.js'
@@ -171,6 +172,18 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
       res.json({ rows, total: rows.length })
     } catch (err) {
       console.error('[mantenimiento-ot-concretos]', err)
+      res.status(500).json({ error: 'Error interno del servidor.' })
+    }
+  })
+
+  /** GET /api/llantas/data - Inventario de llantas + inspecciones + detalle (FleetControl_Llantas). */
+  router.get('/llantas/data', authenticateRequest, async (req, res) => {
+    try {
+      const force = req.query.force === 'true'
+      const data = await buildLlantasData(force)
+      res.json(data)
+    } catch (err) {
+      console.error('[llantas]', err)
       res.status(500).json({ error: 'Error interno del servidor.' })
     }
   })
