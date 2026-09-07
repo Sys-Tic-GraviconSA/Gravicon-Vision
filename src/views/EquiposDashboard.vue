@@ -100,9 +100,14 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           Informe
         </button>
+        <button v-if="dashboardView === 'resumen'" class="av-btn av-btn-pdf" :disabled="generandoGraficasPdf" @click="generarGraficasPdf">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          {{ generandoGraficasPdf ? 'Generando PDF…' : 'Descargar todo en PDF' }}
+        </button>
       </div>
 
       <template v-if="dashboardView === 'resumen'">
+      <div ref="resumenRef">
 
       <div id="sec-general" class="section-anchor"></div>
       <div class="kpi-row">
@@ -359,6 +364,7 @@
       <ChartCard title="Órdenes Diarias" description="Abiertas y cerradas con sus costos (Externas)" :option="ordenesDiariasExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fecha', p, 'ext')" />
     </div>
 
+    </div>
     </template>
     </template>
 
@@ -3177,6 +3183,9 @@ const informeAnalisisTexto = computed(() => {
 
 const generandoPdf = ref(false)
 
+const generandoGraficasPdf = ref(false)
+const resumenRef = ref<HTMLElement | null>(null)
+
 /** Genera el PDF del informe oficial de OT con captura nítida por página (html2canvas + jsPDF) */
 async function generarInformePdf() {
   if (generandoPdf.value || !informeRows.value.length) return
@@ -3184,11 +3193,35 @@ async function generarInformePdf() {
   try {
     await nextTick()
     await new Promise(r => setTimeout(r, 400))
-    const elemento = document.querySelector('.report-paper') as HTMLElement
-    if (!elemento) {
-      console.error('No se encontró el contenedor del reporte (.report-paper)')
-      return
-    }
+    const el = document.querySelector('.report-paper') as HTMLElement | null
+    if (!el) { console.error('No se encontró el contenedor del reporte (.report-paper)'); return }
+    await renderElementoPdf(el, `Informe_Gestion_OT_${plantaLabel.value}_${informeDesde.value || 'reporte'}_al_${informeHasta.value || 'corte'}.pdf`)
+  } catch (err) {
+    console.error('[generarInformePdf]', err)
+  } finally {
+    generandoPdf.value = false
+  }
+}
+
+/** Genera un PDF con TODO el contenido de la vista Gráficas (KPIs + gráficas + tablas). */
+async function generarGraficasPdf() {
+  const el = resumenRef.value
+  if (generandoGraficasPdf.value || !el) return
+  generandoGraficasPdf.value = true
+  el.classList.add('pdf-capturing')
+  try {
+    await new Promise(r => setTimeout(r, 700)) // deja que las gráficas terminen de dibujarse
+    await renderElementoPdf(el, `Mantenimiento_${plantaLabel.value}_Graficas_${new Date().toISOString().slice(0, 10)}.pdf`)
+  } catch (err) {
+    console.error('[generarGraficasPdf]', err)
+  } finally {
+    el.classList.remove('pdf-capturing')
+    generandoGraficasPdf.value = false
+  }
+}
+
+/** Captura un elemento del DOM y arma un PDF A4 multipágina (cortes seguros). */
+async function renderElementoPdf(elemento: HTMLElement, filename: string) {
     const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
       import('html2canvas'),
       import('jspdf'),
@@ -3216,7 +3249,7 @@ async function generarInformePdf() {
         const pageRect = pageEl.getBoundingClientRect()
         const ratio = canvasWidth / (pageRect.width || pageEl.offsetWidth || 1)
         const nodes = pageEl.querySelectorAll<HTMLElement>(
-          ':scope > *, .report-section-block, .data-card, .charts-grid > *, table, tr, .res li, .rank-bar'
+          ':scope > *, .report-section-block, .data-card, .charts-grid, .charts-grid > *, .kpi-row, .chart-card, .section-title, .section-divider, .ots-bar, table, tr, .res li, .rank-bar'
         )
         const boundaries = new Set<number>()
         nodes.forEach(el => {
@@ -3273,7 +3306,7 @@ async function generarInformePdf() {
           backgroundColor: '#ffffff',
           logging: false,
         })
-        allSlices.push(...sliceCanvas(canvas, []))
+        allSlices.push(...sliceCanvas(canvas, getBreakCandidates(elemento, canvas.width)))
       } else {
         for (let i = 0; i < pages.length; i++) {
           const pageCanvas = await html2canvas(pages[i], {
@@ -3301,7 +3334,6 @@ async function generarInformePdf() {
         pdf.addImage(slice.dataUrl, 'PNG', 0, 0, pageW, slice.heightMm, undefined, 'FAST')
       })
 
-      const filename = `Informe_Gestion_OT_${plantaLabel.value}_${informeDesde.value || 'reporte'}_al_${informeHasta.value || 'corte'}.pdf`
       pdf.save(filename)
     } finally {
       if (temaPrevio) {
@@ -3312,11 +3344,6 @@ async function generarInformePdf() {
         }
       }
     }
-  } catch (err) {
-    console.error('[generarInformePdf]', err)
-  } finally {
-    generandoPdf.value = false
-  }
 }
 
 async function loadData(forceRefresh = false, resetFilters = true) {
@@ -5346,7 +5373,33 @@ const sistemasExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(comput
   flex-shrink: 0;
 }
 .section-anchor {
-  scroll-margin-top: 60px;
+  scroll-margin-top: 96px;
+}
+
+/* Los KPI de Mantenimiento llevan valores en pesos completos (millones/miles de
+   millones): se reduce el tamaño y se permite el ajuste para que no se recorten. */
+.kpi-row :deep(.kpi-value),
+.compact-kpi :deep(.kpi-value) {
+  font-size: 19px;
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+/* Botón de exportar toda la vista Gráficas a PDF */
+.av-btn-pdf {
+  margin-left: auto;
+  background: var(--navy, #172954);
+  border-color: var(--navy, #172954);
+  color: #fff;
+}
+.av-btn-pdf:hover { background: #1e3a8a; border-color: #1e3a8a; color: #fff; }
+.av-btn-pdf:disabled { opacity: .6; cursor: not-allowed; }
+
+/* Durante la captura del PDF se ocultan los íconos de copiar/expandir de las gráficas */
+.pdf-capturing :deep(.chart-actions),
+.pdf-capturing :deep(.action-btn) {
+  display: none !important;
 }
 
 .page-header {
