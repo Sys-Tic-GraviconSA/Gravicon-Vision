@@ -58,5 +58,7 @@ export const SPREADSHEETS: Record<string, string> = {
   produccion_concretos: requireEnv('SPREADSHEET_PRODUCCION_CONCRETOS'),
   ordenes_ot_concretos: requireEnv('SPREADSHEET_ORDENES_OT_CONCRETOS'),
   maestro_concretos: requireEnv('SPREADSHEET_MAESTRO_CONCRETOS'),
-  llantas: requireEnv('SPREADSHEET_LLANTAS'),
+  // Opcional: si SPREADSHEET_LLANTAS no está configurado, solo /api/llantas/data
+  // fallará (con 404 de hoja); el resto de endpoints siguen funcionando.
+  llantas: process.env.SPREADSHEET_LLANTAS ?? '',
 };

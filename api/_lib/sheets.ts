@@ -222,6 +222,7 @@ export async function analyzeSpreadsheet(key: string, id: string): Promise<Sprea
 async function _fetchAnalyzeAll(): Promise<SpreadsheetAnalysis[]> {
   const results: SpreadsheetAnalysis[] = [];
   for (const [key, id] of Object.entries(SPREADSHEETS)) {
+    if (!id) continue; // spreadsheet opcional sin configurar (ej. llantas)
     console.log(`Analyzing ${key}...`);
     const analysis = await analyzeSpreadsheet(key, id);
     results.push(analysis);
