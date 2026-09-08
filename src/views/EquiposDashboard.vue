@@ -635,6 +635,7 @@
           <!-- Costo Acumulado e Indicadores por Planta / Línea -->
           <div class="report-section-block">
             <h3 class="report-block-title"><span class="title-bar"></span>Gestión del Mantenimiento por {{ repSectionLabelPlanta }} y {{ repSectionLabelMaquinaria }}</h3>
+            <p class="report-block-sub">General de cada {{ repSectionLabelPlanta.toLowerCase() }} (fila resaltada) y desglose de los mismos indicadores por {{ repSectionLabelMaquinaria.toLowerCase() }}.</p>
             <div class="data-card">
               <div class="table-wrap">
                 <table>
@@ -669,8 +670,12 @@
                       <tr v-for="m in g.maquinas" :key="g.planta + '-' + m.maquina">
                         <td class="accent-text" style="padding-left: 18px">{{ m.maquina }}</td>
                         <td class="r">{{ m.n }}</td>
-                        <td colspan="5"></td>
-                        <td></td>
+                        <td class="r">{{ m.corr }}</td>
+                        <td class="r">{{ m.prev }}</td>
+                        <td class="r" :style="{ color: m.emer ? '#dc2626' : '' }">{{ m.emer }}</td>
+                        <td class="r">{{ m.prog }}</td>
+                        <td class="r muted">—</td>
+                        <td class="r">{{ fmt(m.horas) }}</td>
                         <td class="r">{{ $$(m.costo) }}</td>
                         <td class="r">{{ repPct(m.costo) }}%</td>
                       </tr>
@@ -2933,10 +2938,20 @@ const repIndiceCierreFiltrado = computed(() =>
 /** Índice de apertura: OTs agrupadas por la persona que las abrió (soporta múltiples personas separadas por coma). */
 const repIndiceApertura = computed(() => rankByMultiValue(repRows.value, 'Solicitante', 8).map(([label, n]) => ({ label, n })))
 
-/** Costo acumulado por planta (Localización) y maquinaria (tipo de vehículo). */
-/** Costo e indicadores de gestión agrupados por planta/línea (una fila por planta). */
+/** Costo e indicadores de gestión agrupados por línea/planta y, dentro de cada una, por equipo. */
 const repCostoPlanta = computed(() => {
-  interface G { planta: string; n: number; costo: number; corr: number; prev: number; emer: number; prog: number; horas: number; equipos: Set<string>; alm: number; maquinas: Map<string, { maquina: string; n: number; costo: number }> }
+  interface Row { n: number; costo: number; corr: number; prev: number; emer: number; prog: number; horas: number; alm: number }
+  interface G extends Row { planta: string; equipos: Set<string>; maquinas: Map<string, Row & { maquina: string }> }
+  const nuevoRow = (): Row => ({ n: 0, costo: 0, corr: 0, prev: 0, emer: 0, prog: 0, horas: 0, alm: 0 })
+  const acumular = (row: Row, c: number, clase: string, fuente: string, horas: number, alm: number) => {
+    row.n++; row.costo += c
+    if (clase.includes('CORRECTIVO')) row.corr++
+    if (clase.includes('PREVENTIVO')) row.prev++
+    if (clase.includes('URGENTE') || fuente.includes('EMERGENCIA')) row.emer++
+    if (fuente.includes('PROGRAMADO')) row.prog++
+    row.horas += horas
+    row.alm += alm
+  }
   const groups = new Map<string, G>()
   for (const r of repRows.value) {
     const planta = String(r['Localización'] ?? '').trim() || 'SIN PLANTA'
@@ -2944,31 +2959,46 @@ const repCostoPlanta = computed(() => {
     const c = rowServicios(r) + rowInsumos(r)
     const clase = String(r['Clase Mantenimiento'] ?? '').toUpperCase()
     const fuente = String(r['Fuente_Novedad'] ?? '').toUpperCase()
-    const g = groups.get(planta) ?? { planta, n: 0, costo: 0, corr: 0, prev: 0, emer: 0, prog: 0, horas: 0, equipos: new Set<string>(), alm: 0, maquinas: new Map() }
-    g.n++; g.costo += c
-    if (clase.includes('CORRECTIVO')) g.corr++
-    if (clase.includes('PREVENTIVO')) g.prev++
-    if (clase.includes('URGENTE') || fuente.includes('EMERGENCIA')) g.emer++
-    if (fuente.includes('PROGRAMADO')) g.prog++
-    g.horas += Number(r['Duración (horas)']) || 0
-    const p = String(r['Placa del Vehículo'] ?? '').trim()
-    if (p) g.equipos.add(p)
+    const horas = Number(r['Duración (horas)']) || 0
+    let alm = 0
     const sops = r['_sopled']
     if (Array.isArray(sops)) for (const sop of sops as { _subSopled?: { cantidad?: number }[] }[]) {
       const it = sop?._subSopled
-      if (Array.isArray(it)) for (const x of it) g.alm += Number(x?.cantidad) || 0
+      if (Array.isArray(it)) for (const x of it) alm += Number(x?.cantidad) || 0
     }
-    const mq = g.maquinas.get(maquina) ?? { maquina, n: 0, costo: 0 }
-    mq.n++; mq.costo += c
+    const g = groups.get(planta) ?? { planta, equipos: new Set<string>(), maquinas: new Map(), ...nuevoRow() }
+    acumular(g, c, clase, fuente, horas, alm)
+    const p = String(r['Placa del Vehículo'] ?? '').trim()
+    if (p) g.equipos.add(p)
+    const mq = g.maquinas.get(maquina) ?? { maquina, ...nuevoRow() }
+    acumular(mq, c, clase, fuente, horas, alm)
     g.maquinas.set(maquina, mq)
     groups.set(planta, g)
   }
+  const TOP = 8
   return [...groups.values()]
-    .map(g => ({
-      planta: g.planta, n: g.n, costo: g.costo, corr: g.corr, prev: g.prev, emer: g.emer, prog: g.prog,
-      horas: Math.round(g.horas), nEquipos: g.equipos.size, alm: Math.round(g.alm),
-      maquinas: [...g.maquinas.values()].sort((a, b) => b.costo - a.costo).slice(0, 4),
-    }))
+    .map(g => {
+      const ordenados = [...g.maquinas.values()].sort((a, b) => b.costo - a.costo)
+      const top = ordenados.slice(0, TOP)
+      const resto = ordenados.slice(TOP)
+      let otros: (Row & { maquina: string }) | null = null
+      if (resto.length) {
+        otros = { maquina: `Otros (${resto.length} equipos)`, ...nuevoRow() }
+        for (const m of resto) {
+          otros.n += m.n; otros.costo += m.costo; otros.corr += m.corr; otros.prev += m.prev
+          otros.emer += m.emer; otros.prog += m.prog; otros.horas += m.horas; otros.alm += m.alm
+        }
+      }
+      const fmtRow = (m: Row & { maquina: string }) => ({
+        maquina: m.maquina, n: m.n, costo: m.costo, corr: m.corr, prev: m.prev,
+        emer: m.emer, prog: m.prog, horas: Math.round(m.horas), alm: Math.round(m.alm),
+      })
+      return {
+        planta: g.planta, n: g.n, costo: g.costo, corr: g.corr, prev: g.prev, emer: g.emer, prog: g.prog,
+        horas: Math.round(g.horas), nEquipos: g.equipos.size, alm: Math.round(g.alm),
+        maquinas: [...top.map(fmtRow), ...(otros ? [fmtRow(otros)] : [])],
+      }
+    })
     .sort((a, b) => b.costo - a.costo)
 })
 
@@ -6217,6 +6247,12 @@ const sistemasExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(comput
   background: #2563eb;
   border-radius: 2px;
 }
+.report-block-sub {
+  margin: 0 0 2px;
+  font-size: 10px;
+  color: var(--text-secondary, #64748b);
+}
+td.muted { color: #94a3b8; }
 
 .zoho-analysis-box {
   background-color: var(--card-bg-hover, #f8fafc);
