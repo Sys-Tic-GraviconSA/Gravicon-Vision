@@ -2916,23 +2916,31 @@ async function generarInformePdf() {
         return slices
       }
 
-      const allSlices: { dataUrl: string; heightMm: number }[] = []
-      // Un solo lienzo con TODO el documento; sliceCanvas hace el paginado A4.
+      // Un solo lienzo con TODO el documento.
       const canvas = await html2canvas(elemento, {
         scale: 2.6, useCORS: true, backgroundColor: '#ffffff', logging: false,
         height: elemento.scrollHeight, windowHeight: elemento.scrollHeight,
       })
-      allSlices.push(...sliceCanvas(canvas, getBreakInfo(elemento, canvas.width)))
+      if (!canvas.width) throw new Error('No se pudo generar contenido para el PDF')
 
-      if (!allSlices.length) throw new Error('No se pudo generar contenido para el PDF')
-      const pdf = new jsPDF({ unit: 'mm', format: [pageW, allSlices[0].heightMm], orientation: 'portrait' })
-      allSlices.forEach((slice, i) => {
-        if (i > 0) pdf.addPage([pageW, slice.heightMm])
-        pdf.addImage(slice.dataUrl, 'PNG', 0, 0, pageW, slice.heightMm, undefined, 'FAST')
-      })
       const fechaLimpia = (informeFechaLabel.value || 'reporte')
         .replace(/[^\wáéíóúÁÉÍÓÚñÑ -]/g, '').replace(/\s+/g, '_').trim()
-      pdf.save(`Disponibilidad_${plantaLabel.value}_${fechaLimpia}.pdf`)
+      const nombre = `Disponibilidad_${plantaLabel.value}_${fechaLimpia}.pdf`
+      const imgH = (canvas.height * pageW) / canvas.width
+      const MAX_MM = 5080
+      if (imgH <= MAX_MM) {
+        const pdf = new jsPDF({ unit: 'mm', format: [pageW, imgH], orientation: 'portrait' })
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pageW, imgH, undefined, 'FAST')
+        pdf.save(nombre)
+      } else {
+        const allSlices = sliceCanvas(canvas, getBreakInfo(elemento, canvas.width))
+        const pdf = new jsPDF({ unit: 'mm', format: [pageW, allSlices[0].heightMm], orientation: 'portrait' })
+        allSlices.forEach((slice, i) => {
+          if (i > 0) pdf.addPage([pageW, slice.heightMm])
+          pdf.addImage(slice.dataUrl, 'PNG', 0, 0, pageW, slice.heightMm, undefined, 'FAST')
+        })
+        pdf.save(nombre)
+      }
     } finally {
       elemento.classList.remove('pdf-capturing')
       if (temaPrevio === 'dark') {

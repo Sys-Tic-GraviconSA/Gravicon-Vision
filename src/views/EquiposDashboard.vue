@@ -3551,9 +3551,8 @@ async function renderElementoPdf(elemento: HTMLElement, filename: string) {
         return slices
       }
 
-      const allSlices: { dataUrl: string; heightMm: number }[] = []
       // Un solo lienzo con TODO el documento (la maqueta de hojas se neutraliza
-      // con .pdf-capturing); sliceCanvas hace el paginado A4.
+      // con .pdf-capturing).
       const canvas = await html2canvas(elemento, {
         scale: 2.6,
         useCORS: true,
@@ -3562,19 +3561,25 @@ async function renderElementoPdf(elemento: HTMLElement, filename: string) {
         height: elemento.scrollHeight,
         windowHeight: elemento.scrollHeight,
       })
-      allSlices.push(...sliceCanvas(canvas, getBreakInfo(elemento, canvas.width)))
+      if (!canvas.width) throw new Error('No se pudo generar contenido para el PDF')
 
-      if (!allSlices.length) throw new Error('No se pudo generar contenido para el PDF')
-
-      // Cada página del PDF se crea con el alto exacto de su rebanada (nunca más de 297mm),
-      // así nunca queda espacio en blanco sobrante al final de una página.
-      const pdf = new jsPDF({ unit: 'mm', format: [pageW, allSlices[0].heightMm], orientation: 'portrait' })
-      allSlices.forEach((slice, i) => {
-        if (i > 0) pdf.addPage([pageW, slice.heightMm])
-        pdf.addImage(slice.dataUrl, 'PNG', 0, 0, pageW, slice.heightMm, undefined, 'FAST')
-      })
-
-      pdf.save(filename)
+      const imgH = (canvas.height * pageW) / canvas.width
+      const MAX_MM = 5080 // límite práctico de altura de página en un PDF
+      if (imgH <= MAX_MM) {
+        // PDF de una sola página larga (ancho A4, alto = el que necesite el informe).
+        const pdf = new jsPDF({ unit: 'mm', format: [pageW, imgH], orientation: 'portrait' })
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pageW, imgH, undefined, 'FAST')
+        pdf.save(filename)
+      } else {
+        // Informe gigante: se pagina en hojas cortando en puntos seguros.
+        const allSlices = sliceCanvas(canvas, getBreakInfo(elemento, canvas.width))
+        const pdf = new jsPDF({ unit: 'mm', format: [pageW, allSlices[0].heightMm], orientation: 'portrait' })
+        allSlices.forEach((slice, i) => {
+          if (i > 0) pdf.addPage([pageW, slice.heightMm])
+          pdf.addImage(slice.dataUrl, 'PNG', 0, 0, pageW, slice.heightMm, undefined, 'FAST')
+        })
+        pdf.save(filename)
+      }
     } finally {
       elemento.classList.remove('pdf-capturing')
       if (temaPrevio) {
