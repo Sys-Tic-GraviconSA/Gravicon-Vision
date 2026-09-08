@@ -3429,13 +3429,23 @@ async function renderElementoPdf(elemento: HTMLElement, filename: string) {
       import('jspdf'),
     ])
 
-    // Forzar tema claro temporalmente para que los colores del PDF salgan vivos y nítidos
+    // Forzar tema claro temporalmente para que los colores del PDF salgan vivos y nítidos.
+    // Importante: además del atributo, hay que mover el ref `theme` para que las gráficas
+    // ECharts (que leen theme.value) se repinten en claro; si no, salen con estilos
+    // oscuros sobre el fondo blanco del PDF (texto ilegible / "distorsionado").
     const root = document.documentElement
     const temaPrevio = root.getAttribute('data-theme')
+    const themeRefPrevio = theme.value
     root.setAttribute('data-theme', 'light')
     root.classList.add('light')
     root.classList.remove('dark')
+    theme.value = 'light'
 
+    // Espera a que Vue re-renderice las opciones y ECharts termine de dibujar en claro.
+    await nextTick()
+    await new Promise(r => setTimeout(r, 350))
+    window.dispatchEvent(new Event('resize'))
+    await new Promise(r => setTimeout(r, 250))
     await new Promise(r => requestAnimationFrame(() => r(null)))
 
     try {
@@ -3545,6 +3555,9 @@ async function renderElementoPdf(elemento: HTMLElement, filename: string) {
           root.classList.remove('light')
         }
       }
+      theme.value = themeRefPrevio
+      await nextTick()
+      window.dispatchEvent(new Event('resize'))
     }
 }
 
