@@ -115,17 +115,7 @@
           />
         </div>
 
-        <!-- Tendencia diaria de disponibilidad global -->
-        <div v-if="dispRowsBase.length" class="charts-grid" style="margin-top: 14px;">
-          <ChartCard
-            title="Tendencia Diaria de Disponibilidad"
-            description="% de disponibilidad operativa promedio de la flota por día — línea de meta 85%"
-            :option="dispTendenciaDiariaOpt"
-            :height="320"
-          />
-        </div>
-
-        <!-- Clasificación de equipo: promedio y evolución -->
+        <!-- Clasificación de equipo: promedio + días fuera de servicio -->
         <div v-if="!isConcretosPlanta && disponibilidadMensualClasif.filas.length" class="charts-grid cols-2" style="margin-top: 14px;">
           <ChartCard
             title="Disponibilidad Promedio por Clasificación"
@@ -134,33 +124,36 @@
             :height="340"
           />
           <ChartCard
-            v-if="disponibilidadMensualClasif.meses.length >= 2"
-            title="Evolución Mensual por Clasificación"
-            description="% de disponibilidad mes a mes por familia de equipo"
-            :option="dispEvolucionClasifOpt"
-            :height="340"
-          />
-          <ChartCard
-            v-else
             title="Días Fuera de Servicio por Clasificación"
-            description="Días-equipo no operativos acumulados en el período por familia"
+            description="Días-equipo no operativos (parcial = 0,5) acumulados en el período por familia"
             :option="dispDiasFueraClasifOpt"
             :height="340"
           />
         </div>
 
-        <!-- Frente de trabajo + composición por estado -->
+        <!-- Composición por estado + evolución mensual -->
         <div v-if="dispRowsBase.length" class="charts-grid cols-2" style="margin-top: 14px;">
-          <ChartCard
-            title="Disponibilidad por Frente de Trabajo"
-            description="% de disponibilidad promedio según la localización registrada en la inspección"
-            :option="dispPorFrenteOpt"
-            :height="340"
-          />
           <ChartCard
             title="Composición de la Flota por Estado"
             description="Reparto de días-equipo inspeccionados: operativo pleno, parcial y fuera de servicio"
             :option="dispEstadoDonutOpt"
+            :height="340"
+          />
+          <ChartCard
+            v-if="!isConcretosPlanta && disponibilidadMensualClasif.meses.length >= 2"
+            title="Evolución Mensual por Clasificación"
+            description="% de disponibilidad mes a mes por familia de equipo"
+            :option="dispEvolucionClasifOpt"
+            :height="340"
+          />
+        </div>
+
+        <!-- Tendencia diaria de disponibilidad global (última) -->
+        <div v-if="dispRowsBase.length" class="charts-grid" style="margin-top: 14px;">
+          <ChartCard
+            title="Tendencia Diaria de Disponibilidad"
+            description="% de disponibilidad operativa promedio de la flota por día — meta 85%, con máximo y mínimo del período"
+            :option="dispTendenciaDiariaOpt"
             :height="340"
           />
         </div>
@@ -3104,7 +3097,7 @@ function buildDispEquipoOption(equipos: EquipoDisp[], limit?: number) {
         return `<div style="font-size:12px"><strong>${p.name}</strong> ${eq?.tipo ? `<span style="color:#888">(${eq.tipo})</span>` : ''}<hr style="margin:4px 0;border:none;border-top:1px solid #e5e7eb"/><div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color}"></span><strong>${p.value}%</strong> Disponibilidad</div><div style="margin-top:4px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981"></span>Op.: <strong>${eq?.diasOp}</strong> d</div><div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444"></span>No Op.: <strong>${eq?.diasNoOp}</strong> d</div><hr style="margin:4px 0;border:none;border-top:1px solid #e5e7eb"/><div style="color:#6b7280;font-size:11px">Prom. Op. <strong>${avgDiasOp}</strong> d · Prom. Mant. <strong>${avgDiasMant}</strong> d</div></div>`
       },
     },
-    grid: { left: '3%', right: '14%', bottom: '14%', top: '3%', containLabel: true },
+    grid: { left: '3%', right: '18%', bottom: '15%', top: 28, containLabel: true },
     xAxis: {
       type: 'value', min: 0, max: 100,
       axisLabel: { formatter: '{value}%', color: textColor.value, fontSize: 10 },
@@ -3114,12 +3107,12 @@ function buildDispEquipoOption(equipos: EquipoDisp[], limit?: number) {
       type: 'category',
       inverse: true,
       data: list.map(e => e.placa),
-      axisLabel: { color: titleColor.value, fontSize: 11, fontWeight: 'bold' },
+      axisLabel: { color: titleColor.value, fontSize: 11, fontWeight: 'bold', width: 96, overflow: 'truncate' },
     },
     series: [{
       name: 'Disponibilidad',
       type: 'bar',
-      barMaxWidth: 22,
+      barMaxWidth: 24,
       data: list.map(e => ({
         value: e.dispPct,
         diasOp: e.diasOp,
@@ -3131,30 +3124,31 @@ function buildDispEquipoOption(equipos: EquipoDisp[], limit?: number) {
         },
       })),
       label: {
-        show: true, position: 'right',
-        formatter: (p: any) => `${p.value}% (${p.data.diasOp} d)`,
-        fontSize: 10, fontWeight: 'bold', color: titleColor.value,
+        show: true, position: 'right', distance: 6,
+        formatter: (p: any) => `${p.value}%  ·  ${p.data.diasOp} d op`,
+        fontSize: 11, fontWeight: 'bold', color: titleColor.value,
       },
+      labelLayout: { hideOverlap: true },
       markLine: {
         silent: true, symbol: 'none',
-        data: [{ xAxis: 85, lineStyle: { color: '#10b981', type: 'dashed', width: 1.5 }, label: { formatter: 'Meta 85%', color: '#10b981', fontSize: 10 } }],
+        data: [{ xAxis: 85, lineStyle: { color: '#10b981', type: 'dashed', width: 2 }, label: { formatter: 'Meta 85%', color: '#10b981', fontSize: 11, fontWeight: 'bold', position: 'end' } }],
       },
     }],
     graphic: [
-      { type: 'group', left: '3%', bottom: 2, children: [
-        { type: 'rect', shape: { width: 190, height: 22, r: 4 }, style: { fill: isDark.value ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' } },
-        { type: 'rect', shape: { x: 8, y: 6, width: 10, height: 10, r: 2 }, style: { fill: '#10b981' } },
-        { type: 'text', style: { text: '≥85%', x: 22, y: 15, fill: textColor.value, fontSize: 10, font: 'bold 10px sans-serif' } },
-        { type: 'rect', shape: { x: 68, y: 6, width: 10, height: 10, r: 2 }, style: { fill: '#f59e0b' } },
-        { type: 'text', style: { text: '≥60%', x: 82, y: 15, fill: textColor.value, fontSize: 10, font: 'bold 10px sans-serif' } },
-        { type: 'rect', shape: { x: 128, y: 6, width: 10, height: 10, r: 2 }, style: { fill: '#ef4444' } },
-        { type: 'text', style: { text: '<60%', x: 142, y: 15, fill: textColor.value, fontSize: 10, font: 'bold 10px sans-serif' } },
+      { type: 'group', left: '3%', top: 2, children: [
+        { type: 'rect', shape: { width: 210, height: 20, r: 4 }, style: { fill: isDark.value ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' } },
+        { type: 'rect', shape: { x: 8, y: 5, width: 10, height: 10, r: 2 }, style: { fill: '#10b981' } },
+        { type: 'text', style: { text: 'Op. ≥85%', x: 22, y: 14, fill: textColor.value, fontSize: 10, font: 'bold 10px sans-serif' } },
+        { type: 'rect', shape: { x: 78, y: 5, width: 10, height: 10, r: 2 }, style: { fill: '#f59e0b' } },
+        { type: 'text', style: { text: '≥60%', x: 92, y: 14, fill: textColor.value, fontSize: 10, font: 'bold 10px sans-serif' } },
+        { type: 'rect', shape: { x: 138, y: 5, width: 10, height: 10, r: 2 }, style: { fill: '#ef4444' } },
+        { type: 'text', style: { text: '<60%', x: 152, y: 14, fill: textColor.value, fontSize: 10, font: 'bold 10px sans-serif' } },
       ]},
     ],
   })
 }
 
-const dispEquipoOpt = computed(() => buildDispEquipoOption(dispEquipoList.value, 15))
+const dispEquipoOpt = computed(() => buildDispEquipoOption(dispEquipoList.value, 12))
 const dispEquipoFullOpt = computed(() => buildDispEquipoOption(dispEquipoList.value))
 
 type EquipoMant = { placa: string; mantPct: number; diasMant: number; diasOp: number; tipo: string }
@@ -3220,7 +3214,7 @@ function buildIncidenciaOption(equipos: EquipoMant[], limit?: number) {
         return `<div style="font-size:12px"><strong>${p.name}</strong> ${eq?.tipo ? `<span style="color:#888">(${eq.tipo})</span>` : ''}<hr style="margin:4px 0;border:none;border-top:1px solid #e5e7eb"/><div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color}"></span><strong>${p.value}%</strong> Incidencia Mant.</div><div style="margin-top:4px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981"></span>Op.: <strong>${eq?.diasOp}</strong> d</div><div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444"></span>No Op.: <strong>${eq?.diasMant}</strong> d</div><hr style="margin:4px 0;border:none;border-top:1px solid #e5e7eb"/><div style="color:#6b7280;font-size:11px">Prom. Op. <strong>${avgDiasOp}</strong> d · Prom. Mant. <strong>${avgDiasMant}</strong> d</div></div>`
       },
     },
-    grid: { left: '3%', right: '14%', bottom: '14%', top: '3%', containLabel: true },
+    grid: { left: '3%', right: '18%', bottom: '15%', top: 28, containLabel: true },
     xAxis: {
       type: 'value', min: 0, max: 100,
       axisLabel: { formatter: '{value}%', color: textColor.value, fontSize: 10 },
@@ -3230,12 +3224,12 @@ function buildIncidenciaOption(equipos: EquipoMant[], limit?: number) {
       type: 'category',
       inverse: true,
       data: list.map(e => e.placa),
-      axisLabel: { color: titleColor.value, fontSize: 11, fontWeight: 'bold' },
+      axisLabel: { color: titleColor.value, fontSize: 11, fontWeight: 'bold', width: 96, overflow: 'truncate' },
     },
     series: [{
       name: 'Incidencia Mantenimiento',
       type: 'bar',
-      barMaxWidth: 22,
+      barMaxWidth: 24,
       data: list.map(e => ({
         value: e.mantPct,
         diasMant: e.diasMant,
@@ -3247,26 +3241,31 @@ function buildIncidenciaOption(equipos: EquipoMant[], limit?: number) {
         },
       })),
       label: {
-        show: true, position: 'right',
-        formatter: (p: any) => `${p.value}% (${p.data.diasMant} d)`,
-        fontSize: 10, fontWeight: 'bold', color: titleColor.value,
+        show: true, position: 'right', distance: 6,
+        formatter: (p: any) => `${p.value}%  ·  ${p.data.diasMant} d`,
+        fontSize: 11, fontWeight: 'bold', color: titleColor.value,
+      },
+      labelLayout: { hideOverlap: true },
+      markLine: {
+        silent: true, symbol: 'none',
+        data: [{ xAxis: 15, lineStyle: { color: '#10b981', type: 'dashed', width: 2 }, label: { formatter: 'Objetivo ≤15%', color: '#10b981', fontSize: 11, fontWeight: 'bold', position: 'end' } }],
       },
     }],
     graphic: [
-      { type: 'group', left: '3%', bottom: 2, children: [
-        { type: 'rect', shape: { width: 190, height: 22, r: 4 }, style: { fill: isDark.value ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' } },
-        { type: 'rect', shape: { x: 8, y: 6, width: 10, height: 10, r: 2 }, style: { fill: '#10b981' } },
-        { type: 'text', style: { text: '≤15%', x: 22, y: 15, fill: textColor.value, fontSize: 10, font: 'bold 10px sans-serif' } },
-        { type: 'rect', shape: { x: 68, y: 6, width: 10, height: 10, r: 2 }, style: { fill: '#f59e0b' } },
-        { type: 'text', style: { text: '≤40%', x: 82, y: 15, fill: textColor.value, fontSize: 10, font: 'bold 10px sans-serif' } },
-        { type: 'rect', shape: { x: 128, y: 6, width: 10, height: 10, r: 2 }, style: { fill: '#ef4444' } },
-        { type: 'text', style: { text: '>40%', x: 142, y: 15, fill: textColor.value, fontSize: 10, font: 'bold 10px sans-serif' } },
+      { type: 'group', left: '3%', top: 2, children: [
+        { type: 'rect', shape: { width: 210, height: 20, r: 4 }, style: { fill: isDark.value ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' } },
+        { type: 'rect', shape: { x: 8, y: 5, width: 10, height: 10, r: 2 }, style: { fill: '#10b981' } },
+        { type: 'text', style: { text: 'Mant. ≤15%', x: 22, y: 14, fill: textColor.value, fontSize: 10, font: 'bold 10px sans-serif' } },
+        { type: 'rect', shape: { x: 90, y: 5, width: 10, height: 10, r: 2 }, style: { fill: '#f59e0b' } },
+        { type: 'text', style: { text: '≤40%', x: 104, y: 14, fill: textColor.value, fontSize: 10, font: 'bold 10px sans-serif' } },
+        { type: 'rect', shape: { x: 150, y: 5, width: 10, height: 10, r: 2 }, style: { fill: '#ef4444' } },
+        { type: 'text', style: { text: '>40%', x: 164, y: 14, fill: textColor.value, fontSize: 10, font: 'bold 10px sans-serif' } },
       ]},
     ],
   })
 }
 
-const incidenciaMantenimientoOpt = computed(() => buildIncidenciaOption(incidenciaMantenimientoList.value, 15))
+const incidenciaMantenimientoOpt = computed(() => buildIncidenciaOption(incidenciaMantenimientoList.value, 12))
 const incidenciaMantenimientoFullOpt = computed(() => buildIncidenciaOption(incidenciaMantenimientoList.value))
 
 // ===================================================================
@@ -3356,17 +3355,33 @@ const dispTendenciaDiariaOpt = computed(() => {
       type: 'line',
       smooth: true,
       symbol: 'circle',
-      symbolSize: 6,
+      symbolSize: 7,
       data: values,
       lineStyle: { width: 2.5, color: '#2563eb' },
       itemStyle: { color: '#2563eb' },
       areaStyle: { color: isDark.value ? 'rgba(37,99,235,0.18)' : 'rgba(37,99,235,0.10)' },
+      label: {
+        show: values.length <= 20,
+        position: 'top',
+        formatter: '{c}%',
+        fontSize: 10,
+        fontWeight: 'bold',
+        color: titleColor.value,
+      },
+      labelLayout: { hideOverlap: true },
+      markPoint: {
+        symbolSize: 46,
+        data: [
+          { type: 'max', name: 'Máx', itemStyle: { color: '#16a34a' }, label: { formatter: '{c}%', color: '#fff', fontSize: 10, fontWeight: 'bold' } },
+          { type: 'min', name: 'Mín', itemStyle: { color: '#ef4444' }, label: { formatter: '{c}%', color: '#fff', fontSize: 10, fontWeight: 'bold' } },
+        ],
+      },
       markLine: {
         silent: true,
         symbol: 'none',
         data: [
-          { yAxis: 85, lineStyle: { color: '#16a34a', type: 'dashed', width: 1.5 }, label: { formatter: 'Meta 85%', color: '#16a34a', fontSize: 10 } },
-          { yAxis: avg, lineStyle: { color: '#94a3b8', type: 'dotted', width: 1.5 }, label: { formatter: `Prom. ${avg}%`, color: textColor.value, fontSize: 10, position: 'insideEndTop' } },
+          { yAxis: 85, lineStyle: { color: '#16a34a', type: 'dashed', width: 1.5 }, label: { formatter: 'Meta 85%', color: '#16a34a', fontSize: 11, fontWeight: 'bold', position: 'insideStartTop' } },
+          { yAxis: avg, lineStyle: { color: '#94a3b8', type: 'dotted', width: 1.5 }, label: { formatter: `Prom. ${avg}%`, color: textColor.value, fontSize: 11, fontWeight: 'bold', position: 'insideEndTop' } },
         ],
       },
     }],
@@ -3449,10 +3464,20 @@ const dispEvolucionClasifOpt = computed(() => {
       smooth: true,
       connectNulls: true,
       symbol: 'circle',
-      symbolSize: 6,
+      symbolSize: 8,
       data: f.celdas,
-      lineStyle: { width: 2, color: CLASIF_COLORS[i % CLASIF_COLORS.length] },
+      lineStyle: { width: 2.5, color: CLASIF_COLORS[i % CLASIF_COLORS.length] },
       itemStyle: { color: CLASIF_COLORS[i % CLASIF_COLORS.length] },
+      label: {
+        show: true,
+        position: 'top',
+        formatter: (p: any) => (p.value == null ? '' : `${p.value}%`),
+        fontSize: 10,
+        fontWeight: 'bold',
+        color: CLASIF_COLORS[i % CLASIF_COLORS.length],
+      },
+      labelLayout: { hideOverlap: true },
+      emphasis: { focus: 'series' },
     })),
   })
 })
@@ -3488,61 +3513,6 @@ const dispDiasFueraClasifOpt = computed(() => {
       data: filas.map(f => f.dias),
       itemStyle: { color: '#ef4444', borderRadius: [0, 4, 4, 0] },
       label: { show: true, position: 'right', formatter: '{c} d', fontSize: 10, fontWeight: 'bold', color: titleColor.value },
-    }],
-  })
-})
-
-/** C. Disponibilidad por frente de trabajo / localización. */
-const dispPorFrenteOpt = computed(() => {
-  const byLoc = new Map<string, { sum: number; n: number; placas: Set<string> }>()
-  for (const r of dispRowsBase.value) {
-    const e = byLoc.get(r.loc) ?? { sum: 0, n: 0, placas: new Set<string>() }
-    e.sum += r.score
-    e.n++
-    if (r.placa) e.placas.add(r.placa)
-    byLoc.set(r.loc, e)
-  }
-  const filas = [...byLoc.entries()]
-    .map(([loc, e]) => ({ loc, pct: Math.round((e.sum / e.n) * 100), placas: e.placas.size }))
-    .sort((a, b) => a.pct - b.pct)
-  return markRaw({
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      formatter: (params: any[]) => {
-        const p = params[0]
-        return `<strong>${p.name}</strong><br/>${p.value}% disponibilidad<br/><span style="color:#888">${p.data.placas} equipos</span>`
-      },
-    },
-    grid: { left: '3%', right: '12%', bottom: '3%', top: 10, containLabel: true },
-    xAxis: {
-      type: 'value',
-      min: 0,
-      max: 100,
-      axisLabel: { formatter: '{value}%', color: textColor.value, fontSize: 10 },
-      splitLine: { lineStyle: { color: splitLineColor.value } },
-    },
-    yAxis: {
-      type: 'category',
-      data: filas.map(f => f.loc),
-      axisLabel: { color: titleColor.value, fontSize: 11, fontWeight: 'bold' },
-    },
-    series: [{
-      type: 'bar',
-      barMaxWidth: 26,
-      data: filas.map(f => ({
-        value: f.pct,
-        placas: f.placas,
-        itemStyle: { color: semColorPct(f.pct), borderRadius: [0, 4, 4, 0] },
-      })),
-      label: {
-        show: true,
-        position: 'right',
-        formatter: (p: any) => `${p.value}%  ·  ${p.data.placas} eq`,
-        fontSize: 10,
-        fontWeight: 'bold',
-        color: titleColor.value,
-      },
     }],
   })
 })
