@@ -353,7 +353,7 @@
 
           <footer class="report-footer">
             <span>Informe de Disponibilidad de Flota — Gravicon</span>
-            <span>Documento Oficial | Página 1 de 3</span>
+            <span>Documento Oficial<span class="fp-num"> | Página 1 de 3</span></span>
           </footer>
         </div>
 
@@ -526,7 +526,7 @@
 
           <footer class="report-footer">
             <span>Informe de Disponibilidad de Flota — Gravicon</span>
-            <span>Documento Oficial | Página 2 de 3</span>
+            <span>Documento Oficial<span class="fp-num"> | Página 2 de 3</span></span>
           </footer>
         </div>
 
@@ -843,7 +843,7 @@
 
           <footer class="report-footer">
             <span>Informe de Disponibilidad de Flota — Gravicon</span>
-            <span>Documento Oficial | Página 3 de 3</span>
+            <span>Documento Oficial<span class="fp-num"> | Página 3 de 3</span></span>
           </footer>
         </div>
 
@@ -4386,8 +4386,9 @@ text.dona {
   page-break-after: auto !important;
   break-after: auto !important;
 }
-.pdf-capturing .report-salto-superior,
-.pdf-capturing .report-footer { display: none !important; }
+.pdf-capturing .report-salto-superior { display: none !important; }
+.pdf-capturing .report-page:not(:last-child) .report-footer { display: none !important; }
+.pdf-capturing .fp-num { display: none !important; }
 
 .pdf-capturing .table-wrap { overflow: visible !important; }
 .pdf-capturing .table-wrap table { width: 100% !important; }

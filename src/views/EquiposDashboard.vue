@@ -625,7 +625,7 @@
 
           <footer class="report-footer">
             <span>Informe de Órdenes de Trabajo — Gravicon</span>
-            <span>Documento Oficial | Página 1 de 3</span>
+            <span>Documento Oficial<span class="fp-num"> | Página 1 de 3</span></span>
           </footer>
         </div>
 
@@ -956,7 +956,7 @@
 
           <footer class="report-footer">
             <span>Informe de Órdenes de Trabajo — Gravicon</span>
-            <span>Documento Oficial | Página 2 de 3</span>
+            <span>Documento Oficial<span class="fp-num"> | Página 2 de 3</span></span>
           </footer>
         </div>
 
@@ -1108,7 +1108,7 @@
 
           <footer class="report-footer">
             <span>Informe de Órdenes de Trabajo — Gravicon</span>
-            <span>Documento Oficial | Página 3 de 3</span>
+            <span>Documento Oficial<span class="fp-num"> | Página 3 de 3</span></span>
           </footer>
         </div>
 
@@ -5719,8 +5719,10 @@ const sistemasExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(comput
   page-break-after: auto !important;
   break-after: auto !important;
 }
-.pdf-capturing .report-salto-superior,
-.pdf-capturing .report-footer { display: none !important; }
+.pdf-capturing .report-salto-superior { display: none !important; }
+/* Un solo documento: solo el pie de la última hoja, sin "Página X de 3" */
+.pdf-capturing .report-page:not(:last-child) .report-footer { display: none !important; }
+.pdf-capturing .fp-num { display: none !important; }
 
 /* Durante la captura: ninguna tabla debe desbordar el ancho de la hoja
    (si no, html2canvas la captura a otra escala y la página "se daña"). */
