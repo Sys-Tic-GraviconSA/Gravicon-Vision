@@ -714,7 +714,7 @@
               Mes más bajo: <strong>{{ repTendenciaMensual.minRow?.label }} ({{ $$(repTendenciaMensual.minRow?.total || 0) }})</strong> ·
               Total <strong>{{ $$(repTendenciaMensual.totals.total) }}</strong> en {{ repTendenciaMensual.totals.n }} OT
             </div>
-            <ChartCard title="" :option="isPlanta ? eficienciaMttoInformeOpt : costosGeneralesM3Opt" :height="isPlanta ? 460 : 420" hide-actions />
+            <ChartCard title="" :option="isPlanta ? eficienciaMttoInformeOpt : costosGeneralesM3Opt" :height="isPlanta ? 520 : 420" hide-actions />
           </div>
 
           <!-- Costo por Tipo de Vehículo + Top 5 Vehículos Mayor Consumo -->
@@ -4610,10 +4610,39 @@ const repTopOt = computed(() =>
 function buildEficienciaMttoOption(data: MonthlyEfficiencyData, _isExpand = false, compact = false) {
   const isLight = theme.value === 'light'
   const units = data.unitsDef || plantUnits.value
-  // En el informe (compact) hay poca altura y varias series: solo mostramos las
-  // etiquetas $ de las barras si son pocos meses; la línea de costo/m³ siempre.
-  const showBarLabels = !compact || data.months.length <= 3
   const nMonths = data.months.length
+  // En el informe (compact) hay poca altura y varias series encimadas: la
+  // etiqueta $ de cada barra va DENTRO de la barra, en vertical, para que
+  // siempre se vea sin pisarse con las de al lado.
+  const barLabel = compact
+    ? {
+        show: true,
+        position: 'insideBottom' as const,
+        rotate: 90,
+        align: 'left' as const,
+        verticalAlign: 'middle' as const,
+        distance: 6,
+        color: '#ffffff',
+        fontFamily: 'Lato, sans-serif',
+        fontWeight: 700 as const,
+        fontSize: 9,
+        textBorderColor: 'rgba(0,0,0,0.35)',
+        textBorderWidth: 2,
+        formatter: (p: any) => {
+          const v = Number(p.value) || 0
+          return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
+        },
+      }
+    : {
+        ...labelLine.value,
+        position: 'top' as const,
+        distance: 4,
+        fontSize: 11,
+        formatter: (p: any) => {
+          const v = Number(p.value) || 0
+          return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
+        },
+      }
   const legendData = [
     ...units.map(u => ({ name: u.label, itemStyle: { color: u.color } })),
     { name: 'Costo Mtto por m³', itemStyle: { color: isLight ? '#172554' : '#60a5fa' } },
@@ -4631,18 +4660,8 @@ function buildEficienciaMttoOption(data: MonthlyEfficiencyData, _isExpand = fals
     barMaxWidth: 30,
     itemStyle: { color: u.color, borderRadius: [4, 4, 0, 0] as [number, number, number, number] },
     emphasis: { focus: 'series' as const, itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.3)' } },
-    label: {
-      ...labelLine.value,
-      show: showBarLabels,
-      position: 'top' as const,
-      distance: 4,
-      fontSize: compact ? 10 : 11,
-      formatter: (p: any) => {
-        const v = Number(p.value) || 0
-        return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
-      },
-    },
-    labelLayout: { hideOverlap: true },
+    label: barLabel,
+    labelLayout: compact ? {} : { hideOverlap: true },
     data: data.months.map(m => {
       const st = m.units[u.key] || { costo: 0, serv: 0, ins: 0, ots: 0, abiertas: 0, cerradas: 0, prodM3: 0, costoM3: 0 }
       const isCtx = isContextMonth(m.key)
