@@ -632,84 +632,72 @@
         <div class="report-page">
           <div class="report-salto-superior"></div>
 
-          <!-- Indicadores de Gestión del Mantenimiento -->
+          <!-- Costo Acumulado e Indicadores por Planta / Línea -->
           <div class="report-section-block">
-            <h3 class="report-block-title"><span class="title-bar"></span>Indicadores de Gestión del Mantenimiento</h3>
-            <div class="data-card">
-              <div class="table-wrap">
-                <table>
-                  <tbody>
-                    <tr>
-                      <td class="bold">OT Correctivas</td><td class="r bold">{{ repIndicadores.corr }}</td>
-                      <td class="bold">OT Preventivas</td><td class="r bold">{{ repIndicadores.prev }}</td>
-                    </tr>
-                    <tr>
-                      <td class="bold">OT de Emergencia / Urgentes</td><td class="r bold" style="color:#dc2626">{{ repIndicadores.emer }}</td>
-                      <td class="bold">OT Programadas</td><td class="r bold">{{ repIndicadores.prog }}</td>
-                    </tr>
-                    <tr>
-                      <td class="bold">OT Predictivas</td><td class="r">{{ repIndicadores.pred }}</td>
-                      <td class="bold">Nº de equipos intervenidos</td><td class="r bold">{{ repIndicadores.nEquipos }}</td>
-                    </tr>
-                    <tr>
-                      <td class="bold">Intervenciones por equipo (prom.)</td><td class="r">{{ repIndicadores.intervPorEquipo }}</td>
-                      <td class="bold">Horas de mantenimiento (estimadas)</td><td class="r">{{ fmt(repIndicadores.horasMant) }} h</td>
-                    </tr>
-                    <tr>
-                      <td class="bold">Días fuera de servicio por OT (Recep. → Cierre, prom.)</td><td class="r">{{ repIndicadores.diasIndispProm }} d</td>
-                      <td class="bold">Consumo de almacén</td><td class="r">{{ fmt(repIndicadores.almItems) }} ítems · {{ repIndicadores.almPedidos }} pedidos</td>
-                    </tr>
-                    <tr>
-                      <td class="bold">Costo de servicios externos</td><td class="r bold">{{ $$(repIndicadores.servExt) }}</td>
-                      <td class="bold">Costo total con gasto real registrado</td>
-                      <td class="r bold">{{ $$(repIndicadores.costoReal) }} <span style="color:#94a3b8;font-size:10px">({{ repIndicadores.conCostoReal }} OT · {{ repIndicadores.pctCostoReal }}%)</span></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <!-- Costo Acumulado por Planta y Maquinaria -->
-          <div class="report-section-block">
-            <h3 class="report-block-title"><span class="title-bar"></span>Costo Acumulado por {{ repSectionLabelPlanta }} y {{ repSectionLabelMaquinaria }}</h3>
+            <h3 class="report-block-title"><span class="title-bar"></span>Gestión del Mantenimiento por {{ repSectionLabelPlanta }} y {{ repSectionLabelMaquinaria }}</h3>
             <div class="data-card">
               <div class="table-wrap">
                 <table>
                   <thead>
                     <tr>
-                      <th style="width: 26%">{{ repSectionLabelPlanta }}</th>
-                      <th>{{ repSectionLabelMaquinaria }}</th>
-                      <th class="r" style="width: 60px">OTs</th>
-                      <th class="r" style="width: 130px">Costo Acumulado</th>
-                      <th class="r" style="width: 70px">Particip.</th>
+                      <th>{{ repSectionLabelPlanta }} / {{ repSectionLabelMaquinaria }}</th>
+                      <th class="r" style="width: 45px">OT</th>
+                      <th class="r" style="width: 50px" title="Correctivas">Corr.</th>
+                      <th class="r" style="width: 50px" title="Preventivas">Prev.</th>
+                      <th class="r" style="width: 55px" title="Emergencia / Urgentes">Emerg.</th>
+                      <th class="r" style="width: 50px" title="Programadas">Progr.</th>
+                      <th class="r" style="width: 55px" title="Equipos intervenidos">Equip.</th>
+                      <th class="r" style="width: 60px" title="Horas de mantenimiento estimadas">Horas</th>
+                      <th class="r" style="width: 120px">Costo Acum.</th>
+                      <th class="r" style="width: 55px">Part.</th>
                     </tr>
                   </thead>
                   <tbody>
                     <template v-for="g in repCostoPlanta" :key="g.planta">
                       <tr class="grupo-row">
-                        <td class="bold" :rowspan="g.maquinas.length + 1">{{ g.planta }}</td>
-                        <td class="bold">Subtotal {{ g.planta }}</td>
+                        <td class="bold">{{ g.planta }}</td>
                         <td class="r bold">{{ g.n }}</td>
+                        <td class="r">{{ g.corr }}</td>
+                        <td class="r">{{ g.prev }}</td>
+                        <td class="r" :style="{ color: g.emer ? '#dc2626' : '' }">{{ g.emer }}</td>
+                        <td class="r">{{ g.prog }}</td>
+                        <td class="r">{{ g.nEquipos }}</td>
+                        <td class="r">{{ fmt(g.horas) }}</td>
                         <td class="r bold">{{ $$(g.costo) }}</td>
                         <td class="r bold">{{ repPct(g.costo) }}%</td>
                       </tr>
                       <tr v-for="m in g.maquinas" :key="g.planta + '-' + m.maquina">
-                        <td class="accent-text">{{ m.maquina }}</td>
+                        <td class="accent-text" style="padding-left: 18px">{{ m.maquina }}</td>
                         <td class="r">{{ m.n }}</td>
+                        <td colspan="5"></td>
+                        <td></td>
                         <td class="r">{{ $$(m.costo) }}</td>
                         <td class="r">{{ repPct(m.costo) }}%</td>
                       </tr>
                     </template>
-                    <tr v-if="!repCostoPlanta.length"><td colspan="5" class="empty-table">Sin datos en el período</td></tr>
+                    <tr v-if="!repCostoPlanta.length"><td colspan="10" class="empty-table">Sin datos en el período</td></tr>
                     <tr class="table-total-row">
-                      <td colspan="2" class="bold">TOTAL</td>
+                      <td class="bold">TOTAL</td>
                       <td class="r bold">{{ repRows.length }}</td>
+                      <td class="r bold">{{ repIndicadores.corr }}</td>
+                      <td class="r bold">{{ repIndicadores.prev }}</td>
+                      <td class="r bold">{{ repIndicadores.emer }}</td>
+                      <td class="r bold">{{ repIndicadores.prog }}</td>
+                      <td class="r bold">{{ repIndicadores.nEquipos }}</td>
+                      <td class="r bold">{{ fmt(repIndicadores.horasMant) }}</td>
                       <td class="r bold">{{ $$(repCostoTotal) }}</td>
                       <td class="r bold">100%</td>
                     </tr>
                   </tbody>
                 </table>
+              </div>
+              <div style="font-size: 10px; color: #64748b; padding: 6px 10px;">
+                También: OT predictivas <strong>{{ repIndicadores.pred }}</strong> ·
+                Intervenciones por equipo <strong>{{ repIndicadores.intervPorEquipo }}</strong> ·
+                Días fuera de servicio por OT (Recep.→Cierre) <strong>{{ repIndicadores.diasIndispProm }} d</strong> ·
+                Consumo de almacén <strong>{{ fmt(repIndicadores.almItems) }} ítems</strong> ({{ repIndicadores.almPedidos }} pedidos) ·
+                Costo servicios externos <strong>{{ $$(repIndicadores.servExt) }}</strong> ·
+                Costo con gasto real registrado <strong>{{ $$(repIndicadores.costoReal) }}</strong> ({{ repIndicadores.pctCostoReal }}% de las OT)
               </div>
             </div>
           </div>
@@ -2946,22 +2934,41 @@ const repIndiceCierreFiltrado = computed(() =>
 const repIndiceApertura = computed(() => rankByMultiValue(repRows.value, 'Solicitante', 8).map(([label, n]) => ({ label, n })))
 
 /** Costo acumulado por planta (Localización) y maquinaria (tipo de vehículo). */
-/** Costo acumulado agrupado por planta (una sola vez) y, dentro, sus máquinas top. */
+/** Costo e indicadores de gestión agrupados por planta/línea (una fila por planta). */
 const repCostoPlanta = computed(() => {
-  const groups = new Map<string, { planta: string; n: number; costo: number; maquinas: Map<string, { maquina: string; n: number; costo: number }> }>()
+  interface G { planta: string; n: number; costo: number; corr: number; prev: number; emer: number; prog: number; horas: number; equipos: Set<string>; alm: number; maquinas: Map<string, { maquina: string; n: number; costo: number }> }
+  const groups = new Map<string, G>()
   for (const r of repRows.value) {
     const planta = String(r['Localización'] ?? '').trim() || 'SIN PLANTA'
     const maquina = String(r['Placa del Vehículo'] ?? '').trim() || vehTypeLabel(String(r['Tipo de Vehículo'] ?? ''))
     const c = rowServicios(r) + rowInsumos(r)
-    const g = groups.get(planta) ?? { planta, n: 0, costo: 0, maquinas: new Map() }
+    const clase = String(r['Clase Mantenimiento'] ?? '').toUpperCase()
+    const fuente = String(r['Fuente_Novedad'] ?? '').toUpperCase()
+    const g = groups.get(planta) ?? { planta, n: 0, costo: 0, corr: 0, prev: 0, emer: 0, prog: 0, horas: 0, equipos: new Set<string>(), alm: 0, maquinas: new Map() }
     g.n++; g.costo += c
+    if (clase.includes('CORRECTIVO')) g.corr++
+    if (clase.includes('PREVENTIVO')) g.prev++
+    if (clase.includes('URGENTE') || fuente.includes('EMERGENCIA')) g.emer++
+    if (fuente.includes('PROGRAMADO')) g.prog++
+    g.horas += Number(r['Duración (horas)']) || 0
+    const p = String(r['Placa del Vehículo'] ?? '').trim()
+    if (p) g.equipos.add(p)
+    const sops = r['_sopled']
+    if (Array.isArray(sops)) for (const sop of sops as { _subSopled?: { cantidad?: number }[] }[]) {
+      const it = sop?._subSopled
+      if (Array.isArray(it)) for (const x of it) g.alm += Number(x?.cantidad) || 0
+    }
     const mq = g.maquinas.get(maquina) ?? { maquina, n: 0, costo: 0 }
     mq.n++; mq.costo += c
     g.maquinas.set(maquina, mq)
     groups.set(planta, g)
   }
   return [...groups.values()]
-    .map(g => ({ planta: g.planta, n: g.n, costo: g.costo, maquinas: [...g.maquinas.values()].sort((a, b) => b.costo - a.costo).slice(0, 6) }))
+    .map(g => ({
+      planta: g.planta, n: g.n, costo: g.costo, corr: g.corr, prev: g.prev, emer: g.emer, prog: g.prog,
+      horas: Math.round(g.horas), nEquipos: g.equipos.size, alm: Math.round(g.alm),
+      maquinas: [...g.maquinas.values()].sort((a, b) => b.costo - a.costo).slice(0, 4),
+    }))
     .sort((a, b) => b.costo - a.costo)
 })
 
