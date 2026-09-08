@@ -2917,21 +2917,12 @@ async function generarInformePdf() {
       }
 
       const allSlices: { dataUrl: string; heightMm: number }[] = []
-      const pages = elemento.querySelectorAll<HTMLElement>('.report-page')
-      if (pages.length === 0) {
-        const canvas = await html2canvas(elemento, {
-          scale: 3, useCORS: true, backgroundColor: '#ffffff', logging: false,
-        })
-        allSlices.push(...sliceCanvas(canvas, getBreakInfo(elemento, canvas.width)))
-      } else {
-        for (let i = 0; i < pages.length; i++) {
-          const pageCanvas = await html2canvas(pages[i], {
-            scale: 3, useCORS: true, backgroundColor: '#ffffff', logging: false,
-            height: pages[i].scrollHeight, windowHeight: pages[i].scrollHeight,
-          })
-          allSlices.push(...sliceCanvas(pageCanvas, getBreakInfo(pages[i], pageCanvas.width)))
-        }
-      }
+      // Un solo lienzo con TODO el documento; sliceCanvas hace el paginado A4.
+      const canvas = await html2canvas(elemento, {
+        scale: 2.6, useCORS: true, backgroundColor: '#ffffff', logging: false,
+        height: elemento.scrollHeight, windowHeight: elemento.scrollHeight,
+      })
+      allSlices.push(...sliceCanvas(canvas, getBreakInfo(elemento, canvas.width)))
 
       if (!allSlices.length) throw new Error('No se pudo generar contenido para el PDF')
       const pdf = new jsPDF({ unit: 'mm', format: [pageW, allSlices[0].heightMm], orientation: 'portrait' })
@@ -4373,6 +4364,23 @@ text.dona {
 /* Durante la captura del PDF: ninguna tabla debe desbordar el ancho de la hoja */
 .pdf-capturing :deep(.chart-actions),
 .pdf-capturing :deep(.action-btn) { display: none !important; }
+
+/* Captura: el informe es un solo documento continuo (sin maqueta de hojas) */
+.pdf-capturing.report-paper { gap: 0 !important; }
+.pdf-capturing .report-page {
+  min-height: 0 !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  padding-top: 6mm !important;
+  padding-bottom: 6mm !important;
+  page-break-after: auto !important;
+  break-after: auto !important;
+}
+.pdf-capturing .report-salto-superior,
+.pdf-capturing .report-footer { display: none !important; }
+
 .pdf-capturing .table-wrap { overflow: visible !important; }
 .pdf-capturing .table-wrap table { width: 100% !important; }
 .pdf-capturing .table-wrap th,

@@ -3552,30 +3552,17 @@ async function renderElementoPdf(elemento: HTMLElement, filename: string) {
       }
 
       const allSlices: { dataUrl: string; heightMm: number }[] = []
-      const pages = elemento.querySelectorAll<HTMLElement>('.report-page')
-      if (pages.length === 0) {
-        const canvas = await html2canvas(elemento, {
-          scale: 3,
-          useCORS: true,
-          backgroundColor: '#ffffff',
-          logging: false,
-        })
-        allSlices.push(...sliceCanvas(canvas, getBreakInfo(elemento, canvas.width)))
-      } else {
-        for (let i = 0; i < pages.length; i++) {
-          // Sin `width`/`windowWidth`: html2canvas usa el ancho real del .report-page,
-          // que es idéntico en todas las hojas (así todas salen a ancho completo).
-          const pageCanvas = await html2canvas(pages[i], {
-            scale: 3,
-            useCORS: true,
-            backgroundColor: '#ffffff',
-            logging: false,
-            height: pages[i].scrollHeight,
-            windowHeight: pages[i].scrollHeight,
-          })
-          allSlices.push(...sliceCanvas(pageCanvas, getBreakInfo(pages[i], pageCanvas.width)))
-        }
-      }
+      // Un solo lienzo con TODO el documento (la maqueta de hojas se neutraliza
+      // con .pdf-capturing); sliceCanvas hace el paginado A4.
+      const canvas = await html2canvas(elemento, {
+        scale: 2.6,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        height: elemento.scrollHeight,
+        windowHeight: elemento.scrollHeight,
+      })
+      allSlices.push(...sliceCanvas(canvas, getBreakInfo(elemento, canvas.width)))
 
       if (!allSlices.length) throw new Error('No se pudo generar contenido para el PDF')
 
@@ -5710,6 +5697,25 @@ const sistemasExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(comput
 .pdf-capturing :deep(.action-btn) {
   display: none !important;
 }
+
+/* Durante la captura, el informe es UN solo documento continuo: se quita la
+   maqueta de "hojas" (min-height 297mm, sombras, bordes, saltos y pies de
+   página) para que html2canvas capture todo el div de una y el paginado lo
+   haga sliceCanvas sin cortes raros entre .report-page. */
+.pdf-capturing.report-paper { gap: 0 !important; }
+.pdf-capturing .report-page {
+  min-height: 0 !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  padding-top: 6mm !important;
+  padding-bottom: 6mm !important;
+  page-break-after: auto !important;
+  break-after: auto !important;
+}
+.pdf-capturing .report-salto-superior,
+.pdf-capturing .report-footer { display: none !important; }
 
 /* Durante la captura: ninguna tabla debe desbordar el ancho de la hoja
    (si no, html2canvas la captura a otra escala y la página "se daña"). */
