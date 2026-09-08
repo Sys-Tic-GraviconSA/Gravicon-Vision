@@ -125,7 +125,7 @@
         <KpiCard :value="promCierreDia.toFixed(1)" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasActivos > 0 ? (otsIntEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasActivos > 0 ? (otsExtEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div>`" />
         <KpiCard :value="otDuracionEstimadaProm + ' h'" label="Duración Estimada Promedio" accent="#8B5CF6" icon="clock" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntDuracionEstimadaProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtDuracionEstimadaProm}h</strong></div>`" />
         <KpiCard :value="otTiempoRealProm + ' h'" label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntTiempoRealProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtTiempoRealProm}h</strong></div>`" />
-        <KpiCard :value="otConSopledPct + '%'" label="% OT con Pedido de Almacén" accent="#10B981" icon="package" meta="vía SOPLED" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntConSopledPct}%</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtConSopledPct}%</strong></div>`" />
+        <KpiCard :value="otConSopledPct + '%'" label="% OT con Pedido de Almacén" accent="#10B981" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntConSopledPct}%</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtConSopledPct}%</strong></div>`" />
       </div>
 
       <div class="ots-bar">
@@ -139,7 +139,7 @@
       </div>
 
     <!-- Eficiencia de Mantenimiento y Costos Generales -->
-    <div class="charts-grid cols-1" style="margin-bottom:22px">
+    <div v-if="isConcretos || isPlanta" class="charts-grid cols-1" style="margin-bottom:22px">
       <ChartCard
         title="Eficiencia de Mantenimiento y Costo Unitario (m³)"
         :description="isConcretos ? 'Costos de mantenimiento por planta (Acacías, Restrepo, Villavicencio) y costo unitario por m³ producido' : isAcacias ? 'Costos de mantenimiento por planta (Planta 1, Planta 2) y costo unitario por m³ producido' : 'Costos de mantenimiento por línea (Cañaveral, Guayuriba, Línea 3) y costo unitario por m³ producido'"
@@ -213,7 +213,7 @@
       <KpiCard :value="otsIntPctCierre + '%'" label="% Cierre" accent="#3B82F6" icon="zap" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>OTs</span> <strong>${otsIntEstadoCounts.cerradas} / ${otsIntEstadoCounts.abiertas + otsIntEstadoCounts.cerradas}</strong></div>`" />
       <KpiCard :value="otsIntDuracionEstimadaProm + ' h'" label="Duración Estimada Promedio" accent="#8B5CF6" icon="clock" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#8B5CF6'></span><span class='kpi-label-int'>OTs</span> <strong>${intCount} OTs</strong></div>`" />
       <KpiCard :value="otsIntTiempoRealProm + ' h'" label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#06B6D4'></span><span class='kpi-label-int'>Cierre</span> <strong>${otsIntPctCierre}% cerradas</strong></div>`" />
-      <KpiCard :value="otsIntConSopledPct + '%'" label="% OT con Pedido de Almacén" accent="#10B981" icon="package" meta="vía SOPLED" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-int'>SOPLED</span> <strong>${otsIntSopled} pedidos</strong></div>`" />
+      <KpiCard :value="otsIntConSopledPct + '%'" label="% OT con Pedido de Almacén" accent="#10B981" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-int'>SOPLED</span> <strong>${otsIntSopled} pedidos</strong></div>`" />
     </div>
 
       <div class="ots-bar">
@@ -301,7 +301,7 @@
       <KpiCard :value="otsExtPctCierre + '%'" label="% Cierre" accent="#3B82F6" icon="zap" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-ext'>OTs</span> <strong>${otsExtEstadoCounts.cerradas} / ${otsExtEstadoCounts.abiertas + otsExtEstadoCounts.cerradas}</strong></div>`" />
       <KpiCard :value="otsExtDuracionEstimadaProm + ' h'" label="Duración Estimada Promedio" accent="#8B5CF6" icon="clock" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#8B5CF6'></span><span class='kpi-label-int'>OTs</span> <strong>${extCount} OTs</strong></div>`" />
       <KpiCard :value="otsExtTiempoRealProm + ' h'" label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#06B6D4'></span><span class='kpi-label-ext'>Cierre</span> <strong>${otsExtPctCierre}% cerradas</strong></div>`" />
-      <KpiCard :value="otsExtConSopledPct + '%'" label="% OT con Pedido de Almacén" accent="#10B981" icon="package" meta="vía SOPLED" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>SOPLED</span> <strong>${otsExtSopled} pedidos</strong></div>`" />
+      <KpiCard :value="otsExtConSopledPct + '%'" label="% OT con Pedido de Almacén" accent="#10B981" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>SOPLED</span> <strong>${otsExtSopled} pedidos</strong></div>`" />
     </div>
 
       <div class="ots-bar">
@@ -479,7 +479,7 @@
             <KpiCard label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" :value="promCierreDia.toFixed(1)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasActivos > 0 ? (otsIntEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasActivos > 0 ? (otsExtEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div>`" />
             <KpiCard label="Duración Promedio" accent="#8B5CF6" icon="clock" :value="otDuracionEstimadaProm + ' h'" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntDuracionEstimadaProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtDuracionEstimadaProm}h</strong></div>`" />
             <KpiCard label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" :value="otTiempoRealProm + ' h'" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntTiempoRealProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtTiempoRealProm}h</strong></div>`" />
-            <KpiCard label="% OT con Pedido de Almacén" accent="#10B981" icon="package" meta="vía SOPLED" :value="otConSopledPct + '%'" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntConSopledPct}%</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtConSopledPct}%</strong></div>`" />
+            <KpiCard label="% OT con Pedido de Almacén" accent="#10B981" icon="package" :value="otConSopledPct + '%'" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntConSopledPct}%</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtConSopledPct}%</strong></div>`" />
           </div>
 
           <!-- Nota de metodología del filtro por fecha -->
@@ -705,16 +705,16 @@
             </div>
           </div>
 
-          <!-- Tendencia de Costos por Mes -->
+          <!-- Eficiencia de Mantenimiento y Costo Unitario (m³) / Tendencia de Costos por Mes -->
           <div v-if="repTendenciaMensual.rows.length" class="report-section-block">
-            <h3 class="report-block-title"><span class="title-bar"></span>Tendencia de Costos por Mes</h3>
+            <h3 class="report-block-title"><span class="title-bar"></span>{{ isPlanta ? 'Eficiencia de Mantenimiento y Costo Unitario (m³)' : 'Tendencia de Costos por Mes' }}</h3>
             <div v-if="repTendenciaMensual.rows.length > 1" style="font-size: 11px; color: #475569; margin-bottom: 4px;">
               Promedio mensual: <strong>{{ $$(repTendenciaMensual.avg) }}</strong> ·
               Mes más alto: <strong>{{ repTendenciaMensual.maxRow?.label }} ({{ $$(repTendenciaMensual.maxRow?.total || 0) }})</strong> ·
               Mes más bajo: <strong>{{ repTendenciaMensual.minRow?.label }} ({{ $$(repTendenciaMensual.minRow?.total || 0) }})</strong> ·
               Total <strong>{{ $$(repTendenciaMensual.totals.total) }}</strong> en {{ repTendenciaMensual.totals.n }} OT
             </div>
-            <ChartCard title="" :option="costosGeneralesM3Opt" :height="320" hide-actions />
+            <ChartCard title="" :option="isPlanta ? eficienciaMttoOpt : costosGeneralesM3Opt" :height="420" hide-actions />
           </div>
 
           <!-- Costo por Tipo de Vehículo + Top 5 Vehículos Mayor Consumo -->
@@ -1195,7 +1195,7 @@
         </div>
       </div>
 
-      <div class="charts-grid cols-1" style="margin-bottom:22px">
+      <div v-if="isConcretos || isPlanta" class="charts-grid cols-1" style="margin-bottom:22px">
         <ChartCard
           title="Eficiencia de Mantenimiento y Costo Unitario (m³)"
           :description="isConcretos ? 'Costos de mantenimiento por planta (Acacías, Restrepo, Villavicencio) y costo unitario por m³ producido' : isAcacias ? 'Costos de mantenimiento por planta (Planta 1, Planta 2) y costo unitario por m³ producido' : 'Costos de mantenimiento por línea (Cañaveral, Guayuriba, Línea 3) y costo unitario por m³ producido'"
