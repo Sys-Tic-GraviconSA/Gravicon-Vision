@@ -5002,12 +5002,11 @@ function buildBarOpt(data: Record<string, unknown>[], groupBy: 'Tipo de Vehícul
         if (groupBy === 'Placa del Veh\u00EDculo') {
           const mm = m3PorPlaca.value.get(String(nombre).trim().toUpperCase()) || 0
           if (mm > 0) {
-            const cM3 = Math.round(total / mm)
-            extra += `<br/><span style="color:${cM3 > metaM3.value ? '#EF4444' : '#10B981'}">\u25CF</span> Costo/m\u00B3 del equipo: <b>$${cM3.toLocaleString('es-CO')}</b> <span style="color:#94a3b8;font-size:10px">(${mm.toLocaleString('es-CO')} m\u00B3)</span>`
+            const cM3 = Math.round((total / mm) * 10) / 10
+            extra = `<br/><span style="color:${cM3 > metaM3.value ? '#EF4444' : '#10B981'}">\u25CF</span> Costo/m\u00B3 de este equipo: <b>$${cM3.toLocaleString('es-CO')}</b> <span style="color:#94a3b8;font-size:10px">(${$$(total)} \u00F7 ${mm.toLocaleString('es-CO')} m\u00B3 \u00B7 ${metaM3Label.value.toLowerCase()})</span>`
+          } else {
+            extra = `<br/><span style="color:#94a3b8;font-size:11px">Sin m\u00B3 atribuibles a este equipo (no mueve concreto)</span>`
           }
-          // Referencia siempre visible: costo/m\u00B3 global de la planta vs meta.
-          const g = Math.round(costoM3.value)
-          extra += `<br/><span style="color:${g > metaM3.value ? '#EF4444' : '#10B981'}">\u25CF</span> Costo/m\u00B3 planta: <b>$${g.toLocaleString('es-CO')}</b> <span style="color:#94a3b8;font-size:10px">(${metaM3Label.value.toLowerCase()})</span>`
         }
         return `<b>${nombre}</b><br/>` +
           `<span style="color:${palette[1]}">\u25CF</span> Servicios: <b>$${Math.round(serv).toLocaleString('es-CO')}</b><br/>` +
