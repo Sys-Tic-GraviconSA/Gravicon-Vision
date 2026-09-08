@@ -3389,9 +3389,11 @@ const dispTendenciaDiariaOpt = computed(() => {
         ...pillLabelBase.value,
         position: 'top' as const,
         distance: 8,
+        borderColor: '#2563eb',
+        borderWidth: 1,
         formatter: (p: any) => (p.value == null ? '' : `${p.value}%`),
       },
-      labelLayout: { hideOverlap: true },
+      labelLayout: { moveOverlap: 'shiftY' as const, hideOverlap: false },
       markLine: {
         silent: true,
         symbol: 'none',
@@ -3498,15 +3500,18 @@ const dispEvolucionClasifOpt = computed(() => {
       data: f.celdas,
       lineStyle: { width: 2.5, color: CLASIF_COLORS[i % CLASIF_COLORS.length] },
       itemStyle: { color: CLASIF_COLORS[i % CLASIF_COLORS.length] },
-      emphasis: { scale: 1.4, focus: 'series' as const },
+      z: 3,
+      emphasis: { scale: 1.4, focus: 'series' as const, label: { ...pillLabelBase.value, color: CLASIF_COLORS[i % CLASIF_COLORS.length] } },
       label: {
         ...pillLabelBase.value,
         position: 'top' as const,
         distance: 8,
         color: CLASIF_COLORS[i % CLASIF_COLORS.length],
+        borderColor: CLASIF_COLORS[i % CLASIF_COLORS.length],
+        borderWidth: 1,
         formatter: (p: any) => (p.value == null ? '' : `${p.value}%`),
       },
-      labelLayout: { hideOverlap: true },
+      labelLayout: { moveOverlap: 'shiftY' as const, hideOverlap: false },
     })),
   })
 })
