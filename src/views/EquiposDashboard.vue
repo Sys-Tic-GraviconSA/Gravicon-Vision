@@ -705,16 +705,16 @@
             </div>
           </div>
 
-          <!-- Eficiencia de Mantenimiento y Costo Unitario (m³) / Tendencia de Costos por Mes -->
+          <!-- Tendencia de Costos por Mes -->
           <div v-if="repTendenciaMensual.rows.length" class="report-section-block">
-            <h3 class="report-block-title"><span class="title-bar"></span>{{ isPlanta ? 'Eficiencia de Mantenimiento y Costo Unitario (m³)' : 'Tendencia de Costos por Mes' }}</h3>
+            <h3 class="report-block-title"><span class="title-bar"></span>Tendencia de Costos por Mes</h3>
             <div v-if="repTendenciaMensual.rows.length > 1" style="font-size: 11px; color: #475569; margin-bottom: 4px;">
               Promedio mensual: <strong>{{ $$(repTendenciaMensual.avg) }}</strong> ·
               Mes más alto: <strong>{{ repTendenciaMensual.maxRow?.label }} ({{ $$(repTendenciaMensual.maxRow?.total || 0) }})</strong> ·
               Mes más bajo: <strong>{{ repTendenciaMensual.minRow?.label }} ({{ $$(repTendenciaMensual.minRow?.total || 0) }})</strong> ·
               Total <strong>{{ $$(repTendenciaMensual.totals.total) }}</strong> en {{ repTendenciaMensual.totals.n }} OT
             </div>
-            <ChartCard title="" :option="isPlanta ? eficienciaMttoInformeOpt : costosGeneralesM3Opt" :height="isPlanta ? 520 : 420" hide-actions />
+            <ChartCard title="" :option="costosGeneralesM3Opt" :height="420" hide-actions />
           </div>
 
           <!-- Costo por Tipo de Vehículo + Top 5 Vehículos Mayor Consumo -->
@@ -4607,42 +4607,9 @@ const repTopOt = computed(() =>
     .slice(0, 10),
 )
 
-function buildEficienciaMttoOption(data: MonthlyEfficiencyData, _isExpand = false, compact = false) {
+function buildEficienciaMttoOption(data: MonthlyEfficiencyData, _isExpand = false) {
   const isLight = theme.value === 'light'
   const units = data.unitsDef || plantUnits.value
-  const nMonths = data.months.length
-  // En el informe (compact) hay poca altura y varias series encimadas: la
-  // etiqueta $ de cada barra va DENTRO de la barra, en vertical, para que
-  // siempre se vea sin pisarse con las de al lado.
-  const barLabel = compact
-    ? {
-        show: true,
-        position: 'insideBottom' as const,
-        rotate: 90,
-        align: 'left' as const,
-        verticalAlign: 'middle' as const,
-        distance: 6,
-        color: '#ffffff',
-        fontFamily: 'Lato, sans-serif',
-        fontWeight: 700 as const,
-        fontSize: 9,
-        textBorderColor: 'rgba(0,0,0,0.35)',
-        textBorderWidth: 2,
-        formatter: (p: any) => {
-          const v = Number(p.value) || 0
-          return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
-        },
-      }
-    : {
-        ...labelLine.value,
-        position: 'top' as const,
-        distance: 4,
-        fontSize: 11,
-        formatter: (p: any) => {
-          const v = Number(p.value) || 0
-          return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
-        },
-      }
   const legendData = [
     ...units.map(u => ({ name: u.label, itemStyle: { color: u.color } })),
     { name: 'Costo Mtto por m³', itemStyle: { color: isLight ? '#172554' : '#60a5fa' } },
@@ -4660,8 +4627,15 @@ function buildEficienciaMttoOption(data: MonthlyEfficiencyData, _isExpand = fals
     barMaxWidth: 30,
     itemStyle: { color: u.color, borderRadius: [4, 4, 0, 0] as [number, number, number, number] },
     emphasis: { focus: 'series' as const, itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.3)' } },
-    label: barLabel,
-    labelLayout: compact ? {} : { hideOverlap: true },
+    label: {
+      ...labelLine.value,
+      position: 'top' as const,
+      distance: 4,
+      formatter: (p: any) => {
+        const v = Number(p.value) || 0
+        return v > 0 ? `$ ${Math.round(v).toLocaleString('es-CO')}` : ''
+      },
+    },
     data: data.months.map(m => {
       const st = m.units[u.key] || { costo: 0, serv: 0, ins: 0, ots: 0, abiertas: 0, cerradas: 0, prodM3: 0, costoM3: 0 }
       const isCtx = isContextMonth(m.key)
@@ -4696,22 +4670,17 @@ function buildEficienciaMttoOption(data: MonthlyEfficiencyData, _isExpand = fals
       focus: 'series' as const,
       itemStyle: { shadowBlur: 12, shadowColor: isLight ? 'rgba(23, 37, 84, 0.4)' : 'rgba(96, 165, 250, 0.5)' },
     },
-    lineStyle: { width: compact ? 3 : 2.5, color: isLight ? '#172554' : '#60a5fa', opacity: isExpandedMode ? 0.95 : 1 },
+    lineStyle: { width: 2.5, color: isLight ? '#172554' : '#60a5fa', opacity: isExpandedMode ? 0.95 : 1 },
     itemStyle: { color: isLight ? '#172554' : '#60a5fa' },
-    z: 5,
     label: {
       ...labelLine.value,
       position: 'top' as const,
       distance: 8,
-      fontSize: compact ? 11 : 11,
-      borderColor: isLight ? '#172554' : '#60a5fa',
-      borderWidth: 1,
       formatter: (p: any) => {
         const v = Number(p.value) || 0
         return v > 0 ? `$ ${v.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''
       },
     },
-    labelLayout: { hideOverlap: true, moveOverlap: 'shiftY' as const },
     data: data.months.map(m => {
       const isCtx = _isCtxLine(m.key)
       return {
@@ -4763,29 +4732,22 @@ function buildEficienciaMttoOption(data: MonthlyEfficiencyData, _isExpand = fals
       },
     },
     legend: {
-      top: compact ? 4 : 8,
+      top: 8,
       left: 12,
-      itemGap: compact ? 12 : 18,
+      itemGap: 18,
       icon: 'circle',
       itemWidth: 10,
       itemHeight: 10,
-      textStyle: { fontFamily: 'Lato, sans-serif', fontWeight: 600 as const, color: chartTextColor.value, fontSize: compact ? 10 : 11 },
+      textStyle: { fontFamily: 'Lato, sans-serif', fontWeight: 600 as const, color: chartTextColor.value, fontSize: 11 },
       data: legendData,
     },
-    grid: compact
-      ? { left: 16, right: 24, bottom: nMonths > 6 ? 48 : 28, top: 56, containLabel: true }
-      : { left: 60, right: 30, bottom: 60, top: 50, containLabel: true },
+    grid: { left: 60, right: 30, bottom: 60, top: 50, containLabel: true },
     xAxis: {
       type: 'category' as const,
       data: data.labels,
       axisLine: { lineStyle: { color: isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)' } },
       axisTick: { show: false },
-      axisLabel: {
-        fontFamily: 'Lato, sans-serif', fontWeight: 600 as const, color: chartTextColor.value,
-        fontSize: compact ? 10 : 11, margin: 12,
-        interval: 0,
-        rotate: compact && nMonths > 6 ? 35 : 0,
-      },
+      axisLabel: { fontFamily: 'Lato, sans-serif', fontWeight: 600 as const, color: chartTextColor.value, fontSize: 11, margin: 12 },
     },
     yAxis: [
       {
@@ -4812,8 +4774,6 @@ function buildEficienciaMttoOption(data: MonthlyEfficiencyData, _isExpand = fals
 
 const eficienciaMttoOpt = computed(() => buildEficienciaMttoOption(monthlyEfficiency.value, false))
 const eficienciaMttoExpandOpt = computed(() => buildEficienciaMttoOption(monthlyEfficiency.value, true))
-/** Versión compacta para el informe: menos etiquetas, más legible a poca altura. */
-const eficienciaMttoInformeOpt = computed(() => buildEficienciaMttoOption(monthlyEfficiency.value, false, true))
 
 const eficienciaMttoIntOpt = computed(() => buildEficienciaMttoOption(monthlyEfficiencyInt.value, false))
 const eficienciaMttoIntExpandOpt = computed(() => buildEficienciaMttoOption(monthlyEfficiencyInt.value, true))
