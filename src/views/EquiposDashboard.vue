@@ -590,44 +590,6 @@
             </div>
           </div>
 
-          <!-- Indicadores de Gestión del Mantenimiento -->
-          <div class="report-section-block">
-            <h3 class="report-block-title"><span class="title-bar"></span>Indicadores de Gestión del Mantenimiento</h3>
-            <div class="data-card">
-              <div class="table-wrap">
-                <table>
-                  <tbody>
-                    <tr>
-                      <td class="bold">OT Correctivas</td><td class="r bold">{{ repIndicadores.corr }}</td>
-                      <td class="bold">OT Preventivas</td><td class="r bold">{{ repIndicadores.prev }}</td>
-                    </tr>
-                    <tr>
-                      <td class="bold">OT de Emergencia / Urgentes</td><td class="r bold" style="color:#dc2626">{{ repIndicadores.emer }}</td>
-                      <td class="bold">OT Programadas</td><td class="r bold">{{ repIndicadores.prog }}</td>
-                    </tr>
-                    <tr>
-                      <td class="bold">OT Predictivas</td><td class="r">{{ repIndicadores.pred }}</td>
-                      <td class="bold">Nº de equipos intervenidos</td><td class="r bold">{{ repIndicadores.nEquipos }}</td>
-                    </tr>
-                    <tr>
-                      <td class="bold">Intervenciones por equipo (prom.)</td><td class="r">{{ repIndicadores.intervPorEquipo }}</td>
-                      <td class="bold">Horas de mantenimiento (estimadas)</td><td class="r">{{ fmt(repIndicadores.horasMant) }} h</td>
-                    </tr>
-                    <tr>
-                      <td class="bold">Días fuera de servicio por OT (Recep. → Cierre, prom.)</td><td class="r">{{ repIndicadores.diasIndispProm }} d</td>
-                      <td class="bold">Consumo de almacén</td><td class="r">{{ fmt(repIndicadores.almItems) }} ítems · {{ repIndicadores.almPedidos }} pedidos</td>
-                    </tr>
-                    <tr>
-                      <td class="bold">Costo de servicios externos</td><td class="r bold">{{ $$(repIndicadores.servExt) }}</td>
-                      <td class="bold">Costo total con gasto real registrado</td>
-                      <td class="r bold">{{ $$(repIndicadores.costoReal) }} <span style="color:#94a3b8;font-size:10px">({{ repIndicadores.conCostoReal }} OT · {{ repIndicadores.pctCostoReal }}%)</span></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
           <!-- Índice de Cierre y Apertura por Persona -->
           <div class="report-section-block">
             <h3 class="report-block-title"><span class="title-bar"></span>Índice de Cierre y Apertura por Persona</h3>
@@ -669,6 +631,44 @@
         <!-- ============================================== -->
         <div class="report-page">
           <div class="report-salto-superior"></div>
+
+          <!-- Indicadores de Gestión del Mantenimiento -->
+          <div class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Indicadores de Gestión del Mantenimiento</h3>
+            <div class="data-card">
+              <div class="table-wrap">
+                <table>
+                  <tbody>
+                    <tr>
+                      <td class="bold">OT Correctivas</td><td class="r bold">{{ repIndicadores.corr }}</td>
+                      <td class="bold">OT Preventivas</td><td class="r bold">{{ repIndicadores.prev }}</td>
+                    </tr>
+                    <tr>
+                      <td class="bold">OT de Emergencia / Urgentes</td><td class="r bold" style="color:#dc2626">{{ repIndicadores.emer }}</td>
+                      <td class="bold">OT Programadas</td><td class="r bold">{{ repIndicadores.prog }}</td>
+                    </tr>
+                    <tr>
+                      <td class="bold">OT Predictivas</td><td class="r">{{ repIndicadores.pred }}</td>
+                      <td class="bold">Nº de equipos intervenidos</td><td class="r bold">{{ repIndicadores.nEquipos }}</td>
+                    </tr>
+                    <tr>
+                      <td class="bold">Intervenciones por equipo (prom.)</td><td class="r">{{ repIndicadores.intervPorEquipo }}</td>
+                      <td class="bold">Horas de mantenimiento (estimadas)</td><td class="r">{{ fmt(repIndicadores.horasMant) }} h</td>
+                    </tr>
+                    <tr>
+                      <td class="bold">Días fuera de servicio por OT (Recep. → Cierre, prom.)</td><td class="r">{{ repIndicadores.diasIndispProm }} d</td>
+                      <td class="bold">Consumo de almacén</td><td class="r">{{ fmt(repIndicadores.almItems) }} ítems · {{ repIndicadores.almPedidos }} pedidos</td>
+                    </tr>
+                    <tr>
+                      <td class="bold">Costo de servicios externos</td><td class="r bold">{{ $$(repIndicadores.servExt) }}</td>
+                      <td class="bold">Costo total con gasto real registrado</td>
+                      <td class="r bold">{{ $$(repIndicadores.costoReal) }} <span style="color:#94a3b8;font-size:10px">({{ repIndicadores.conCostoReal }} OT · {{ repIndicadores.pctCostoReal }}%)</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
 
           <!-- Costo Acumulado por Planta y Maquinaria -->
           <div class="report-section-block">
