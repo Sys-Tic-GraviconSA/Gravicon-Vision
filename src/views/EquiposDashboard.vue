@@ -705,16 +705,16 @@
             </div>
           </div>
 
-          <!-- Tendencia de Costos por Mes -->
+          <!-- Eficiencia de Mantenimiento y Costo Unitario (m³) — Planta / Tendencia de Costos por Mes — Maquinaria -->
           <div v-if="repTendenciaMensual.rows.length" class="report-section-block">
-            <h3 class="report-block-title"><span class="title-bar"></span>Tendencia de Costos por Mes</h3>
+            <h3 class="report-block-title"><span class="title-bar"></span>{{ isPlanta ? 'Eficiencia de Mantenimiento y Costo Unitario (m³)' : 'Tendencia de Costos por Mes' }}</h3>
             <div v-if="repTendenciaMensual.rows.length > 1" style="font-size: 11px; color: #475569; margin-bottom: 4px;">
               Promedio mensual: <strong>{{ $$(repTendenciaMensual.avg) }}</strong> ·
               Mes más alto: <strong>{{ repTendenciaMensual.maxRow?.label }} ({{ $$(repTendenciaMensual.maxRow?.total || 0) }})</strong> ·
               Mes más bajo: <strong>{{ repTendenciaMensual.minRow?.label }} ({{ $$(repTendenciaMensual.minRow?.total || 0) }})</strong> ·
               Total <strong>{{ $$(repTendenciaMensual.totals.total) }}</strong> en {{ repTendenciaMensual.totals.n }} OT
             </div>
-            <ChartCard title="" :option="costosGeneralesM3Opt" :height="420" hide-actions />
+            <ChartCard title="" :option="isPlanta ? eficienciaMttoOpt : costosGeneralesM3Opt" :height="isPlanta ? 480 : 420" hide-actions />
           </div>
 
           <!-- Costo por Tipo de Vehículo + Top 5 Vehículos Mayor Consumo -->
