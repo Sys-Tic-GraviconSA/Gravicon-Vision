@@ -66,6 +66,7 @@ import { BarChart, LineChart, PieChart, RadarChart } from 'echarts/charts'
 import {
   GridComponent, TooltipComponent, TitleComponent,
   LegendComponent, DataZoomComponent, RadarComponent,
+  MarkLineComponent, MarkAreaComponent, MarkPointComponent,
 } from 'echarts/components'
 import VChart from 'vue-echarts'
 import EmptyState from '../ui/EmptyState.vue'
@@ -76,6 +77,7 @@ use([
   CanvasRenderer, BarChart, LineChart, PieChart, RadarChart,
   GridComponent, TooltipComponent, TitleComponent, LegendComponent,
   DataZoomComponent, RadarComponent,
+  MarkLineComponent, MarkAreaComponent, MarkPointComponent,
 ])
 
 const props = withDefaults(defineProps<{
