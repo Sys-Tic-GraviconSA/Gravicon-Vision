@@ -3759,7 +3759,8 @@ function normalizeLocalizacion(loc: string): string {
 /** Nombres de columnas de líneas en datos de producción (excluye metadatos) */
 const PROD_META_KEYS = [
   'Fecha', 'Total de M³', 'M³ Proyectado', 'Meta Mensual M³',
-  'PROVEEDOR', '% Cumplimiento', 'ID_Registro', 'agregados', 'Cant. Concreto'
+  'PROVEEDOR', '% Cumplimiento', 'ID_Registro', 'agregados', 'Cant. Concreto',
+  'observacion', 'Observación', 'Observaciones', 'Observacion'
 ]
 const prodLineNames = computed(() => {
   const first = prodRows.value[0]
