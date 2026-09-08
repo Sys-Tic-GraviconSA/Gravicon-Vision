@@ -425,7 +425,14 @@
                 src="https://gravicon2026.sirv.com/Pagina%20Gravicon/images/Logos/gravicon_logo.png"
                 @error="($event.target as HTMLImageElement).src = '/Logos/Logo-Gravicon-Nuevo.png'"
                 alt="Gravicon"
-                class="report-logo"
+                class="report-logo report-logo--light"
+                crossorigin="anonymous"
+                loading="eager"
+              />
+              <img
+                src="https://gravicon2026.sirv.com/Pagina%20Gravicon/Logos/logo-blanco.webp"
+                alt="Gravicon"
+                class="report-logo report-logo--dark"
                 crossorigin="anonymous"
                 loading="eager"
               />
@@ -6490,11 +6497,11 @@ ul.res li::before {
 :root[data-theme='dark'] .report-header {
   border-bottom-color: #334155;
 }
-:root[data-theme='dark'] .report-logo {
-  background: #f8fafc;
-  border-radius: 4px;
-  padding: 3px 6px;
-}
+/* Logo: color sobre fondo claro (y en el PDF, que fuerza data-theme=light);
+   versión blanca solo en pantalla con modo oscuro. */
+.report-logo--dark { display: none; }
+:root[data-theme='dark'] .report-logo--light { display: none; }
+:root[data-theme='dark'] .report-logo--dark { display: block; }
 :root[data-theme='dark'] .report-header-text h2,
 :root[data-theme='dark'] .report-title-section h1,
 :root[data-theme='dark'] .report-header-meta strong,

@@ -101,7 +101,8 @@
           <div class="report-page">
             <header class="report-header">
               <div class="report-header-brand">
-                <img src="https://gravicon2026.sirv.com/Pagina%20Gravicon/images/Logos/gravicon_logo.png" @error="($event.target as HTMLImageElement).style.display='none'" alt="Gravicon" class="report-logo" crossorigin="anonymous" />
+                <img src="https://gravicon2026.sirv.com/Pagina%20Gravicon/images/Logos/gravicon_logo.png" @error="($event.target as HTMLImageElement).style.display='none'" alt="Gravicon" class="report-logo report-logo--light" crossorigin="anonymous" />
+                <img src="https://gravicon2026.sirv.com/Pagina%20Gravicon/Logos/logo-blanco.webp" alt="Gravicon" class="report-logo report-logo--dark" crossorigin="anonymous" />
                 <div class="report-header-text">
                   <h2>Mantenimiento de Llantas — {{ plantaLabel }} Gravicon</h2>
                   <span>GRAVAS Y CONCRETOS S.A. · Gestión de Llantas</span>
@@ -660,6 +661,9 @@ async function generarPdf() {
 .report-header::after { content: ""; position: absolute; left: 0; bottom: -2.5px; width: 74px; height: 2.5px; background: #a90707; }
 .report-header-brand { display: flex; align-items: center; gap: 12px; }
 .report-logo { height: 48px; max-width: 190px; object-fit: contain; display: block; }
+.report-logo--dark { display: none; }
+:root[data-theme="dark"] .report-logo--light { display: none; }
+:root[data-theme="dark"] .report-logo--dark { display: block; }
 .report-header-text h2 { font-size: 14px; font-weight: 700; color: var(--navy, #172954); margin: 0; }
 .report-header-text span { font-size: 12px; color: var(--text-secondary); }
 .report-header-meta { text-align: right; font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
