@@ -37,4 +37,8 @@ analysis-result.json
 
 # Misc
 *.bak
-*.tmpFD-05011GRAVICONACACIAS.pdf
+*.tmp
+
+# Referencias del cliente (no versionar)
+FD-05011GRAVICONACACIAS.pdf
+WhatsApp Image*
