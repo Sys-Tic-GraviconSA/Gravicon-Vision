@@ -2171,12 +2171,15 @@ const svgTrend = computed(() => {
   }
 })
 
-// Clasificación de disponibilidad por familia de equipo (solo agregados: Cuncía / Acacías)
+// Clasificación de disponibilidad por familia de equipo (solo agregados: Cuncía / Acacías).
+// Los tipos provienen de "Tipo de Vehiculos" de la hoja Reporte Placa Disponibilidad:
+// CARGADOR(-FRONTAL), EXCAVADORA, RETROEXCAVADORA, VOLQUETA DOBLETROQUE, MINERA,
+// CAMION MINERO, MOTONIVELADORA, MULA, CAMABAJA, CAMIONETA, MOTOCICLETA, MOTOCARRO, TURBO, DUAL.
 const CLASIF_DISPONIBILIDAD: { id: string; label: string; match: (t: string) => boolean }[] = [
   { id: 'cargue', label: 'Equipos de Cargue', match: t => t.includes('CARGADOR') },
   { id: 'extraccion', label: 'Equipos de Extracción', match: t => t.includes('EXCAVADORA') || t.includes('RETRO') },
-  { id: 'transporte', label: 'Equipos de Transporte', match: t => t.includes('VOLQUETA') },
-  { id: 'adecuacion', label: 'Adecuación de Vías / Transporte Maquinaria', match: t => /MOTONIVELADORA|TRACTOMULA|CAMABAJA|CAMA\s*BAJA|CAMILO|LOWBOY|NIVELADORA/.test(t) },
+  { id: 'transporte', label: 'Equipos de Transporte', match: t => /VOLQUETA|MINERA|CAMI[OÓ]N\s*MINERO/.test(t) },
+  { id: 'adecuacion', label: 'Adecuación de Vías / Transporte Maquinaria', match: t => /MOTONIVELADORA|NIVELADORA|TRACTOMULA|\bMULA\b|CAMABAJA|CAMA\s*BAJA|LOW\s*BOY|CAMILO/.test(t) },
   { id: 'admin', label: 'Equipos Administrativos y Logísticos', match: () => true },
 ]
 
@@ -2208,6 +2211,10 @@ const disponibilidadMensualClasif = computed(() => {
   for (const r of activePlacasRows.value) {
     const info = getInspectionDetails(r)
     if (info.esAlquilado) continue
+    // Solo maquinaria móvil: excluye activos de planta fija (por Área de Trabajo del
+    // maestro y, como respaldo, por el tipo).
+    const area = String(r['Área de Trabajo'] ?? '').trim().toUpperCase()
+    if (area === 'PLANTA') continue
     if (ES_PLANTA_FIJA.test((info.baseTipo || '').toUpperCase())) continue
     const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
     if (!d) continue

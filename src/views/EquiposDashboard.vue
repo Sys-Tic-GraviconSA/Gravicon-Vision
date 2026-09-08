@@ -3685,8 +3685,12 @@ const allData = computed(() => {
     }
     return true
   })
-  // Disponibilidad usa toda la flota sin filtrar por tipo
-  if (tipoTab.value === 'disponibilidad') return base
+  // Disponibilidad: en Concretos usa toda la flota; en Agregados (Cuncía/Acacías)
+  // solo se hace seguimiento de disponibilidad a MAQUINARIA, no a planta fija.
+  if (tipoTab.value === 'disponibilidad') {
+    if (isConcretos.value) return base
+    return base.filter(r => String(r['Tipo de Mantenimiento'] ?? '').trim().toUpperCase() === 'MAQUINARIA')
+  }
   // Filter by tipo de mantenimiento tab
   if (tipoTab.value === 'planta') {
     return base.filter(r => String(r['Tipo de Mantenimiento'] ?? '').trim().toUpperCase() === 'PLANTA')

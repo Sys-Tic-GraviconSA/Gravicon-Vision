@@ -92,11 +92,16 @@ export async function loadDisponibilidadData(planta: string, forceRefresh = fals
 
         const finalPlacaTexto = placaTexto || String(maestro['PLACA'] ?? idRef)
         const finalTipo = String(r['Tipo de Vehiculos'] || maestro['TIPO'] || 'MAQUINARIA').trim()
+        // Área de Trabajo del maestro: PLANTA | MAQUINARIA | DUAL — clasifica el activo
+        const areaTrabajo = String(
+          maestro['Área de Trabajo'] || maestro['Area de Trabajo'] || maestro['AREA DE TRABAJO'] || ''
+        ).trim()
 
         return {
           ...r,
           Placa_Texto: finalPlacaTexto,
           'Tipo de Vehiculos': finalTipo,
+          'Área de Trabajo': areaTrabajo,
           Localizacion: rawLoc,
           Supervisor: r['Supervisor_Texto'] || r['Supervisor'] || '—',
           Proveedor_Texto: r['Proveedor_Texto'] || r['Proveedor'] || '',
