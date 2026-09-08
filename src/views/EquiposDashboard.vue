@@ -590,6 +590,44 @@
             </div>
           </div>
 
+          <!-- Indicadores de Gestión del Mantenimiento -->
+          <div class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Indicadores de Gestión del Mantenimiento</h3>
+            <div class="data-card">
+              <div class="table-wrap">
+                <table>
+                  <tbody>
+                    <tr>
+                      <td class="bold">OT Correctivas</td><td class="r bold">{{ repIndicadores.corr }}</td>
+                      <td class="bold">OT Preventivas</td><td class="r bold">{{ repIndicadores.prev }}</td>
+                    </tr>
+                    <tr>
+                      <td class="bold">OT de Emergencia / Urgentes</td><td class="r bold" style="color:#dc2626">{{ repIndicadores.emer }}</td>
+                      <td class="bold">OT Programadas</td><td class="r bold">{{ repIndicadores.prog }}</td>
+                    </tr>
+                    <tr>
+                      <td class="bold">OT Predictivas</td><td class="r">{{ repIndicadores.pred }}</td>
+                      <td class="bold">Nº de equipos intervenidos</td><td class="r bold">{{ repIndicadores.nEquipos }}</td>
+                    </tr>
+                    <tr>
+                      <td class="bold">Intervenciones por equipo (prom.)</td><td class="r">{{ repIndicadores.intervPorEquipo }}</td>
+                      <td class="bold">Horas de mantenimiento (estimadas)</td><td class="r">{{ fmt(repIndicadores.horasMant) }} h</td>
+                    </tr>
+                    <tr>
+                      <td class="bold">Días fuera de servicio por OT (Recep. → Cierre, prom.)</td><td class="r">{{ repIndicadores.diasIndispProm }} d</td>
+                      <td class="bold">Consumo de almacén</td><td class="r">{{ fmt(repIndicadores.almItems) }} ítems · {{ repIndicadores.almPedidos }} pedidos</td>
+                    </tr>
+                    <tr>
+                      <td class="bold">Costo de servicios externos</td><td class="r bold">{{ $$(repIndicadores.servExt) }}</td>
+                      <td class="bold">Costo total con gasto real registrado</td>
+                      <td class="r bold">{{ $$(repIndicadores.costoReal) }} <span style="color:#94a3b8;font-size:10px">({{ repIndicadores.conCostoReal }} OT · {{ repIndicadores.pctCostoReal }}%)</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
           <!-- Índice de Cierre y Apertura por Persona -->
           <div class="report-section-block">
             <h3 class="report-block-title"><span class="title-bar"></span>Índice de Cierre y Apertura por Persona</h3>
@@ -3115,6 +3153,50 @@ const repClaseMant = computed(() => {
   const pctCor = total ? Math.round((correctivo / total) * 100) : 0
   const pctPrev = total ? Math.round((preventivo / total) * 100) : 0
   return { correctivo, preventivo, otros, total, pctCor, pctPrev, pctOtro: total ? 100 - pctCor - pctPrev : 0 }
+})
+
+/** Indicadores de gestión del mantenimiento para el informe. */
+const repIndicadores = computed(() => {
+  let corr = 0, prev = 0, pred = 0, emer = 0, prog = 0, horasMant = 0, diasIndispSum = 0, diasIndispN = 0, conCostoReal = 0, costoReal = 0, servExt = 0
+  const equipos = new Set<string>()
+  let almItems = 0, almPedidos = 0
+  for (const r of repRows.value) {
+    const clase = String(r['Clase Mantenimiento'] ?? '').toUpperCase()
+    const fuente = String(r['Fuente_Novedad'] ?? '').toUpperCase()
+    if (clase.includes('CORRECTIVO')) corr++
+    if (clase.includes('PREVENTIVO')) prev++
+    if (clase.includes('PREDICTIVO')) pred++
+    if (clase.includes('URGENTE') || fuente.includes('EMERGENCIA')) emer++
+    if (fuente.includes('PROGRAMADO')) prog++
+    horasMant += Number(r['Duración (horas)']) || 0
+    const rec = Number(r['Fecha Recepción']); const cie = Number(r['Fecha Cierre'])
+    if (rec > 0 && cie > rec) { diasIndispSum += cie - rec; diasIndispN++ }
+    const c = (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0)
+    if (c > 0) { conCostoReal++; costoReal += c }
+    if (!isInterno(r)) servExt += Number(r['Costo servicios']) || 0
+    const p = String(r['Placa del Vehículo'] ?? '').trim()
+    if (p) equipos.add(p)
+    const sops = r['_sopled']
+    if (Array.isArray(sops)) {
+      for (const sop of sops as { _subSopled?: { cantidad?: number }[] }[]) {
+        const items = sop?._subSopled
+        if (!Array.isArray(items) || !items.length) continue
+        almPedidos++
+        for (const it of items) almItems += Number(it?.cantidad) || 0
+      }
+    }
+  }
+  const n = repRows.value.length
+  return {
+    corr, prev, pred, emer, prog,
+    horasMant: Math.round(horasMant),
+    diasIndispProm: diasIndispN ? +(diasIndispSum / diasIndispN).toFixed(1) : 0,
+    nEquipos: equipos.size,
+    intervPorEquipo: equipos.size ? +(n / equipos.size).toFixed(1) : 0,
+    almItems: Math.round(almItems), almPedidos,
+    servExt,
+    conCostoReal, costoReal, pctCostoReal: n ? Math.round((conCostoReal / n) * 100) : 0,
+  }
 })
 
 /** Ranking de sistemas con mayor intervención a partir de las sub-órdenes de cada OT. */
