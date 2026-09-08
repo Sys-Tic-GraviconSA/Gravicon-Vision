@@ -3397,7 +3397,7 @@ async function generarInformePdf() {
     await new Promise(r => setTimeout(r, 400))
     const el = document.querySelector('.report-paper') as HTMLElement | null
     if (!el) { console.error('No se encontró el contenedor del reporte (.report-paper)'); return }
-    await renderElementoPdf(el, `Informe_Gestion_OT_${plantaLabel.value}_${informeDesde.value || 'reporte'}_al_${informeHasta.value || 'corte'}.pdf`)
+    await renderElementoPdf(el, `Informe_Gestion_OT_${plantaLabel.value}_${repTipoLabel.value}_${informeDesde.value || 'reporte'}_al_${informeHasta.value || 'corte'}.pdf`)
   } catch (err) {
     console.error('[generarInformePdf]', err)
   } finally {
@@ -3460,7 +3460,7 @@ async function renderElementoPdf(elemento: HTMLElement, filename: string) {
        * tarjeta, fila de tabla o ítem de lista. Evita partir una tabla o un párrafo a la mitad
        * cuando el contenido de una página no cabe en una sola hoja A4 y hay que dividirlo.
        */
-      function getBreakCandidates(pageEl: HTMLElement, canvasWidth: number): number[] {
+      function getBreakInfo(pageEl: HTMLElement, canvasWidth: number): { points: number[]; forbidden: [number, number][] } {
         const pageRect = pageEl.getBoundingClientRect()
         const ratio = canvasWidth / (pageRect.width || pageEl.offsetWidth || 1)
         const nodes = pageEl.querySelectorAll<HTMLElement>(
@@ -3474,7 +3474,15 @@ async function renderElementoPdf(elemento: HTMLElement, filename: string) {
           const top = Math.round((el.getBoundingClientRect().top - pageRect.top) * ratio)
           if (top > 0) boundaries.add(top)
         })
-        return [...boundaries].sort((a, b) => a - b)
+        // Rangos que NO se pueden partir: gráficas y pares de gráficas.
+        const forbidden: [number, number][] = []
+        pageEl.querySelectorAll<HTMLElement>('.chart-card, .fila-charts, div[style*="height:"]').forEach(el => {
+          const r = el.getBoundingClientRect()
+          const t = Math.round((r.top - pageRect.top) * ratio)
+          const b = Math.round((r.bottom - pageRect.top) * ratio)
+          if (b > t) forbidden.push([t, b])
+        })
+        return { points: [...boundaries].sort((a, b) => a - b), forbidden }
       }
 
       /**
@@ -3482,18 +3490,30 @@ async function renderElementoPdf(elemento: HTMLElement, filename: string) {
        * en un punto seguro cercano al borde. Cada rebanada mide exactamente lo que ocupa su
        * contenido (nunca más de 297mm), para que la página del PDF no quede con espacio sobrante.
        */
-      function sliceCanvas(canvas: HTMLCanvasElement, breakPoints: number[]): { dataUrl: string; heightMm: number }[] {
+      function sliceCanvas(canvas: HTMLCanvasElement, info: { points: number[]; forbidden: [number, number][] }): { dataUrl: string; heightMm: number }[] {
         const imgW = pageW
         const imgH = (canvas.height * imgW) / canvas.width
         if (imgH <= pageH) {
           return [{ dataUrl: canvas.toDataURL('image/png'), heightMm: imgH }]
         }
 
+        const breakPoints = info.points
         const pxPerMm = canvas.width / imgW
         const pageHeightPx = Math.floor(pageH * pxPerMm)
         const margin = pageHeightPx * 0.08
         const slices: { dataUrl: string; heightMm: number }[] = []
         let yOffset = 0
+
+        // Si el corte cae dentro de una gráfica, se empuja fuera (a su tope si hay
+        // espacio razonable arriba, o a su base — la hoja del PDF crece si hace falta).
+        const avoidForbidden = (cut: number): number => {
+          for (const [t, b] of info.forbidden) {
+            if (cut > t + 2 && cut < b - 2) {
+              return t - yOffset > pageHeightPx * 0.22 ? t : b
+            }
+          }
+          return cut
+        }
 
         while (yOffset < canvas.height) {
           const maxEnd = Math.min(yOffset + pageHeightPx, canvas.height)
@@ -3513,6 +3533,7 @@ async function renderElementoPdf(elemento: HTMLElement, filename: string) {
               const within = breakPoints.filter(b => b > yOffset + pageHeightPx * 0.28 && b < maxEnd)
               sliceEnd = within.length ? within[within.length - 1] : maxEnd
             }
+            sliceEnd = avoidForbidden(sliceEnd)
           }
           const sliceHeightPx = Math.max(sliceEnd - yOffset, 1)
 
@@ -3539,7 +3560,7 @@ async function renderElementoPdf(elemento: HTMLElement, filename: string) {
           backgroundColor: '#ffffff',
           logging: false,
         })
-        allSlices.push(...sliceCanvas(canvas, getBreakCandidates(elemento, canvas.width)))
+        allSlices.push(...sliceCanvas(canvas, getBreakInfo(elemento, canvas.width)))
       } else {
         for (let i = 0; i < pages.length; i++) {
           // Sin `width`/`windowWidth`: html2canvas usa el ancho real del .report-page,
@@ -3552,8 +3573,7 @@ async function renderElementoPdf(elemento: HTMLElement, filename: string) {
             height: pages[i].scrollHeight,
             windowHeight: pages[i].scrollHeight,
           })
-          const breakPoints = getBreakCandidates(pages[i], pageCanvas.width)
-          allSlices.push(...sliceCanvas(pageCanvas, breakPoints))
+          allSlices.push(...sliceCanvas(pageCanvas, getBreakInfo(pages[i], pageCanvas.width)))
         }
       }
 
