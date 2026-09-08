@@ -152,7 +152,7 @@
         <div v-if="dispRowsBase.length" class="charts-grid" style="margin-top: 14px;">
           <ChartCard
             title="Tendencia Diaria de Disponibilidad"
-            description="% de disponibilidad operativa promedio de la flota por día — meta 85% y promedio del período"
+            description="% de disponibilidad operativa promedio de la flota por día — con promedio del período"
             :option="dispTendenciaDiariaOpt"
             :height="520"
           />
@@ -3146,10 +3146,6 @@ function buildDispEquipoOption(equipos: EquipoDisp[], limit?: number) {
         formatter: (p: any) => `${p.value}%  ·  ${p.data.diasOp} d`,
       },
       labelLayout: { hideOverlap: true },
-      markLine: {
-        silent: true, symbol: 'none',
-        data: [{ xAxis: 85, lineStyle: { color: '#10b981', type: 'dashed', width: 2 }, label: { formatter: 'Meta 85%', color: '#10b981', fontSize: 11, fontWeight: 'bold', position: 'end' } }],
-      },
     }],
   })
 }
@@ -3343,7 +3339,7 @@ const dispTendenciaDiariaOpt = computed(() => {
         const v = Number(p.value) || 0
         const col = v >= 85 ? '#16a34a' : v >= 75 ? '#d99a2b' : '#ef4444'
         return `<b>${p.name}</b><br/><span style="color:${col}">●</span> Disponibilidad: <b>${v}%</b><br/>` +
-          `<span style="color:#94a3b8">●</span> Meta 85% · Prom. período <b>${avg}%</b>`
+          `<span style="color:#94a3b8">●</span> Prom. período <b>${avg}%</b>`
       },
     },
     grid: { left: 40, right: 20, bottom: 40, top: 30, containLabel: true },
@@ -3388,7 +3384,6 @@ const dispTendenciaDiariaOpt = computed(() => {
         silent: true,
         symbol: 'none',
         data: [
-          { yAxis: 85, lineStyle: { color: '#16a34a', type: 'dashed', width: 2 }, label: { formatter: 'Meta 85%', color: '#16a34a', fontSize: 11, fontWeight: 'bold', position: 'insideStartTop' } },
           { yAxis: avg, lineStyle: { color: '#94a3b8', type: 'dotted', width: 1.5 }, label: { formatter: `Prom. ${avg}%`, color: textColor.value, fontSize: 11, fontWeight: 'bold', position: 'insideEndTop' } },
         ],
       },
