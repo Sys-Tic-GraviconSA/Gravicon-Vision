@@ -3454,14 +3454,6 @@ async function renderElementoPdf(elemento: HTMLElement, filename: string) {
     try {
       const pageW = 210
       const pageH = 297
-      // Ancho de referencia común a todas las páginas (el ancho real ya renderizado
-      // del informe), para que ninguna hoja quede a una escala distinta.
-      const refWidth = Math.round(
-        elemento.getBoundingClientRect().width ||
-        (elemento.querySelector('.report-page') as HTMLElement | null)?.clientWidth ||
-        elemento.clientWidth ||
-        794
-      )
 
       /**
        * Puntos de corte "seguros" dentro de una página (en px de canvas): tope de cada bloque,
@@ -3546,20 +3538,18 @@ async function renderElementoPdf(elemento: HTMLElement, filename: string) {
           useCORS: true,
           backgroundColor: '#ffffff',
           logging: false,
-          width: refWidth,
-          windowWidth: refWidth,
         })
         allSlices.push(...sliceCanvas(canvas, getBreakCandidates(elemento, canvas.width)))
       } else {
         for (let i = 0; i < pages.length; i++) {
+          // Sin `width`/`windowWidth`: html2canvas usa el ancho real del .report-page,
+          // que es idéntico en todas las hojas (así todas salen a ancho completo).
           const pageCanvas = await html2canvas(pages[i], {
             scale: 3,
             useCORS: true,
             backgroundColor: '#ffffff',
             logging: false,
-            width: refWidth,
             height: pages[i].scrollHeight,
-            windowWidth: refWidth,
             windowHeight: pages[i].scrollHeight,
           })
           const breakPoints = getBreakCandidates(pages[i], pageCanvas.width)

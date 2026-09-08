@@ -2845,11 +2845,6 @@ async function generarInformePdf() {
     try {
       const pageW = 210
       const pageH = 297
-      const refWidth = Math.round(
-        elemento.getBoundingClientRect().width ||
-        (elemento.querySelector('.report-page') as HTMLElement | null)?.clientWidth ||
-        elemento.clientWidth || 794
-      )
 
       function getBreakCandidates(pageEl: HTMLElement, canvasWidth: number): number[] {
         const pageRect = pageEl.getBoundingClientRect()
@@ -2911,15 +2906,13 @@ async function generarInformePdf() {
       if (pages.length === 0) {
         const canvas = await html2canvas(elemento, {
           scale: 3, useCORS: true, backgroundColor: '#ffffff', logging: false,
-          width: refWidth, windowWidth: refWidth,
         })
         allSlices.push(...sliceCanvas(canvas, getBreakCandidates(elemento, canvas.width)))
       } else {
         for (let i = 0; i < pages.length; i++) {
           const pageCanvas = await html2canvas(pages[i], {
             scale: 3, useCORS: true, backgroundColor: '#ffffff', logging: false,
-            width: refWidth, height: pages[i].scrollHeight,
-            windowWidth: refWidth, windowHeight: pages[i].scrollHeight,
+            height: pages[i].scrollHeight, windowHeight: pages[i].scrollHeight,
           })
           allSlices.push(...sliceCanvas(pageCanvas, getBreakCandidates(pages[i], pageCanvas.width)))
         }
