@@ -3440,6 +3440,9 @@ async function renderElementoPdf(elemento: HTMLElement, filename: string) {
     root.classList.add('light')
     root.classList.remove('dark')
     theme.value = 'light'
+    // Neutraliza desbordes horizontales de tablas/gráficas para que todas las
+    // páginas se capturen al mismo ancho (si no, algunas salen a otra escala).
+    elemento.classList.add('pdf-capturing')
 
     // Espera a que Vue re-renderice las opciones y ECharts termine de dibujar en claro.
     await nextTick()
@@ -3451,6 +3454,14 @@ async function renderElementoPdf(elemento: HTMLElement, filename: string) {
     try {
       const pageW = 210
       const pageH = 297
+      // Ancho de referencia común a todas las páginas (el ancho real ya renderizado
+      // del informe), para que ninguna hoja quede a una escala distinta.
+      const refWidth = Math.round(
+        elemento.getBoundingClientRect().width ||
+        (elemento.querySelector('.report-page') as HTMLElement | null)?.clientWidth ||
+        elemento.clientWidth ||
+        794
+      )
 
       /**
        * Puntos de corte "seguros" dentro de una página (en px de canvas): tope de cada bloque,
@@ -3517,6 +3528,8 @@ async function renderElementoPdf(elemento: HTMLElement, filename: string) {
           useCORS: true,
           backgroundColor: '#ffffff',
           logging: false,
+          width: refWidth,
+          windowWidth: refWidth,
         })
         allSlices.push(...sliceCanvas(canvas, getBreakCandidates(elemento, canvas.width)))
       } else {
@@ -3526,9 +3539,9 @@ async function renderElementoPdf(elemento: HTMLElement, filename: string) {
             useCORS: true,
             backgroundColor: '#ffffff',
             logging: false,
-            width: pages[i].scrollWidth,
+            width: refWidth,
             height: pages[i].scrollHeight,
-            windowWidth: pages[i].scrollWidth,
+            windowWidth: refWidth,
             windowHeight: pages[i].scrollHeight,
           })
           const breakPoints = getBreakCandidates(pages[i], pageCanvas.width)
@@ -3548,6 +3561,7 @@ async function renderElementoPdf(elemento: HTMLElement, filename: string) {
 
       pdf.save(filename)
     } finally {
+      elemento.classList.remove('pdf-capturing')
       if (temaPrevio) {
         root.setAttribute('data-theme', temaPrevio)
         if (temaPrevio === 'dark') {
@@ -5667,6 +5681,24 @@ const sistemasExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(comput
 .pdf-capturing :deep(.chart-actions),
 .pdf-capturing :deep(.action-btn) {
   display: none !important;
+}
+
+/* Durante la captura: ninguna tabla debe desbordar el ancho de la hoja
+   (si no, html2canvas la captura a otra escala y la página "se daña"). */
+.pdf-capturing .table-wrap {
+  overflow: visible !important;
+}
+.pdf-capturing .table-wrap table {
+  width: 100% !important;
+  table-layout: fixed;
+}
+.pdf-capturing .table-wrap th,
+.pdf-capturing .table-wrap td {
+  white-space: normal !important;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  font-size: 9.5px !important;
+  padding: 4px 6px !important;
 }
 
 .page-header {
