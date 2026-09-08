@@ -4388,7 +4388,8 @@ text.dona {
 }
 .pdf-capturing .report-salto-superior { display: none !important; }
 .pdf-capturing .report-page:not(:last-child) .report-footer { display: none !important; }
-.pdf-capturing .fp-num { display: none !important; }
+.pdf-capturing .fp-num,
+.pdf-capturing .page-counter { display: none !important; }
 
 .pdf-capturing .table-wrap { overflow: visible !important; }
 .pdf-capturing .table-wrap table { width: 100% !important; }
