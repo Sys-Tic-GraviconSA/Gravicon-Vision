@@ -500,7 +500,7 @@
           <!-- Comparativo vs Período Anterior -->
           <div v-if="repComparativo" class="report-section-block">
             <h3 class="report-block-title"><span class="title-bar"></span>Comparativo vs Período Anterior</h3>
-            <div v-if="repComparativo.hasPrev" style="font-size: 11px; color: #475569; margin-bottom: 4px;">
+            <div v-if="repComparativo.hasPrev" class="report-muted" style="font-size: 11px; margin-bottom: 4px;">
               <strong>Actual:</strong> {{ informeDesde }} al {{ informeHasta }} &nbsp;·&nbsp; <strong>Anterior:</strong> {{ repComparativo.prevDesde }} al {{ repComparativo.prevHasta }} &nbsp;·&nbsp; por fecha de cierre
             </div>
             <div class="data-card">
@@ -694,7 +694,7 @@
                   </tbody>
                 </table>
               </div>
-              <div style="font-size: 10px; color: #64748b; padding: 6px 10px;">
+              <div class="report-muted" style="font-size: 10px; padding: 6px 10px;">
                 También: OT predictivas <strong>{{ repIndicadores.pred }}</strong> ·
                 Intervenciones por equipo <strong>{{ repIndicadores.intervPorEquipo }}</strong> ·
                 Días fuera de servicio por OT (Recep.→Cierre) <strong>{{ repIndicadores.diasIndispProm }} d</strong> ·
@@ -708,7 +708,7 @@
           <!-- Eficiencia de Mantenimiento y Costo Unitario (m³) — Planta / Tendencia de Costos por Mes — Maquinaria -->
           <div v-if="repTendenciaMensual.rows.length" class="report-section-block">
             <h3 class="report-block-title"><span class="title-bar"></span>{{ isPlanta ? 'Eficiencia de Mantenimiento y Costo Unitario (m³)' : 'Tendencia de Costos por Mes' }}</h3>
-            <div v-if="repTendenciaMensual.rows.length > 1" style="font-size: 11px; color: #475569; margin-bottom: 4px;">
+            <div v-if="repTendenciaMensual.rows.length > 1" class="report-muted" style="font-size: 11px; margin-bottom: 4px;">
               Promedio mensual: <strong>{{ $$(repTendenciaMensual.avg) }}</strong> ·
               Mes más alto: <strong>{{ repTendenciaMensual.maxRow?.label }} ({{ $$(repTendenciaMensual.maxRow?.total || 0) }})</strong> ·
               Mes más bajo: <strong>{{ repTendenciaMensual.minRow?.label }} ({{ $$(repTendenciaMensual.minRow?.total || 0) }})</strong> ·
@@ -870,7 +870,7 @@
           <!-- Distribución por Jornada (Interno vs Externo) -->
           <div v-if="repJornada.length" class="report-section-block">
             <h3 class="report-block-title"><span class="title-bar"></span>Distribución del Costo por Jornada</h3>
-            <div style="font-size: 11px; color: #475569; margin-bottom: 4px;">
+            <div class="report-muted" style="font-size: 11px; margin-bottom: 4px;">
               <template v-for="(j, i) in repJornada" :key="j.label"><template v-if="i">  ·  </template><strong>{{ j.label }}</strong>: {{ j.n }} OT · {{ $$(j.costo) }} ({{ repPct(j.costo) }}%)</template>
             </div>
             <div class="charts-grid cols-2">
@@ -1016,7 +1016,7 @@
                       <td class="bold">{{ o.orden }}</td>
                       <td>{{ o.fecha }}</td>
                       <td class="bold accent-text">{{ o.placa }}</td>
-                      <td>{{ o.proveedor }}<br><span style="font-size: 10px; color: #64748b;">{{ o.desc }}</span></td>
+                      <td>{{ o.proveedor }}<br><span class="report-muted" style="font-size: 10px;">{{ o.desc }}</span></td>
                       <td class="r">{{ $$(o.serv) }}</td>
                       <td class="r">{{ $$(o.ins) }}</td>
                       <td class="r bold" style="color: #dc2626;">{{ $$(o.total) }}</td>
@@ -6260,6 +6260,7 @@ const sistemasExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(comput
   color: var(--text-secondary, #64748b);
 }
 td.muted { color: #94a3b8; }
+.report-muted { color: #475569; }
 
 .zoho-analysis-box {
   background-color: var(--card-bg-hover, #f8fafc);
@@ -6473,6 +6474,113 @@ ul.res li::before {
   color: var(--text-secondary, #64748b);
   font-weight: 500;
 }
+
+/* ============================================================
+   MODO OSCURO DEL INFORME (solo en pantalla).
+   La exportación a PDF fuerza data-theme="light" en <html>,
+   así que estas reglas no aplican durante la captura → el PDF
+   sigue saliendo en blanco.
+   ============================================================ */
+:root[data-theme='dark'] .report-page {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-color: #1e293b;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+}
+:root[data-theme='dark'] .report-header {
+  border-bottom-color: #334155;
+}
+:root[data-theme='dark'] .report-logo {
+  background: #f8fafc;
+  border-radius: 4px;
+  padding: 3px 6px;
+}
+:root[data-theme='dark'] .report-header-text h2,
+:root[data-theme='dark'] .report-title-section h1,
+:root[data-theme='dark'] .report-header-meta strong,
+:root[data-theme='dark'] .page-counter,
+:root[data-theme='dark'] .report-block-title,
+:root[data-theme='dark'] .accent-text,
+:root[data-theme='dark'] .rank-label,
+:root[data-theme='dark'] .rank-val,
+:root[data-theme='dark'] .pv-legend b,
+:root[data-theme='dark'] .table-wrap th {
+  color: #93c5fd;
+}
+:root[data-theme='dark'] .report-intro,
+:root[data-theme='dark'] .report-header-text span,
+:root[data-theme='dark'] .report-header-meta,
+:root[data-theme='dark'] .report-block-sub,
+:root[data-theme='dark'] .report-muted,
+:root[data-theme='dark'] .zoho-analysis-label,
+:root[data-theme='dark'] .empty-table,
+:root[data-theme='dark'] .idx-col,
+:root[data-theme='dark'] .idx,
+:root[data-theme='dark'] .pv-legend,
+:root[data-theme='dark'] .report-footer {
+  color: #94a3b8;
+}
+:root[data-theme='dark'] .zoho-analysis-text,
+:root[data-theme='dark'] ul.res li,
+:root[data-theme='dark'] .report-nota {
+  color: #e2e8f0;
+}
+:root[data-theme='dark'] ul.res li::before {
+  color: #60a5fa;
+}
+:root[data-theme='dark'] .data-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+:root[data-theme='dark'] .card-head,
+:root[data-theme='dark'] .table-wrap th,
+:root[data-theme='dark'] .table-wrap tr:hover td {
+  background: #172033;
+}
+:root[data-theme='dark'] .table-wrap td {
+  border-bottom-color: #334155;
+}
+:root[data-theme='dark'] .table-wrap th {
+  border-bottom-color: #334155;
+}
+:root[data-theme='dark'] .table-total-row td {
+  background: #172033 !important;
+  border-top-color: #475569 !important;
+}
+:root[data-theme='dark'] .grupo-row td {
+  background: #1e2a45;
+  border-top-color: #3b4a6b;
+}
+:root[data-theme='dark'] .grupo-row td:first-child {
+  background: #24304d;
+}
+:root[data-theme='dark'] .report-nota {
+  background: #172033;
+  border-left-color: #60a5fa;
+}
+:root[data-theme='dark'] .report-nota.alerta {
+  background: #2a1414;
+  color: #fca5a5;
+  border-left-color: #ef4444;
+}
+:root[data-theme='dark'] .zoho-analysis-box {
+  background-color: #172033;
+  border-left-color: #60a5fa;
+}
+:root[data-theme='dark'] .rank-track,
+:root[data-theme='dark'] .stack-track {
+  background: #334155;
+}
+:root[data-theme='dark'] .rank-fill {
+  background: #3b82f6;
+}
+:root[data-theme='dark'] .yellow {
+  color: #fbbf24;
+}
+:root[data-theme='dark'] .p-rojo { background: rgba(220, 38, 38, 0.18); color: #fca5a5; }
+:root[data-theme='dark'] .p-verde { background: rgba(22, 163, 74, 0.18); color: #86efac; }
+:root[data-theme='dark'] .p-ambar { background: rgba(184, 134, 11, 0.22); color: #fcd34d; }
+:root[data-theme='dark'] .p-gris { background: rgba(100, 116, 139, 0.22); color: #cbd5e1; }
 
 /* Estilos de Impresión / Guardar PDF */
 @media print {
