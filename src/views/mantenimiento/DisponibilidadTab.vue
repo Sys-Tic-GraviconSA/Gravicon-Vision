@@ -242,11 +242,16 @@
           <header class="report-header">
             <div class="report-header-brand">
               <img
-                src="https://gravicon2026.sirv.com/Pagina%20Gravicon/images/Logos/gravicon_logo.png"
-                @error="($event.target as HTMLImageElement).src = '/Logos/Logo-Gravicon-Nuevo.png'"
+                src="/Logos/Logo-Gravicon-Nuevo.png"
                 alt="Gravicon"
-                class="report-logo"
-                crossorigin="anonymous"
+                class="report-logo report-logo--light"
+                loading="eager"
+              />
+              <img
+                src="/Logos/Logo_Gravicon_Blanco.png"
+                @error="($event.target as HTMLImageElement).style.display = 'none'"
+                alt="Gravicon"
+                class="report-logo report-logo--dark"
                 loading="eager"
               />
               <div class="report-header-text">
@@ -2819,98 +2824,127 @@ async function generarInformePdf() {
       import('jspdf'),
     ])
 
-    // Forzar tema claro temporalmente para que los colores del PDF salgan vivos
+    // Forzar tema claro temporalmente (atributo + ref) para que las gráficas
+    // ECharts se repinten en claro; si no, salen oscuras sobre el fondo blanco.
     const root = document.documentElement
     const temaPrevio = root.getAttribute('data-theme')
+    const themeRefPrevio = theme.value
     root.setAttribute('data-theme', 'light')
     root.classList.add('light')
     root.classList.remove('dark')
+    theme.value = 'light'
+    elemento.classList.add('pdf-capturing')
 
-    // Esperar un frame para que el navegador aplique los estilos
+    await nextTick()
+    renderAllCharts()
+    await new Promise(r => setTimeout(r, 400))
+    window.dispatchEvent(new Event('resize'))
+    await new Promise(r => setTimeout(r, 250))
     await new Promise(r => requestAnimationFrame(() => r(null)))
 
     try {
-      // Dimensiones A4 en mm
       const pageW = 210
       const pageH = 297
-      const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
+      const refWidth = Math.round(
+        elemento.getBoundingClientRect().width ||
+        (elemento.querySelector('.report-page') as HTMLElement | null)?.clientWidth ||
+        elemento.clientWidth || 794
+      )
 
-      // Función auxiliar: añadir un canvas al PDF respetando la proporción
-      // y dividendo en múltiples páginas A4 si el contenido es más alto
-      function addCanvasToPdf(canvas: HTMLCanvasElement, isFirst: boolean) {
-        const imgW = pageW
-        const imgH = (canvas.height * imgW) / canvas.width
-        const imgData = canvas.toDataURL('image/png')
-
-        if (imgH <= pageH) {
-          // Cabe en una sola página
-          if (!isFirst) pdf.addPage()
-          pdf.addImage(imgData, 'PNG', 0, 0, imgW, imgH, undefined, 'FAST')
-        } else {
-          // El contenido es más alto que una página A4: dividir en rebanadas
-          const pxPerMm = canvas.width / imgW
-          const pageHeightPx = Math.floor(pageH * pxPerMm)
-          let yOffset = 0
-          let firstSlice = isFirst
-
-          while (yOffset < canvas.height) {
-            const sliceHeight = Math.min(pageHeightPx, canvas.height - yOffset)
-            const sliceCanvas = document.createElement('canvas')
-            sliceCanvas.width = canvas.width
-            sliceCanvas.height = sliceHeight
-            const ctx = sliceCanvas.getContext('2d')!
-            ctx.fillStyle = '#ffffff'
-            ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height)
-            ctx.drawImage(canvas, 0, yOffset, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight)
-
-            if (!firstSlice) pdf.addPage()
-            const sliceData = sliceCanvas.toDataURL('image/png')
-            const sliceHm = (sliceHeight * imgW) / canvas.width
-            pdf.addImage(sliceData, 'PNG', 0, 0, imgW, sliceHm, undefined, 'FAST')
-
-            yOffset += sliceHeight
-            firstSlice = false
-          }
-        }
+      function getBreakCandidates(pageEl: HTMLElement, canvasWidth: number): number[] {
+        const pageRect = pageEl.getBoundingClientRect()
+        const ratio = canvasWidth / (pageRect.width || pageEl.offsetWidth || 1)
+        const nodes = pageEl.querySelectorAll<HTMLElement>(
+          ':scope > *, .report-section-block, .report-block-title, .data-card, .zoho-analysis-box, ' +
+          '.report-nota, .charts-grid, .charts-grid > *, .fila-charts, .fila-charts > *, .kpi-row, ' +
+          '.chart-card, .comp-grid, .comp-col, table, thead, tr, .table-total-row, .res li'
+        )
+        const boundaries = new Set<number>()
+        nodes.forEach(el => {
+          const top = Math.round((el.getBoundingClientRect().top - pageRect.top) * ratio)
+          if (top > 0) boundaries.add(top)
+        })
+        return [...boundaries].sort((a, b) => a - b)
       }
 
-      // Capturar cada .report-page individualmente para mayor nitidez
+      function sliceCanvas(canvas: HTMLCanvasElement, breakPoints: number[]): { dataUrl: string; heightMm: number }[] {
+        const imgW = pageW
+        const imgH = (canvas.height * imgW) / canvas.width
+        if (imgH <= pageH) return [{ dataUrl: canvas.toDataURL('image/png'), heightMm: imgH }]
+
+        const pxPerMm = canvas.width / imgW
+        const pageHeightPx = Math.floor(pageH * pxPerMm)
+        const margin = pageHeightPx * 0.08
+        const slices: { dataUrl: string; heightMm: number }[] = []
+        let yOffset = 0
+
+        while (yOffset < canvas.height) {
+          const maxEnd = Math.min(yOffset + pageHeightPx, canvas.height)
+          let sliceEnd: number
+          if (maxEnd >= canvas.height) {
+            sliceEnd = canvas.height
+          } else {
+            const near = breakPoints.filter(b => b > yOffset && b >= maxEnd - margin && b <= maxEnd)
+            if (near.length) {
+              sliceEnd = near[near.length - 1]
+            } else {
+              const within = breakPoints.filter(b => b > yOffset + pageHeightPx * 0.28 && b < maxEnd)
+              sliceEnd = within.length ? within[within.length - 1] : maxEnd
+            }
+          }
+          const sliceHeightPx = Math.max(sliceEnd - yOffset, 1)
+          const el = document.createElement('canvas')
+          el.width = canvas.width
+          el.height = sliceHeightPx
+          const ctx = el.getContext('2d')!
+          ctx.fillStyle = '#ffffff'
+          ctx.fillRect(0, 0, el.width, el.height)
+          ctx.drawImage(canvas, 0, yOffset, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx)
+          slices.push({ dataUrl: el.toDataURL('image/png'), heightMm: (sliceHeightPx * imgW) / canvas.width })
+          yOffset += sliceHeightPx
+        }
+        return slices
+      }
+
+      const allSlices: { dataUrl: string; heightMm: number }[] = []
       const pages = elemento.querySelectorAll<HTMLElement>('.report-page')
       if (pages.length === 0) {
         const canvas = await html2canvas(elemento, {
-          scale: 3,
-          useCORS: true,
-          backgroundColor: '#ffffff',
-          logging: false,
+          scale: 3, useCORS: true, backgroundColor: '#ffffff', logging: false,
+          width: refWidth, windowWidth: refWidth,
         })
-        addCanvasToPdf(canvas, true)
+        allSlices.push(...sliceCanvas(canvas, getBreakCandidates(elemento, canvas.width)))
       } else {
-        let first = true
         for (let i = 0; i < pages.length; i++) {
           const pageCanvas = await html2canvas(pages[i], {
-            scale: 3,
-            useCORS: true,
-            backgroundColor: '#ffffff',
-            logging: false,
-            width: pages[i].scrollWidth,
-            height: pages[i].scrollHeight,
-            windowWidth: pages[i].scrollWidth,
-            windowHeight: pages[i].scrollHeight,
+            scale: 3, useCORS: true, backgroundColor: '#ffffff', logging: false,
+            width: refWidth, height: pages[i].scrollHeight,
+            windowWidth: refWidth, windowHeight: pages[i].scrollHeight,
           })
-          addCanvasToPdf(pageCanvas, first)
-          first = false
+          allSlices.push(...sliceCanvas(pageCanvas, getBreakCandidates(pages[i], pageCanvas.width)))
         }
       }
+
+      if (!allSlices.length) throw new Error('No se pudo generar contenido para el PDF')
+      const pdf = new jsPDF({ unit: 'mm', format: [pageW, allSlices[0].heightMm], orientation: 'portrait' })
+      allSlices.forEach((slice, i) => {
+        if (i > 0) pdf.addPage([pageW, slice.heightMm])
+        pdf.addImage(slice.dataUrl, 'PNG', 0, 0, pageW, slice.heightMm, undefined, 'FAST')
+      })
       const fechaLimpia = (informeFechaLabel.value || 'reporte')
         .replace(/[^\wáéíóúÁÉÍÓÚñÑ -]/g, '').replace(/\s+/g, '_').trim()
       pdf.save(`Disponibilidad_${plantaLabel.value}_${fechaLimpia}.pdf`)
     } finally {
-      // Restaurar el tema original
+      elemento.classList.remove('pdf-capturing')
       if (temaPrevio === 'dark') {
         root.setAttribute('data-theme', 'dark')
         root.classList.add('dark')
         root.classList.remove('light')
       }
+      theme.value = themeRefPrevio
+      await nextTick()
+      renderAllCharts()
+      window.dispatchEvent(new Event('resize'))
     }
   } catch (err) {
     console.error('Error generando PDF:', err)
@@ -4327,6 +4361,70 @@ text.dona {
 .report-paper :deep(.chart-actions) {
   display: none !important;
 }
+
+/* Durante la captura del PDF: ninguna tabla debe desbordar el ancho de la hoja */
+.pdf-capturing :deep(.chart-actions),
+.pdf-capturing :deep(.action-btn) { display: none !important; }
+.pdf-capturing .table-wrap { overflow: visible !important; }
+.pdf-capturing .table-wrap table { width: 100% !important; }
+.pdf-capturing .table-wrap th,
+.pdf-capturing .table-wrap td {
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  font-size: 10px !important;
+  padding: 4px 6px !important;
+}
+
+/* ============ MODO OSCURO DEL INFORME (solo en pantalla) ============
+   La exportación fuerza data-theme="light", así que el PDF sigue en blanco. */
+:root[data-theme="dark"] .report-page {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-color: #1e293b;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+}
+:root[data-theme="dark"] .report-header,
+:root[data-theme="dark"] .report-header.mini { border-bottom-color: #334155; }
+:root[data-theme="dark"] .report-logo--dark { display: block; }
+:root[data-theme="dark"] .report-logo--light { display: none; }
+.report-logo--dark { display: none; }
+:root[data-theme="dark"] .report-header-text h2,
+:root[data-theme="dark"] .report-title-section h1,
+:root[data-theme="dark"] .report-header-meta strong,
+:root[data-theme="dark"] .page-counter,
+:root[data-theme="dark"] .report-block-title,
+:root[data-theme="dark"] .accent-text,
+:root[data-theme="dark"] .table-wrap th { color: #93c5fd; }
+:root[data-theme="dark"] .report-intro,
+:root[data-theme="dark"] .report-header-text span,
+:root[data-theme="dark"] .report-header-meta,
+:root[data-theme="dark"] .report-footer,
+:root[data-theme="dark"] .empty-table,
+:root[data-theme="dark"] .leyenda,
+:root[data-theme="dark"] .zoho-analysis-label { color: #94a3b8; }
+:root[data-theme="dark"] .zoho-analysis-text,
+:root[data-theme="dark"] ul.res li,
+:root[data-theme="dark"] .report-nota { color: #e2e8f0; }
+:root[data-theme="dark"] .data-card { background: #1e293b; border-color: #334155; }
+:root[data-theme="dark"] .card-head,
+:root[data-theme="dark"] .table-wrap th,
+:root[data-theme="dark"] .table-wrap tr:hover td { background: #172033; }
+:root[data-theme="dark"] .table-wrap td,
+:root[data-theme="dark"] .table-wrap th { border-bottom-color: #334155; }
+:root[data-theme="dark"] .table-total-row td {
+  background: #172033 !important;
+  border-top-color: #475569 !important;
+}
+:root[data-theme="dark"] .report-nota { background: #172033; border-left-color: #60a5fa; }
+:root[data-theme="dark"] .report-nota.alerta { background: #2a1414; color: #fca5a5; border-left-color: #ef4444; }
+:root[data-theme="dark"] .zoho-analysis-box { background-color: #172033; border-left-color: #60a5fa; }
+:root[data-theme="dark"] .green { color: #4ade80; }
+:root[data-theme="dark"] .yellow { color: #fbbf24; }
+:root[data-theme="dark"] .red { color: #f87171; }
+:root[data-theme="dark"] .pill.p-azul { background: rgba(59,130,246,.2); color: #93c5fd; }
+:root[data-theme="dark"] .pill.p-rojo { background: rgba(220,38,38,.2); color: #fca5a5; }
+:root[data-theme="dark"] .pill.p-ambar { background: rgba(184,134,11,.22); color: #fcd34d; }
+:root[data-theme="dark"] .pill.p-gris { background: rgba(100,116,139,.22); color: #cbd5e1; }
 
 /* Estilos de Impresión / Guardar PDF */
 @media print {
