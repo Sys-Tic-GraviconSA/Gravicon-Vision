@@ -101,17 +101,17 @@
         <div class="charts-grid cols-2">
           <ChartCard
             title="Disponibilidad Operativa por Equipo"
-            description="% de días operativos sobre el total del período — semáforo: azul ≥85%, amarillo ≥60%, rojo <60%"
+            description="% de días operativos sobre el total del período — semáforo: verde ≥85%, amarillo ≥60%, rojo <60%"
             :option="dispEquipoOpt"
             :expand-option="dispEquipoFullOpt"
-            :height="440"
+            :height="540"
           />
           <ChartCard
             title="Incidencia de Mantenimiento por Equipo"
-            description="% de días en mantenimiento vs. días totales del período"
+            description="% de días en mantenimiento vs. días totales del período — objetivo ≤15%"
             :option="incidenciaMantenimientoOpt"
             :expand-option="incidenciaMantenimientoFullOpt"
-            :height="440"
+            :height="540"
           />
         </div>
 
@@ -121,13 +121,13 @@
             title="Disponibilidad Promedio por Clasificación"
             description="Promedio del período por familia de equipo (maquinaria propia) — semáforo 85 / 75 %"
             :option="dispPorClasifOpt"
-            :height="340"
+            :height="300"
           />
           <ChartCard
             title="Días Fuera de Servicio por Clasificación"
             description="Días-equipo no operativos (parcial = 0,5) acumulados en el período por familia"
             :option="dispDiasFueraClasifOpt"
-            :height="340"
+            :height="300"
           />
         </div>
 
@@ -137,14 +137,14 @@
             title="Composición de la Flota por Estado"
             description="Reparto de días-equipo inspeccionados: operativo pleno, parcial y fuera de servicio"
             :option="dispEstadoDonutOpt"
-            :height="340"
+            :height="360"
           />
           <ChartCard
             v-if="!isConcretosPlanta && disponibilidadMensualClasif.meses.length >= 2"
             title="Evolución Mensual por Clasificación"
             description="% de disponibilidad mes a mes por familia de equipo"
             :option="dispEvolucionClasifOpt"
-            :height="340"
+            :height="360"
           />
         </div>
 
@@ -152,9 +152,9 @@
         <div v-if="dispRowsBase.length" class="charts-grid" style="margin-top: 14px;">
           <ChartCard
             title="Tendencia Diaria de Disponibilidad"
-            description="% de disponibilidad operativa promedio de la flota por día — meta 85%, con máximo y mínimo del período"
+            description="% de disponibilidad operativa promedio de la flota por día — meta 85% y promedio del período"
             :option="dispTendenciaDiariaOpt"
-            :height="340"
+            :height="520"
           />
         </div>
 
@@ -3108,22 +3108,27 @@ function buildDispEquipoOption(equipos: EquipoDisp[], limit?: number) {
         return `<div style="font-size:12px"><strong>${p.name}</strong> ${eq?.tipo ? `<span style="color:#888">(${eq.tipo})</span>` : ''}<hr style="margin:4px 0;border:none;border-top:1px solid #e5e7eb"/><div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color}"></span><strong>${p.value}%</strong> Disponibilidad</div><div style="margin-top:4px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981"></span>Op.: <strong>${eq?.diasOp}</strong> d</div><div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444"></span>No Op.: <strong>${eq?.diasNoOp}</strong> d</div><hr style="margin:4px 0;border:none;border-top:1px solid #e5e7eb"/><div style="color:#6b7280;font-size:11px">Prom. Op. <strong>${avgDiasOp}</strong> d · Prom. Mant. <strong>${avgDiasMant}</strong> d</div></div>`
       },
     },
-    grid: { left: '3%', right: '18%', bottom: '15%', top: 28, containLabel: true },
+    grid: { left: '3%', right: '20%', bottom: 24, top: 30, containLabel: true },
     xAxis: {
       type: 'value', min: 0, max: 100,
       axisLabel: { formatter: '{value}%', color: textColor.value, fontSize: 10 },
-      splitLine: { lineStyle: { color: splitLineColor.value } },
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { lineStyle: { color: splitLineColor.value, type: 'dashed' as const } },
     },
     yAxis: {
       type: 'category',
       inverse: true,
       data: list.map(e => e.placa),
+      axisTick: { show: false },
+      axisLine: { show: false },
       axisLabel: { color: titleColor.value, fontSize: 11, fontWeight: 'bold', width: 96, overflow: 'truncate' },
     },
     series: [{
       name: 'Disponibilidad',
       type: 'bar',
-      barMaxWidth: 24,
+      barMaxWidth: 30,
+      barCategoryGap: '28%',
       data: list.map(e => ({
         value: e.dispPct,
         diasOp: e.diasOp,
@@ -3134,10 +3139,11 @@ function buildDispEquipoOption(equipos: EquipoDisp[], limit?: number) {
           borderRadius: [0, 4, 4, 0],
         },
       })),
+      emphasis: { focus: 'series' as const, itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } },
       label: {
-        show: true, position: 'right', distance: 6,
-        formatter: (p: any) => `${p.value}%  ·  ${p.data.diasOp} d op`,
-        fontSize: 11, fontWeight: 'bold', color: titleColor.value,
+        ...pillLabelBase.value,
+        position: 'right' as const, distance: 6,
+        formatter: (p: any) => `${p.value}%  ·  ${p.data.diasOp} d`,
       },
       labelLayout: { hideOverlap: true },
       markLine: {
@@ -3145,17 +3151,6 @@ function buildDispEquipoOption(equipos: EquipoDisp[], limit?: number) {
         data: [{ xAxis: 85, lineStyle: { color: '#10b981', type: 'dashed', width: 2 }, label: { formatter: 'Meta 85%', color: '#10b981', fontSize: 11, fontWeight: 'bold', position: 'end' } }],
       },
     }],
-    graphic: [
-      { type: 'group', left: '3%', top: 2, children: [
-        { type: 'rect', shape: { width: 210, height: 20, r: 4 }, style: { fill: isDark.value ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' } },
-        { type: 'rect', shape: { x: 8, y: 5, width: 10, height: 10, r: 2 }, style: { fill: '#10b981' } },
-        { type: 'text', style: { text: 'Op. ≥85%', x: 22, y: 14, fill: textColor.value, fontSize: 10, font: 'bold 10px sans-serif' } },
-        { type: 'rect', shape: { x: 78, y: 5, width: 10, height: 10, r: 2 }, style: { fill: '#f59e0b' } },
-        { type: 'text', style: { text: '≥60%', x: 92, y: 14, fill: textColor.value, fontSize: 10, font: 'bold 10px sans-serif' } },
-        { type: 'rect', shape: { x: 138, y: 5, width: 10, height: 10, r: 2 }, style: { fill: '#ef4444' } },
-        { type: 'text', style: { text: '<60%', x: 152, y: 14, fill: textColor.value, fontSize: 10, font: 'bold 10px sans-serif' } },
-      ]},
-    ],
   })
 }
 
@@ -3225,22 +3220,27 @@ function buildIncidenciaOption(equipos: EquipoMant[], limit?: number) {
         return `<div style="font-size:12px"><strong>${p.name}</strong> ${eq?.tipo ? `<span style="color:#888">(${eq.tipo})</span>` : ''}<hr style="margin:4px 0;border:none;border-top:1px solid #e5e7eb"/><div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color}"></span><strong>${p.value}%</strong> Incidencia Mant.</div><div style="margin-top:4px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981"></span>Op.: <strong>${eq?.diasOp}</strong> d</div><div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444"></span>No Op.: <strong>${eq?.diasMant}</strong> d</div><hr style="margin:4px 0;border:none;border-top:1px solid #e5e7eb"/><div style="color:#6b7280;font-size:11px">Prom. Op. <strong>${avgDiasOp}</strong> d · Prom. Mant. <strong>${avgDiasMant}</strong> d</div></div>`
       },
     },
-    grid: { left: '3%', right: '18%', bottom: '15%', top: 28, containLabel: true },
+    grid: { left: '3%', right: '20%', bottom: 24, top: 30, containLabel: true },
     xAxis: {
       type: 'value', min: 0, max: 100,
       axisLabel: { formatter: '{value}%', color: textColor.value, fontSize: 10 },
-      splitLine: { lineStyle: { color: splitLineColor.value } },
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { lineStyle: { color: splitLineColor.value, type: 'dashed' as const } },
     },
     yAxis: {
       type: 'category',
       inverse: true,
       data: list.map(e => e.placa),
+      axisTick: { show: false },
+      axisLine: { show: false },
       axisLabel: { color: titleColor.value, fontSize: 11, fontWeight: 'bold', width: 96, overflow: 'truncate' },
     },
     series: [{
       name: 'Incidencia Mantenimiento',
       type: 'bar',
-      barMaxWidth: 24,
+      barMaxWidth: 30,
+      barCategoryGap: '28%',
       data: list.map(e => ({
         value: e.mantPct,
         diasMant: e.diasMant,
@@ -3251,10 +3251,11 @@ function buildIncidenciaOption(equipos: EquipoMant[], limit?: number) {
           borderRadius: [0, 4, 4, 0],
         },
       })),
+      emphasis: { focus: 'series' as const, itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } },
       label: {
-        show: true, position: 'right', distance: 6,
+        ...pillLabelBase.value,
+        position: 'right' as const, distance: 6,
         formatter: (p: any) => `${p.value}%  ·  ${p.data.diasMant} d`,
-        fontSize: 11, fontWeight: 'bold', color: titleColor.value,
       },
       labelLayout: { hideOverlap: true },
       markLine: {
@@ -3262,17 +3263,6 @@ function buildIncidenciaOption(equipos: EquipoMant[], limit?: number) {
         data: [{ xAxis: 15, lineStyle: { color: '#10b981', type: 'dashed', width: 2 }, label: { formatter: 'Objetivo ≤15%', color: '#10b981', fontSize: 11, fontWeight: 'bold', position: 'end' } }],
       },
     }],
-    graphic: [
-      { type: 'group', left: '3%', top: 2, children: [
-        { type: 'rect', shape: { width: 210, height: 20, r: 4 }, style: { fill: isDark.value ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' } },
-        { type: 'rect', shape: { x: 8, y: 5, width: 10, height: 10, r: 2 }, style: { fill: '#10b981' } },
-        { type: 'text', style: { text: 'Mant. ≤15%', x: 22, y: 14, fill: textColor.value, fontSize: 10, font: 'bold 10px sans-serif' } },
-        { type: 'rect', shape: { x: 90, y: 5, width: 10, height: 10, r: 2 }, style: { fill: '#f59e0b' } },
-        { type: 'text', style: { text: '≤40%', x: 104, y: 14, fill: textColor.value, fontSize: 10, font: 'bold 10px sans-serif' } },
-        { type: 'rect', shape: { x: 150, y: 5, width: 10, height: 10, r: 2 }, style: { fill: '#ef4444' } },
-        { type: 'text', style: { text: '>40%', x: 164, y: 14, fill: textColor.value, fontSize: 10, font: 'bold 10px sans-serif' } },
-      ]},
-    ],
   })
 }
 
@@ -3438,7 +3428,8 @@ const dispPorClasifOpt = computed(() => {
     },
     series: [{
       type: 'bar',
-      barMaxWidth: 26,
+      barMaxWidth: 34,
+      barCategoryGap: '40%',
       data: filas.map(f => ({
         value: f.prom,
         nEq: f.nEquipos,
@@ -3548,7 +3539,8 @@ const dispDiasFueraClasifOpt = computed(() => {
     },
     series: [{
       type: 'bar',
-      barMaxWidth: 26,
+      barMaxWidth: 34,
+      barCategoryGap: '40%',
       data: filas.map(f => f.dias),
       itemStyle: { color: '#ef4444', borderRadius: [0, 4, 4, 0] },
       emphasis: { focus: 'series' as const, itemStyle: { shadowBlur: 10, shadowColor: 'rgba(239,68,68,0.35)' } },
