@@ -3472,7 +3472,10 @@ async function renderElementoPdf(elemento: HTMLElement, filename: string) {
         const pageRect = pageEl.getBoundingClientRect()
         const ratio = canvasWidth / (pageRect.width || pageEl.offsetWidth || 1)
         const nodes = pageEl.querySelectorAll<HTMLElement>(
-          ':scope > *, .report-section-block, .data-card, .charts-grid, .charts-grid > *, .kpi-row, .chart-card, .section-title, .section-divider, .ots-bar, table, tr, .res li, .rank-bar'
+          ':scope > *, .report-section-block, .report-block-title, .data-card, .zoho-analysis-box, .report-nota, ' +
+          '.charts-grid, .charts-grid > *, .fila-charts, .fila-charts > *, .kpi-row, .chart-card, ' +
+          '.section-title, .section-divider, .ots-bar, table, thead, tr, .table-total-row, .grupo-row, ' +
+          '.res li, .rank-bar'
         )
         const boundaries = new Set<number>()
         nodes.forEach(el => {
@@ -3502,8 +3505,23 @@ async function renderElementoPdf(elemento: HTMLElement, filename: string) {
 
         while (yOffset < canvas.height) {
           const maxEnd = Math.min(yOffset + pageHeightPx, canvas.height)
-          const candidates = breakPoints.filter(b => b > yOffset && b >= maxEnd - margin && b <= maxEnd)
-          const sliceEnd = candidates.length ? candidates[candidates.length - 1] : maxEnd
+          let sliceEnd: number
+          if (maxEnd >= canvas.height) {
+            // Última rebanada: llega hasta el final.
+            sliceEnd = canvas.height
+          } else {
+            // 1) Corte limpio pegado al borde de la hoja.
+            const near = breakPoints.filter(b => b > yOffset && b >= maxEnd - margin && b <= maxEnd)
+            if (near.length) {
+              sliceEnd = near[near.length - 1]
+            } else {
+              // 2) Sin corte cerca del borde: el bloque siguiente no cabe entero.
+              //    Se corta en el último punto limpio de la página (aunque deje algo
+              //    de espacio abajo) para NO partir una tabla o gráfica por la mitad.
+              const within = breakPoints.filter(b => b > yOffset + pageHeightPx * 0.28 && b < maxEnd)
+              sliceEnd = within.length ? within[within.length - 1] : maxEnd
+            }
+          }
           const sliceHeightPx = Math.max(sliceEnd - yOffset, 1)
 
           const sliceCanvasEl = document.createElement('canvas')
@@ -5690,14 +5708,12 @@ const sistemasExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(comput
 }
 .pdf-capturing .table-wrap table {
   width: 100% !important;
-  table-layout: fixed;
 }
 .pdf-capturing .table-wrap th,
 .pdf-capturing .table-wrap td {
   white-space: normal !important;
-  word-break: break-word;
   overflow-wrap: anywhere;
-  font-size: 9.5px !important;
+  font-size: 10px !important;
   padding: 4px 6px !important;
 }
 
