@@ -637,6 +637,61 @@
           </div>
 
           <!-- ============================================ -->
+          <!-- DISPONIBILIDAD MENSUAL POR CLASIFICACIÓN     -->
+          <!-- ============================================ -->
+          <div v-if="!isConcretosPlanta && disponibilidadMensualClasif.filas.length" class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Disponibilidad Mensual por Clasificación de Equipo</h3>
+            <p style="font-size: 11px; color: var(--text-secondary); margin: 0 0 6px;">
+              % de disponibilidad operativa de flota propia por familia de equipo y mes. La fila <strong>Cumplimiento</strong> es el promedio ponderado por número de equipos de cada clasificación. Semáforo: verde ≥85 %, ámbar ≥75 %, rojo &lt;75 %.
+            </p>
+            <div class="data-card">
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Clasificación</th>
+                      <th class="r" title="Número de equipos propios">Nº Eq.</th>
+                      <th v-for="m in disponibilidadMensualClasif.mesLabels" :key="m.key" class="r">
+                        {{ m.label }}<template v-if="disponibilidadMensualClasif.multiYear"> '{{ String(m.year).slice(2) }}</template>
+                      </th>
+                      <th class="r">Prom.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="f in disponibilidadMensualClasif.filas" :key="f.id">
+                      <td class="bold accent-text">{{ f.label }}</td>
+                      <td class="r bold">{{ f.nEquipos }}</td>
+                      <td
+                        v-for="(c, ci) in f.celdas"
+                        :key="ci"
+                        class="r"
+                        :class="c == null ? '' : c >= 85 ? 'green' : c >= 75 ? 'yellow' : 'red'"
+                      >{{ c == null ? '—' : c + '%' }}</td>
+                      <td class="r bold" :class="f.prom == null ? '' : f.prom >= 85 ? 'green' : f.prom >= 75 ? 'yellow' : 'red'">
+                        {{ f.prom == null ? '—' : f.prom + '%' }}
+                      </td>
+                    </tr>
+                    <tr class="table-total-row">
+                      <td class="bold">Cumplimiento (disp. global — prom. ponderado)</td>
+                      <td class="r bold">{{ disponibilidadMensualClasif.totalEquipos }}</td>
+                      <td
+                        v-for="(c, ci) in disponibilidadMensualClasif.cumplimiento"
+                        :key="ci"
+                        class="r bold"
+                        :class="c == null ? '' : c >= 85 ? 'green' : c >= 75 ? 'yellow' : 'red'"
+                      >{{ c == null ? '—' : c.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%' }}</td>
+                      <td
+                        class="r bold"
+                        :class="disponibilidadMensualClasif.cumplimientoProm == null ? '' : disponibilidadMensualClasif.cumplimientoProm >= 85 ? 'green' : disponibilidadMensualClasif.cumplimientoProm >= 75 ? 'yellow' : 'red'"
+                      >{{ disponibilidadMensualClasif.cumplimientoProm == null ? '—' : disponibilidadMensualClasif.cumplimientoProm.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ============================================ -->
           <!-- TENDENCIA MENSUAL DE DISPONIBILIDAD          -->
           <!-- ============================================ -->
           <div class="report-section-block">
@@ -2059,6 +2114,104 @@ const svgTrend = computed(() => {
     maxPct,
     minPct,
   }
+})
+
+// Clasificación de disponibilidad por familia de equipo (solo agregados: Cuncía / Acacías)
+const CLASIF_DISPONIBILIDAD: { id: string; label: string; match: (t: string) => boolean }[] = [
+  { id: 'cargue', label: 'Equipos de Cargue', match: t => t.includes('CARGADOR') },
+  { id: 'extraccion', label: 'Equipos de Extracción', match: t => t.includes('EXCAVADORA') || t.includes('RETRO') },
+  { id: 'transporte', label: 'Equipos de Transporte', match: t => t.includes('VOLQUETA') },
+  { id: 'adecuacion', label: 'Adecuación de Vías / Transporte Maquinaria', match: t => /MOTONIVELADORA|TRACTOMULA|CAMABAJA|CAMA\s*BAJA|CAMILO|LOWBOY|NIVELADORA/.test(t) },
+  { id: 'admin', label: 'Equipos Administrativos y Logísticos', match: () => true },
+]
+
+function clasifDispIndex(baseTipo: string): number {
+  const t = (baseTipo || '').toUpperCase()
+  for (let i = 0; i < CLASIF_DISPONIBILIDAD.length; i++) {
+    if (CLASIF_DISPONIBILIDAD[i].match(t)) return i
+  }
+  return CLASIF_DISPONIBILIDAD.length - 1
+}
+
+/**
+ * Tabla de disponibilidad mensual por clasificación de equipo (flota propia).
+ * Cada celda = promedio del score de las inspecciones de esa familia en el mes × 100.
+ * Fila "Cumplimiento" = promedio ponderado por número de equipos de cada clasificación.
+ */
+const disponibilidadMensualClasif = computed(() => {
+  const buckets = CLASIF_DISPONIBILIDAD.map(c => ({
+    id: c.id,
+    label: c.label,
+    placas: new Set<string>(),
+    meses: new Map<string, { sum: number; count: number }>(),
+  }))
+  const mesesSet = new Set<string>()
+
+  for (const r of activePlacasRows.value) {
+    const info = getInspectionDetails(r)
+    if (info.esAlquilado) continue
+    const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
+    if (!d) continue
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+    mesesSet.add(key)
+    const b = buckets[clasifDispIndex(info.baseTipo)]
+    if (info.placa) b.placas.add(info.placa)
+    const cell = b.meses.get(key) ?? { sum: 0, count: 0 }
+    cell.sum += info.score
+    cell.count++
+    b.meses.set(key, cell)
+  }
+
+  const meses = [...mesesSet].sort()
+  const multiYear = new Set(meses.map(k => k.slice(0, 4))).size > 1
+  const mesLabels = meses.map(k => {
+    const [yy, mm] = k.split('-').map(Number)
+    const lbl = new Date(Date.UTC(yy, mm - 1, 1))
+      .toLocaleDateString('es-CO', { month: 'short', timeZone: 'UTC' })
+      .replace('.', '')
+    return { key: k, label: lbl.charAt(0).toUpperCase() + lbl.slice(1), year: yy }
+  })
+
+  const filas = buckets
+    .map(b => {
+      const celdas = meses.map(k => {
+        const c = b.meses.get(k)
+        return c && c.count > 0 ? Math.round((c.sum / c.count) * 100) : null
+      })
+      let totSum = 0
+      let totCount = 0
+      for (const c of b.meses.values()) {
+        totSum += c.sum
+        totCount += c.count
+      }
+      const prom = totCount > 0 ? Math.round((totSum / totCount) * 100) : null
+      return { id: b.id, label: b.label, nEquipos: b.placas.size, celdas, prom }
+    })
+    .filter(f => f.nEquipos > 0 || f.celdas.some(c => c != null))
+
+  const cumplimiento = meses.map((_, mi) => {
+    let wsum = 0
+    let w = 0
+    for (const f of filas) {
+      const v = f.celdas[mi]
+      if (v == null || f.nEquipos === 0) continue
+      wsum += v * f.nEquipos
+      w += f.nEquipos
+    }
+    return w > 0 ? Math.round((wsum / w) * 100) / 100 : null
+  })
+
+  let promWsum = 0
+  let promW = 0
+  for (const f of filas) {
+    if (f.prom == null || f.nEquipos === 0) continue
+    promWsum += f.prom * f.nEquipos
+    promW += f.nEquipos
+  }
+  const cumplimientoProm = promW > 0 ? Math.round((promWsum / promW) * 100) / 100 : null
+  const totalEquipos = filas.reduce((s, f) => s + f.nEquipos, 0)
+
+  return { meses, mesLabels, multiYear, filas, cumplimiento, cumplimientoProm, totalEquipos }
 })
 
 const informeAnalisisTexto = computed(() => {
