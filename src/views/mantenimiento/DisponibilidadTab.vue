@@ -114,6 +114,61 @@
             :height="440"
           />
         </div>
+
+        <!-- Disponibilidad Mensual por Clasificación de Equipo (solo maquinaria — agregados) -->
+        <div v-if="!isConcretosPlanta && disponibilidadMensualClasif.filas.length" class="clasif-card">
+          <div class="clasif-head">
+            <h3>Disponibilidad Mensual por Clasificación de Equipo</h3>
+            <p>
+              % de disponibilidad operativa de la <strong>maquinaria propia</strong> por familia de equipo y mes (equipos de planta fija excluidos).
+              Con un rango de fechas, cada celda es el <strong>promedio</strong> del período de ese mes; la fila
+              <strong>Cumplimiento</strong> es el promedio ponderado por número de equipos. Semáforo: verde ≥85 %, ámbar ≥75 %, rojo &lt;75 %.
+            </p>
+          </div>
+          <div class="clasif-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Clasificación</th>
+                  <th class="r" title="Número de equipos de maquinaria propia">Nº Eq.</th>
+                  <th v-for="m in disponibilidadMensualClasif.mesLabels" :key="m.key" class="r">
+                    {{ m.label }}<template v-if="disponibilidadMensualClasif.multiYear"> '{{ String(m.year).slice(2) }}</template>
+                  </th>
+                  <th class="r">Prom.</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="f in disponibilidadMensualClasif.filas" :key="f.id">
+                  <td class="bold">{{ f.label }}</td>
+                  <td class="r bold">{{ f.nEquipos }}</td>
+                  <td
+                    v-for="(c, ci) in f.celdas"
+                    :key="ci"
+                    class="r"
+                    :class="c == null ? '' : c >= 85 ? 'sem-g' : c >= 75 ? 'sem-y' : 'sem-r'"
+                  >{{ c == null ? '—' : c + '%' }}</td>
+                  <td class="r bold" :class="f.prom == null ? '' : f.prom >= 85 ? 'sem-g' : f.prom >= 75 ? 'sem-y' : 'sem-r'">
+                    {{ f.prom == null ? '—' : f.prom + '%' }}
+                  </td>
+                </tr>
+                <tr class="clasif-tot">
+                  <td class="bold">Cumplimiento (disp. global — prom. ponderado)</td>
+                  <td class="r bold">{{ disponibilidadMensualClasif.totalEquipos }}</td>
+                  <td
+                    v-for="(c, ci) in disponibilidadMensualClasif.cumplimiento"
+                    :key="ci"
+                    class="r bold"
+                    :class="c == null ? '' : c >= 85 ? 'sem-g' : c >= 75 ? 'sem-y' : 'sem-r'"
+                  >{{ c == null ? '—' : c.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%' }}</td>
+                  <td
+                    class="r bold"
+                    :class="disponibilidadMensualClasif.cumplimientoProm == null ? '' : disponibilidadMensualClasif.cumplimientoProm >= 85 ? 'sem-g' : disponibilidadMensualClasif.cumplimientoProm >= 75 ? 'sem-y' : 'sem-r'"
+                  >{{ disponibilidadMensualClasif.cumplimientoProm == null ? '—' : disponibilidadMensualClasif.cumplimientoProm.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
     </template>
 
     <!-- ==================================================== -->
@@ -642,7 +697,7 @@
           <div v-if="!isConcretosPlanta && disponibilidadMensualClasif.filas.length" class="report-section-block">
             <h3 class="report-block-title"><span class="title-bar"></span>Disponibilidad Mensual por Clasificación de Equipo</h3>
             <p style="font-size: 11px; color: var(--text-secondary); margin: 0 0 6px;">
-              % de disponibilidad operativa de flota propia por familia de equipo y mes. La fila <strong>Cumplimiento</strong> es el promedio ponderado por número de equipos de cada clasificación. Semáforo: verde ≥85 %, ámbar ≥75 %, rojo &lt;75 %.
+              % de disponibilidad operativa de la maquinaria propia por familia de equipo y mes (equipos de planta fija excluidos). Con un rango de fechas cada celda es el promedio del período de ese mes. La fila <strong>Cumplimiento</strong> es el promedio ponderado por número de equipos de cada clasificación. Semáforo: verde ≥85 %, ámbar ≥75 %, rojo &lt;75 %.
             </p>
             <div class="data-card">
               <div class="table-wrap">
@@ -2133,6 +2188,9 @@ function clasifDispIndex(baseTipo: string): number {
   return CLASIF_DISPONIBILIDAD.length - 1
 }
 
+/** Equipos de planta fija (no maquinaria móvil): en agregados no entran a disponibilidad. */
+const ES_PLANTA_FIJA = /TRITURADORA|CHANCADORA|\bPLANTA\b|ZARANDA|CRIBA|\bBANDA\b|TRANSPORTADORA|TOLVA|MOLINO|CLASIFICADORA|LAVADORA|\bTAMIZ|\bCONO\b|ALIMENTADOR|PRIMARI|SECUNDARI|TERCIARI|GENERADOR|PLANTA ELÉCTRICA|SUBESTACION|SUBESTACIÓN/
+
 /**
  * Tabla de disponibilidad mensual por clasificación de equipo (flota propia).
  * Cada celda = promedio del score de las inspecciones de esa familia en el mes × 100.
@@ -2150,6 +2208,7 @@ const disponibilidadMensualClasif = computed(() => {
   for (const r of activePlacasRows.value) {
     const info = getInspectionDetails(r)
     if (info.esAlquilado) continue
+    if (ES_PLANTA_FIJA.test((info.baseTipo || '').toUpperCase())) continue
     const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
     if (!d) continue
     const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
@@ -3371,6 +3430,66 @@ const incidenciaMantenimientoFullOpt = computed(() => buildIncidenciaOption(inci
   color: var(--text-secondary);
   font-size: 11.5px;
 }
+
+/* Tabla de disponibilidad mensual por clasificación (vista Gráficas — theme-aware) */
+.clasif-card {
+  margin-top: 16px;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--card-border, #e2e8f0);
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+.clasif-head h3 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary, #172954);
+}
+.clasif-head p {
+  margin: 0 0 12px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text-secondary, #64748b);
+}
+.clasif-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+.clasif-table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  color: var(--text-primary, #1e293b);
+}
+.clasif-table-wrap th {
+  text-align: right;
+  padding: 7px 10px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary, #64748b);
+  border-bottom: 2px solid var(--card-border, #e2e8f0);
+  white-space: nowrap;
+}
+.clasif-table-wrap th:first-child { text-align: left; }
+.clasif-table-wrap td {
+  padding: 6.5px 10px;
+  text-align: right;
+  border-bottom: 1px solid var(--card-border, #f1f5f9);
+  white-space: nowrap;
+}
+.clasif-table-wrap td:first-child { text-align: left; }
+.clasif-table-wrap .bold { font-weight: 700; }
+.clasif-table-wrap .clasif-tot td {
+  border-top: 2px solid var(--card-border, #cbd5e1);
+  border-bottom: none;
+  font-weight: 700;
+  background: var(--hover-bg, rgba(100, 116, 139, 0.08));
+}
+.clasif-table-wrap .sem-g { color: #16a34a; font-weight: 700; }
+.clasif-table-wrap .sem-y { color: #d99a2b; font-weight: 700; }
+.clasif-table-wrap .sem-r { color: #ef4444; font-weight: 700; }
 
 /* Alerts grid — section de estado operativo */
 .alerts-grid {
