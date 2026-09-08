@@ -483,6 +483,12 @@
             <KpiCard label="Gasto Externo" accent="#F59E0B" icon="users" :value="$$(repCostosProv.externo)" />
           </div>
 
+          <!-- Nota de metodología del filtro por fecha -->
+          <div class="report-nota">
+            <strong>Base del período:</strong> los datos filtrados por fecha se toman por la <strong>fecha de cierre</strong> de la OT (cuando se realiza y paga el gasto), no por la de creación.
+            <template v-if="repAbiertas > 0"> Las <strong>{{ repAbiertas }} OT abiertas</strong> (sin fecha de cierre) se incluyen en todos los períodos para no perder de vista el pendiente.</template>
+          </div>
+
           <!-- Nota de Estado / Alertas -->
           <div v-if="repAbiertas > 0" class="report-nota alerta">
             <strong>Atención a Órdenes Abiertas ({{ repAbiertas }} OT):</strong>
@@ -532,10 +538,28 @@
                       <td class="r bold" :style="{ color: repDeltaColor(repComparativo.actual.ins - repComparativo.prev.ins, 'down') }">{{ repDeltaTxt(repComparativo.actual.ins - repComparativo.prev.ins, true) }} · {{ repDeltaPct(repComparativo.actual.ins, repComparativo.prev.ins) }}</td>
                     </tr>
                     <tr>
+                      <td class="bold">Costo Interno (Gravicon)</td>
+                      <td class="r">{{ $$(repComparativo.prev.servInt) }}</td>
+                      <td class="r bold">{{ $$(repComparativo.actual.servInt) }}</td>
+                      <td class="r bold" :style="{ color: repDeltaColor(repComparativo.actual.servInt - repComparativo.prev.servInt, 'down') }">{{ repDeltaTxt(repComparativo.actual.servInt - repComparativo.prev.servInt, true) }} · {{ repDeltaPct(repComparativo.actual.servInt, repComparativo.prev.servInt) }}</td>
+                    </tr>
+                    <tr>
+                      <td class="bold">Costo Externo (Proveedores)</td>
+                      <td class="r">{{ $$(repComparativo.prev.servExt) }}</td>
+                      <td class="r bold">{{ $$(repComparativo.actual.servExt) }}</td>
+                      <td class="r bold" :style="{ color: repDeltaColor(repComparativo.actual.servExt - repComparativo.prev.servExt, 'down') }">{{ repDeltaTxt(repComparativo.actual.servExt - repComparativo.prev.servExt, true) }} · {{ repDeltaPct(repComparativo.actual.servExt, repComparativo.prev.servExt) }}</td>
+                    </tr>
+                    <tr>
                       <td class="bold">% Preventivo</td>
                       <td class="r">{{ repComparativo.prev.pctPrev }}%</td>
                       <td class="r bold">{{ repComparativo.actual.pctPrev }}%</td>
                       <td class="r bold" :style="{ color: repDeltaColor(repComparativo.actual.pctPrev - repComparativo.prev.pctPrev, 'up') }">{{ repDeltaTxt(repComparativo.actual.pctPrev - repComparativo.prev.pctPrev) }} pts</td>
+                    </tr>
+                    <tr>
+                      <td class="bold">% Correctivo</td>
+                      <td class="r">{{ repComparativo.prev.pctCorr }}%</td>
+                      <td class="r bold">{{ repComparativo.actual.pctCorr }}%</td>
+                      <td class="r bold" :style="{ color: repDeltaColor(repComparativo.actual.pctCorr - repComparativo.prev.pctCorr, 'down') }">{{ repDeltaTxt(repComparativo.actual.pctCorr - repComparativo.prev.pctCorr) }} pts</td>
                     </tr>
                     <tr>
                       <td class="bold">% Cierre</td>
@@ -643,53 +667,13 @@
           <!-- Tendencia de Costos por Mes -->
           <div v-if="repTendenciaMensual.rows.length" class="report-section-block">
             <h3 class="report-block-title"><span class="title-bar"></span>Tendencia de Costos por Mes</h3>
-            <div v-if="repTendenciaMensual.rows.length > 1" style="font-size: 11px; color: #475569; margin-bottom: 6px;">
+            <div v-if="repTendenciaMensual.rows.length > 1" style="font-size: 11px; color: #475569; margin-bottom: 4px;">
               Promedio mensual: <strong>{{ $$(repTendenciaMensual.avg) }}</strong> ·
               Mes más alto: <strong>{{ repTendenciaMensual.maxRow?.label }} ({{ $$(repTendenciaMensual.maxRow?.total || 0) }})</strong> ·
-              Mes más bajo: <strong>{{ repTendenciaMensual.minRow?.label }} ({{ $$(repTendenciaMensual.minRow?.total || 0) }})</strong>
+              Mes más bajo: <strong>{{ repTendenciaMensual.minRow?.label }} ({{ $$(repTendenciaMensual.minRow?.total || 0) }})</strong> ·
+              Total <strong>{{ $$(repTendenciaMensual.totals.total) }}</strong> en {{ repTendenciaMensual.totals.n }} OT
             </div>
-            <div class="data-card">
-              <div class="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Mes</th>
-                      <th class="r" style="width: 45px">OTs</th>
-                      <th class="r" style="width: 115px">Servicios</th>
-                      <th class="r" style="width: 115px">Insumos</th>
-                      <th class="r" style="width: 130px">Costo Total</th>
-                      <th style="width: 110px">Peso</th>
-                      <th class="r" style="width: 90px">Costo/m³</th>
-                      <th class="r" style="width: 55px">% Prev.</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="m in repTendenciaMensual.rows" :key="m.label">
-                      <td class="bold accent-text">{{ m.label }}</td>
-                      <td class="r">{{ m.n }}</td>
-                      <td class="r">{{ $$(m.serv) }}</td>
-                      <td class="r">{{ $$(m.ins) }}</td>
-                      <td class="r bold">{{ $$(m.total) }}</td>
-                      <td>
-                        <div class="rank-track"><div class="rank-fill" :style="{ width: (repTendenciaMensual.maxCost ? (m.total / repTendenciaMensual.maxCost) * 100 : 0) + '%' }"></div></div>
-                      </td>
-                      <td class="r">{{ m.costoM3 ? $$(m.costoM3) : '—' }}</td>
-                      <td class="r">{{ m.pctPrev }}%</td>
-                    </tr>
-                    <tr class="table-total-row">
-                      <td class="bold">TOTAL</td>
-                      <td class="r bold">{{ repTendenciaMensual.totals.n }}</td>
-                      <td class="r bold">{{ $$(repTendenciaMensual.totals.serv) }}</td>
-                      <td class="r bold">{{ $$(repTendenciaMensual.totals.ins) }}</td>
-                      <td class="r bold">{{ $$(repTendenciaMensual.totals.total) }}</td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <ChartCard title="" :option="repTendenciaOpt" :height="300" hide-actions />
           </div>
 
           <!-- Costo por Tipo de Vehículo + Top 5 Vehículos Mayor Consumo -->
@@ -765,8 +749,10 @@
                     <tr>
                       <th style="width: 24px">#</th>
                       <th>{{ repSectionLabelVehiculo }}</th>
-                      <th class="r" style="width: 90px">OTs Correctivas</th>
-                      <th style="width: 120px">Última OT</th>
+                      <th class="r" style="width: 70px">OT Corr.</th>
+                      <th class="r" style="width: 110px">Gasto Corr.</th>
+                      <th>Sistema recurrente</th>
+                      <th style="width: 100px">Última OT</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -774,9 +760,14 @@
                       <td class="idx">{{ i + 1 }}</td>
                       <td class="bold accent-text">{{ v.placa }}</td>
                       <td class="r bold" style="color: #dc2626;">{{ v.n }}</td>
+                      <td class="r">{{ $$(v.costo) }}</td>
+                      <td>
+                        {{ v.sistemaTop }}
+                        <template v-if="v.sistemaTopN > 1"> <span :style="{ fontWeight: 700, color: v.reincide ? '#dc2626' : '#b45309' }">({{ v.sistemaTopN }}× — {{ v.reincide ? 'reincide en lo mismo' : 'repetido' }})</span></template>
+                      </td>
                       <td>{{ v.ultimaFecha ? serialDate(v.ultimaFecha) : '—' }}</td>
                     </tr>
-                    <tr v-if="!repFallasRecurrentes.length"><td colspan="4" class="empty-table">Sin equipos con fallas recurrentes en el período</td></tr>
+                    <tr v-if="!repFallasRecurrentes.length"><td colspan="6" class="empty-table">Sin equipos con fallas recurrentes en el período</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -835,41 +826,13 @@
             </div>
           </div>
 
-          <!-- Distribución por Jornada -->
-          <div class="report-section-block">
-            <h3 class="report-block-title"><span class="title-bar"></span>Distribución por Jornada</h3>
-            <div class="charts-grid cols-2">
-              <div class="data-card">
-                <div class="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Jornada</th>
-                        <th class="r" style="width: 50px">OTs</th>
-                        <th class="r" style="width: 110px">Costo</th>
-                        <th class="r" style="width: 60px">Part.</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="j in repJornada" :key="j.label">
-                        <td class="bold accent-text">{{ j.label }}</td>
-                        <td class="r bold">{{ j.n }}</td>
-                        <td class="r bold">{{ $$(j.costo) }}</td>
-                        <td class="r bold">{{ repPct(j.costo) }}%</td>
-                      </tr>
-                      <tr v-if="!repJornada.length"><td colspan="4" class="empty-table">Sin datos</td></tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-              <div class="data-card" style="padding: 12px 16px; display: flex; flex-direction: column; justify-content: center;">
-                <div class="pv-legend">
-                  <template v-for="j in repJornada" :key="'leg-' + j.label">
-                    <span style="font-weight:700;">{{ j.label }}</span> — {{ repPct(j.costo) }}% del costo ({{ $$(j.costo) }}) · {{ j.n }} OTs<br>
-                  </template>
-                </div>
-              </div>
+          <!-- Distribución por Jornada (Interno vs Externo) -->
+          <div v-if="repJornada.length" class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Distribución por Jornada — Interno vs Externo</h3>
+            <div style="font-size: 11px; color: #475569; margin-bottom: 4px;">
+              <template v-for="(j, i) in repJornada" :key="j.label"><template v-if="i">  ·  </template><strong>{{ j.label }}</strong>: {{ j.n }} OT · {{ $$(j.costo) }} ({{ repPct(j.costo) }}%)</template>
             </div>
+            <ChartCard title="" :option="repJornadaOpt" :height="240" hide-actions />
           </div>
 
           <!-- Ranking de Proveedores con Mayor Uso -->
@@ -900,6 +863,36 @@
                       <td class="r">{{ repPct(p.costo) }}%</td>
                     </tr>
                     <tr v-if="!repRankProveedores.length"><td colspan="7" class="empty-table">Sin datos en el período</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Personal Interno de Intervención (junto al Ranking de Proveedores) -->
+          <div class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Personal de Intervención (Interno)</h3>
+            <div class="data-card">
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width: 24px">#</th>
+                      <th>Técnico / Personal Interno</th>
+                      <th class="r" style="width: 65px">OTs</th>
+                      <th class="r" style="width: 130px">Costo Servicios</th>
+                      <th class="r" style="width: 100px">Duración (horas)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(p, i) in repPersonalInterno" :key="p.label">
+                      <td class="idx">{{ i + 1 }}</td>
+                      <td class="bold accent-text">{{ p.label }}</td>
+                      <td class="r bold">{{ p.n }}</td>
+                      <td class="r bold">{{ $$(p.costoServ) }}</td>
+                      <td class="r bold">{{ fmtDuracion(p.horas) }}</td>
+                    </tr>
+                    <tr v-if="!repPersonalInterno.length"><td colspan="5" class="empty-table">Sin datos en el período</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -998,7 +991,8 @@
                       <tr>
                         <th style="width: 24px">#</th>
                         <th>Sistema Intervenido</th>
-                        <th class="r" style="width: 60px">Interv.</th>
+                        <th class="r" style="width: 55px">Interv.</th>
+                        <th class="r" style="width: 105px">Gasto</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1006,8 +1000,9 @@
                         <td class="idx">{{ i + 1 }}</td>
                         <td class="bold accent-text">{{ s.label }}</td>
                         <td class="r bold">{{ s.n }}</td>
+                        <td class="r">{{ $$(s.costo) }}</td>
                       </tr>
-                      <tr v-if="!repRankSistemas.length"><td colspan="3" class="empty-table">Sin intervenciones</td></tr>
+                      <tr v-if="!repRankSistemas.length"><td colspan="4" class="empty-table">Sin intervenciones</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -1039,36 +1034,6 @@
                     </tbody>
                   </table>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Personal Interno de Intervención -->
-          <div class="report-section-block">
-            <h3 class="report-block-title"><span class="title-bar"></span>Personal de Intervención (Interno)</h3>
-            <div class="data-card">
-              <div class="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th style="width: 24px">#</th>
-                      <th>Técnico / Personal Interno</th>
-                      <th class="r" style="width: 65px">OTs</th>
-                      <th class="r" style="width: 130px">Costo Servicios</th>
-                      <th class="r" style="width: 100px">Duración (horas)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="(p, i) in repPersonalInterno" :key="p.label">
-                      <td class="idx">{{ i + 1 }}</td>
-                      <td class="bold accent-text">{{ p.label }}</td>
-                      <td class="r bold">{{ p.n }}</td>
-                      <td class="r bold">{{ $$(p.costoServ) }}</td>
-                      <td class="r bold">{{ fmtDuracion(p.horas) }}</td>
-                    </tr>
-                    <tr v-if="!repPersonalInterno.length"><td colspan="5" class="empty-table">Sin datos en el período</td></tr>
-                  </tbody>
-                </table>
               </div>
             </div>
           </div>
@@ -2842,17 +2807,23 @@ const selectedProveedores = ref<Set<string>>(new Set())
 const selectedEstados = ref<Set<string>>(new Set())
 const selectedPersonalInterno = ref<Set<string>>(new Set())
 
+/**
+ * Serial de la fecha que rige el filtro por fecha del panel: la FECHA DE CIERRE de
+ * la OT (es cuando se realiza/paga el gasto). Devuelve 0 si la OT está abierta o no
+ * tiene fecha de cierre — esas OT se muestran siempre, sin importar el rango.
+ */
+function otCloseSerial(r: Record<string, unknown>): number {
+  const c = Number(r['Fecha Cierre'])
+  return typeof c === 'number' && !isNaN(c) && c > 0 ? c : 0
+}
+
 /* ── INFORME OFICIAL DE GESTIÓN DE OT (Vista previa + PDF nítido en el cliente) ── */
 const informeMinSerial = computed(() => {
-  const all = dataFilteredMain.value
-  if (!all.length) return null
-  const serials = all.map(r => Number(r['FECHA'])).filter(v => typeof v === 'number' && !isNaN(v) && v > 0)
+  const serials = dataFilteredMain.value.map(otCloseSerial).filter(v => v > 0)
   return serials.length ? Math.min(...serials) : null
 })
 const informeMaxSerial = computed(() => {
-  const all = dataFilteredMain.value
-  if (!all.length) return null
-  const serials = all.map(r => Number(r['FECHA'])).filter(v => typeof v === 'number' && !isNaN(v) && v > 0)
+  const serials = dataFilteredMain.value.map(otCloseSerial).filter(v => v > 0)
   return serials.length ? Math.max(...serials) : null
 })
 const informeDesde = computed(() => {
@@ -2866,7 +2837,7 @@ const informeHasta = computed(() => {
   return informeDesde.value
 })
 const informeRows = computed(() => {
-  return [...dataFilteredMain.value].sort((a, b) => Number(a['FECHA']) - Number(b['FECHA']))
+  return [...dataFilteredMain.value].sort((a, b) => (otCloseSerial(a) || Infinity) - (otCloseSerial(b) || Infinity))
 })
 const repRows = informeRows
 const repReferencia = computed(() => `${new Date().getFullYear()}-${plantaLabel.value.toUpperCase()}`)
@@ -2956,18 +2927,38 @@ const repTopVehiculos = computed(() => {
 
 /** Equipos con fallas recurrentes: 2 o más OTs de mantenimiento correctivo en el período. */
 const repFallasRecurrentes = computed(() => {
-  const map = new Map<string, { placa: string; n: number; ultimaFecha: number }>()
+  const map = new Map<string, { placa: string; n: number; ultimaFecha: number; costo: number; sistemas: Map<string, number> }>()
   for (const r of repRows.value) {
     const clase = String(r['Clase Mantenimiento'] ?? '').trim().toUpperCase()
     if (!clase.includes('CORRECTIVO')) continue
     const placa = String(r['Placa del Vehículo'] ?? '').trim() || vehTypeLabel(String(r['Tipo de Vehículo'] ?? ''))
-    const e = map.get(placa) ?? { placa, n: 0, ultimaFecha: 0 }
+    const e = map.get(placa) ?? { placa, n: 0, ultimaFecha: 0, costo: 0, sistemas: new Map<string, number>() }
     e.n++
-    const f = Number(r['FECHA']) || 0
+    e.costo += (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0)
+    const f = otCloseSerial(r) || Number(r['FECHA']) || 0
     if (f > e.ultimaFecha) e.ultimaFecha = f
+    const subs = r['_subOrdenes']
+    if (Array.isArray(subs)) {
+      const seen = new Set<string>()
+      for (const s of subs as { sistema?: string; sistemaTexto?: string }[]) {
+        const lbl = String(s?.sistemaTexto || s?.sistema || '').trim()
+        if (!lbl || seen.has(lbl)) continue
+        seen.add(lbl)
+        e.sistemas.set(lbl, (e.sistemas.get(lbl) || 0) + 1)
+      }
+    }
     map.set(placa, e)
   }
-  return [...map.values()].filter(e => e.n >= 2).sort((a, b) => b.n - a.n).slice(0, 8)
+  return [...map.values()].filter(e => e.n >= 2).sort((a, b) => b.n - a.n).slice(0, 8).map(e => {
+    const top = [...e.sistemas.entries()].sort((a, b) => b[1] - a[1])[0]
+    return {
+      placa: e.placa, n: e.n, ultimaFecha: e.ultimaFecha, costo: Math.round(e.costo),
+      sistemaTop: top ? top[0] : '—',
+      sistemaTopN: top ? top[1] : 0,
+      // "Reincidente": la mayoría de sus OT correctivas son por el mismo sistema.
+      reincide: top ? top[1] >= 2 && top[1] / e.n >= 0.5 : false,
+    }
+  })
 })
 
 /** Costos por proveedores internos (Gravicon) y externos. */
@@ -3006,17 +2997,45 @@ const repRankProveedores = computed((): { label: string; n: number; costo: numbe
     .slice(0, 10)
 })
 
-/** Distribución por Jornada (Noche / Dia). */
+/** Distribución por Jornada (Noche / Día), separada por Interno / Externo. */
 const repJornada = computed(() => {
-  const map = new Map<string, { n: number; costo: number }>()
+  const map = new Map<string, { n: number; costo: number; costoInt: number; costoExt: number; nInt: number; nExt: number }>()
   for (const r of repRows.value) {
     const j = String(r['Jornada'] ?? '').trim() || 'Sin jornada'
-    const e = map.get(j) ?? { n: 0, costo: 0 }
-    e.n++
-    e.costo += rowServicios(r) + rowInsumos(r)
+    const e = map.get(j) ?? { n: 0, costo: 0, costoInt: 0, costoExt: 0, nInt: 0, nExt: 0 }
+    const c = rowServicios(r) + rowInsumos(r)
+    e.n++; e.costo += c
+    if (isInterno(r)) { e.costoInt += c; e.nInt++ } else { e.costoExt += c; e.nExt++ }
     map.set(j, e)
   }
   return [...map.entries()].map(([label, v]) => ({ label, ...v })).sort((a, b) => b.n - a.n)
+})
+
+/** Gráfica de la distribución por jornada: barras apiladas Interno/Externo del costo. */
+const repJornadaOpt = computed(() => {
+  const j = repJornada.value
+  return markRaw({
+    tooltip: {
+      trigger: 'axis' as const,
+      formatter: (params: any) => {
+        const arr = Array.isArray(params) ? params : [params]
+        const row = j[arr[0]?.dataIndex ?? 0]
+        if (!row) return ''
+        return `<b>${row.label}</b> · ${row.n} OT<br/>` +
+          `Interno: <b>$${Math.round(row.costoInt).toLocaleString('es-CO')}</b> (${row.nInt} OT)<br/>` +
+          `Externo: <b>$${Math.round(row.costoExt).toLocaleString('es-CO')}</b> (${row.nExt} OT)<br/>` +
+          `Total: <b>$${Math.round(row.costo).toLocaleString('es-CO')}</b>`
+      },
+    },
+    legend: { bottom: 0, textStyle: { fontSize: 10, color: '#475569' } },
+    grid: { left: 8, right: 8, top: 12, bottom: 40, containLabel: true },
+    xAxis: { type: 'category' as const, data: j.map(x => x.label), axisLabel: { fontSize: 11, color: '#475569', fontWeight: 600 } },
+    yAxis: { type: 'value' as const, axisLabel: { show: false }, splitLine: { lineStyle: { type: 'dashed', color: '#e2e8f0' } } },
+    series: [
+      { name: 'Interno (Gravicon)', type: 'bar' as const, stack: 'j', barMaxWidth: 60, data: j.map(x => Math.round(x.costoInt)), itemStyle: { color: palette[1] } },
+      { name: 'Externo (Proveedores)', type: 'bar' as const, stack: 'j', barMaxWidth: 60, data: j.map(x => Math.round(x.costoExt)), itemStyle: { color: '#F59E0B' } },
+    ],
+  })
 })
 
 
@@ -3073,17 +3092,26 @@ const repClaseMant = computed(() => {
 
 /** Ranking de sistemas con mayor intervención a partir de las sub-órdenes de cada OT. */
 const repRankSistemas = computed(() => {
-  const map = new Map<string, number>()
+  const map = new Map<string, { n: number; costo: number }>()
   for (const r of repRows.value) {
     const subs = r['_subOrdenes']
     if (!Array.isArray(subs)) continue
+    const sistemasOt = new Set<string>()
     for (const s of subs as { sistema?: string; sistemaTexto?: string }[]) {
       const label = String(s?.sistemaTexto || s?.sistema || '').trim()
       if (!label) continue
-      map.set(label, (map.get(label) || 0) + 1)
+      sistemasOt.add(label)
+      const e = map.get(label) ?? { n: 0, costo: 0 }
+      e.n++
+      map.set(label, e)
     }
+    if (!sistemasOt.size) continue
+    // El costo de la OT se reparte entre los sistemas distintos que tocó.
+    const share = ((Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0)) / sistemasOt.size
+    for (const label of sistemasOt) map.get(label)!.costo += share
   }
-  return [...map.entries()].map(([label, n]) => ({ label, n })).sort((a, b) => b.n - a.n).slice(0, 8)
+  // El ranking sigue liderado por Nº de intervenciones, no por costo.
+  return [...map.entries()].map(([label, v]) => ({ label, n: v.n, costo: Math.round(v.costo) })).sort((a, b) => b.n - a.n).slice(0, 8)
 })
 
 /** Ranking de elementos de almacén más solicitados (suma de cantidades en sub-solped). */
@@ -3672,9 +3700,11 @@ const prodFiltered = computed(() => {
 const filteredData = computed(() => {
   const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
   const until = fechaFin.value ? dateToSerial(fechaFin.value) + 1 : Infinity
+  if (since === -Infinity && until === Infinity) return allData.value
   return allData.value.filter(r => {
-    const v = Number(r['FECHA'])
-    return typeof v === 'number' && !isNaN(v) && v >= since && v < until
+    const c = otCloseSerial(r)
+    if (c === 0) return true // OT abierta / sin fecha de cierre → siempre visible
+    return c >= since && c < until
   })
 })
 
@@ -3703,8 +3733,9 @@ const filteredDataExpanded = computed(() => {
   const range = monthlyExpandedRange.value
   if (!range) return filteredData.value
   return allData.value.filter(r => {
-    const v = Number(r['FECHA'])
-    return typeof v === 'number' && !isNaN(v) && v >= range.since && v < range.until + 1
+    const c = otCloseSerial(r)
+    if (c === 0) return true
+    return c >= range.since && c < range.until + 1
   })
 })
 const prodFilteredByDateExpanded = computed(() => {
@@ -4141,7 +4172,9 @@ function computeMonthlyEfficiency(sourceMaintenanceRows: Record<string, unknown>
   }
 
   for (const r of sourceMaintenanceRows) {
-    const f = r['FECHA'] ?? r['Fecha']
+    // Se agrupa por la fecha de CIERRE (cuando se realiza el gasto); si la OT sigue
+    // abierta, se usa la fecha de creación para no perderla del todo.
+    const f = otCloseSerial(r) || r['FECHA'] || r['Fecha']
     const d = parseRowDate(f)
     if (!d) continue
     const y = d.getUTCFullYear()
@@ -4290,12 +4323,17 @@ const repVentana = computed(() => {
 
 /** Resumen de indicadores para un conjunto de OTs + producción (usado en el comparativo). */
 function repStatsBundle(otRows: Record<string, unknown>[], prodRowsArr: Record<string, unknown>[]) {
-  let serv = 0, ins = 0, cerradas = 0, prev = 0, m3 = 0, tSum = 0, tN = 0
+  let serv = 0, ins = 0, servInt = 0, servExt = 0, cerradas = 0, prev = 0, corr = 0, m3 = 0, tSum = 0, tN = 0
   for (const r of otRows) {
-    serv += Number(r['Costo servicios']) || 0
-    ins += Number(r['Costos Insumos']) || 0
+    const s = Number(r['Costo servicios']) || 0
+    const i = Number(r['Costos Insumos']) || 0
+    serv += s; ins += i
+    if (isInterno(r)) servInt += s + i
+    else servExt += s + i
     if (estadoClass(String(r['Estado'] ?? '')) === 'ok') cerradas++
-    if (String(r['Clase Mantenimiento'] ?? '').toUpperCase().includes('PREVENTIVO')) prev++
+    const clase = String(r['Clase Mantenimiento'] ?? '').toUpperCase()
+    if (clase.includes('PREVENTIVO')) prev++
+    else if (clase.includes('CORRECTIVO')) corr++
     const rec = Number(r['Fecha Recepción']); const cie = Number(r['Fecha Cierre'])
     if (!isNaN(rec) && !isNaN(cie) && rec > 0 && cie > rec) { tSum += (cie - rec) * 24; tN++ }
   }
@@ -4303,19 +4341,21 @@ function repStatsBundle(otRows: Record<string, unknown>[], prodRowsArr: Record<s
   const n = otRows.length
   const total = serv + ins
   return {
-    n, serv, ins, total,
+    n, serv, ins, servInt, servExt, total,
     pctCierre: n ? Math.round((cerradas / n) * 100) : 0,
     pctPrev: n ? Math.round((prev / n) * 100) : 0,
+    pctCorr: n ? Math.round((corr / n) * 100) : 0,
     tiempoCierre: tN ? +(tSum / tN).toFixed(1) : 0,
     costoM3: m3 > 0 ? Math.round(total / m3) : 0,
   }
 }
 
-/** Comparativo del período del informe contra el período equivalente anterior. */
+/** Comparativo del período del informe contra el período equivalente anterior.
+ *  Se toma la FECHA DE CIERRE de la OT; las OT abiertas no entran (aún no se han pagado). */
 const repComparativo = computed(() => {
   const v = repVentana.value
   if (!v) return null
-  const otIn = (r: Record<string, unknown>, a: number, b: number) => { const f = Number(r['FECHA']); return typeof f === 'number' && f >= a && f <= b }
+  const otIn = (r: Record<string, unknown>, a: number, b: number) => { const f = otCloseSerial(r); return f > 0 && f >= a && f <= b }
   const prIn = (r: Record<string, unknown>, a: number, b: number) => { const f = Number(r['Fecha']); return typeof f === 'number' && f >= a && f <= b }
   const prod = prodRows.value as Record<string, unknown>[]
   const actual = repStatsBundle(
@@ -4365,7 +4405,7 @@ const repTendenciaMensual = computed(() => {
   }))
   const prevByMonth = new Map<string, { prev: number; tot: number }>()
   for (const r of repRows.value) {
-    const d = parseRowDate(r['FECHA'])
+    const d = parseRowDate(otCloseSerial(r) || r['FECHA'])
     if (!d) continue
     const key = `${d.getUTCFullYear()} ${MESES_ES[d.getUTCMonth()]}`
     const e = prevByMonth.get(key) ?? { prev: 0, tot: 0 }
@@ -4383,6 +4423,40 @@ const repTendenciaMensual = computed(() => {
   const maxRow = rows.length ? rows.reduce((a, b) => (b.total > a.total ? b : a)) : null
   const minRow = rows.length ? rows.reduce((a, b) => (b.total < a.total ? b : a)) : null
   return { rows, totals, maxCost, avg, maxRow, minRow }
+})
+
+/** Gráfica de la tendencia mensual: barras apiladas Servicios/Insumos + línea Costo/m³. */
+const repTendenciaOpt = computed(() => {
+  const t = repTendenciaMensual.value
+  const labels = t.rows.map(r => r.label)
+  return markRaw({
+    tooltip: {
+      trigger: 'axis' as const,
+      formatter: (params: any) => {
+        const arr = Array.isArray(params) ? params : [params]
+        const idx = arr[0]?.dataIndex ?? 0
+        const row = t.rows[idx]
+        if (!row) return ''
+        return `<b>${row.label}</b><br/>` +
+          `Servicios: <b>$${Math.round(row.serv).toLocaleString('es-CO')}</b><br/>` +
+          `Insumos: <b>$${Math.round(row.ins).toLocaleString('es-CO')}</b><br/>` +
+          `Total: <b>$${Math.round(row.total).toLocaleString('es-CO')}</b> · ${row.n} OT<br/>` +
+          `Costo/m³: <b>${row.costoM3 ? '$' + Math.round(row.costoM3).toLocaleString('es-CO') : '—'}</b> · Prev. ${row.pctPrev}%`
+      },
+    },
+    legend: { bottom: 0, textStyle: { fontSize: 10, color: '#475569' } },
+    grid: { left: 8, right: 8, top: 16, bottom: 44, containLabel: true },
+    xAxis: { type: 'category' as const, data: labels, axisLabel: { fontSize: 10, color: '#475569', interval: 0, rotate: labels.length > 5 ? 25 : 0 } },
+    yAxis: [
+      { type: 'value' as const, name: 'Costo', axisLabel: { show: false }, splitLine: { lineStyle: { type: 'dashed', color: '#e2e8f0' } } },
+      { type: 'value' as const, name: '$/m³', axisLabel: { show: false }, splitLine: { show: false } },
+    ],
+    series: [
+      { name: 'Servicios', type: 'bar' as const, stack: 'costo', barMaxWidth: 40, data: t.rows.map(r => Math.round(r.serv)), itemStyle: { color: palette[1] } },
+      { name: 'Insumos', type: 'bar' as const, stack: 'costo', barMaxWidth: 40, data: t.rows.map(r => Math.round(r.ins)), itemStyle: { color: '#EF4444' } },
+      { name: 'Costo/m³', type: 'line' as const, yAxisIndex: 1, smooth: true, symbolSize: 6, data: t.rows.map(r => Math.round(r.costoM3)), itemStyle: { color: '#F59E0B' }, lineStyle: { width: 2 } },
+    ],
+  })
 })
 
 /** Las 10 órdenes de trabajo de mayor costo del período. */
