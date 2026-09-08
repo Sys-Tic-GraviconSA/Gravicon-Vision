@@ -458,27 +458,28 @@
 
           <!-- Tarjetas KPI Oficiales -->
           <div class="kpi-row compact-kpi">
-            <KpiCard label="Total Órdenes" accent="#8B5CF6" icon="list" :value="String(totalOrdenes)" />
-            <KpiCard label="OT Abiertas" accent="#DC2626" icon="activity" :value="String(repAbiertas)" />
-            <KpiCard label="OT Cerradas" accent="#16A34A" icon="check-circle" :value="String(repCerradas)" />
-            <KpiCard label="Costo Acumulado" accent="#1D4ED8" icon="dollar" :value="$$(repCostoTotal)" />
-            <KpiCard label="Costo Servicios" accent="#0EA5E9" icon="dollar" :value="$$(repCostoServTotal)" />
-            <KpiCard label="Costo Insumos" accent="#F97316" icon="package" :value="$$(repCostoInsumosTotal)" />
+            <KpiCard label="Costo Acumulado" accent="#1D4ED8" icon="dollar" :value="$$(repCostoTotal)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${intPct}%)</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${extPct}%)</span></div>`" />
+            <KpiCard label="Costo Servicios" accent="#0EA5E9" icon="settings" :value="$$(repCostoServTotal)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intServ)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extServ)}</strong></div>`" />
+            <KpiCard label="Costo Insumos" accent="#EF4444" icon="package" :value="$$(repCostoInsumosTotal)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intIns)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extIns)}</strong></div>`" />
             <KpiCard label="Total Producción" accent="#10B981" icon="trending-up" :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" :detail="isConcretos ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${fmt(totalProd)} m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Agregados</span> <strong>${fmt(totalProdAgg)} m³</strong></div>` : ''" />
             <KpiCard v-if="isConcretos" label="Costo por m³" :accent="costoM3 > 22000 ? '#EF4444' : '#10B981'" meta="Meta: $22.000/m³" icon="target" :value="$$(costoM3)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${$$(costoM3)}/m³</strong></div>` + (totalProdAgg > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Con agregados</span> <strong>${$$(costoM3ConAgg)}/m³</strong></div>` : '')" />
-            <KpiCard v-else label="Costo por m³" :accent="costoM3 > 22000 ? '#EF4444' : '#10B981'" meta="Meta: $22.000/m³" icon="target" :value="$$(costoM3)" />
-            <KpiCard label="Promedio OT / día" accent="#0EA5E9" icon="activity" :value="promOtDia.toFixed(1)" />
-            <KpiCard label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" :value="promCierreDia.toFixed(1)" />
+            <KpiCard v-else label="Costo por m³" :accent="costoM3 > 22000 ? '#EF4444' : '#10B981'" meta="Meta: $22.000/m³" icon="target" :value="$$(costoM3)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3)}/m³</strong></div>`" />
+            <KpiCard label="Total Órdenes" accent="#8B5CF6" icon="list" :value="String(totalOrdenes)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCount}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCount}</strong></div>`" />
+            <KpiCard label="Promedio OT / día" accent="#0EA5E9" icon="activity" :value="promOtDia.toFixed(1)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasActivos > 0 ? (intCount / otDiasActivos).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasActivos > 0 ? (extCount / otDiasActivos).toFixed(1) : '0.0'}</strong></div>`" />
+            <KpiCard label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" :value="promCierreDia.toFixed(1)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasActivos > 0 ? (otsIntEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasActivos > 0 ? (otsExtEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div>`" />
+            <KpiCard label="OT Abiertas" accent="#DC2626" icon="activity" :value="String(repAbiertas)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.abiertas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.abiertas)}</span></div>`" />
+            <KpiCard label="OT Cerradas" accent="#16A34A" icon="check-circle" :value="String(repCerradas)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.cerradas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.cerradas)}</span></div>`" />
             <KpiCard
               label="% Cierre"
               :accent="repPctCierre >= 85 ? '#16A34A' : repPctCierre >= 60 ? '#F59E0B' : '#DC2626'"
               meta="Meta: 85%"
               icon="target"
               :value="repPctCierre + '%'"
+              :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntPctCierre}%</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtPctCierre}%</strong></div>`"
             />
-            <KpiCard label="Duración Promedio" accent="#8B5CF6" icon="clock" :value="otDuracionEstimadaProm + ' h'" />
-            <KpiCard label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" :value="otTiempoRealProm + ' h'" />
-            <KpiCard label="% OT con Pedido de Almacén" accent="#10B981" icon="package" meta="vía SOPLED" :value="otConSopledPct + '%'" />
+            <KpiCard label="Duración Promedio" accent="#8B5CF6" icon="clock" :value="otDuracionEstimadaProm + ' h'" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntDuracionEstimadaProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtDuracionEstimadaProm}h</strong></div>`" />
+            <KpiCard label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" :value="otTiempoRealProm + ' h'" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntTiempoRealProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtTiempoRealProm}h</strong></div>`" />
+            <KpiCard label="% OT con Pedido de Almacén" accent="#10B981" icon="package" meta="vía SOPLED" :value="otConSopledPct + '%'" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntConSopledPct}%</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtConSopledPct}%</strong></div>`" />
             <KpiCard label="Gasto Interno" accent="#2563EB" icon="package" :value="$$(repCostosProv.interno)" />
             <KpiCard label="Gasto Externo" accent="#F59E0B" icon="users" :value="$$(repCostosProv.externo)" />
           </div>
@@ -500,7 +501,10 @@
 
           <!-- Comparativo vs Período Anterior -->
           <div v-if="repComparativo" class="report-section-block">
-            <h3 class="report-block-title"><span class="title-bar"></span>Comparativo vs Período Anterior<template v-if="repComparativo.hasPrev"> ({{ repComparativo.prevDesde }} al {{ repComparativo.prevHasta }})</template></h3>
+            <h3 class="report-block-title"><span class="title-bar"></span>Comparativo vs Período Anterior</h3>
+            <div v-if="repComparativo.hasPrev" style="font-size: 11px; color: #475569; margin-bottom: 4px;">
+              <strong>Actual:</strong> {{ informeDesde }} al {{ informeHasta }} &nbsp;·&nbsp; <strong>Anterior:</strong> {{ repComparativo.prevDesde }} al {{ repComparativo.prevHasta }} &nbsp;·&nbsp; por fecha de cierre
+            </div>
             <div class="data-card">
               <div v-if="repComparativo.hasPrev" class="table-wrap">
                 <table>
@@ -644,13 +648,21 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="m in repCostoPlanta" :key="m.planta + '-' + m.maquina">
-                      <td class="bold">{{ m.planta }}</td>
-                      <td class="accent-text">{{ m.maquina }}</td>
-                      <td class="r bold">{{ m.n }}</td>
-                      <td class="r bold">{{ $$(m.costo) }}</td>
-                      <td class="r">{{ repPct(m.costo) }}%</td>
-                    </tr>
+                    <template v-for="g in repCostoPlanta" :key="g.planta">
+                      <tr class="grupo-row">
+                        <td class="bold" :rowspan="g.maquinas.length + 1">{{ g.planta }}</td>
+                        <td class="bold">Subtotal {{ g.planta }}</td>
+                        <td class="r bold">{{ g.n }}</td>
+                        <td class="r bold">{{ $$(g.costo) }}</td>
+                        <td class="r bold">{{ repPct(g.costo) }}%</td>
+                      </tr>
+                      <tr v-for="m in g.maquinas" :key="g.planta + '-' + m.maquina">
+                        <td class="accent-text">{{ m.maquina }}</td>
+                        <td class="r">{{ m.n }}</td>
+                        <td class="r">{{ $$(m.costo) }}</td>
+                        <td class="r">{{ repPct(m.costo) }}%</td>
+                      </tr>
+                    </template>
                     <tr v-if="!repCostoPlanta.length"><td colspan="5" class="empty-table">Sin datos en el período</td></tr>
                     <tr class="table-total-row">
                       <td colspan="2" class="bold">TOTAL</td>
@@ -673,7 +685,7 @@
               Mes más bajo: <strong>{{ repTendenciaMensual.minRow?.label }} ({{ $$(repTendenciaMensual.minRow?.total || 0) }})</strong> ·
               Total <strong>{{ $$(repTendenciaMensual.totals.total) }}</strong> en {{ repTendenciaMensual.totals.n }} OT
             </div>
-            <ChartCard title="" :option="repTendenciaOpt" :height="300" hide-actions />
+            <ChartCard title="" :option="costosGeneralesM3Opt" :height="320" hide-actions />
           </div>
 
           <!-- Costo por Tipo de Vehículo + Top 5 Vehículos Mayor Consumo -->
@@ -828,11 +840,20 @@
 
           <!-- Distribución por Jornada (Interno vs Externo) -->
           <div v-if="repJornada.length" class="report-section-block">
-            <h3 class="report-block-title"><span class="title-bar"></span>Distribución por Jornada — Interno vs Externo</h3>
+            <h3 class="report-block-title"><span class="title-bar"></span>Distribución del Costo por Jornada</h3>
             <div style="font-size: 11px; color: #475569; margin-bottom: 4px;">
               <template v-for="(j, i) in repJornada" :key="j.label"><template v-if="i">  ·  </template><strong>{{ j.label }}</strong>: {{ j.n }} OT · {{ $$(j.costo) }} ({{ repPct(j.costo) }}%)</template>
             </div>
-            <ChartCard title="" :option="repJornadaOpt" :height="240" hide-actions />
+            <div class="charts-grid cols-2">
+              <div class="data-card">
+                <div class="card-head">Interno (Gravicon) — {{ $$(repCostosProv.interno) }}</div>
+                <ChartCard title="" :option="repJornadaIntOpt" :height="220" hide-actions />
+              </div>
+              <div class="data-card">
+                <div class="card-head">Externo (Proveedores) — {{ $$(repCostosProv.externo) }}</div>
+                <ChartCard title="" :option="repJornadaExtOpt" :height="220" hide-actions />
+              </div>
+            </div>
           </div>
 
           <!-- Ranking de Proveedores con Mayor Uso -->
@@ -2883,18 +2904,23 @@ const repIndiceCierreFiltrado = computed(() =>
 const repIndiceApertura = computed(() => rankByMultiValue(repRows.value, 'Solicitante', 8).map(([label, n]) => ({ label, n })))
 
 /** Costo acumulado por planta (Localización) y maquinaria (tipo de vehículo). */
+/** Costo acumulado agrupado por planta (una sola vez) y, dentro, sus máquinas top. */
 const repCostoPlanta = computed(() => {
-  const map = new Map<string, { planta: string; maquina: string; n: number; costo: number }>()
+  const groups = new Map<string, { planta: string; n: number; costo: number; maquinas: Map<string, { maquina: string; n: number; costo: number }> }>()
   for (const r of repRows.value) {
     const planta = String(r['Localización'] ?? '').trim() || 'SIN PLANTA'
     const maquina = String(r['Placa del Vehículo'] ?? '').trim() || vehTypeLabel(String(r['Tipo de Vehículo'] ?? ''))
-    const key = planta + '|' + maquina
-    const e = map.get(key) ?? { planta, maquina, n: 0, costo: 0 }
-    e.n++
-    e.costo += rowServicios(r) + rowInsumos(r)
-    map.set(key, e)
+    const c = rowServicios(r) + rowInsumos(r)
+    const g = groups.get(planta) ?? { planta, n: 0, costo: 0, maquinas: new Map() }
+    g.n++; g.costo += c
+    const mq = g.maquinas.get(maquina) ?? { maquina, n: 0, costo: 0 }
+    mq.n++; mq.costo += c
+    g.maquinas.set(maquina, mq)
+    groups.set(planta, g)
   }
-  return [...map.values()].sort((a, b) => b.costo - a.costo).slice(0, 14)
+  return [...groups.values()]
+    .map(g => ({ planta: g.planta, n: g.n, costo: g.costo, maquinas: [...g.maquinas.values()].sort((a, b) => b.costo - a.costo).slice(0, 6) }))
+    .sort((a, b) => b.costo - a.costo)
 })
 
 /** Costo acumulado por placa de vehículo. */
@@ -3011,32 +3037,29 @@ const repJornada = computed(() => {
   return [...map.entries()].map(([label, v]) => ({ label, ...v })).sort((a, b) => b.n - a.n)
 })
 
-/** Gráfica de la distribución por jornada: barras apiladas Interno/Externo del costo. */
-const repJornadaOpt = computed(() => {
-  const j = repJornada.value
+/** Torta de la distribución del costo por jornada, para Interno o Externo. */
+function buildJornadaPieOpt(campoCosto: 'costoInt' | 'costoExt', campoN: 'nInt' | 'nExt') {
+  const j = repJornada.value.filter(x => x[campoCosto] > 0)
   return markRaw({
+    color: palette,
     tooltip: {
-      trigger: 'axis' as const,
-      formatter: (params: any) => {
-        const arr = Array.isArray(params) ? params : [params]
-        const row = j[arr[0]?.dataIndex ?? 0]
-        if (!row) return ''
-        return `<b>${row.label}</b> · ${row.n} OT<br/>` +
-          `Interno: <b>$${Math.round(row.costoInt).toLocaleString('es-CO')}</b> (${row.nInt} OT)<br/>` +
-          `Externo: <b>$${Math.round(row.costoExt).toLocaleString('es-CO')}</b> (${row.nExt} OT)<br/>` +
-          `Total: <b>$${Math.round(row.costo).toLocaleString('es-CO')}</b>`
+      trigger: 'item' as const,
+      formatter: (p: any) => {
+        const row = j[p.dataIndex]
+        return `<b>${p.name}</b><br/>$${Math.round(p.value).toLocaleString('es-CO')} · ${p.percent}%<br/><span style="color:#94a3b8;font-size:11px">${row ? row[campoN] : 0} OT</span>`
       },
     },
     legend: { bottom: 0, textStyle: { fontSize: 10, color: '#475569' } },
-    grid: { left: 8, right: 8, top: 12, bottom: 40, containLabel: true },
-    xAxis: { type: 'category' as const, data: j.map(x => x.label), axisLabel: { fontSize: 11, color: '#475569', fontWeight: 600 } },
-    yAxis: { type: 'value' as const, axisLabel: { show: false }, splitLine: { lineStyle: { type: 'dashed', color: '#e2e8f0' } } },
-    series: [
-      { name: 'Interno (Gravicon)', type: 'bar' as const, stack: 'j', barMaxWidth: 60, data: j.map(x => Math.round(x.costoInt)), itemStyle: { color: palette[1] } },
-      { name: 'Externo (Proveedores)', type: 'bar' as const, stack: 'j', barMaxWidth: 60, data: j.map(x => Math.round(x.costoExt)), itemStyle: { color: '#F59E0B' } },
-    ],
+    series: [{
+      type: 'pie' as const, radius: ['42%', '68%'], center: ['50%', '46%'], avoidLabelOverlap: true,
+      itemStyle: { borderRadius: 5, borderColor: '#fff', borderWidth: 2 },
+      label: { show: true, formatter: (p: any) => `${p.name}\n${p.percent}%`, fontSize: 10, color: '#475569' },
+      data: j.map(x => ({ name: x.label, value: Math.round(x[campoCosto]) })),
+    }],
   })
-})
+}
+const repJornadaIntOpt = computed(() => buildJornadaPieOpt('costoInt', 'nInt'))
+const repJornadaExtOpt = computed(() => buildJornadaPieOpt('costoExt', 'nExt'))
 
 
 /** Personal interno de intervención: costo servicios y duración estimada. */
@@ -3175,9 +3198,19 @@ const repConclusiones = computed((): ConclusionGrupo[] => {
   if (top) equipos.push(`El ${repSectionLabelVehiculo.value.toLowerCase()} con mayor consumo fue ${top.placa}, con ${$$(top.costo)} y ${fmtDuracion(top.dias) || '—'} acumuladas en taller.`)
   if (repFallasRecurrentes.value.length > 0) {
     const peor = repFallasRecurrentes.value[0]
-    equipos.push(`${repFallasRecurrentes.value.length} equipo(s) registraron fallas recurrentes (2 o más OT correctivas en el período); el más crítico fue ${peor.placa} con ${peor.n} OT correctivas.`)
+    equipos.push(`${repFallasRecurrentes.value.length} equipo(s) registraron fallas recurrentes (2 o más OT correctivas en el período); el más crítico fue ${peor.placa} con ${peor.n} OT correctivas${peor.sistemaTop && peor.sistemaTop !== '—' ? `, principalmente en "${peor.sistemaTop}"` : ''}.`)
+    const reincidentes = repFallasRecurrentes.value.filter(e => e.reincide)
+    if (reincidentes.length > 0) {
+      equipos.push(`${reincidentes.length} de esos equipos se están reparando repetidamente por el mismo sistema (${reincidentes.map(e => `${e.placa}: ${e.sistemaTop}`).join('; ')}); conviene revisar la causa raíz en lugar de reparaciones puntuales.`)
+    } else {
+      equipos.push('Las fallas recurrentes se distribuyen en distintos sistemas por equipo — no se detecta reincidencia sobre un mismo componente.')
+    }
   } else {
     equipos.push('No se identificaron equipos con fallas recurrentes en el período.')
+  }
+  if (repRankSistemas.value.length > 0) {
+    const s0 = repRankSistemas.value[0]
+    equipos.push(`El sistema con más intervenciones en la flota fue "${s0.label}" (${s0.n} intervenciones, ${$$(s0.costo)} acumulados).`)
   }
   grupos.push({ titulo: 'Equipos y Confiabilidad', items: equipos })
 
@@ -4423,40 +4456,6 @@ const repTendenciaMensual = computed(() => {
   const maxRow = rows.length ? rows.reduce((a, b) => (b.total > a.total ? b : a)) : null
   const minRow = rows.length ? rows.reduce((a, b) => (b.total < a.total ? b : a)) : null
   return { rows, totals, maxCost, avg, maxRow, minRow }
-})
-
-/** Gráfica de la tendencia mensual: barras apiladas Servicios/Insumos + línea Costo/m³. */
-const repTendenciaOpt = computed(() => {
-  const t = repTendenciaMensual.value
-  const labels = t.rows.map(r => r.label)
-  return markRaw({
-    tooltip: {
-      trigger: 'axis' as const,
-      formatter: (params: any) => {
-        const arr = Array.isArray(params) ? params : [params]
-        const idx = arr[0]?.dataIndex ?? 0
-        const row = t.rows[idx]
-        if (!row) return ''
-        return `<b>${row.label}</b><br/>` +
-          `Servicios: <b>$${Math.round(row.serv).toLocaleString('es-CO')}</b><br/>` +
-          `Insumos: <b>$${Math.round(row.ins).toLocaleString('es-CO')}</b><br/>` +
-          `Total: <b>$${Math.round(row.total).toLocaleString('es-CO')}</b> · ${row.n} OT<br/>` +
-          `Costo/m³: <b>${row.costoM3 ? '$' + Math.round(row.costoM3).toLocaleString('es-CO') : '—'}</b> · Prev. ${row.pctPrev}%`
-      },
-    },
-    legend: { bottom: 0, textStyle: { fontSize: 10, color: '#475569' } },
-    grid: { left: 8, right: 8, top: 16, bottom: 44, containLabel: true },
-    xAxis: { type: 'category' as const, data: labels, axisLabel: { fontSize: 10, color: '#475569', interval: 0, rotate: labels.length > 5 ? 25 : 0 } },
-    yAxis: [
-      { type: 'value' as const, name: 'Costo', axisLabel: { show: false }, splitLine: { lineStyle: { type: 'dashed', color: '#e2e8f0' } } },
-      { type: 'value' as const, name: '$/m³', axisLabel: { show: false }, splitLine: { show: false } },
-    ],
-    series: [
-      { name: 'Servicios', type: 'bar' as const, stack: 'costo', barMaxWidth: 40, data: t.rows.map(r => Math.round(r.serv)), itemStyle: { color: palette[1] } },
-      { name: 'Insumos', type: 'bar' as const, stack: 'costo', barMaxWidth: 40, data: t.rows.map(r => Math.round(r.ins)), itemStyle: { color: '#EF4444' } },
-      { name: 'Costo/m³', type: 'line' as const, yAxisIndex: 1, smooth: true, symbolSize: 6, data: t.rows.map(r => Math.round(r.costoM3)), itemStyle: { color: '#F59E0B' }, lineStyle: { width: 2 } },
-    ],
-  })
 })
 
 /** Las 10 órdenes de trabajo de mayor costo del período. */
@@ -6209,6 +6208,14 @@ const sistemasExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(comput
   background: #f1f5f9 !important;
   font-weight: 700 !important;
   border-top: 2px solid var(--card-border, #cbd5e1) !important;
+}
+.grupo-row td {
+  background: #eef2ff;
+  border-top: 1.5px solid #c7d2fe;
+}
+.grupo-row td:first-child {
+  vertical-align: top;
+  background: #e0e7ff;
 }
 
 .empty-table {
