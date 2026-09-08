@@ -458,9 +458,9 @@
 
           <!-- Tarjetas KPI Oficiales -->
           <div class="kpi-row compact-kpi">
-            <KpiCard label="Costo Acumulado" accent="#1D4ED8" icon="dollar" :value="$$(repCostoTotal)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${intPct}%)</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${extPct}%)</span></div>`" />
-            <KpiCard label="Costo Servicios" accent="#0EA5E9" icon="settings" :value="$$(repCostoServTotal)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intServ)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extServ)}</strong></div>`" />
-            <KpiCard label="Costo Insumos" accent="#EF4444" icon="package" :value="$$(repCostoInsumosTotal)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intIns)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extIns)}</strong></div>`" />
+            <KpiCard label="Costo Acumulado" accent="#1D4ED8" icon="dollar" :value="$$(repCostoTotal)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(repCostosProv.interno)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${repCostosProv.pctInt}%)</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(repCostosProv.externo)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${repCostosProv.pctExt}%)</span></div>`" />
+            <KpiCard label="Costo Servicios" accent="#0EA5E9" icon="settings" :value="$$(repCostoServTotal)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(repCostosProv.servInt)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(repCostosProv.servExt)}</strong></div>`" />
+            <KpiCard label="Costo Insumos" accent="#EF4444" icon="package" :value="$$(repCostoInsumosTotal)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(repCostosProv.insInt)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(repCostosProv.insExt)}</strong></div>`" />
             <KpiCard label="Total Producción" accent="#10B981" icon="trending-up" :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" :detail="isConcretos ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${fmt(totalProd)} m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Agregados</span> <strong>${fmt(totalProdAgg)} m³</strong></div>` : ''" />
             <KpiCard v-if="isConcretos" label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :value="$$(costoM3)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${$$(costoM3)}/m³</strong></div>` + (totalProdAgg > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Con agregados</span> <strong>${$$(costoM3ConAgg)}/m³</strong></div>` : '')" />
             <KpiCard v-else label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :value="$$(costoM3)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3)}/m³</strong></div>`" />
@@ -480,8 +480,6 @@
             <KpiCard label="Duración Promedio" accent="#8B5CF6" icon="clock" :value="otDuracionEstimadaProm + ' h'" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntDuracionEstimadaProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtDuracionEstimadaProm}h</strong></div>`" />
             <KpiCard label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" :value="otTiempoRealProm + ' h'" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntTiempoRealProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtTiempoRealProm}h</strong></div>`" />
             <KpiCard label="% OT con Pedido de Almacén" accent="#10B981" icon="package" meta="vía SOPLED" :value="otConSopledPct + '%'" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntConSopledPct}%</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtConSopledPct}%</strong></div>`" />
-            <KpiCard label="Gasto Interno" accent="#2563EB" icon="package" :value="$$(repCostosProv.interno)" />
-            <KpiCard label="Gasto Externo" accent="#F59E0B" icon="users" :value="$$(repCostosProv.externo)" />
           </div>
 
           <!-- Nota de metodología del filtro por fecha -->
@@ -3069,13 +3067,17 @@ const repFallasRecurrentes = computed(() => {
 /** Costos por proveedores internos (Gravicon) y externos. */
 const repCostosProv = computed(() => {
   let interno = 0, externo = 0, nInt = 0, nExt = 0
+  let servInt = 0, servExt = 0, insInt = 0, insExt = 0
   for (const r of repRows.value) {
-    const c = rowServicios(r) + rowInsumos(r)
-    if (isInterno(r)) { interno += c; nInt++ } else { externo += c; nExt++ }
+    const s = rowServicios(r), i = rowInsumos(r)
+    const c = s + i
+    if (isInterno(r)) { interno += c; nInt++; servInt += s; insInt += i }
+    else { externo += c; nExt++; servExt += s; insExt += i }
   }
   const total = interno + externo
   return {
     interno, externo, nInt, nExt, total,
+    servInt, servExt, insInt, insExt,
     pctInt: total ? Math.round((interno / total) * 100) : 0,
     pctExt: total ? Math.round((externo / total) * 100) : 0,
   }
