@@ -429,13 +429,7 @@
                 crossorigin="anonymous"
                 loading="eager"
               />
-              <img
-                src="https://gravicon2026.sirv.com/Pagina%20Gravicon/Logos/logo-blanco.webp"
-                alt="Gravicon"
-                class="report-logo report-logo--dark"
-                crossorigin="anonymous"
-                loading="eager"
-              />
+              <img class="Sirv report-logo report-logo--dark" src="https://gravicon2026.sirv.com/Pagina%20Gravicon/Logos/logo-blanco.webp?w=200" data-src="https://gravicon2026.sirv.com/Pagina%20Gravicon/Logos/logo-blanco.webp?w=200" alt="Gravicon" referrerpolicy="no-referrer" />
               <div class="report-header-text">
                 <h2>Mantenimiento {{ plantaLabel }} Gravicon</h2>
                 <span>GRAVAS Y CONCRETOS S.A. · {{ isConcretos ? 'Concretos' : 'Agregados' }} · {{ repTipoLabel }}</span>
@@ -3630,6 +3624,13 @@ async function loadData(forceRefresh = false, resetFilters = true) {
 
 onMounted(() => {
   loadData()
+  // Sirv.js: resuelve los <img class="Sirv" data-src> (logo blanco del informe en modo oscuro)
+  if (typeof document !== 'undefined' && !document.querySelector('script[src="https://scripts.sirv.com/sirvjs/v3/sirv.js"]')) {
+    const s = document.createElement('script')
+    s.src = 'https://scripts.sirv.com/sirvjs/v3/sirv.js'
+    s.async = true
+    document.head.appendChild(s)
+  }
 })
 
 watch(() => props.planta, () => {
