@@ -3030,6 +3030,17 @@ const textColor = computed(() => isDark.value ? '#94a3b8' : '#475569')
 const titleColor = computed(() => isDark.value ? '#f1f5f9' : '#0f172a')
 const splitLineColor = computed(() => isDark.value ? 'rgba(255,255,255,0.06)' : '#e2e8f0')
 
+/** Etiqueta tipo "píldora" con fondo — mismo estilo que las gráficas de Órdenes de Trabajo. */
+const pillLabelBase = computed(() => ({
+  show: true,
+  fontSize: 11,
+  fontWeight: 700 as const,
+  color: isDark.value ? '#e2e8f0' : '#334155',
+  backgroundColor: isDark.value ? 'rgba(11,15,26,.88)' : 'rgba(255,255,255,.92)',
+  padding: [2, 6] as [number, number],
+  borderRadius: 4,
+}))
+
 // ================= GRÁFICAS EXCLUSIVAS CONCRETOS =================
 
 type EquipoDisp = { placa: string; dispPct: number; diasOp: number; diasNoOp: number; tipo: string; loc: string }
@@ -3332,49 +3343,60 @@ const dispTendenciaDiariaOpt = computed(() => {
   const labels = days.map(k => `${k.slice(8, 10)}/${k.slice(5, 7)}`)
   const avg = values.length ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : 0
   return markRaw({
+    textStyle: { fontFamily: 'Lato, sans-serif' },
+    animationDuration: 650,
+    animationEasing: 'cubicOut',
     tooltip: {
       trigger: 'axis',
-      valueFormatter: (v: number) => `${v}%`,
+      formatter: (params: any[]) => {
+        const p = Array.isArray(params) ? params[0] : params
+        const v = Number(p.value) || 0
+        const col = v >= 85 ? '#16a34a' : v >= 75 ? '#d99a2b' : '#ef4444'
+        return `<b>${p.name}</b><br/><span style="color:${col}">●</span> Disponibilidad: <b>${v}%</b><br/>` +
+          `<span style="color:#94a3b8">●</span> Meta 85% · Prom. período <b>${avg}%</b>`
+      },
     },
-    grid: { left: '3%', right: '4%', bottom: '3%', top: 24, containLabel: true },
+    grid: { left: 40, right: 20, bottom: 40, top: 30, containLabel: true },
     xAxis: {
       type: 'category',
       data: labels,
-      axisLabel: { color: textColor.value, fontSize: 10, interval: labels.length > 24 ? 2 : 0 },
+      axisTick: { show: false },
       axisLine: { lineStyle: { color: splitLineColor.value } },
+      axisLabel: { fontWeight: 600 as const, color: textColor.value, fontSize: 11, interval: Math.ceil(labels.length / 12) },
     },
     yAxis: {
       type: 'value',
       min: 0,
       max: 100,
-      axisLabel: { formatter: '{value}%', color: textColor.value, fontSize: 10 },
-      splitLine: { lineStyle: { color: splitLineColor.value } },
+      axisLabel: { show: false },
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { show: true, lineStyle: { color: splitLineColor.value, type: 'dashed' as const } },
     },
     series: [{
       name: 'Disponibilidad',
       type: 'line',
-      smooth: true,
+      smooth: 0.35,
       symbol: 'circle',
       symbolSize: 8,
+      showSymbol: true,
       data: values,
       lineStyle: { width: 2.5, color: '#2563eb' },
       itemStyle: { color: '#2563eb' },
-      areaStyle: { color: isDark.value ? 'rgba(37,99,235,0.18)' : 'rgba(37,99,235,0.10)' },
+      areaStyle: { opacity: 0.22, color: '#2563eb' },
+      emphasis: { scale: 1.4, focus: 'series' as const, itemStyle: { shadowBlur: 12, shadowColor: 'rgba(37,99,235,0.45)' } },
       label: {
-        show: true,
-        position: 'top',
+        ...pillLabelBase.value,
+        position: 'top' as const,
+        distance: 8,
         formatter: (p: any) => (p.value == null ? '' : `${p.value}%`),
-        fontSize: 10,
-        fontWeight: 'bold',
-        color: titleColor.value,
       },
       labelLayout: { hideOverlap: true },
-      emphasis: { focus: 'series' },
       markLine: {
         silent: true,
         symbol: 'none',
         data: [
-          { yAxis: 85, lineStyle: { color: '#16a34a', type: 'dashed', width: 1.5 }, label: { formatter: 'Meta 85%', color: '#16a34a', fontSize: 11, fontWeight: 'bold', position: 'insideStartTop' } },
+          { yAxis: 85, lineStyle: { color: '#16a34a', type: 'dashed', width: 2 }, label: { formatter: 'Meta 85%', color: '#16a34a', fontSize: 11, fontWeight: 'bold', position: 'insideStartTop' } },
           { yAxis: avg, lineStyle: { color: '#94a3b8', type: 'dotted', width: 1.5 }, label: { formatter: `Prom. ${avg}%`, color: textColor.value, fontSize: 11, fontWeight: 'bold', position: 'insideEndTop' } },
         ],
       },
@@ -3395,17 +3417,21 @@ const dispPorClasifOpt = computed(() => {
         return `<strong>${p.name}</strong><br/>${p.value}% disponibilidad<br/><span style="color:#888">${p.data.nEq} equipos</span>`
       },
     },
-    grid: { left: '3%', right: '12%', bottom: '3%', top: 10, containLabel: true },
+    grid: { left: 40, right: 60, bottom: 20, top: 12, containLabel: true },
     xAxis: {
       type: 'value',
       min: 0,
       max: 100,
       axisLabel: { formatter: '{value}%', color: textColor.value, fontSize: 10 },
-      splitLine: { lineStyle: { color: splitLineColor.value } },
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { lineStyle: { color: splitLineColor.value, type: 'dashed' as const } },
     },
     yAxis: {
       type: 'category',
       data: filas.map(f => f.label),
+      axisTick: { show: false },
+      axisLine: { show: false },
       axisLabel: { color: titleColor.value, fontSize: 11, fontWeight: 'bold' },
     },
     series: [{
@@ -3416,12 +3442,12 @@ const dispPorClasifOpt = computed(() => {
         nEq: f.nEquipos,
         itemStyle: { color: semColorPct(f.prom ?? 0), borderRadius: [0, 4, 4, 0] },
       })),
+      emphasis: { focus: 'series' as const, itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } },
       label: {
-        show: true,
-        position: 'right',
+        ...pillLabelBase.value,
+        position: 'right' as const,
+        distance: 6,
         formatter: (p: any) => `${p.value}%  ·  ${p.data.nEq} eq`,
-        fontSize: 10,
-        fontWeight: 'bold',
         color: titleColor.value,
       },
     }],
@@ -3432,46 +3458,55 @@ const dispPorClasifOpt = computed(() => {
 const dispEvolucionClasifOpt = computed(() => {
   const { mesLabels, filas } = disponibilidadMensualClasif.value
   return markRaw({
+    textStyle: { fontFamily: 'Lato, sans-serif' },
+    animationDuration: 650,
+    animationEasing: 'cubicOut',
     tooltip: { trigger: 'axis', valueFormatter: (v: number | null) => (v == null ? '—' : `${v}%`) },
     legend: {
       type: 'scroll',
       bottom: 0,
-      textStyle: { color: textColor.value, fontSize: 10 },
+      icon: 'circle',
+      itemWidth: 10,
+      itemHeight: 10,
+      textStyle: { color: textColor.value, fontSize: 10, fontWeight: 600 as const },
     },
-    grid: { left: '3%', right: '4%', bottom: 40, top: 16, containLabel: true },
+    grid: { left: 40, right: 20, bottom: 44, top: 20, containLabel: true },
     xAxis: {
       type: 'category',
       data: mesLabels.map(m => m.label + (disponibilidadMensualClasif.value.multiYear ? ` '${String(m.year).slice(2)}` : '')),
-      axisLabel: { color: textColor.value, fontSize: 10 },
+      axisTick: { show: false },
       axisLine: { lineStyle: { color: splitLineColor.value } },
+      axisLabel: { color: textColor.value, fontSize: 11, fontWeight: 600 as const },
     },
     yAxis: {
       type: 'value',
       min: 0,
       max: 100,
-      axisLabel: { formatter: '{value}%', color: textColor.value, fontSize: 10 },
-      splitLine: { lineStyle: { color: splitLineColor.value } },
+      axisLabel: { show: false },
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { show: true, lineStyle: { color: splitLineColor.value, type: 'dashed' as const } },
     },
     series: filas.map((f, i) => ({
       name: f.label,
       type: 'line',
-      smooth: true,
+      smooth: 0.35,
       connectNulls: true,
       symbol: 'circle',
       symbolSize: 8,
+      showSymbol: true,
       data: f.celdas,
       lineStyle: { width: 2.5, color: CLASIF_COLORS[i % CLASIF_COLORS.length] },
       itemStyle: { color: CLASIF_COLORS[i % CLASIF_COLORS.length] },
+      emphasis: { scale: 1.4, focus: 'series' as const },
       label: {
-        show: true,
-        position: 'top',
-        formatter: (p: any) => (p.value == null ? '' : `${p.value}%`),
-        fontSize: 10,
-        fontWeight: 'bold',
+        ...pillLabelBase.value,
+        position: 'top' as const,
+        distance: 8,
         color: CLASIF_COLORS[i % CLASIF_COLORS.length],
+        formatter: (p: any) => (p.value == null ? '' : `${p.value}%`),
       },
       labelLayout: { hideOverlap: true },
-      emphasis: { focus: 'series' },
     })),
   })
 })
@@ -3485,20 +3520,25 @@ const dispDiasFueraClasifOpt = computed(() => {
   }
   const filas = acc.filter(a => a.dias > 0).sort((a, b) => a.dias - b.dias)
   return markRaw({
+    textStyle: { fontFamily: 'Lato, sans-serif' },
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
       valueFormatter: (v: number) => `${v} días-equipo`,
     },
-    grid: { left: '3%', right: '10%', bottom: '3%', top: 10, containLabel: true },
+    grid: { left: 40, right: 40, bottom: 20, top: 12, containLabel: true },
     xAxis: {
       type: 'value',
       axisLabel: { color: textColor.value, fontSize: 10 },
-      splitLine: { lineStyle: { color: splitLineColor.value } },
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { lineStyle: { color: splitLineColor.value, type: 'dashed' as const } },
     },
     yAxis: {
       type: 'category',
       data: filas.map(f => f.label),
+      axisTick: { show: false },
+      axisLine: { show: false },
       axisLabel: { color: titleColor.value, fontSize: 11, fontWeight: 'bold' },
     },
     series: [{
@@ -3506,7 +3546,8 @@ const dispDiasFueraClasifOpt = computed(() => {
       barMaxWidth: 26,
       data: filas.map(f => f.dias),
       itemStyle: { color: '#ef4444', borderRadius: [0, 4, 4, 0] },
-      label: { show: true, position: 'right', formatter: '{c} d', fontSize: 10, fontWeight: 'bold', color: titleColor.value },
+      emphasis: { focus: 'series' as const, itemStyle: { shadowBlur: 10, shadowColor: 'rgba(239,68,68,0.35)' } },
+      label: { ...pillLabelBase.value, position: 'right' as const, distance: 6, formatter: '{c} d' },
     }],
   })
 })
@@ -3529,7 +3570,10 @@ const dispEstadoDonutOpt = computed(() => {
     },
     legend: {
       bottom: 0,
-      textStyle: { color: textColor.value, fontSize: 11 },
+      icon: 'circle',
+      itemWidth: 10,
+      itemHeight: 10,
+      textStyle: { color: textColor.value, fontSize: 11, fontWeight: 600 as const },
     },
     series: [{
       type: 'pie',
@@ -3537,7 +3581,8 @@ const dispEstadoDonutOpt = computed(() => {
       center: ['50%', '46%'],
       avoidLabelOverlap: true,
       itemStyle: { borderColor: isDark.value ? '#0f172a' : '#fff', borderWidth: 2 },
-      label: { formatter: '{d}%', color: titleColor.value, fontSize: 11, fontWeight: 'bold' },
+      emphasis: { scale: true, scaleSize: 6 },
+      label: { ...pillLabelBase.value, formatter: '{d}%' },
       data: [
         { name: 'Operativo pleno', value: op, itemStyle: { color: '#16a34a' } },
         { name: 'Parcial', value: par, itemStyle: { color: '#d99a2b' } },
