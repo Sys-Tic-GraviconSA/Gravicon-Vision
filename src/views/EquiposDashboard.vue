@@ -422,14 +422,18 @@
           <header class="report-header">
             <div class="report-header-brand">
               <img
-                src="https://gravicon2026.sirv.com/Pagina%20Gravicon/images/Logos/gravicon_logo.png"
-                @error="($event.target as HTMLImageElement).src = '/Logos/Logo-Gravicon-Nuevo.png'"
+                src="/Logos/Logo-Gravicon-Nuevo.png"
                 alt="Gravicon"
                 class="report-logo report-logo--light"
-                crossorigin="anonymous"
                 loading="eager"
               />
-              <img class="Sirv report-logo report-logo--dark" src="https://gravicon2026.sirv.com/Pagina%20Gravicon/Logos/logo-blanco.webp?w=200" data-src="https://gravicon2026.sirv.com/Pagina%20Gravicon/Logos/logo-blanco.webp?w=200" alt="Gravicon" referrerpolicy="no-referrer" />
+              <img
+                src="/Logos/Logo_Gravicon_Blanco.png"
+                @error="($event.target as HTMLImageElement).style.display = 'none'"
+                alt="Gravicon"
+                class="report-logo report-logo--dark"
+                loading="eager"
+              />
               <div class="report-header-text">
                 <h2>Mantenimiento {{ plantaLabel }} Gravicon</h2>
                 <span>GRAVAS Y CONCRETOS S.A. · {{ isConcretos ? 'Concretos' : 'Agregados' }} · {{ repTipoLabel }}</span>
@@ -3624,13 +3628,6 @@ async function loadData(forceRefresh = false, resetFilters = true) {
 
 onMounted(() => {
   loadData()
-  // Sirv.js: resuelve los <img class="Sirv" data-src> (logo blanco del informe en modo oscuro)
-  if (typeof document !== 'undefined' && !document.querySelector('script[src="https://scripts.sirv.com/sirvjs/v3/sirv.js"]')) {
-    const s = document.createElement('script')
-    s.src = 'https://scripts.sirv.com/sirvjs/v3/sirv.js'
-    s.async = true
-    document.head.appendChild(s)
-  }
 })
 
 watch(() => props.planta, () => {

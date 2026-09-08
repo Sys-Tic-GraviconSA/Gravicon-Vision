@@ -101,8 +101,8 @@
           <div class="report-page">
             <header class="report-header">
               <div class="report-header-brand">
-                <img src="https://gravicon2026.sirv.com/Pagina%20Gravicon/images/Logos/gravicon_logo.png" @error="($event.target as HTMLImageElement).style.display='none'" alt="Gravicon" class="report-logo report-logo--light" crossorigin="anonymous" />
-                <img class="Sirv report-logo report-logo--dark" src="https://gravicon2026.sirv.com/Pagina%20Gravicon/Logos/logo-blanco.webp?w=200" data-src="https://gravicon2026.sirv.com/Pagina%20Gravicon/Logos/logo-blanco.webp?w=200" alt="Gravicon" referrerpolicy="no-referrer" />
+                <img src="/Logos/Logo-Gravicon-Nuevo.png" @error="($event.target as HTMLImageElement).style.display='none'" alt="Gravicon" class="report-logo report-logo--light" />
+                <img src="/Logos/Logo_Gravicon_Blanco.png" @error="($event.target as HTMLImageElement).style.display='none'" alt="Gravicon" class="report-logo report-logo--dark" />
                 <div class="report-header-text">
                   <h2>Mantenimiento de Llantas — {{ plantaLabel }} Gravicon</h2>
                   <span>GRAVAS Y CONCRETOS S.A. · Gestión de Llantas</span>
@@ -396,15 +396,7 @@ const plantaLabel = computed(() => {
 
 const store = useLlantasStore()
 const vista = ref<'graficas' | 'inventario' | 'informe'>('graficas')
-onMounted(() => {
-  if (!store.data) void store.fetchData()
-  if (typeof document !== 'undefined' && !document.querySelector('script[src="https://scripts.sirv.com/sirvjs/v3/sirv.js"]')) {
-    const s = document.createElement('script')
-    s.src = 'https://scripts.sirv.com/sirvjs/v3/sirv.js'
-    s.async = true
-    document.head.appendChild(s)
-  }
-})
+onMounted(() => { if (!store.data) void store.fetchData() })
 
 const palette = ['#15223c', '#3B82F6', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899', '#84CC16', '#F97316', '#64748B', '#A855F7']
 
