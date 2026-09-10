@@ -54,18 +54,8 @@
         <button v-for="t in tipoTabs" :key="t.id" class="tab-btn" :class="{ active: tipoTab === t.id }" @click="tipoTab = t.id">{{ t.label }}</button>
       </nav>
 
-      <!-- Disponibilidad: vista propia al nivel de Planta/Maquinaria -->
-      <template v-if="tipoTab === 'disponibilidad'">
-        <DisponibilidadTab
-          :data="dataFilteredMain"
-          :planta="planta"
-          :fecha-inicio="fechaInicio"
-          :fecha-fin="fechaFin"
-        />
-      </template>
-
       <!-- Inspección de Llantas: vista propia (solo Concretos) -->
-      <template v-else-if="tipoTab === 'inspeccion'">
+      <template v-if="tipoTab === 'inspeccion'">
         <InspeccionLlantasTab :planta="planta" />
       </template>
 
@@ -84,7 +74,19 @@
         <button class="sub-tab-btn" :class="{ active: subTab === 'dashboard' }" @click="subTab = 'dashboard'">Órdenes de Trabajo</button>
         <button class="sub-tab-btn" :class="{ active: subTab === 'almacen' }" @click="subTab = 'almacen'">Almacén</button>
         <button class="sub-tab-btn" :class="{ active: subTab === 'gerencial' }" @click="subTab = 'gerencial'">Gerencial</button>
+        <button class="sub-tab-btn" :class="{ active: subTab === 'disponibilidad' }" @click="subTab = 'disponibilidad'">Disponibilidad</button>
       </nav>
+
+      <!-- Disponibilidad: el área (Planta/Maquinaria) la impone la pestaña activa -->
+      <template v-if="subTab === 'disponibilidad'">
+        <DisponibilidadTab
+          :data="dataFilteredMain"
+          :planta="planta"
+          :fecha-inicio="fechaInicio"
+          :fecha-fin="fechaFin"
+          :area-filtro="tipoTab === 'maquinaria' ? 'maquinaria' : 'planta'"
+        />
+      </template>
 
       <template v-if="subTab === 'dashboard'">
       <div class="almacen-view-toggle">
@@ -1853,11 +1855,10 @@ const tipoTab = ref('planta')
 const tipoTabs = computed(() => [
   { id: 'planta', label: 'Planta' },
   { id: 'maquinaria', label: 'Maquinaria' },
-  { id: 'disponibilidad', label: 'Disponibilidad' },
   ...(isConcretos.value ? [{ id: 'inspeccion', label: 'Inspección' }] : []),
   { id: 'tareas', label: 'Tareas' },
 ])
-const subTab = ref<'dashboard' | 'almacen' | 'gerencial'>('dashboard')
+const subTab = ref<'dashboard' | 'almacen' | 'gerencial' | 'disponibilidad'>('dashboard')
 const dashboardView = ref<'resumen' | 'ordenes' | 'informe'>('resumen')
 const almacenView = ref<'graficos' | 'solicitudes'>('graficos')
 function scrollToSec(id: string) {
@@ -3739,9 +3740,9 @@ const allData = computed(() => {
     }
     return true
   })
-  // Disponibilidad: en Concretos usa toda la flota; en Agregados (Cuncía/Acacías)
-  // solo se hace seguimiento de disponibilidad a MAQUINARIA, no a planta fija.
-  if (tipoTab.value === 'disponibilidad') {
+  // Disponibilidad (sub-pestaña bajo Planta/Maquinaria): en Concretos usa toda la flota;
+  // en Agregados (Cuncía/Acacías) solo se hace seguimiento a MAQUINARIA, no a planta fija.
+  if (subTab.value === 'disponibilidad') {
     if (isConcretos.value) return base
     return base.filter(r => String(r['Tipo de Mantenimiento'] ?? '').trim().toUpperCase() === 'MAQUINARIA')
   }
@@ -5185,6 +5186,11 @@ function buildBarOpt(data: Record<string, unknown>[], groupBy: 'Tipo de Vehícul
           } else {
             extra = `<br/><span style="color:#94a3b8;font-size:11px">Sin m\u00B3 atribuibles a este equipo (no mueve concreto)</span>`
           }
+          const dp = dispPorPlaca.value.get(normPlaca(nombre))
+          if (dp != null) {
+            const dCol = dp >= 85 ? '#10B981' : dp >= 60 ? '#F59E0B' : '#EF4444'
+            extra += `<br/><span style="color:${dCol}">\u25CF</span> Disponibilidad: <b>${dp}%</b> <span style="color:#94a3b8;font-size:10px">(prom. del per\u00EDodo)</span>`
+          }
         }
         return `<b>${nombre}</b><br/>` +
           `<span style="color:${palette[1]}">\u25CF</span> Servicios: <b>$${Math.round(serv).toLocaleString('es-CO')}</b><br/>` +
@@ -5215,7 +5221,20 @@ function extraerPlacaEquipo(raw: string): string {
   return parts.length === 1 ? s : parts[parts.length - 1]
 }
 
-/** m³ producidos por placa de equipo (mixer o bomba) dentro del rango filtrado. Solo Concretos. */
+/** ¿El servicio de la remisión implica bombeo con autobomba? Excluye "Sin Bomba",
+ *  vacío y "estacionaria" (misma regla que el resto del dashboard de concreto). */
+function esServicioBombeo(servicio: unknown): boolean {
+  if (servicio == null) return false
+  const s = String(servicio).trim().toLowerCase()
+  if (s === '' || s === 'null' || s === 'undefined' || s === 'sin bomba') return false
+  return !s.includes('estacionaria')
+}
+
+/** m³ producidos por placa de equipo dentro del rango filtrado. Solo Concretos.
+ *  - Mixers: m³ de concreto despachado (`Cant. Concreto` / concreto_cantidad).
+ *  - Autobombas: m³ efectivamente bombeados = `Cant. Servicio` (servicio_cantidad) de
+ *    las filas cuyo `Servicio` (servicio_nombre) es un bombeo — NO el concreto de la
+ *    remisión, porque una autobomba puede bombear un volumen distinto al despachado. */
 const m3PorPlaca = computed(() => {
   const m3 = new Map<string, number>()
   const add = (raw: string, val: number) => {
@@ -5226,9 +5245,50 @@ const m3PorPlaca = computed(() => {
   for (const r of prodFiltered.value as unknown as Record<string, unknown>[]) {
     const cant = Number(r['Cant. Concreto']) || Number(r['concreto_cantidad']) || 0
     add(String(r['Mixer'] ?? ''), cant)
-    add(String(r['Bomba'] ?? ''), cant)
+
+    if (esServicioBombeo(r['Servicio'] ?? r['servicio_nombre'])) {
+      const bombeado = Number(r['Cant. Servicio']) || Number(r['servicio_cantidad']) || 0
+      add(String(r['Bomba'] ?? ''), bombeado)
+    }
   }
   return m3
+})
+
+/** Normaliza una placa para cruzar entre fuentes (mant. / disponibilidad / producción). */
+function normPlaca(raw: unknown): string {
+  return String(raw ?? '').trim().toUpperCase().replace(/[\s-]/g, '')
+}
+
+/** Disponibilidad operativa promedio (%) por placa dentro del rango de fechas filtrado.
+ *  Mismo criterio de score que la pestaña Disponibilidad: `Porcentaje_Placa` si viene,
+ *  si no el promedio de `Rev_AM` / `Rev_PM`. Se usa en el tooltip de "Costos por Placa". */
+const dispPorPlaca = computed(() => {
+  const plantaKey = isConcretos.value ? 'concretos' : isAcacias.value ? 'acacias' : 'cuncia'
+  const placas = disp.data?.planta === plantaKey ? (disp.data?.placas ?? []) : []
+  const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
+  const until = fechaFin.value ? dateToSerial(fechaFin.value) + 1 : Infinity
+  const acc = new Map<string, { sum: number; n: number }>()
+  for (const r of placas) {
+    const v = Number(r['Fecha'])
+    if (!(typeof v === 'number' && !isNaN(v) && v >= since && v < until)) continue
+    const placa = normPlaca(r['Placa_Texto'] ?? r['Placa'] ?? r['Placa del Vehículo'])
+    if (!placa) continue
+    const revAm = Number(r['Rev_AM'] ?? r['rev_am'] ?? NaN)
+    const revPm = Number(r['Rev_PM'] ?? r['rev_pm'] ?? NaN)
+    const pctPlaca = Number(r['Porcentaje_Placa'] ?? r['porcentaje_placa'] ?? NaN)
+    let score: number
+    if (!isNaN(pctPlaca) && pctPlaca >= 0) score = pctPlaca
+    else if (!isNaN(revAm) && !isNaN(revPm)) score = (revAm + revPm) / 2
+    else if (!isNaN(revAm)) score = revAm
+    else if (!isNaN(revPm)) score = revPm
+    else continue
+    const e = acc.get(placa) ?? { sum: 0, n: 0 }
+    e.sum += score; e.n++
+    acc.set(placa, e)
+  }
+  const out = new Map<string, number>()
+  for (const [k, e] of acc) if (e.n > 0) out.set(k, Math.round((e.sum / e.n) * 100))
+  return out
 })
 
 const vehiculoGenOpt = computed(() => markRaw(buildBarOpt(dataFilteredNoAcpm.value, 'Placa del Vehículo')))

@@ -12,6 +12,18 @@
       </button>
     </div>
 
+    <!-- Filtro Área de Trabajo (Planta / Maquinaria) — solo Concretos y solo si el
+         contenedor NO impone ya el área (cuando viene de las pestañas Planta/Maquinaria). -->
+    <div v-if="isConcretosPlanta && !props.areaFiltro" class="area-filtro-row">
+      <span class="area-filtro-label">Área de trabajo</span>
+      <div class="almacen-view-toggle" style="margin-bottom: 0;">
+        <button class="av-btn" :class="{ active: areaFiltroLocal === 'maquinaria' }" @click="areaFiltroLocal = 'maquinaria'">Maquinaria</button>
+        <button class="av-btn" :class="{ active: areaFiltroLocal === 'planta' }" @click="areaFiltroLocal = 'planta'">Planta</button>
+        <button class="av-btn" :class="{ active: areaFiltroLocal === 'todos' }" @click="areaFiltroLocal = 'todos'">Todos</button>
+      </div>
+      <span class="area-filtro-hint">La flota alquilada se excluye siempre.</span>
+    </div>
+
     <!-- ========================================== -->
     <!-- VISTA 1: GRÁFICAS DE DISPONIBILIDAD        -->
     <!-- ========================================== -->
@@ -42,7 +54,9 @@
           :value="String(kpis.flotaPropia)"
         />
 
+        <!-- En Concretos la disponibilidad no considera flota alquilada (sí en el informe). -->
         <KpiCard
+          v-if="!isConcretosPlanta"
           label="Alquilados"
           accent="#2a3f6b"
           icon="truck"
@@ -68,21 +82,21 @@
           :accent="kpis.dispPropiaPct >= 85 ? '#10B981' : kpis.dispPropiaPct >= 60 ? '#F59E0B' : '#EF4444'"
           :meta="'Meta: 85%'"
           icon="target"
-          :value="kpis.dispPropiaPct + '%'"
+          :value="kpis.dispPropiaPctLabel + '%'"
         />
 
         <KpiCard
           label="Disponible en Cancha"
           :accent="kpis.dispCanchaPct >= 85 ? '#10B981' : kpis.dispCanchaPct >= 60 ? '#F59E0B' : '#EF4444'"
           icon="trending-up"
-          :value="kpis.dispCanchaPct + '%'"
+          :value="kpis.dispCanchaPctLabel + '%'"
         />
 
         <KpiCard
           label="Cobertura de Inspección"
           accent="#3B82F6"
           icon="zap"
-          :value="kpis.coberturaPct + '%'"
+          :value="kpis.coberturaPctLabel + '%'"
         />
 
         <KpiCard
@@ -101,14 +115,14 @@
         <div class="charts-grid cols-2">
           <ChartCard
             title="Disponibilidad Operativa por Equipo"
-            description="% de días operativos sobre el total del período — semáforo: verde ≥85%, amarillo ≥60%, rojo <60%"
+            description="% de días operativos sobre el total del período"
             :option="dispEquipoOpt"
             :expand-option="dispEquipoFullOpt"
             :height="540"
           />
           <ChartCard
             title="Incidencia de Mantenimiento por Equipo"
-            description="% de días en mantenimiento vs. días totales del período — objetivo ≤15%"
+            description="% de días en mantenimiento vs. días totales del período"
             :option="incidenciaMantenimientoOpt"
             :expand-option="incidenciaMantenimientoFullOpt"
             :height="540"
@@ -158,8 +172,18 @@
           />
         </div>
 
-        <!-- Disponibilidad Mensual por Clasificación de Equipo (solo maquinaria — agregados) -->
-        <div v-if="!isConcretosPlanta && disponibilidadMensualClasif.filas.length" class="clasif-card">
+        <!-- Tendencia diaria de disponibilidad — comparación AM vs PM -->
+        <div v-if="dispRowsBase.length" class="charts-grid" style="margin-top: 14px;">
+          <ChartCard
+            title="Tendencia Diaria de Disponibilidad — AM vs PM"
+            description="% de disponibilidad promedio de la flota por día en la ronda de la mañana (AM) frente a la de la tarde (PM)"
+            :option="dispTendenciaDiariaAmPmOpt"
+            :height="520"
+          />
+        </div>
+
+        <!-- Disponibilidad Mensual por Clasificación de Equipo (solo maquinaria) -->
+        <div v-if="disponibilidadMensualClasif.filas.length" class="clasif-card">
           <div class="clasif-head">
             <h3>Disponibilidad Mensual por Clasificación de Equipo</h3>
             <p>
@@ -292,7 +316,7 @@
               :accent="informeKpis.dispPropiaPct >= 85 ? '#16A34A' : informeKpis.dispPropiaPct >= 60 ? '#F59E0B' : '#DC2626'"
               meta="Meta: 85%"
               icon="target"
-              :value="informeKpis.dispPropiaPct + '%'"
+              :value="informeKpis.dispPropiaPctLabel + '%'"
             />
             <KpiCard
               label="Salen Hoy de Taller"
@@ -301,7 +325,7 @@
               :meta="informeKpis.salenHoy > 0 ? 'Listos para entrega' : 'Sin salidas prog.'"
               :value="String(informeKpis.salenHoy)"
             />
-            <KpiCard label="Cobertura" accent="#16A34A" icon="zap" :value="informeKpis.coberturaPct + '%'" />
+            <KpiCard label="Cobertura" accent="#16A34A" icon="zap" :value="informeKpis.coberturaPctLabel + '%'" />
             <KpiCard label="Días de Rezago" accent="#1D4ED8" icon="clock" :value="String(informeKpis.diasRezago)" />
           </div>
 
@@ -742,7 +766,7 @@
           <!-- ============================================ -->
           <!-- DISPONIBILIDAD MENSUAL POR CLASIFICACIÓN     -->
           <!-- ============================================ -->
-          <div v-if="!isConcretosPlanta && disponibilidadMensualClasif.filas.length" class="report-section-block">
+          <div v-if="disponibilidadMensualClasif.filas.length" class="report-section-block">
             <h3 class="report-block-title"><span class="title-bar"></span>Disponibilidad Mensual por Clasificación de Equipo</h3>
             <p style="font-size: 11px; color: var(--text-secondary); margin: 0 0 6px;">
               % de disponibilidad operativa de la maquinaria propia por familia de equipo y mes (equipos de planta fija excluidos). Con un rango de fechas cada celda es el promedio del período de ese mes. La fila <strong>Cumplimiento</strong> es el promedio ponderado por número de equipos de cada clasificación. Semáforo: verde ≥85 %, ámbar ≥75 %, rojo &lt;75 %.
@@ -872,6 +896,9 @@ const props = defineProps<{
   planta: string
   fechaInicio?: string
   fechaFin?: string
+  /** Área de trabajo impuesta por el contenedor (pestañas Planta/Maquinaria). Si viene,
+   *  el toggle interno se oculta y manda este valor. */
+  areaFiltro?: 'maquinaria' | 'planta' | 'todos'
 }>()
 
 const { theme } = useTheme()
@@ -879,6 +906,13 @@ const dispStore = useDisponibilidadStore()
 const mantStore = useMantenimientoStore()
 const dispView = ref<'graficas' | 'informe'>('graficas')
 // Removed iframe reference – not needed after switching to v-html rendering
+
+// Filtro Área de Trabajo — solo Concretos (en agregados la disponibilidad ya es 100% maquinaria).
+// `areaFiltroLocal` es el estado del toggle interno; si el contenedor pasa `props.areaFiltro`
+// (pestañas Planta/Maquinaria), ese valor manda y el toggle se oculta.
+type AreaFiltro = 'maquinaria' | 'planta' | 'todos'
+const areaFiltroLocal = ref<AreaFiltro>('maquinaria')
+const areaFiltro = computed<AreaFiltro>(() => props.areaFiltro ?? areaFiltroLocal.value)
 
 const isConcretosPlanta = computed(() => {
   return (props.planta ?? '').toLowerCase().includes('concreto')
@@ -981,6 +1015,27 @@ function getDateKey(d: Date): string {
   return key
 }
 
+/** Clasifica una inspección como 'planta' | 'maquinaria' | 'dual' según la columna
+ *  "Área de Trabajo" del maestro; si el maestro no la trae, se deduce del tipo de equipo. */
+function areaTrabajoClasif(r: Record<string, unknown>): 'planta' | 'maquinaria' | 'dual' {
+  const a = String(r['Área de Trabajo'] ?? r['Area de Trabajo'] ?? '').trim().toUpperCase()
+  if (a === 'PLANTA') return 'planta'
+  if (a === 'MAQUINARIA') return 'maquinaria'
+  if (a === 'DUAL') return 'dual'
+  const tipo = String(r['Tipo de Vehiculos'] ?? '').toUpperCase()
+  return ES_PLANTA_FIJA.test(tipo) ? 'planta' : 'maquinaria'
+}
+
+/** Concretos: normaliza la localización a las 3 plantas del informe. `null` = fuera de alcance
+ *  (logística, otros frentes…) y se descarta. */
+function sedeConcretos(loc: string): string | null {
+  const n = (loc || '').toUpperCase()
+  if (n.includes('VILLA')) return 'Planta Villavicencio'
+  if (n.includes('RESTREPO')) return 'Planta Restrepo'
+  if (n.includes('ACACIA') || n.includes('ACACÍA')) return 'Planta Acacías'
+  return null
+}
+
 // Filas activas: inspecciones de disponibilidad del store filtradas por rango de fechas
 const activePlacasRows = computed(() => {
   const storeData = dispStore.data
@@ -989,6 +1044,20 @@ const activePlacasRows = computed(() => {
     rows = storeData.placas
   } else {
     rows = props.data || []
+  }
+
+  // Concretos, SOLO en la vista Gráficas: la disponibilidad es solo de flota propia
+  // (las alquiladas se excluyen) y se puede acotar por Área de Trabajo (Planta / Maquinaria)
+  // del maestro. En el Informe se deja la flota completa, tal cual.
+  if (isConcretosPlanta.value && dispView.value === 'graficas') {
+    rows = rows.filter(r => !getInspectionDetails(r).esAlquilado)
+    if (areaFiltro.value !== 'todos') {
+      const want = areaFiltro.value
+      rows = rows.filter(r => {
+        const a = areaTrabajoClasif(r)
+        return a === 'dual' || a === want
+      })
+    }
   }
 
   const desde = props.fechaInicio || ''
@@ -1136,6 +1205,9 @@ const informeKpis = computed(() => {
       parciales: 0,
       dispPropiaPct: 0,
       dispCanchaPct: 0,
+      dispPropiaPctLabel: '0',
+      dispCanchaPctLabel: '0',
+      coberturaPctLabel: '0',
       salenHoy: 0,
       coberturaPct: 0,
       inspeccionados: 0,
@@ -1191,13 +1263,16 @@ const informeKpis = computed(() => {
     ? (opCount + (parcialCount * 0.5)).toFixed(1).replace('.0', '').replace('.', ',')
     : String(opCount)
 
-  const dispPropiaPct = countPropia > 0
-    ? Math.round((scorePropiaSum / countPropia) * 100)
-    : (countTotal > 0 ? Math.round((scoreSumTotal / countTotal) * 100) : 0)
+  const dispPropiaRaw = countPropia > 0
+    ? (scorePropiaSum / countPropia) * 100
+    : (countTotal > 0 ? (scoreSumTotal / countTotal) * 100 : 0)
 
-  const dispCanchaPct = countTotal > 0
-    ? Math.round((scoreSumTotal / countTotal) * 100)
-    : dispPropiaPct
+  const dispCanchaRaw = countTotal > 0
+    ? (scoreSumTotal / countTotal) * 100
+    : dispPropiaRaw
+
+  const dispPropiaPct = Math.round(dispPropiaRaw)
+  const dispCanchaPct = Math.round(dispCanchaRaw)
 
   // Salidas programadas para el día de hoy (o fecha de corte)
   const salenHoySet = new Set<string>()
@@ -1219,7 +1294,17 @@ const informeKpis = computed(() => {
   }
   const salenHoy = salenHoySet.size
 
-  const coberturaPct = flotaTotal > 0 ? Math.min(100, Math.round((inspectedCount / flotaTotal) * 100)) : 100
+  const coberturaRaw = flotaTotal > 0 ? Math.min(100, (inspectedCount / flotaTotal) * 100) : 100
+  const coberturaPct = Math.round(coberturaRaw)
+
+  // Concretos: los KPIs de disponibilidad del informe se muestran con 2 decimales
+  // (igual que la vista Gráficas y la fila "Cumplimiento" de la tabla mensual).
+  const fmtPct = (n: number) => isConcretosPlanta.value
+    ? n.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : String(Math.round(n))
+  const dispPropiaPctLabel = fmtPct(dispPropiaRaw)
+  const dispCanchaPctLabel = fmtPct(dispCanchaRaw)
+  const coberturaPctLabel = fmtPct(coberturaRaw)
 
   let diasRezago = 0
   if (targetIso) {
@@ -1239,6 +1324,9 @@ const informeKpis = computed(() => {
     parciales: parcialCount,
     dispPropiaPct,
     dispCanchaPct,
+    dispPropiaPctLabel,
+    dispCanchaPctLabel,
+    coberturaPctLabel,
     salenHoy,
     coberturaPct,
     inspeccionados: inspectedCount,
@@ -2219,11 +2307,14 @@ const svgTrend = computed(() => {
   }
 })
 
-// Clasificación de disponibilidad por familia de equipo (solo agregados: Cuncía / Acacías).
-// Los tipos provienen de "Tipo de Vehiculos" de la hoja Reporte Placa Disponibilidad:
-// CARGADOR(-FRONTAL), EXCAVADORA, RETROEXCAVADORA, VOLQUETA DOBLETROQUE, MINERA,
-// CAMION MINERO, MOTONIVELADORA, MULA, CAMABAJA, CAMIONETA, MOTOCICLETA, MOTOCARRO, TURBO, DUAL.
-const CLASIF_DISPONIBILIDAD: { id: string; label: string; match: (t: string) => boolean }[] = [
+// Clasificación de disponibilidad por familia de equipo.
+// Los tipos provienen de "Tipo de Vehiculos" de la hoja Reporte Placa Disponibilidad.
+type ClasifDisp = { id: string; label: string; match: (t: string) => boolean }
+
+// Agregados (Cuncía / Acacías): CARGADOR(-FRONTAL), EXCAVADORA, RETROEXCAVADORA,
+// VOLQUETA DOBLETROQUE, MINERA, CAMION MINERO, MOTONIVELADORA, MULA, CAMABAJA,
+// CAMIONETA, MOTOCICLETA, MOTOCARRO, TURBO, DUAL.
+const CLASIF_DISPONIBILIDAD_AGREGADOS: ClasifDisp[] = [
   { id: 'cargue', label: 'Equipos de Cargue', match: t => t.includes('CARGADOR') },
   { id: 'extraccion', label: 'Equipos de Extracción', match: t => t.includes('EXCAVADORA') || t.includes('RETRO') },
   { id: 'transporte', label: 'Equipos de Transporte', match: t => /VOLQUETA|MINERA|CAMI[OÓ]N\s*MINERO/.test(t) },
@@ -2231,12 +2322,43 @@ const CLASIF_DISPONIBILIDAD: { id: string; label: string; match: (t: string) => 
   { id: 'admin', label: 'Equipos Administrativos y Logísticos', match: () => true },
 ]
 
+// Concretos: NO se agrupa en familias — una fila por "Tipo de Vehiculos" tal cual
+// (MIXER, CARGADOR, TRACTOCAMION, TURBO, AUTOBOMBA, BOBCAT, BOMBA ESTACIONARIA,
+//  VOLQUETA, CAMIONETA, MOTOCICLETA…), ordenadas por nº de inspecciones descendente.
+const dispTiposConcretos = computed<string[]>(() => {
+  if (!isConcretosPlanta.value) return []
+  const counts = new Map<string, number>()
+  for (const r of activePlacasRows.value) {
+    const info = getInspectionDetails(r)
+    if (info.esAlquilado) continue
+    if (String(r['Área de Trabajo'] ?? '').trim().toUpperCase() === 'PLANTA') continue
+    if (ES_PLANTA_FIJA.test((info.baseTipo || '').toUpperCase())) continue
+    const t = (info.baseTipo || 'SIN TIPO').toUpperCase().trim()
+    counts.set(t, (counts.get(t) ?? 0) + 1)
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(e => e[0])
+})
+
+const CLASIF_DISPONIBILIDAD = computed<ClasifDisp[]>(() => {
+  if (!isConcretosPlanta.value) return CLASIF_DISPONIBILIDAD_AGREGADOS
+  const list: ClasifDisp[] = dispTiposConcretos.value.map(t => ({
+    id: t.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'sin-tipo',
+    label: t,
+    match: (x: string) => (x || 'SIN TIPO').toUpperCase().trim() === t,
+  }))
+  list.push({ id: 'otros', label: 'Otros', match: () => true })
+  return list
+})
+
 function clasifDispIndex(baseTipo: string): number {
   const t = (baseTipo || '').toUpperCase()
-  for (let i = 0; i < CLASIF_DISPONIBILIDAD.length; i++) {
-    if (CLASIF_DISPONIBILIDAD[i].match(t)) return i
+  const clasif = CLASIF_DISPONIBILIDAD.value
+  for (let i = 0; i < clasif.length; i++) {
+    if (clasif[i].match(t)) return i
   }
-  return CLASIF_DISPONIBILIDAD.length - 1
+  return clasif.length - 1
 }
 
 /** Equipos de planta fija (no maquinaria móvil): en agregados no entran a disponibilidad. */
@@ -2248,7 +2370,7 @@ const ES_PLANTA_FIJA = /TRITURADORA|CHANCADORA|\bPLANTA\b|ZARANDA|CRIBA|\bBANDA\
  * Fila "Cumplimiento" = promedio ponderado por número de equipos de cada clasificación.
  */
 const disponibilidadMensualClasif = computed(() => {
-  const buckets = CLASIF_DISPONIBILIDAD.map(c => ({
+  const buckets = CLASIF_DISPONIBILIDAD.value.map(c => ({
     id: c.id,
     label: c.label,
     placas: new Set<string>(),
@@ -2397,9 +2519,16 @@ const tendenciaSedesAmPm = computed(() => {
     if (getDateKey(d) !== targetIso) continue
 
     const info = getInspectionDetails(r)
-    const loc = info.loc || 'Planta'
-    const locUpper = loc.toUpperCase()
-    if (locUpper.includes('LOGISTICA') || locUpper.includes('LOGÍSTICA')) continue
+    let loc = info.loc || 'Planta'
+    if (isConcretosPlanta.value) {
+      // Concretos: solo Planta Villavicencio / Restrepo / Acacías.
+      const s = sedeConcretos(loc)
+      if (!s) continue
+      loc = s
+    } else {
+      const locUpper = loc.toUpperCase()
+      if (locUpper.includes('LOGISTICA') || locUpper.includes('LOGÍSTICA')) continue
+    }
 
     if (!map.has(loc)) map.set(loc, { amSum: 0, amN: 0, pmSum: 0, pmN: 0, proySum: 0, proyN: 0 })
     const item = map.get(loc)!
@@ -2597,7 +2726,12 @@ function renderAllCharts() {
         if (!d) continue
         if (targetIso && getDateKey(d) !== targetIso) continue
         const info = getInspectionDetails(r)
-        const sede = info.loc || 'Planta'
+        let sede = info.loc || 'Planta'
+        if (isConcretosPlanta.value) {
+          const s = sedeConcretos(sede)
+          if (!s) continue
+          sede = s
+        }
         if (!sedeMap.has(sede)) sedeMap.set(sede, { op: 0, alq: 0, parc: 0, no: 0 })
         const item = sedeMap.get(sede)!
         if (info.esAlquilado) {
@@ -2665,6 +2799,8 @@ function renderAllCharts() {
       chartInstances.push(chart)
       const sedesData = tendenciaSedesAmPm.value
       if (sedesData.length > 0) {
+        // Diseño "Órdenes Diarias": etiquetas píldora, rejilla clara, ejes limpios.
+        // Los colores de línea se conservan por planta (no se cambian).
         const fallbackColors = ['#2b2256', '#16a34a', '#0369a1', '#7e22ce', '#ea580c', '#dc2626']
         const allVals: number[] = []
         sedesData.forEach(p => { allVals.push(p.pmPct, p.amPct, p.proyPct) })
@@ -2681,16 +2817,16 @@ function renderAllCharts() {
             name: p.nombre,
             type: 'line',
             data: [Number(p.amPct), Number(p.pmPct), Number(p.proyPct)],
-            smooth: false,
+            smooth: true,
             symbol: 'circle',
-            symbolSize: 10,
+            symbolSize: 8,
             showSymbol: true,
             z: 3,
-            lineStyle: { width: 3, color, cap: 'round', join: 'round' },
-            itemStyle: { color, borderWidth: 3, borderColor: '#ffffff' },
+            lineStyle: { width: 2.5, color, cap: 'round', join: 'round' },
+            itemStyle: { color, borderWidth: 2, borderColor: '#ffffff' },
             label: { show: true, formatter: (x: any) => x.value != null ? x.value + '%' : '',
               position: 'top', distance: 2, offset: [0, lift - 10],
-              backgroundColor: 'rgba(255,255,255,0.95)', padding: [2, 5], borderRadius: 3,
+              backgroundColor: 'rgba(255,255,255,0.95)', padding: [2, 6], borderRadius: 4,
               borderColor: color, borderWidth: 1,
               textStyle: { fontWeight: 'bold', fontSize: 11, color } }
           }
@@ -2698,23 +2834,23 @@ function renderAllCharts() {
         chart.setOption({
           animation: false,
           color: seriesTend.map(s => (s.itemStyle as any).color),
-          legend: { top: 6, right: 10, itemWidth: 28, itemHeight: 14, itemGap: 16,
+          legend: { top: 4, right: 10, icon: 'circle', itemWidth: 10, itemHeight: 10, itemGap: 16,
             textStyle: { fontSize: 11, color: CP, fontWeight: 'bold' } },
-          grid: { top: 70, bottom: 40, left: 60, right: 30 },
+          grid: { top: 62, bottom: 40, left: 40, right: 30, containLabel: true },
           xAxis: { type: 'category', data: ['AM (Mañana)', 'PM (Tarde)', `Proy. D+1 (${nextNom})`], boundaryGap: true,
-            axisLine: { lineStyle: { color: '#999', width: 1.5 } },
+            axisLine: { lineStyle: { color: '#cbd5e1', width: 1 } },
             axisTick: { show: false },
             axisLabel: { margin: 12, textStyle: { color: CP, fontWeight: 'bold', fontSize: 12 } } },
           yAxis: { type: 'value', min: yTop, max: yBottom, interval: 5,
             axisLine: { show: false }, axisTick: { show: false },
-            splitLine: { lineStyle: { color: '#d8d2e8', width: 1, type: 'solid' } },
-            axisLabel: { formatter: '{value}%', textStyle: { color: '#444', fontSize: 10, fontWeight: 'bold' } } },
+            axisLabel: { show: false },
+            splitLine: { lineStyle: { color: '#e5e7eb', width: 1, type: 'dashed' } } },
           series: seriesTend
         })
       }
     }
 
-    // ── 5. Línea tendencia mensual — color Órdenes Diarias (#3B82F6) ──
+    // ── 5. Línea tendencia mensual — mismo diseño que "Órdenes Diarias" de Órdenes de Trabajo ──
     if (chartMensualRef.value) {
       const chart = echarts.init(chartMensualRef.value, null, { renderer: 'canvas' })
       chartInstances.push(chart)
@@ -2722,58 +2858,38 @@ function renderAllCharts() {
       if (trend && trend.points.length > 0) {
         const fechas = trend.points.map(p => p.dateLabel)
         const pcts = trend.points.map(p => p.pct)
-        const minVal = Math.max(0, Math.min(...pcts) - 12)
-        const AZUL_OT = '#3B82F6'
         chart.setOption({
           animation: false,
-          grid: { top: 46, bottom: 46, left: 58, right: 38 },
+          color: ['#3B82F6'],
+          tooltip: {
+            trigger: 'axis',
+            formatter: (params: any) => {
+              const p = Array.isArray(params) ? params[0] : params
+              return `<b>${p.name}</b><br/><span style="color:#3B82F6">●</span> Disponibilidad: <b>${Number(p.value) || 0}%</b>`
+            }
+          },
+          grid: { left: 40, right: 20, bottom: 40, top: 30, containLabel: true },
           xAxis: {
             type: 'category',
             data: fechas,
-            axisLine: { lineStyle: { color: '#ccc', width: 1.5 } },
-            axisTick: { alignWithLabel: true, lineStyle: { color: '#ccc' } },
-            axisLabel: { fontSize: 10, fontWeight: 'bold', color: '#555', rotate: fechas.length > 18 ? 35 : 0 }
+            axisLabel: { fontWeight: 'bold', color: '#555', fontSize: 11, interval: Math.ceil(fechas.length / 12), rotate: fechas.length > 18 ? 35 : 0 }
           },
-          yAxis: {
-            type: 'value',
-            min: minVal,
-            max: 100,
-            interval: 10,
-            axisLine: { show: false },
-            axisTick: { show: false },
-            axisLabel: { formatter: '{value}%', fontSize: 11, fontWeight: 'bold', color: '#444' },
-            splitLine: { lineStyle: { color: '#e8f0fe', type: 'dashed', width: 1.5 } }
-          },
+          yAxis: { type: 'value', axisLabel: { show: false }, splitLine: { show: false } },
           series: [{
+            name: 'Disponibilidad',
             type: 'line',
             data: pcts,
             smooth: true,
-            symbol: 'circle',
-            symbolSize: 8,
-            lineStyle: { width: 3.5, color: AZUL_OT },
-            itemStyle: { color: AZUL_OT, borderWidth: 2, borderColor: '#fff' },
-            areaStyle: {
-              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                { offset: 0, color: 'rgba(59, 130, 246, 0.38)' },
-                { offset: 1, color: 'rgba(59, 130, 246, 0.03)' }
-              ])
-            },
-            markLine: {
-              silent: true,
-              symbol: 'none',
-              data: [{
-                yAxis: 85,
-                lineStyle: { color: '#16a34a', type: 'dashed', width: 2.5 },
-                label: { formatter: 'Meta 85%', position: 'insideEndTop', color: '#16a34a', fontSize: 11, fontWeight: 'bold' }
-              }]
-            },
+            areaStyle: { opacity: 0.25 },
             label: {
               show: true,
-              position: 'top',
               formatter: '{c}%',
-              fontSize: 10,
+              fontSize: 11,
               fontWeight: 'bold',
-              color: AZUL_OT
+              color: '#334155',
+              backgroundColor: 'rgba(255,255,255,.92)',
+              padding: [2, 6],
+              borderRadius: 4
             }
           }]
         })
@@ -2976,6 +3092,9 @@ const kpis = computed(() => {
       dispPropiaPct: 0,
       dispCanchaPct: 0,
       coberturaPct: 0,
+      dispPropiaPctLabel: '0',
+      dispCanchaPctLabel: '0',
+      coberturaPctLabel: '0',
       inspeccionados: 0,
       diasRezago: 0,
     }
@@ -3029,15 +3148,28 @@ const kpis = computed(() => {
     ? (opCount + (parcialCount * 0.5)).toFixed(1).replace('.0', '').replace('.', ',')
     : String(opCount)
 
-  const dispPropiaPct = countPropia > 0
-    ? Math.round((scorePropiaSum / countPropia) * 100)
-    : (countTotal > 0 ? Math.round((scoreSumTotal / countTotal) * 100) : 0)
+  const dispPropiaRaw = countPropia > 0
+    ? (scorePropiaSum / countPropia) * 100
+    : (countTotal > 0 ? (scoreSumTotal / countTotal) * 100 : 0)
 
-  const dispCanchaPct = countTotal > 0
-    ? Math.round((scoreSumTotal / countTotal) * 100)
-    : dispPropiaPct
+  const dispCanchaRaw = countTotal > 0
+    ? (scoreSumTotal / countTotal) * 100
+    : dispPropiaRaw
 
-  const coberturaPct = flotaTotal > 0 ? Math.min(100, Math.round((inspectedCount / flotaTotal) * 100)) : 100
+  const coberturaRaw = flotaTotal > 0 ? Math.min(100, (inspectedCount / flotaTotal) * 100) : 100
+
+  const dispPropiaPct = Math.round(dispPropiaRaw)
+  const dispCanchaPct = Math.round(dispCanchaRaw)
+  const coberturaPct = Math.round(coberturaRaw)
+
+  // Concretos: los KPIs de disponibilidad se muestran con 2 decimales (igual que la
+  // fila "Cumplimiento" de la tabla mensual). Las demás plantas mantienen el entero.
+  const fmtPct = (n: number) => isConcretosPlanta.value
+    ? n.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : String(Math.round(n))
+  const dispPropiaPctLabel = fmtPct(dispPropiaRaw)
+  const dispCanchaPctLabel = fmtPct(dispCanchaRaw)
+  const coberturaPctLabel = fmtPct(coberturaRaw)
 
   let diasRezago = 0
   if (targetIso) {
@@ -3060,6 +3192,9 @@ const kpis = computed(() => {
     dispPropiaPct,
     dispCanchaPct,
     coberturaPct,
+    dispPropiaPctLabel,
+    dispCanchaPctLabel,
+    coberturaPctLabel,
     inspeccionados: inspectedCount,
     diasRezago,
   }
@@ -3084,7 +3219,7 @@ const pillLabelBase = computed(() => ({
 
 // ================= GRÁFICAS EXCLUSIVAS CONCRETOS =================
 
-type EquipoDisp = { placa: string; dispPct: number; diasOp: number; diasNoOp: number; tipo: string; loc: string }
+type EquipoDisp = { placa: string; dispPct: number; dispPctRaw: number; diasOp: number; diasNoOp: number; tipo: string; loc: string }
 
 const dispEquipoList = computed<EquipoDisp[]>(() => {
   const records = activePlacasRows.value
@@ -3109,16 +3244,27 @@ const dispEquipoList = computed<EquipoDisp[]>(() => {
     equiposMap.set(info.placa, existing)
   }
 
-  const equipos: EquipoDisp[] = [...equiposMap.values()].map(e => ({
-    placa: e.placa,
-    dispPct: e.count > 0 ? Math.round((e.sumScore / e.count) * 100) : 0,
-    diasOp: +e.sumScore.toFixed(1),
-    diasNoOp: e.diasNoOp,
-    tipo: e.tipo,
-    loc: e.loc,
-  }))
+  const equipos: EquipoDisp[] = [...equiposMap.values()].map(e => {
+    const ratio = e.count > 0 ? e.sumScore / e.count : 0
+    return {
+      placa: e.placa,
+      dispPct: Math.round(ratio * 100),
+      dispPctRaw: ratio * 100,
+      diasOp: +e.sumScore.toFixed(1),
+      diasNoOp: e.diasNoOp,
+      tipo: e.tipo,
+      loc: e.loc,
+    }
+  })
 
-  equipos.sort((a, b) => b.dispPct - a.dispPct || b.diasOp - a.diasOp)
+  // Orden estricto de mayor a menor disponibilidad: se ordena por el % exacto (sin
+  // redondear) para que no queden empates ambiguos entre equipos con el mismo valor
+  // redondeado; desempate por días operativos y luego por placa.
+  equipos.sort((a, b) =>
+    b.dispPctRaw - a.dispPctRaw ||
+    b.diasOp - a.diasOp ||
+    a.placa.localeCompare(b.placa, 'es'),
+  )
   return equipos
 })
 
@@ -3168,19 +3314,34 @@ function buildDispEquipoOption(equipos: EquipoDisp[], limit?: number) {
     series: [{
       name: 'Disponibilidad',
       type: 'bar',
-      barMaxWidth: 30,
-      barCategoryGap: '28%',
-      data: list.map(e => ({
-        value: e.dispPct,
-        diasOp: e.diasOp,
-        diasNoOp: e.diasNoOp,
-        tipo: e.tipo,
-        itemStyle: {
-          color: e.dispPct >= 85 ? '#10b981' : e.dispPct >= 60 ? '#f59e0b' : '#ef4444',
-          borderRadius: [0, 4, 4, 0],
-        },
-      })),
-      emphasis: { focus: 'series' as const, itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } },
+      barMaxWidth: 34,
+      barMinHeight: 4,
+      barCategoryGap: '32%',
+      showBackground: true,
+      backgroundStyle: {
+        color: isDark.value ? 'rgba(255,255,255,0.05)' : 'rgba(15,23,42,0.05)',
+        borderRadius: [0, 4, 4, 0],
+      },
+      data: list.map(e => {
+        const c = e.dispPct >= 85 ? '#10b981' : e.dispPct >= 60 ? '#f59e0b' : '#ef4444'
+        return {
+          value: e.dispPct,
+          diasOp: e.diasOp,
+          diasNoOp: e.diasNoOp,
+          tipo: e.tipo,
+          itemStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+              { offset: 0, color: c + 'cc' },
+              { offset: 1, color: c },
+            ]),
+            borderRadius: [0, 4, 4, 0],
+            shadowBlur: 6,
+            shadowColor: c + '55',
+            shadowOffsetY: 1,
+          },
+        }
+      }),
+      emphasis: { focus: 'series' as const, itemStyle: { shadowBlur: 14, shadowColor: 'rgba(0,0,0,0.25)' } },
       label: {
         ...pillLabelBase.value,
         position: 'right' as const, distance: 6,
@@ -3295,10 +3456,6 @@ function buildIncidenciaOption(equipos: EquipoMant[], limit?: number) {
         formatter: (p: any) => `${p.value}%  ·  ${p.data.diasMant} d`,
       },
       labelLayout: { hideOverlap: true },
-      markLine: {
-        silent: true, symbol: 'none',
-        data: [{ xAxis: 15, lineStyle: { color: '#10b981', type: 'dashed', width: 2 }, label: { formatter: 'Objetivo ≤15%', color: '#10b981', fontSize: 11, fontWeight: 'bold', position: 'end' } }],
-      },
     }],
   })
 }
@@ -3321,6 +3478,8 @@ interface DispRowBase {
   isParcial: boolean
   isNoOp: boolean
   clasif: number
+  revAm: number | null
+  revPm: number | null
 }
 
 /** Inspecciones de maquinaria móvil clasificables (mismo criterio que la tabla mensual). */
@@ -3345,6 +3504,8 @@ const dispRowsBase = computed<DispRowBase[]>(() => {
       isParcial: info.isParcial,
       isNoOp: info.isNoOp,
       clasif: clasifDispIndex(info.baseTipo),
+      revAm: Number.isNaN(info.revAm) ? null : info.revAm,
+      revPm: Number.isNaN(info.revPm) ? null : info.revPm,
     })
   }
   return out
@@ -3368,67 +3529,103 @@ const dispTendenciaDiariaOpt = computed(() => {
     return Math.round((e.sum / e.n) * 100)
   })
   const labels = days.map(k => `${k.slice(8, 10)}/${k.slice(5, 7)}`)
-  const avg = values.length ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : 0
+  // Mismo diseño que la gráfica "Órdenes Diarias" de Órdenes de Trabajo.
   return markRaw({
-    textStyle: { fontFamily: 'Lato, sans-serif' },
-    animationDuration: 650,
-    animationEasing: 'cubicOut',
+    color: ['#3B82F6'],
     tooltip: {
       trigger: 'axis',
-      formatter: (params: any[]) => {
+      formatter: (params: any) => {
         const p = Array.isArray(params) ? params[0] : params
-        const v = Number(p.value) || 0
-        const col = v >= 85 ? '#16a34a' : v >= 75 ? '#d99a2b' : '#ef4444'
-        return `<b>${p.name}</b><br/><span style="color:${col}">●</span> Disponibilidad: <b>${v}%</b><br/>` +
-          `<span style="color:#94a3b8">●</span> Prom. período <b>${avg}%</b>`
+        return `<b>${p.name}</b><br/><span style="color:#3B82F6">●</span> Disponibilidad: <b>${Number(p.value) || 0}%</b>`
       },
     },
     grid: { left: 40, right: 20, bottom: 40, top: 30, containLabel: true },
     xAxis: {
       type: 'category',
       data: labels,
-      axisTick: { show: false },
-      axisLine: { lineStyle: { color: splitLineColor.value } },
-      axisLabel: { fontWeight: 600 as const, color: textColor.value, fontSize: 11, interval: Math.ceil(labels.length / 12) },
+      axisLabel: { fontWeight: 600 as const, color: textColor.value, interval: Math.ceil(labels.length / 12) },
     },
-    yAxis: {
-      type: 'value',
-      min: 0,
-      max: 100,
-      axisLabel: { show: false },
-      axisLine: { show: false },
-      axisTick: { show: false },
-      splitLine: { show: true, lineStyle: { color: splitLineColor.value, type: 'dashed' as const } },
-    },
+    yAxis: { type: 'value', min: 0, max: 100, axisLabel: { show: false }, splitLine: { show: false } },
     series: [{
       name: 'Disponibilidad',
       type: 'line',
-      smooth: 0.35,
-      symbol: 'circle',
-      symbolSize: 8,
-      showSymbol: true,
+      smooth: true,
       data: values,
-      lineStyle: { width: 2.5, color: '#2563eb' },
-      itemStyle: { color: '#2563eb' },
-      areaStyle: { opacity: 0.22, color: '#2563eb' },
-      emphasis: { scale: 1.4, focus: 'series' as const, itemStyle: { shadowBlur: 12, shadowColor: 'rgba(37,99,235,0.45)' } },
-      label: {
-        ...pillLabelBase.value,
-        position: 'top' as const,
-        distance: 8,
-        borderColor: '#2563eb',
-        borderWidth: 1,
-        formatter: (p: any) => (p.value == null ? '' : `${p.value}%`),
-      },
-      labelLayout: { moveOverlap: 'shiftY' as const, hideOverlap: false },
-      markLine: {
-        silent: true,
-        symbol: 'none',
-        data: [
-          { yAxis: avg, lineStyle: { color: '#94a3b8', type: 'dotted', width: 1.5 }, label: { formatter: `Prom. ${avg}%`, color: textColor.value, fontSize: 11, fontWeight: 'bold', position: 'insideEndTop' } },
-        ],
-      },
+      areaStyle: { opacity: 0.25 },
+      label: { ...pillLabelBase.value, formatter: (p: any) => (p.value == null ? '' : `${p.value}%`) },
     }],
+  })
+})
+
+/** A-bis. Tendencia diaria de disponibilidad — comparación ronda AM vs ronda PM. */
+const dispTendenciaDiariaAmPmOpt = computed(() => {
+  const byDay = new Map<string, { amSum: number; amN: number; pmSum: number; pmN: number }>()
+  for (const r of dispRowsBase.value) {
+    const e = byDay.get(r.key) ?? { amSum: 0, amN: 0, pmSum: 0, pmN: 0 }
+    if (r.revAm != null) { e.amSum += r.revAm; e.amN++ }
+    if (r.revPm != null) { e.pmSum += r.revPm; e.pmN++ }
+    byDay.set(r.key, e)
+  }
+  const days = [...byDay.keys()].sort()
+  const amVals = days.map(k => { const e = byDay.get(k)!; return e.amN ? Math.round((e.amSum / e.amN) * 100) : null })
+  const pmVals = days.map(k => { const e = byDay.get(k)!; return e.pmN ? Math.round((e.pmSum / e.pmN) * 100) : null })
+  const labels = days.map(k => `${k.slice(8, 10)}/${k.slice(5, 7)}`)
+  const mean = (arr: (number | null)[]) => {
+    const v = arr.filter((x): x is number => x != null)
+    return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : 0
+  }
+  const amAvg = mean(amVals)
+  const pmAvg = mean(pmVals)
+  const AM_COLOR = '#3B82F6'
+  const PM_COLOR = '#F59E0B'
+  // Mismo diseño que la gráfica "Órdenes Diarias" de Órdenes de Trabajo (con dos series).
+  const mkSeries = (name: string, data: (number | null)[], color: string, labelPos: 'top' | 'bottom') => ({
+    name,
+    type: 'line' as const,
+    smooth: true,
+    connectNulls: true,
+    data,
+    areaStyle: { opacity: 0.18, color },
+    label: {
+      ...pillLabelBase.value,
+      position: labelPos,
+      formatter: (p: any) => (p.value == null ? '' : `${p.value}%`),
+    },
+    labelLayout: { moveOverlap: 'shiftY' as const, hideOverlap: true },
+  })
+  return markRaw({
+    color: [AM_COLOR, PM_COLOR],
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params: any[]) => {
+        const arr = Array.isArray(params) ? params : [params]
+        const dia = arr[0]?.name ?? ''
+        const rows = arr.map(p => {
+          const v = p.value == null ? '—' : `${p.value}%`
+          return `<span style="color:${p.color}">●</span> ${p.seriesName}: <b>${v}</b>`
+        }).join('<br/>')
+        return `<b>${dia}</b><br/>${rows}<br/>` +
+          `<span style="color:#94a3b8">●</span> Prom. AM <b>${amAvg}%</b> · PM <b>${pmAvg}%</b>`
+      },
+    },
+    legend: {
+      top: 0,
+      icon: 'circle',
+      itemWidth: 10,
+      itemHeight: 10,
+      textStyle: { color: textColor.value, fontSize: 11, fontWeight: 600 as const },
+    },
+    grid: { left: 40, right: 20, bottom: 40, top: 36, containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: labels,
+      axisLabel: { fontWeight: 600 as const, color: textColor.value, interval: Math.ceil(labels.length / 12) },
+    },
+    yAxis: { type: 'value', min: 0, max: 100, axisLabel: { show: false }, splitLine: { show: false } },
+    series: [
+      mkSeries('Ronda AM', amVals, AM_COLOR, 'top'),
+      mkSeries('Ronda PM', pmVals, PM_COLOR, 'bottom'),
+    ],
   })
 })
 
@@ -3545,7 +3742,7 @@ const dispEvolucionClasifOpt = computed(() => {
 
 /** E-alt. Días-equipo fuera de servicio por clasificación (cuando hay un solo mes). */
 const dispDiasFueraClasifOpt = computed(() => {
-  const acc = CLASIF_DISPONIBILIDAD.map(c => ({ label: c.label, dias: 0 }))
+  const acc = CLASIF_DISPONIBILIDAD.value.map(c => ({ label: c.label, dias: 0 }))
   for (const r of dispRowsBase.value) {
     if (r.isNoOp) acc[r.clasif].dias += 1
     else if (r.isParcial) acc[r.clasif].dias += 0.5
@@ -3695,6 +3892,28 @@ const dispEstadoDonutOpt = computed(() => {
   gap: 6px;
   margin-bottom: 20px;
   flex-wrap: wrap;
+}
+
+.area-filtro-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: -6px 0 18px;
+}
+
+.area-filtro-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.area-filtro-hint {
+  font-size: 11px;
+  color: var(--text-secondary);
+  opacity: 0.8;
 }
 
 .av-btn {
