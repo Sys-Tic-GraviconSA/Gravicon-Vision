@@ -899,6 +899,9 @@ const props = defineProps<{
   /** Área de trabajo impuesta por el contenedor (pestañas Planta/Maquinaria). Si viene,
    *  el toggle interno se oculta y manda este valor. */
   areaFiltro?: 'maquinaria' | 'planta' | 'todos'
+  /** Proveedores seleccionados en la barra de filtros del contenedor. null/vacío = sin filtro
+   *  (todos seleccionados). Se aplica igual que en la pestaña Órdenes de Trabajo. */
+  proveedorFiltro?: string[] | null
 }>()
 
 const { theme } = useTheme()
@@ -1058,6 +1061,16 @@ const activePlacasRows = computed(() => {
         return a === 'dual' || a === want
       })
     }
+  }
+
+  // Filtro de Proveedor — mismo comportamiento que en la pestaña Órdenes de Trabajo:
+  // llega desde el contenedor; null/vacío = sin filtro (todos seleccionados).
+  const provFiltro = props.proveedorFiltro
+  if (provFiltro && provFiltro.length) {
+    const want = new Set(provFiltro.map(s => String(s).trim().toUpperCase()))
+    rows = rows.filter(r =>
+      want.has(String(r['Proveedor_Texto'] ?? r['Proveedor'] ?? r['PROVEEDOR'] ?? '').trim().toUpperCase())
+    )
   }
 
   const desde = props.fechaInicio || ''

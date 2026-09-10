@@ -20,14 +20,29 @@ export async function loadDisponibilidadData(planta: string, forceRefresh = fals
       const personalPromise = p === 'cuncia' && SPREADSHEETS[maestroKey]
         ? getSheetData(maestroKey, 'GRAVICON_INTERNO_OT', forceRefresh).catch(() => ({ rows: [] as Record<string, unknown>[] }))
         : Promise.resolve({ rows: [] as Record<string, unknown>[] })
+      const proveedoresPromise = SPREADSHEETS[maestroKey]
+        ? getSheetData(maestroKey, 'PROVEEDORES_OT', forceRefresh).catch(() => ({ rows: [] as Record<string, unknown>[] }))
+        : Promise.resolve({ rows: [] as Record<string, unknown>[] })
 
-      const [placasSheet, tareasSheet, resumenSheet, plantasMaq, personalSheet] = await Promise.all([
+      const [placasSheet, tareasSheet, resumenSheet, plantasMaq, personalSheet, proveedoresSheet] = await Promise.all([
         getSheetData(key, 'Reporte Placa Disponibilidad', forceRefresh).catch(() => ({ rows: [] as Record<string, unknown>[] })),
         getSheetData(key, 'Tareas Seguimiento', forceRefresh).catch(() => ({ rows: [] as Record<string, unknown>[] })),
         getSheetData(key, 'Resumen Diario Disponibilidad', forceRefresh).catch(() => ({ rows: [] as Record<string, unknown>[] })),
         plantasMaqPromise,
         personalPromise,
+        proveedoresPromise,
       ])
+
+      // Maestro de proveedores: Id_Registro → Nombre_Proveedor (misma hoja que usan las OT)
+      const proveedoresMap = new Map<string, string>()
+      for (const r of proveedoresSheet.rows) {
+        const id = String(r['Id_Registro'] ?? '').trim()
+        const nombre = String(r['Nombre_Proveedor'] ?? '').trim()
+        if (id && nombre) {
+          proveedoresMap.set(id, nombre)
+          proveedoresMap.set(id.toUpperCase(), nombre)
+        }
+      }
 
       const maestroMap = new Map<string, Record<string, unknown>>()
       for (const m of plantasMaq.rows) {
@@ -90,6 +105,15 @@ export async function loadDisponibilidadData(planta: string, forceRefresh = fals
           'Planta'
         ).trim()
 
+        // Proveedor: la hoja de disponibilidad guarda el ID (ej. PROV-003). Se resuelve al
+        // mismo Nombre_Proveedor que usan las OT para que el filtro de Proveedor haga match.
+        const provIdRaw = String(r['Proveedor'] ?? r['Proveedor_ID'] ?? r['PROVEEDOR'] ?? '').trim()
+        const provTextoRaw = String(r['Proveedor_Texto'] ?? '').trim()
+        const provNombre = provTextoRaw
+          || proveedoresMap.get(provIdRaw)
+          || proveedoresMap.get(provIdRaw.toUpperCase())
+          || provIdRaw
+
         const finalPlacaTexto = placaTexto || String(maestro['PLACA'] ?? idRef)
         const finalTipo = String(r['Tipo de Vehiculos'] || maestro['TIPO'] || 'MAQUINARIA').trim()
         // Área de Trabajo del maestro: PLANTA | MAQUINARIA | DUAL — clasifica el activo
@@ -104,7 +128,8 @@ export async function loadDisponibilidadData(planta: string, forceRefresh = fals
           'Área de Trabajo': areaTrabajo,
           Localizacion: rawLoc,
           Supervisor: r['Supervisor_Texto'] || r['Supervisor'] || '—',
-          Proveedor_Texto: r['Proveedor_Texto'] || r['Proveedor'] || '',
+          Proveedor_ID: provIdRaw,
+          Proveedor_Texto: provNombre,
         }
       })
     }

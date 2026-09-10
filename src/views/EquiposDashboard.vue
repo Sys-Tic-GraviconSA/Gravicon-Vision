@@ -8,7 +8,7 @@
           <h2 class="page-title">{{ isConcretos ? 'Concretos' : 'Agregados' }} Mantenimiento {{ isConcretos ? (props.localizacion || '') : plantaLabel }}</h2>
           <div class="header-actions">
             <div class="filter-group">
-              <FilterBar ref="filterBarRef" :data="allData" date-field="FECHA" :showProvider="false" @dateRangeFilter="onDateRangeFilter" @clear="onClearFilters" />
+              <FilterBar ref="filterBarRef" :data="allData" date-field="Fecha Cierre" :showProvider="false" @dateRangeFilter="onDateRangeFilter" @clear="onClearFilters" />
               <template v-if="subTab === 'almacen'">
                 <MultiSelect v-model="selectedTipoCompra" :options="tipoCompraDisponibles" label="Tipo Compra" icon="filter" />
                 <MultiSelect v-model="selectedCentroCosto" :options="centroCostoDisponibles" label="Centro Costo" icon="filter" />
@@ -85,6 +85,7 @@
           :fecha-inicio="fechaInicio"
           :fecha-fin="fechaFin"
           :area-filtro="tipoTab === 'maquinaria' ? 'maquinaria' : 'planta'"
+          :proveedor-filtro="provFiltroDisponibilidad"
         />
       </template>
 
@@ -123,7 +124,7 @@
         <KpiCard :value="String(estadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.abiertas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.abiertas)}</span></div>`" />
         <KpiCard :value="String(estadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.cerradas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.cerradas)}</span></div>`" />
         <KpiCard :value="otPctCierre + '%'" label="% Cierre" accent="#3B82F6" icon="zap" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntPctCierre}%</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtPctCierre}%</strong></div>`" />
-        <KpiCard :value="promOtDia.toFixed(1)" label="Promedio OT / día" accent="#0EA5E9" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasActivos > 0 ? (intCount / otDiasActivos).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasActivos > 0 ? (extCount / otDiasActivos).toFixed(1) : '0.0'}</strong></div>`" />
+        <KpiCard :value="promOtDia.toFixed(1)" label="Promedio OT / día" accent="#0EA5E9" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasRegistro > 0 ? (intCountRegistro / otDiasRegistro).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasRegistro > 0 ? (extCountRegistro / otDiasRegistro).toFixed(1) : '0.0'}</strong></div>`" />
         <KpiCard :value="promCierreDia.toFixed(1)" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasActivos > 0 ? (otsIntEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasActivos > 0 ? (otsExtEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div>`" />
         <KpiCard :value="otDuracionEstimadaProm + ' h'" label="Duración Estimada Promedio" accent="#8B5CF6" icon="clock" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntDuracionEstimadaProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtDuracionEstimadaProm}h</strong></div>`" />
         <KpiCard :value="otTiempoRealProm + ' h'" label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntTiempoRealProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtTiempoRealProm}h</strong></div>`" />
@@ -172,21 +173,13 @@
 
       <div class="charts-grid cols-2" style="margin-bottom:22px">
         <ChartCard title="Clase de Mantenimiento" description="Órdenes clasificadas por clase de mantenimiento" :option="claseMantenimientoOpt" :expand-option="claseMantExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Clase Mantenimiento', p)" />
-        <ChartCard title="Motivos de No Ejecución" description="Solo órdenes que registran un motivo de no ejecución" :option="motivosNoEjecucionOpt" :expand-option="motivosNoEjExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Motivo No Ejecución', p)" />
-      </div>
-      <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Órdenes por Localización" description="Órdenes según la localización registrada" :option="localizacionOpt" :expand-option="localizacionExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Localización', p)" />
+        <ChartCard v-if="isConcretos" title="Motivos de No Ejecución" description="Solo órdenes que registran un motivo de no ejecución" :option="motivosNoEjecucionOpt" :expand-option="motivosNoEjExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Motivo No Ejecución', p)" />
+        <ChartCard v-if="tipoTab !== 'maquinaria'" title="Órdenes por Localización" description="Órdenes según la localización registrada" :option="localizacionOpt" :expand-option="localizacionExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Localización', p)" />
         <ChartCard title="Prioridad" description="Órdenes por nivel de prioridad" :option="prioridadOpt" :expand-option="prioridadExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Prioridad', p)" />
-      </div>
-      <div class="charts-grid cols-2" style="margin-bottom:22px">
         <ChartCard title="Fuente de Novedad" description="Órdenes según la fuente de novedad registrada" :option="fuenteNovedadOpt" :expand-option="fuenteNovedadExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fuente_Novedad', p)" />
         <ChartCard title="Jornada" description="Distribución de órdenes por jornada (Día / Noche)" :option="jornadaOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Jornada', p)" />
-      </div>
-      <div class="charts-grid cols-2" style="margin-bottom:22px">
         <ChartCard title="Responsables de Cierre con Más Órdenes" description="Quienes más cierran órdenes de trabajo" :option="responsablesCierreOpt" :expand-option="responsablesCierreExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Responsable Cierre', p)" />
         <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasOpt" :expand-option="sistemasExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Sistema', p)" />
-      </div>
-      <div class="charts-grid cols-2" style="margin-bottom:22px">
         <ChartCard title="Personal de Intervención (Interno)" description="Técnicos de Gravicon con más intervenciones" :option="personalInternoOpt" :expand-option="personalInternoExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Personal', p)" />
         <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesOpt" :expand-option="solicitantesExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Solicitante', p)" />
       </div>
@@ -208,7 +201,7 @@
       <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
       <KpiCard :value="$$(intCostoM3)" label="Costo por m³" :accent="intCostoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
       <KpiCard :value="String(intCount)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${totalOrdenes > 0 ? ((intCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
-      <KpiCard :value="otDiasActivos > 0 ? (intCount / otDiasActivos).toFixed(1) : '0.0'" label="Promedio OT / día" accent="#0EA5E9" icon="activity" />
+      <KpiCard :value="otDiasRegistro > 0 ? (intCountRegistro / otDiasRegistro).toFixed(1) : '0.0'" label="Promedio OT / día" accent="#0EA5E9" icon="activity" />
       <KpiCard :value="otDiasActivos > 0 ? (otsIntEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" />
       <KpiCard :value="String(otsIntEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-int'>Costo</span> <strong>${$$(otsIntEstadoCostos.abiertas)}</strong></div>`" />
       <KpiCard :value="String(otsIntEstadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-int'>Costo</span> <strong>${$$(otsIntEstadoCostos.cerradas)}</strong></div>`" />
@@ -260,21 +253,13 @@
 
       <div class="charts-grid cols-2" style="margin-bottom:22px">
         <ChartCard title="Clase de Mantenimiento" description="Órdenes clasificadas por clase de mantenimiento" :option="claseMantenimientoIntOpt" :expand-option="claseMantIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Clase Mantenimiento', p, 'int')" />
-        <ChartCard title="Motivos de No Ejecución" description="Solo órdenes que registran un motivo de no ejecución" :option="motivosNoEjecucionIntOpt" :expand-option="motivosNoEjIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Motivo No Ejecución', p, 'int')" />
-      </div>
-      <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Órdenes por Localización" description="Órdenes según la localización registrada" :option="localizacionIntOpt" :expand-option="localizacionIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Localización', p, 'int')" />
+        <ChartCard v-if="isConcretos" title="Motivos de No Ejecución" description="Solo órdenes que registran un motivo de no ejecución" :option="motivosNoEjecucionIntOpt" :expand-option="motivosNoEjIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Motivo No Ejecución', p, 'int')" />
+        <ChartCard v-if="tipoTab !== 'maquinaria'" title="Órdenes por Localización" description="Órdenes según la localización registrada" :option="localizacionIntOpt" :expand-option="localizacionIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Localización', p, 'int')" />
         <ChartCard title="Prioridad" description="Órdenes por nivel de prioridad" :option="prioridadIntOpt" :expand-option="prioridadIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Prioridad', p, 'int')" />
-      </div>
-      <div class="charts-grid cols-2" style="margin-bottom:22px">
         <ChartCard title="Fuente de Novedad" description="Órdenes según la fuente de novedad registrada" :option="fuenteNovedadIntOpt" :expand-option="fuenteNovedadIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fuente_Novedad', p, 'int')" />
         <ChartCard title="Jornada" description="Distribución de órdenes internas por jornada (Día / Noche)" :option="jornadaIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Jornada', p, 'int')" />
-      </div>
-      <div class="charts-grid cols-2" style="margin-bottom:22px">
         <ChartCard title="Responsables de Cierre con Más Órdenes" description="Quienes más cierran órdenes de trabajo" :option="responsablesCierreIntOpt" :expand-option="responsablesCierreIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Responsable Cierre', p, 'int')" />
         <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasIntOpt" :expand-option="sistemasIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Sistema', p, 'int')" />
-      </div>
-      <div class="charts-grid cols-2" style="margin-bottom:22px">
         <ChartCard title="Personal de Intervención (Interno)" description="Técnicos de Gravicon con más intervenciones" :option="personalIntOpt" :expand-option="personalIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Personal', p, 'int')" />
         <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesIntOpt" :expand-option="solicitantesIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Solicitante', p, 'int')" />
       </div>
@@ -296,7 +281,7 @@
       <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
       <KpiCard :value="$$(extCostoM3)" label="Costo por m³" :accent="extCostoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
       <KpiCard :value="String(extCount)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${totalOrdenes > 0 ? ((extCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
-      <KpiCard :value="otDiasActivos > 0 ? (extCount / otDiasActivos).toFixed(1) : '0.0'" label="Promedio OT / día" accent="#0EA5E9" icon="activity" />
+      <KpiCard :value="otDiasRegistro > 0 ? (extCountRegistro / otDiasRegistro).toFixed(1) : '0.0'" label="Promedio OT / día" accent="#0EA5E9" icon="activity" />
       <KpiCard :value="otDiasActivos > 0 ? (otsExtEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" />
       <KpiCard :value="String(otsExtEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Costo</span> <strong>${$$(otsExtEstadoCostos.abiertas)}</strong></div>`" />
       <KpiCard :value="String(otsExtEstadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Costo</span> <strong>${$$(otsExtEstadoCostos.cerradas)}</strong></div>`" />
@@ -351,21 +336,13 @@
 
       <div class="charts-grid cols-2" style="margin-bottom:22px">
         <ChartCard title="Clase de Mantenimiento" description="Órdenes clasificadas por clase de mantenimiento" :option="claseMantenimientoExtOpt" :expand-option="claseMantExtExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Clase Mantenimiento', p, 'ext')" />
-        <ChartCard title="Motivos de No Ejecución" description="Solo órdenes que registran un motivo de no ejecución" :option="motivosNoEjecucionExtOpt" :expand-option="motivosNoEjExtExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Motivo No Ejecución', p, 'ext')" />
-      </div>
-      <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Órdenes por Localización" description="Órdenes según la localización registrada" :option="localizacionExtOpt" :expand-option="localizacionExtExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Localización', p, 'ext')" />
+        <ChartCard v-if="isConcretos" title="Motivos de No Ejecución" description="Solo órdenes que registran un motivo de no ejecución" :option="motivosNoEjecucionExtOpt" :expand-option="motivosNoEjExtExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Motivo No Ejecución', p, 'ext')" />
+        <ChartCard v-if="tipoTab !== 'maquinaria'" title="Órdenes por Localización" description="Órdenes según la localización registrada" :option="localizacionExtOpt" :expand-option="localizacionExtExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Localización', p, 'ext')" />
         <ChartCard title="Prioridad" description="Órdenes por nivel de prioridad" :option="prioridadExtOpt" :expand-option="prioridadExtExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Prioridad', p, 'ext')" />
-      </div>
-      <div class="charts-grid cols-2" style="margin-bottom:22px">
         <ChartCard title="Fuente de Novedad" description="Órdenes según la fuente de novedad registrada" :option="fuenteNovedadExtOpt" :expand-option="fuenteNovedadExtExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fuente_Novedad', p, 'ext')" />
         <ChartCard title="Jornada" description="Distribución de órdenes externas por jornada (Día / Noche)" :option="jornadaExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Jornada', p, 'ext')" />
-      </div>
-      <div class="charts-grid cols-2" style="margin-bottom:22px">
         <ChartCard title="Responsables de Cierre con Más Órdenes" description="Quienes más cierran órdenes de trabajo" :option="responsablesCierreExtOpt" :expand-option="responsablesCierreExtExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Responsable Cierre', p, 'ext')" />
         <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasExtOpt" :expand-option="sistemasExtExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Sistema', p, 'ext')" />
-      </div>
-      <div class="charts-grid cols-1" style="margin-bottom:22px">
         <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesExtOpt" :expand-option="solicitantesExtExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Solicitante', p, 'ext')" />
       </div>
 
@@ -482,7 +459,7 @@
               :value="repPctCierre + '%'"
               :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntPctCierre}%</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtPctCierre}%</strong></div>`"
             />
-            <KpiCard label="Promedio OT / día" accent="#0EA5E9" icon="activity" :value="promOtDia.toFixed(1)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasActivos > 0 ? (intCount / otDiasActivos).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasActivos > 0 ? (extCount / otDiasActivos).toFixed(1) : '0.0'}</strong></div>`" />
+            <KpiCard label="Promedio OT / día" accent="#0EA5E9" icon="activity" :value="promOtDia.toFixed(1)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasRegistro > 0 ? (intCountRegistro / otDiasRegistro).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasRegistro > 0 ? (extCountRegistro / otDiasRegistro).toFixed(1) : '0.0'}</strong></div>`" />
             <KpiCard label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" :value="promCierreDia.toFixed(1)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasActivos > 0 ? (otsIntEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasActivos > 0 ? (otsExtEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div>`" />
             <KpiCard label="Duración Promedio" accent="#8B5CF6" icon="clock" :value="otDuracionEstimadaProm + ' h'" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntDuracionEstimadaProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtDuracionEstimadaProm}h</strong></div>`" />
             <KpiCard label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" :value="otTiempoRealProm + ' h'" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntTiempoRealProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtTiempoRealProm}h</strong></div>`" />
@@ -491,8 +468,8 @@
 
           <!-- Nota de metodología del filtro por fecha -->
           <div class="report-nota">
-            <strong>Base del período:</strong> los datos filtrados por fecha se toman por la <strong>fecha de cierre</strong> de la OT (cuando se realiza y paga el gasto), no por la de creación.
-            <template v-if="repAbiertas > 0"> Las <strong>{{ repAbiertas }} OT abiertas</strong> (sin fecha de cierre) se incluyen en todos los períodos para no perder de vista el pendiente.</template>
+            <strong>Base del período:</strong> los datos filtrados por fecha se toman por la <strong>fecha de cierre</strong> de la OT (cuando se realiza y paga el gasto), no por la de creación. Las OT abiertas (sin fecha de cierre) solo aparecen cuando no hay filtro de fechas; al acotar un período no entran, porque el gasto aún no se ha liquidado.
+            <template v-if="repAbiertas > 0"> En este corte hay <strong>{{ repAbiertas }} OT abiertas</strong> pendientes de cierre.</template>
           </div>
 
           <!-- Nota de Estado / Alertas -->
@@ -1186,7 +1163,7 @@
         <KpiCard v-if="isConcretos" :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${$$(costoM3)}/m³</strong></div>` + (totalProdAgg > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Con agregados</span> <strong>${$$(costoM3ConAgg)}/m³</strong></div>` : '')" />
         <KpiCard v-else :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3)}/m³</strong></div>`" />
         <KpiCard :value="String(totalOrdenes)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCount}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCount}</strong></div>`" />
-        <KpiCard :value="promOtDia.toFixed(1)" label="Promedio OT / día" accent="#0EA5E9" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasActivos > 0 ? (intCount / otDiasActivos).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasActivos > 0 ? (extCount / otDiasActivos).toFixed(1) : '0.0'}</strong></div>`" />
+        <KpiCard :value="promOtDia.toFixed(1)" label="Promedio OT / día" accent="#0EA5E9" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasRegistro > 0 ? (intCountRegistro / otDiasRegistro).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasRegistro > 0 ? (extCountRegistro / otDiasRegistro).toFixed(1) : '0.0'}</strong></div>`" />
         <KpiCard :value="promCierreDia.toFixed(1)" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasActivos > 0 ? (otsIntEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasActivos > 0 ? (otsExtEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div>`" />
         <KpiCard :value="String(estadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.abiertas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.abiertas)}</span></div>`" />
         <KpiCard :value="String(estadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.cerradas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.cerradas)}</span></div>`" />
@@ -1258,7 +1235,7 @@
         <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
         <KpiCard :value="$$(intCostoM3)" label="Costo por m³" :accent="intCostoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
         <KpiCard :value="String(intCount)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${totalOrdenes > 0 ? ((intCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
-        <KpiCard :value="otDiasActivos > 0 ? (intCount / otDiasActivos).toFixed(1) : '0.0'" label="Promedio OT / día" accent="#0EA5E9" icon="activity" />
+        <KpiCard :value="otDiasRegistro > 0 ? (intCountRegistro / otDiasRegistro).toFixed(1) : '0.0'" label="Promedio OT / día" accent="#0EA5E9" icon="activity" />
       <KpiCard :value="otDiasActivos > 0 ? (otsIntEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" />
         <KpiCard :value="String(otsIntEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-int'>Costo</span> <strong>${$$(otsIntEstadoCostos.abiertas)}</strong></div>`" />
         <KpiCard :value="String(otsIntEstadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-int'>Costo</span> <strong>${$$(otsIntEstadoCostos.cerradas)}</strong></div>`" />
@@ -1330,7 +1307,7 @@
         <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
         <KpiCard :value="$$(extCostoM3)" label="Costo por m³" :accent="extCostoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
         <KpiCard :value="String(extCount)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${totalOrdenes > 0 ? ((extCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
-        <KpiCard :value="otDiasActivos > 0 ? (extCount / otDiasActivos).toFixed(1) : '0.0'" label="Promedio OT / día" accent="#0EA5E9" icon="activity" />
+        <KpiCard :value="otDiasRegistro > 0 ? (extCountRegistro / otDiasRegistro).toFixed(1) : '0.0'" label="Promedio OT / día" accent="#0EA5E9" icon="activity" />
       <KpiCard :value="otDiasActivos > 0 ? (otsExtEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" />
         <KpiCard :value="String(otsExtEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Costo</span> <strong>${$$(otsExtEstadoCostos.abiertas)}</strong></div>`" />
         <KpiCard :value="String(otsExtEstadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Costo</span> <strong>${$$(otsExtEstadoCostos.cerradas)}</strong></div>`" />
@@ -2744,8 +2721,10 @@ const almacenDiarioOpt = computed(() => markRaw({
 
 const ordenesDiarias = computed(() => {
   const map = new Map<string, { abiertas: number; cerradas: number; costoAbiertas: number; costoCerradas: number }>()
-  for (const r of dataFilteredMain.value) {
-    const v = Number(r['FECHA'])
+  // Mismo criterio que el KPI "Promedio OT / día": por fecha de recepción (reserva a
+  // registro) e independiente del filtro por fecha de cierre.
+  for (const r of dataFilteredByRegistro.value) {
+    const v = otRecepcionSerial(r)
     if (!v) continue
     const d = new Date((v - 25569) * 86400 * 1000)
     const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
@@ -2868,13 +2847,45 @@ const selectedEstados = ref<Set<string>>(new Set())
 const selectedPersonalInterno = ref<Set<string>>(new Set())
 
 /**
- * Serial de la fecha que rige el filtro por fecha del panel: la FECHA DE CIERRE de
- * la OT (es cuando se realiza/paga el gasto). Devuelve 0 si la OT está abierta o no
- * tiene fecha de cierre — esas OT se muestran siempre, sin importar el rango.
+ * Reduce un valor de fecha a su serial de Excel SOLO CON LA FECHA (sin hora). Acepta:
+ *  - serial numérico de Excel con fracción de hora → se trunca al día;
+ *  - texto "YYYY-MM-DD[ hh:mm[:ss]]" / ISO;
+ *  - texto "DD/MM/YYYY" o "DD-MM-YYYY" (formato es-CO tecleado a mano).
+ * Devuelve 0 si no parsea.
+ */
+function otDateOnlySerial(v: unknown): number {
+  const n = Number(v)
+  if (!isNaN(n) && n > 0) return Math.floor(n)
+  const s = String(v ?? '').trim()
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)
+  if (m) return Date.UTC(+m[1], +m[2] - 1, +m[3]) / 86400000 + 25569
+  m = s.match(/^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})/)
+  if (m) return Date.UTC(+m[3], +m[2] - 1, +m[1]) / 86400000 + 25569
+  return 0
+}
+
+/**
+ * Serial (solo fecha) que rige el filtro por fecha del panel: la FECHA DE CIERRE de la
+ * OT (es cuando se realiza/paga el gasto). El campo puede venir con fecha y hora → se
+ * usa solo la fecha. Si la OT ya está cerrada pero no tiene fecha de cierre registrada,
+ * se ubica por la fecha de recepción o de registro para no perder su costo del período.
+ * Devuelve 0 si la OT está abierta / sin fecha — esas no entran en un período filtrado.
  */
 function otCloseSerial(r: Record<string, unknown>): number {
-  const c = Number(r['Fecha Cierre'])
-  return typeof c === 'number' && !isNaN(c) && c > 0 ? c : 0
+  const c = otDateOnlySerial(r['Fecha Cierre'])
+  if (c > 0) return c
+  if (estadoClass(String(r['Estado'] ?? '')) === 'ok') {
+    return otDateOnlySerial(r['Fecha Recepción']) || otDateOnlySerial(r['FECHA'])
+  }
+  return 0
+}
+
+/**
+ * Serial (solo fecha) de la RECEPCIÓN de la OT — cuándo se recibió el trabajo. Cae a la
+ * fecha de registro si no hay recepción. 0 si ninguna parsea. Base de "Promedio OT / día".
+ */
+function otRecepcionSerial(r: Record<string, unknown>): number {
+  return otDateOnlySerial(r['Fecha Recepción']) || otDateOnlySerial(r['FECHA'])
 }
 
 /* ── INFORME OFICIAL DE GESTIÓN DE OT (Vista previa + PDF nítido en el cliente) ── */
@@ -3919,7 +3930,9 @@ const filteredData = computed(() => {
   if (since === -Infinity && until === Infinity) return allData.value
   return allData.value.filter(r => {
     const c = otCloseSerial(r)
-    if (c === 0) return true // OT abierta / sin fecha de cierre → siempre visible
+    // Con filtro de fechas activo se acota estrictamente por FECHA DE CIERRE: las OT
+    // abiertas (sin cierre) no pertenecen a ningún período y quedan fuera.
+    if (c === 0) return false
     return c >= since && c < until
   })
 })
@@ -3950,7 +3963,7 @@ const filteredDataExpanded = computed(() => {
   if (!range) return filteredData.value
   return allData.value.filter(r => {
     const c = otCloseSerial(r)
-    if (c === 0) return true
+    if (c === 0) return false
     return c >= range.since && c < range.until + 1
   })
 })
@@ -4032,36 +4045,9 @@ const hasActiveFilters = computed(() => {
   return false
 })
 
-const dataFilteredMain = computed(() => {
-  const hasVehiculoFilter = selectedVehiculos.value.size > 0 && selectedVehiculos.value.size !== vehiculosDisponibles.value.length
-  const hasPlacaFilter = selectedPlacas.value.size > 0 && selectedPlacas.value.size !== placasDisponibles.value.length
-  const hasProveedorFilter = selectedProveedores.value.size > 0 && selectedProveedores.value.size !== proveedoresDisponibles.value.length
-  const hasLineaFilter = selectedLineas.value.size > 0 && selectedLineas.value.size !== lineasDisponibles.value.length
-  const hasEstadoFilter = selectedEstados.value.size > 0 && selectedEstados.value.size !== estadosDisponibles.value.length
-  const hasPersonalFilter = selectedPersonalInterno.value.size > 0 && selectedPersonalInterno.value.size < personalInternoOptions.length
-   if (!hasVehiculoFilter && !hasPlacaFilter && !hasProveedorFilter && !hasLineaFilter && !hasEstadoFilter && !hasPersonalFilter) return filteredData.value
-   return filteredData.value.filter(r => {
-    if (hasVehiculoFilter) {
-      const vehiculoVal = isConcretos.value
-        ? String(r['Tipo Vehículo'] ?? '').trim()
-        : String(r['Placa del Vehículo'] ?? '').trim()
-      if (!selectedVehiculos.value.has(toTitleCase(vehiculoVal))) return false
-    }
-    if (hasPlacaFilter && !selectedPlacas.value.has(toTitleCase(String(r['Placa del Vehículo'] ?? '').trim()))) return false
-    if (hasProveedorFilter && !selectedProveedores.value.has(toTitleCase(String(r['PROVEEDOR'] ?? '').trim()))) return false
-    if (hasLineaFilter && !selectedLineas.value.has(toTitleCase(normalizeLocalizacion(String(r['Localización'] ?? ''))))) return false
-    if (hasEstadoFilter && !selectedEstados.value.has(toTitleCase(String(r['Estado'] ?? '').trim()))) return false
-    if (hasPersonalFilter) {
-      const esInt = isInterno(r)
-      if (selectedPersonalInterno.value.has('Interno') && !esInt) return false
-      if (selectedPersonalInterno.value.has('Externo') && esInt) return false
-    }
-    return true
-  })
-})
-
-const dataFilteredMainExpanded = computed(() => {
-  const base = filteredDataExpanded.value
+/** Aplica los filtros de multiselección (vehículo/placa/proveedor/línea/estado/personal)
+ *  a un conjunto ya acotado por fecha. Devuelve el mismo arreglo si no hay filtros activos. */
+function applyOtMultiFilters(base: Record<string, unknown>[]): Record<string, unknown>[] {
   const hasVehiculoFilter = selectedVehiculos.value.size > 0 && selectedVehiculos.value.size !== vehiculosDisponibles.value.length
   const hasPlacaFilter = selectedPlacas.value.size > 0 && selectedPlacas.value.size !== placasDisponibles.value.length
   const hasProveedorFilter = selectedProveedores.value.size > 0 && selectedProveedores.value.size !== proveedoresDisponibles.value.length
@@ -4087,7 +4073,18 @@ const dataFilteredMainExpanded = computed(() => {
     }
     return true
   })
+}
+
+const dataFilteredMain = computed(() => applyOtMultiFilters(filteredData.value))
+
+/** Proveedores activos para la pestaña Disponibilidad: mismo criterio que el filtro de OT
+ *  (null = todos seleccionados → sin filtro). */
+const provFiltroDisponibilidad = computed<string[] | null>(() => {
+  const active = selectedProveedores.value.size > 0 && selectedProveedores.value.size !== proveedoresDisponibles.value.length
+  return active ? [...selectedProveedores.value] : null
 })
+
+const dataFilteredMainExpanded = computed(() => applyOtMultiFilters(filteredDataExpanded.value))
 const partitionExpanded = computed(() => {
   const int: Record<string, unknown>[] = []
   const ext: Record<string, unknown>[] = []
@@ -4147,7 +4144,7 @@ const partition = computed(() => {
 function buildDiarias(rows: Record<string, unknown>[]) {
   const map = new Map<string, { abiertas: number; cerradas: number; costoAbiertas: number; costoCerradas: number; intAbiertas: number; extAbiertas: number; intCerradas: number; extCerradas: number; costoIntAbiertas: number; costoExtAbiertas: number; costoIntCerradas: number; costoExtCerradas: number }>()
   for (const r of rows) {
-    const v = Number(r['FECHA'])
+    const v = otRecepcionSerial(r) // por fecha de recepción, igual que "Promedio OT / día"
     if (!v) continue
     const d = new Date((v - 25569) * 86400 * 1000)
     const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
@@ -4192,9 +4189,9 @@ function buildDiariasOpt(data: ReturnType<typeof buildDiarias>) {
     series: [{ name: 'Órdenes', type: 'line', smooth: true, data: data.totals, areaStyle: { opacity: 0.25 }, label: labelLine.value }],
   })
 }
-const ordenesDiariasInt = computed(() => buildDiarias(partition.value.int))
+const ordenesDiariasInt = computed(() => buildDiarias(partitionRegistro.value.int))
 const ordenesDiariasIntOpt = computed(() => buildDiariasOpt(ordenesDiariasInt.value))
-const ordenesDiariasExt = computed(() => buildDiarias(partition.value.ext))
+const ordenesDiariasExt = computed(() => buildDiarias(partitionRegistro.value.ext))
 const ordenesDiariasExtOpt = computed(() => buildDiariasOpt(ordenesDiariasExt.value))
 
 const dataFilteredNoAcpm = computed(() => dataFilteredMain.value)
@@ -4253,9 +4250,47 @@ const otDiasActivos = computed(() => {
   }
   return s.size
 })
-const promOtDia = computed(() => (otDiasActivos.value > 0 ? totalOrdenes.value / otDiasActivos.value : 0))
 /** Promedio de OT cerradas por día con actividad. */
 const promCierreDia = computed(() => (otDiasActivos.value > 0 ? estadoCounts.value.cerradas / otDiasActivos.value : 0))
+
+/**
+ * OT acotadas por FECHA DE RECEPCIÓN (con reserva a la de registro si falta), no por
+ * fecha de cierre. Base del KPI "Promedio OT / día": mide cuántas OT entran por día y, a
+ * diferencia del resto del panel, es independiente del filtro por fecha de cierre. Se
+ * aplican los mismos filtros de multiselección (proveedor, línea, etc.).
+ */
+const dataFilteredByRegistro = computed(() => {
+  const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
+  const until = fechaFin.value ? dateToSerial(fechaFin.value) + 1 : Infinity
+  const base = allData.value.filter(r => {
+    const v = otRecepcionSerial(r)
+    // Sin fecha de recepción ni de registro → no cuenta, con o sin filtro de fechas.
+    if (v <= 0) return false
+    return v >= since && v < until
+  })
+  return applyOtMultiFilters(base)
+})
+/** Nº de días distintos con al menos una OT recibida (por fecha de recepción) en el rango. */
+const otDiasRegistro = computed(() => {
+  const s = new Set<number>()
+  for (const r of dataFilteredByRegistro.value) {
+    const v = otRecepcionSerial(r)
+    if (v > 0) s.add(v)
+  }
+  return s.size
+})
+const partitionRegistro = computed(() => {
+  const int: Record<string, unknown>[] = []
+  const ext: Record<string, unknown>[] = []
+  for (const r of dataFilteredByRegistro.value) {
+    if (isInterno(r)) int.push(r)
+    else ext.push(r)
+  }
+  return { int, ext }
+})
+const intCountRegistro = computed(() => partitionRegistro.value.int.length)
+const extCountRegistro = computed(() => partitionRegistro.value.ext.length)
+const promOtDia = computed(() => (otDiasRegistro.value > 0 ? dataFilteredByRegistro.value.length / otDiasRegistro.value : 0))
 
 // ================= GRÁFICA: EFICIENCIA DE MANTENIMIENTO Y COSTO UNITARIO =================
 const MESES_ES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
