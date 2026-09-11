@@ -2085,12 +2085,17 @@ const otsCostoTotal = computed(() => {
   return t
 })
 
+/** Abiertas por Fecha de Registro (una OT abierta nunca tiene Fecha de Cierre, así que
+ *  filtrar por esa columna las deja siempre fuera de cualquier rango) — mismo criterio
+ *  que "Promedio OT / día". Cerradas se mantiene por Fecha de Cierre, como el resto. */
 const estadoCounts = computed(() => {
-  let abiertas = 0, cerradas = 0
+  let abiertas = 0
+  for (const r of dataFilteredByRegistro.value) {
+    if (estadoClass(String(r['Estado'] ?? '')) === 'warn') abiertas++
+  }
+  let cerradas = 0
   for (const r of dataFilteredMain.value) {
-    const cls = estadoClass(String(r['Estado'] ?? ''))
-    if (cls === 'ok') cerradas++
-    else if (cls === 'warn') abiertas++
+    if (estadoClass(String(r['Estado'] ?? '')) === 'ok') cerradas++
   }
   return { abiertas, cerradas }
 })
@@ -2868,7 +2873,8 @@ const repSectionLabelPlanta = computed(() => isPlanta.value ? 'Línea' : 'Planta
 const repSectionLabelMaquinaria = computed(() => isPlanta.value ? 'Equipo Planta' : 'Maquinaria')
 const repSectionLabelVehiculo = computed(() => isPlanta.value ? 'Equipo Planta' : 'Vehículo')
 
-const repAbiertas = computed(() => repRows.value.filter(r => estadoClass(String(r['Estado'] ?? '')) === 'warn').length)
+/** Igual que estadoCounts: abiertas por Fecha de Registro, cerradas por Fecha de Cierre. */
+const repAbiertas = computed(() => dataFilteredByRegistro.value.filter(r => estadoClass(String(r['Estado'] ?? '')) === 'warn').length)
 const repCerradas = computed(() => repRows.value.filter(r => estadoClass(String(r['Estado'] ?? '')) === 'ok').length)
 const repCostoTotal = computed(() => repRows.value.reduce((s, r) => s + rowServicios(r) + rowInsumos(r), 0))
 const repCostoServTotal = computed(() => repRows.value.reduce((s, r) => s + rowServicios(r), 0))
@@ -5052,21 +5058,24 @@ const intCount = computed(() => intKpi.value.count)
 const intCostoM3 = computed(() => totalProd.value > 0 ? intKpi.value.total / totalProd.value : 0)
 
 const otsIntEstadoCounts = computed(() => {
-  let abiertas = 0, cerradas = 0
+  let abiertas = 0
+  for (const r of partitionRegistro.value.int) {
+    if (estadoClass(String(r['Estado'] ?? '')) === 'warn') abiertas++
+  }
+  let cerradas = 0
   for (const r of intRows.value) {
-    const cls = estadoClass(String(r['Estado'] ?? ''))
-    if (cls === 'ok') cerradas++
-    else if (cls === 'warn') abiertas++
+    if (estadoClass(String(r['Estado'] ?? '')) === 'ok') cerradas++
   }
   return { abiertas, cerradas }
 })
 const otsIntEstadoCostos = computed(() => {
-  let abiertas = 0, cerradas = 0
+  let abiertas = 0
+  for (const r of partitionRegistro.value.int) {
+    if (estadoClass(String(r['Estado'] ?? '')) === 'warn') abiertas += (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0)
+  }
+  let cerradas = 0
   for (const r of intRows.value) {
-    const cls = estadoClass(String(r['Estado'] ?? ''))
-    const cost = (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0)
-    if (cls === 'ok') cerradas += cost
-    else if (cls === 'warn') abiertas += cost
+    if (estadoClass(String(r['Estado'] ?? '')) === 'ok') cerradas += (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0)
   }
   return { abiertas, cerradas }
 })
@@ -5137,21 +5146,24 @@ const extCount = computed(() => extKpi.value.count)
 const extCostoM3 = computed(() => totalProd.value > 0 ? extKpi.value.total / totalProd.value : 0)
 
 const otsExtEstadoCounts = computed(() => {
-  let abiertas = 0, cerradas = 0
+  let abiertas = 0
+  for (const r of partitionRegistro.value.ext) {
+    if (estadoClass(String(r['Estado'] ?? '')) === 'warn') abiertas++
+  }
+  let cerradas = 0
   for (const r of extRows.value) {
-    const cls = estadoClass(String(r['Estado'] ?? ''))
-    if (cls === 'ok') cerradas++
-    else if (cls === 'warn') abiertas++
+    if (estadoClass(String(r['Estado'] ?? '')) === 'ok') cerradas++
   }
   return { abiertas, cerradas }
 })
 const otsExtEstadoCostos = computed(() => {
-  let abiertas = 0, cerradas = 0
+  let abiertas = 0
+  for (const r of partitionRegistro.value.ext) {
+    if (estadoClass(String(r['Estado'] ?? '')) === 'warn') abiertas += (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0)
+  }
+  let cerradas = 0
   for (const r of extRows.value) {
-    const cls = estadoClass(String(r['Estado'] ?? ''))
-    const cost = (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0)
-    if (cls === 'ok') cerradas += cost
-    else if (cls === 'warn') abiertas += cost
+    if (estadoClass(String(r['Estado'] ?? '')) === 'ok') cerradas += (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0)
   }
   return { abiertas, cerradas }
 })
