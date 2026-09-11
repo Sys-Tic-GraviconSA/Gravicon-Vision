@@ -18,9 +18,9 @@
                 <MultiSelect v-model="selectedLineas" :options="lineasDisponibles" :label="isConcretos ? 'Planta' : 'Línea'" icon="filter" />
                 <MultiSelect v-model="selectedVehiculos" :options="vehiculosDisponibles" label="Vehículos" icon="filter" />
                 <MultiSelect v-if="isConcretos" v-model="selectedPlacas" :options="placasDisponibles" label="Placa" icon="filter" />
-                <MultiSelect v-model="selectedProveedores" :options="proveedoresDisponibles" label="Proveedor" icon="user" />
+                <MultiSelect v-if="subTab === 'disponibilidad'" v-model="selectedProveedoresDisponibilidad" :options="proveedoresDisponibilidadDisponibles" label="Proveedor" icon="user" />
+                <MultiSelect v-else v-model="selectedProveedores" :options="proveedoresDisponibles" label="Proveedor" icon="user" />
                 <MultiSelect v-model="selectedEstados" :options="estadosDisponibles" label="Estado" icon="filter" />
-                <MultiSelect v-model="selectedPersonalInterno" :options="personalInternoOptions" label="Personal" icon="user" />
               </template>
               <div class="filter-quick-nav" v-if="subTab==='dashboard' && dashboardView==='resumen'">
                 <button class="quick-nav-btn ghost" @click="scrollToSec('sec-general')">General</button>
@@ -114,21 +114,21 @@
 
       <div id="sec-general" class="section-anchor"></div>
       <div class="kpi-row">
-        <KpiCard :value="$$(totalGeneral)" label="Costo Total General" accent="#15223c" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${intPct}%)</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${extPct}%)</span></div>`" />
+        <KpiCard :value="$$(totalGeneral)" label="Costo Total General" accent="#15223c" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${intPct}%)</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${extPct}%)</span></div>` + (alqTotal > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Alq</span> <strong>${$$(alqTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${alqPct}%)</span></div>` : '')" />
         <KpiCard :value="$$(servicios)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intServ)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extServ)}</strong></div>`" />
         <KpiCard :value="$$(insumos)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intIns)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extIns)}</strong></div>`" />
         <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" :detail="isConcretos ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${fmt(totalProd)} m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Agregados</span> <strong>${fmt(totalProdAgg)} m³</strong></div>` : ''" />
         <KpiCard v-if="isConcretos" :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${$$(costoM3)}/m³</strong></div>` + (totalProdAgg > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Con agregados</span> <strong>${$$(costoM3ConAgg)}/m³</strong></div>` : '')" />
         <KpiCard v-else :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3)}/m³</strong></div>`" />
-        <KpiCard :value="String(totalOrdenes)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCount}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCount}</strong></div>`" />
-        <KpiCard :value="String(estadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.abiertas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.abiertas)}</span></div>`" />
-        <KpiCard :value="String(estadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.cerradas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.cerradas)}</span></div>`" />
-        <KpiCard :value="otPctCierre + '%'" label="% Cierre" accent="#3B82F6" icon="zap" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntPctCierre}%</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtPctCierre}%</strong></div>`" />
-        <KpiCard :value="promOtDia.toFixed(1)" label="Promedio OT / día" accent="#0EA5E9" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasRegistro > 0 ? (intCountRegistro / otDiasRegistro).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasRegistro > 0 ? (extCountRegistro / otDiasRegistro).toFixed(1) : '0.0'}</strong></div>`" />
-        <KpiCard :value="promCierreDia.toFixed(1)" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasActivos > 0 ? (otsIntEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasActivos > 0 ? (otsExtEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div>`" />
-        <KpiCard :value="otDuracionEstimadaProm + ' h'" label="Duración Estimada Promedio" accent="#8B5CF6" icon="clock" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntDuracionEstimadaProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtDuracionEstimadaProm}h</strong></div>`" />
-        <KpiCard :value="otTiempoRealProm + ' h'" label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntTiempoRealProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtTiempoRealProm}h</strong></div>`" />
-        <KpiCard :value="otConSopledPct + '%'" label="% OT con Pedido de Almacén" accent="#10B981" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntConSopledPct}%</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtConSopledPct}%</strong></div>`" />
+        <KpiCard :value="String(totalOrdenes)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCount}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCount}</strong></div>`" />
+        <KpiCard :value="String(estadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.abiertas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.abiertas)}</span></div>`" />
+        <KpiCard :value="String(estadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.cerradas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.cerradas)}</span></div>`" />
+        <KpiCard :value="otPctCierre + '%'" label="% Cierre" accent="#3B82F6" icon="zap" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntPctCierre}%</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtPctCierre}%</strong></div>`" />
+        <KpiCard :value="promOtDia.toFixed(1)" label="Promedio OT / día" accent="#0EA5E9" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasRegistro > 0 ? (intCountRegistro / otDiasRegistro).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasRegistro > 0 ? (extCountRegistro / otDiasRegistro).toFixed(1) : '0.0'}</strong></div>`" />
+        <KpiCard :value="promCierreDia.toFixed(1)" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasActivos > 0 ? (otsIntEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasActivos > 0 ? (otsExtEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div>`" />
+        <KpiCard :value="otDuracionEstimadaProm + ' h'" label="Duración Estimada Promedio" accent="#8B5CF6" icon="clock" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntDuracionEstimadaProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtDuracionEstimadaProm}h</strong></div>`" />
+        <KpiCard :value="otTiempoRealProm + ' h'" label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntTiempoRealProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtTiempoRealProm}h</strong></div>`" />
+        <KpiCard :value="otConSopledPct + '%'" label="% OT con Pedido de Almacén" accent="#10B981" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntConSopledPct}%</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtConSopledPct}%</strong></div>`" />
       </div>
 
       <div class="ots-bar">
@@ -179,9 +179,9 @@
         <ChartCard title="Fuente de Novedad" description="Órdenes según la fuente de novedad registrada" :option="fuenteNovedadOpt" :expand-option="fuenteNovedadExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fuente_Novedad', p)" />
         <ChartCard title="Jornada" description="Distribución de órdenes por jornada (Día / Noche)" :option="jornadaOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Jornada', p)" />
         <ChartCard title="Responsables de Cierre con Más Órdenes" description="Quienes más cierran órdenes de trabajo" :option="responsablesCierreOpt" :expand-option="responsablesCierreExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Responsable Cierre', p)" />
-        <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasOpt" :expand-option="sistemasExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Sistema', p)" />
-        <ChartCard title="Personal de Intervención (Interno)" description="Técnicos de Gravicon con más intervenciones" :option="personalInternoOpt" :expand-option="personalInternoExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Personal', p)" />
         <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesOpt" :expand-option="solicitantesExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Solicitante', p)" />
+        <ChartCard title="Personal de Intervención (Interno)" description="Técnicos de Gravicon con más intervenciones" :option="personalInternoOpt" :expand-option="personalInternoExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Personal', p)" />
+        <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasOpt" :expand-option="sistemasExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Sistema', p)" />
       </div>
 
     <div class="charts-grid cols-1" style="margin-bottom:22px">
@@ -259,9 +259,9 @@
         <ChartCard title="Fuente de Novedad" description="Órdenes según la fuente de novedad registrada" :option="fuenteNovedadIntOpt" :expand-option="fuenteNovedadIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fuente_Novedad', p, 'int')" />
         <ChartCard title="Jornada" description="Distribución de órdenes internas por jornada (Día / Noche)" :option="jornadaIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Jornada', p, 'int')" />
         <ChartCard title="Responsables de Cierre con Más Órdenes" description="Quienes más cierran órdenes de trabajo" :option="responsablesCierreIntOpt" :expand-option="responsablesCierreIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Responsable Cierre', p, 'int')" />
-        <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasIntOpt" :expand-option="sistemasIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Sistema', p, 'int')" />
-        <ChartCard title="Personal de Intervención (Interno)" description="Técnicos de Gravicon con más intervenciones" :option="personalIntOpt" :expand-option="personalIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Personal', p, 'int')" />
         <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesIntOpt" :expand-option="solicitantesIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Solicitante', p, 'int')" />
+        <ChartCard title="Personal de Intervención (Interno)" description="Técnicos de Gravicon con más intervenciones" :option="personalIntOpt" :expand-option="personalIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Personal', p, 'int')" />
+        <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasIntOpt" :expand-option="sistemasIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Sistema', p, 'int')" />
       </div>
 
      <div class="charts-grid cols-1" style="margin-bottom:22px">
@@ -280,7 +280,7 @@
       <KpiCard :value="$$(extIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Ext</span> <strong>${extTotal > 0 ? ((extIns / extTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto externo</span></div>`" />
       <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
       <KpiCard :value="$$(extCostoM3)" label="Costo por m³" :accent="extCostoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
-      <KpiCard :value="String(extCount)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${totalOrdenes > 0 ? ((extCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
+      <KpiCard :value="String(extCount)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${totalOrdenes > 0 ? ((extCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
       <KpiCard :value="otDiasRegistro > 0 ? (extCountRegistro / otDiasRegistro).toFixed(1) : '0.0'" label="Promedio OT / día" accent="#0EA5E9" icon="activity" />
       <KpiCard :value="otDiasActivos > 0 ? (otsExtEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" />
       <KpiCard :value="String(otsExtEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Costo</span> <strong>${$$(otsExtEstadoCostos.abiertas)}</strong></div>`" />
@@ -342,8 +342,8 @@
         <ChartCard title="Fuente de Novedad" description="Órdenes según la fuente de novedad registrada" :option="fuenteNovedadExtOpt" :expand-option="fuenteNovedadExtExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fuente_Novedad', p, 'ext')" />
         <ChartCard title="Jornada" description="Distribución de órdenes externas por jornada (Día / Noche)" :option="jornadaExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Jornada', p, 'ext')" />
         <ChartCard title="Responsables de Cierre con Más Órdenes" description="Quienes más cierran órdenes de trabajo" :option="responsablesCierreExtOpt" :expand-option="responsablesCierreExtExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Responsable Cierre', p, 'ext')" />
-        <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasExtOpt" :expand-option="sistemasExtExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Sistema', p, 'ext')" />
         <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesExtOpt" :expand-option="solicitantesExtExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Solicitante', p, 'ext')" />
+        <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasExtOpt" :expand-option="sistemasExtExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Sistema', p, 'ext')" />
       </div>
 
     <div class="charts-grid cols-1" style="margin-bottom:22px">
@@ -448,28 +448,29 @@
             <KpiCard label="Total Producción" accent="#10B981" icon="trending-up" :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" :detail="isConcretos ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${fmt(totalProd)} m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Agregados</span> <strong>${fmt(totalProdAgg)} m³</strong></div>` : ''" />
             <KpiCard v-if="isConcretos" label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :value="$$(costoM3)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${$$(costoM3)}/m³</strong></div>` + (totalProdAgg > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Con agregados</span> <strong>${$$(costoM3ConAgg)}/m³</strong></div>` : '')" />
             <KpiCard v-else label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :value="$$(costoM3)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3)}/m³</strong></div>`" />
-            <KpiCard label="Total Órdenes" accent="#8B5CF6" icon="list" :value="String(totalOrdenes)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCount}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCount}</strong></div>`" />
-            <KpiCard label="OT Abiertas" accent="#DC2626" icon="activity" :value="String(repAbiertas)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.abiertas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.abiertas)}</span></div>`" />
-            <KpiCard label="OT Cerradas" accent="#16A34A" icon="check-circle" :value="String(repCerradas)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.cerradas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.cerradas)}</span></div>`" />
+            <KpiCard label="Total Órdenes" accent="#8B5CF6" icon="list" :value="String(totalOrdenes)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCount}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCount}</strong></div>`" />
+            <KpiCard label="OT Abiertas" accent="#DC2626" icon="activity" :value="String(repAbiertas)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.abiertas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.abiertas)}</span></div>`" />
+            <KpiCard label="OT Cerradas" accent="#16A34A" icon="check-circle" :value="String(repCerradas)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.cerradas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.cerradas)}</span></div>`" />
             <KpiCard
               label="% Cierre"
               :accent="repPctCierre >= 85 ? '#16A34A' : repPctCierre >= 60 ? '#F59E0B' : '#DC2626'"
               meta="Meta: 85%"
               icon="target"
               :value="repPctCierre + '%'"
-              :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntPctCierre}%</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtPctCierre}%</strong></div>`"
+              :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntPctCierre}%</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtPctCierre}%</strong></div>`"
             />
-            <KpiCard label="Promedio OT / día" accent="#0EA5E9" icon="activity" :value="promOtDia.toFixed(1)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasRegistro > 0 ? (intCountRegistro / otDiasRegistro).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasRegistro > 0 ? (extCountRegistro / otDiasRegistro).toFixed(1) : '0.0'}</strong></div>`" />
-            <KpiCard label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" :value="promCierreDia.toFixed(1)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasActivos > 0 ? (otsIntEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasActivos > 0 ? (otsExtEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div>`" />
-            <KpiCard label="Duración Promedio" accent="#8B5CF6" icon="clock" :value="otDuracionEstimadaProm + ' h'" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntDuracionEstimadaProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtDuracionEstimadaProm}h</strong></div>`" />
-            <KpiCard label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" :value="otTiempoRealProm + ' h'" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntTiempoRealProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtTiempoRealProm}h</strong></div>`" />
-            <KpiCard label="% OT con Pedido de Almacén" accent="#10B981" icon="package" :value="otConSopledPct + '%'" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntConSopledPct}%</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtConSopledPct}%</strong></div>`" />
+            <KpiCard label="Promedio OT / día" accent="#0EA5E9" icon="activity" :value="promOtDia.toFixed(1)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasRegistro > 0 ? (intCountRegistro / otDiasRegistro).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasRegistro > 0 ? (extCountRegistro / otDiasRegistro).toFixed(1) : '0.0'}</strong></div>`" />
+            <KpiCard label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" :value="promCierreDia.toFixed(1)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasActivos > 0 ? (otsIntEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasActivos > 0 ? (otsExtEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div>`" />
+            <KpiCard label="Duración Promedio" accent="#8B5CF6" icon="clock" :value="otDuracionEstimadaProm + ' h'" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntDuracionEstimadaProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtDuracionEstimadaProm}h</strong></div>`" />
+            <KpiCard label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" :value="otTiempoRealProm + ' h'" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntTiempoRealProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtTiempoRealProm}h</strong></div>`" />
+            <KpiCard label="% OT con Pedido de Almacén" accent="#10B981" icon="package" :value="otConSopledPct + '%'" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntConSopledPct}%</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtConSopledPct}%</strong></div>`" />
           </div>
 
           <!-- Nota de metodología del filtro por fecha -->
           <div class="report-nota">
-            <strong>Base del período:</strong> los datos filtrados por fecha se toman por la <strong>fecha de cierre</strong> de la OT (cuando se realiza y paga el gasto), no por la de creación. Las OT abiertas (sin fecha de cierre) solo aparecen cuando no hay filtro de fechas; al acotar un período no entran, porque el gasto aún no se ha liquidado.
+            <strong>Base del período:</strong> los datos filtrados por fecha se toman por la <strong>fecha de cierre</strong> de la OT (cuando se realiza y paga el gasto), no por la de creación. Las OT sin fecha de cierre registrada (abiertas, o cerradas sin ese dato en la hoja) solo aparecen cuando no hay filtro de fechas; al acotar un período no entran, porque no hay forma de ubicar su gasto en ese corte.
             <template v-if="repAbiertas > 0"> En este corte hay <strong>{{ repAbiertas }} OT abiertas</strong> pendientes de cierre.</template>
+            Excepción: <strong>Promedio OT / día</strong> se calcula por fecha de recepción (o registro), de forma independiente al filtro por fecha de cierre. Los demás indicadores del informe sí se filtran por fecha de cierre.
           </div>
 
           <!-- Nota de Estado / Alertas -->
@@ -572,6 +573,18 @@
             </div>
           </div>
 
+          <!-- Eficiencia de Mantenimiento y Costo Unitario (m³) — Planta / Tendencia de Costos por Mes — Maquinaria -->
+          <div v-if="repTendenciaMensual.rows.length" class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>{{ isPlanta ? 'Eficiencia de Mantenimiento y Costo Unitario (m³)' : 'Tendencia de Costos por Mes' }}</h3>
+            <div v-if="repTendenciaMensual.rows.length > 1" class="report-muted" style="font-size: 11px; margin-bottom: 4px;">
+              Promedio mensual: <strong>{{ $$(repTendenciaMensual.avg) }}</strong> ·
+              Mes más alto: <strong>{{ repTendenciaMensual.maxRow?.label }} ({{ $$(repTendenciaMensual.maxRow?.total || 0) }})</strong> ·
+              Mes más bajo: <strong>{{ repTendenciaMensual.minRow?.label }} ({{ $$(repTendenciaMensual.minRow?.total || 0) }})</strong> ·
+              Total <strong>{{ $$(repTendenciaMensual.totals.total) }}</strong> en {{ repTendenciaMensual.totals.n }} OT
+            </div>
+            <ChartCard title="" :option="isPlanta ? eficienciaMttoOpt : costosGeneralesM3Opt" :height="isPlanta ? 480 : 420" hide-actions />
+          </div>
+
           <!-- Índice de Cierre y Apertura por Persona -->
           <div class="report-section-block">
             <h3 class="report-block-title"><span class="title-bar"></span>Índice de Cierre y Apertura por Persona</h3>
@@ -630,7 +643,7 @@
                       <th class="r" style="width: 55px" title="Emergencia / Urgentes">Emerg.</th>
                       <th class="r" style="width: 50px" title="Programadas">Progr.</th>
                       <th class="r" style="width: 55px" title="Equipos intervenidos">Equip.</th>
-                      <th class="r" style="width: 60px" title="Horas de mantenimiento estimadas">Horas</th>
+                      <th class="r" style="width: 80px" title="Horas de mantenimiento estimadas">Dur. Estimada</th>
                       <th class="r" style="width: 120px">Costo Acum.</th>
                       <th class="r" style="width: 55px">Part.</th>
                     </tr>
@@ -685,81 +698,6 @@
                 Consumo de almacén <strong>{{ fmt(repIndicadores.almItems) }} ítems</strong> ({{ repIndicadores.almPedidos }} pedidos) ·
                 Costo servicios externos <strong>{{ $$(repIndicadores.servExt) }}</strong> ·
                 Costo con gasto real registrado <strong>{{ $$(repIndicadores.costoReal) }}</strong> ({{ repIndicadores.pctCostoReal }}% de las OT)
-              </div>
-            </div>
-          </div>
-
-          <!-- Eficiencia de Mantenimiento y Costo Unitario (m³) — Planta / Tendencia de Costos por Mes — Maquinaria -->
-          <div v-if="repTendenciaMensual.rows.length" class="report-section-block">
-            <h3 class="report-block-title"><span class="title-bar"></span>{{ isPlanta ? 'Eficiencia de Mantenimiento y Costo Unitario (m³)' : 'Tendencia de Costos por Mes' }}</h3>
-            <div v-if="repTendenciaMensual.rows.length > 1" class="report-muted" style="font-size: 11px; margin-bottom: 4px;">
-              Promedio mensual: <strong>{{ $$(repTendenciaMensual.avg) }}</strong> ·
-              Mes más alto: <strong>{{ repTendenciaMensual.maxRow?.label }} ({{ $$(repTendenciaMensual.maxRow?.total || 0) }})</strong> ·
-              Mes más bajo: <strong>{{ repTendenciaMensual.minRow?.label }} ({{ $$(repTendenciaMensual.minRow?.total || 0) }})</strong> ·
-              Total <strong>{{ $$(repTendenciaMensual.totals.total) }}</strong> en {{ repTendenciaMensual.totals.n }} OT
-            </div>
-            <ChartCard title="" :option="isPlanta ? eficienciaMttoOpt : costosGeneralesM3Opt" :height="isPlanta ? 480 : 420" hide-actions />
-          </div>
-
-          <!-- Costo por Tipo de Vehículo + Top 5 Vehículos Mayor Consumo -->
-          <div class="report-section-block">
-            <div class="charts-grid cols-2">
-              <!-- Columna 1: Costo por Vehículo -->
-              <div class="data-card">
-                <div class="card-head" style="font-size: 11px; font-weight: 700; color: var(--navy); margin-bottom: 6px; text-transform: uppercase;">
-                  Costo Acumulado por {{ repSectionLabelVehiculo }}
-                </div>
-                <div class="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>{{ repSectionLabelVehiculo }}</th>
-                        <th class="r" style="width: 45px">OTs</th>
-                        <th class="r" style="width: 100px">Costo</th>
-                        <th class="r" style="width: 55px">Part.</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="t in repCostoTipoVeh.slice(0, 6)" :key="t.label">
-                        <td class="bold accent-text">{{ t.label }}</td>
-                        <td class="r">{{ t.n }}</td>
-                        <td class="r bold">{{ $$(t.costo) }}</td>
-                        <td class="r">{{ repPct(t.costo) }}%</td>
-                      </tr>
-                      <tr v-if="!repCostoTipoVeh.length"><td colspan="4" class="empty-table">Sin datos</td></tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <!-- Columna 2: Top 5 Vehículos con Mayor Consumo -->
-              <div class="data-card">
-                <div class="card-head" style="font-size: 11px; font-weight: 700; color: var(--navy); margin-bottom: 6px; text-transform: uppercase;">
-                  Top 5 {{ repSectionLabelVehiculo }}s con Mayor Consumo
-                </div>
-                <div class="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th style="width: 24px">#</th>
-                        <th>{{ repSectionLabelVehiculo }}</th>
-                        <th class="r" style="width: 40px">OTs</th>
-                        <th class="r" style="width: 95px">Costo</th>
-                        <th class="r" style="width: 70px">Taller</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="(v, i) in repTopVehiculos" :key="v.placa">
-                        <td class="idx">{{ i + 1 }}</td>
-                        <td class="bold accent-text">{{ v.placa }}</td>
-                        <td class="r">{{ v.n }}</td>
-                        <td class="r bold" style="color: #dc2626;">{{ $$(v.costo) }}</td>
-                        <td class="r">{{ fmtDuracion(v.dias) || '—' }}</td>
-                      </tr>
-                      <tr v-if="!repTopVehiculos.length"><td colspan="5" class="empty-table">Sin datos</td></tr>
-                    </tbody>
-                  </table>
-                </div>
               </div>
             </div>
           </div>
@@ -1156,17 +1094,17 @@
       <!-- ==================== SECCIÓN 1: GENERAL ==================== -->
       <div id="sec-ger-general" class="section-anchor"></div>
       <div class="kpi-row">
-        <KpiCard :value="$$(totalGeneral)" label="Costo Total General" accent="#15223c" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${intPct}%)</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${extPct}%)</span></div>`" />
+        <KpiCard :value="$$(totalGeneral)" label="Costo Total General" accent="#15223c" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${intPct}%)</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${extPct}%)</span></div>` + (alqTotal > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Alq</span> <strong>${$$(alqTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${alqPct}%)</span></div>` : '')" />
         <KpiCard :value="$$(servicios)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intServ)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extServ)}</strong></div>`" />
         <KpiCard :value="$$(insumos)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intIns)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extIns)}</strong></div>`" />
         <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" :detail="isConcretos ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${fmt(totalProd)} m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Agregados</span> <strong>${fmt(totalProdAgg)} m³</strong></div>` : ''" />
         <KpiCard v-if="isConcretos" :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${$$(costoM3)}/m³</strong></div>` + (totalProdAgg > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Con agregados</span> <strong>${$$(costoM3ConAgg)}/m³</strong></div>` : '')" />
         <KpiCard v-else :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3)}/m³</strong></div>`" />
-        <KpiCard :value="String(totalOrdenes)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCount}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCount}</strong></div>`" />
-        <KpiCard :value="promOtDia.toFixed(1)" label="Promedio OT / día" accent="#0EA5E9" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasRegistro > 0 ? (intCountRegistro / otDiasRegistro).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasRegistro > 0 ? (extCountRegistro / otDiasRegistro).toFixed(1) : '0.0'}</strong></div>`" />
-        <KpiCard :value="promCierreDia.toFixed(1)" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasActivos > 0 ? (otsIntEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasActivos > 0 ? (otsExtEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div>`" />
-        <KpiCard :value="String(estadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.abiertas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.abiertas)}</span></div>`" />
-        <KpiCard :value="String(estadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.cerradas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.cerradas)}</span></div>`" />
+        <KpiCard :value="String(totalOrdenes)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCount}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCount}</strong></div>`" />
+        <KpiCard :value="promOtDia.toFixed(1)" label="Promedio OT / día" accent="#0EA5E9" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasRegistro > 0 ? (intCountRegistro / otDiasRegistro).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasRegistro > 0 ? (extCountRegistro / otDiasRegistro).toFixed(1) : '0.0'}</strong></div>`" />
+        <KpiCard :value="promCierreDia.toFixed(1)" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasActivos > 0 ? (otsIntEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasActivos > 0 ? (otsExtEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div>`" />
+        <KpiCard :value="String(estadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.abiertas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.abiertas)}</span></div>`" />
+        <KpiCard :value="String(estadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.cerradas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.cerradas)}</span></div>`" />
       </div>
 
       <div class="ots-bar">
@@ -1306,7 +1244,7 @@
         <KpiCard :value="$$(extIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Ext</span> <strong>${extTotal > 0 ? ((extIns / extTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto externo</span></div>`" />
         <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
         <KpiCard :value="$$(extCostoM3)" label="Costo por m³" :accent="extCostoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
-        <KpiCard :value="String(extCount)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Ext</span> <strong>${totalOrdenes > 0 ? ((extCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
+        <KpiCard :value="String(extCount)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${totalOrdenes > 0 ? ((extCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
         <KpiCard :value="otDiasRegistro > 0 ? (extCountRegistro / otDiasRegistro).toFixed(1) : '0.0'" label="Promedio OT / día" accent="#0EA5E9" icon="activity" />
       <KpiCard :value="otDiasActivos > 0 ? (otsExtEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" />
         <KpiCard :value="String(otsExtEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Costo</span> <strong>${$$(otsExtEstadoCostos.abiertas)}</strong></div>`" />
@@ -2241,8 +2179,8 @@ const costoTotalLocalizacion = computed(() => {
 /** Solicitantes con más órdenes abiertas. */
 const solicitantesRanking = computed(() => rankBy(dataFilteredMain.value, 'Solicitante', 10))
 
-/** Responsables de cierre con más órdenes cerradas. */
-const responsablesCierreRanking = computed(() => rankBy(dataFilteredMain.value, 'Responsable Cierre', 10))
+/** Responsables de cierre con más órdenes cerradas (soporta múltiples personas separadas por coma). */
+const responsablesCierreRanking = computed(() => rankByMultiValue(dataFilteredMain.value, 'Responsable Cierre', 10))
 
 /** Tipos de trabajo más frecuentes. */
 const tiposTrabajoRanking = computed(() => rankBy(dataFilteredMain.value, 'Tipo Trabajo', 10))
@@ -2843,6 +2781,9 @@ const fechaFin = ref('')
 const selectedVehiculos = ref<Set<string>>(new Set())
 const selectedPlacas = ref<Set<string>>(new Set())
 const selectedProveedores = ref<Set<string>>(new Set())
+/** Proveedores seleccionados en la pestaña Disponibilidad — estado propio, no comparte
+ *  selección con el filtro de Proveedor de OT porque son universos de nombres distintos. */
+const selectedProveedoresDisponibilidad = ref<Set<string>>(new Set())
 const selectedEstados = ref<Set<string>>(new Set())
 const selectedPersonalInterno = ref<Set<string>>(new Set())
 
@@ -2866,18 +2807,13 @@ function otDateOnlySerial(v: unknown): number {
 
 /**
  * Serial (solo fecha) que rige el filtro por fecha del panel: la FECHA DE CIERRE de la
- * OT (es cuando se realiza/paga el gasto). El campo puede venir con fecha y hora → se
- * usa solo la fecha. Si la OT ya está cerrada pero no tiene fecha de cierre registrada,
- * se ubica por la fecha de recepción o de registro para no perder su costo del período.
- * Devuelve 0 si la OT está abierta / sin fecha — esas no entran en un período filtrado.
+ * OT (es cuando se realiza/paga el gasto). Misma lógica para Planta y Maquinaria. El
+ * campo puede venir con fecha y hora → se usa solo la fecha. Sin fallback: si la OT no
+ * tiene Fecha_Hora_Cierre registrada en la hoja, devuelve 0 y no entra en ningún período
+ * filtrado — así el panel cuadra exacto con filtrar la hoja por esa misma columna.
  */
 function otCloseSerial(r: Record<string, unknown>): number {
-  const c = otDateOnlySerial(r['Fecha Cierre'])
-  if (c > 0) return c
-  if (estadoClass(String(r['Estado'] ?? '')) === 'ok') {
-    return otDateOnlySerial(r['Fecha Recepción']) || otDateOnlySerial(r['FECHA'])
-  }
-  return 0
+  return otDateOnlySerial(r['Fecha Cierre'])
 }
 
 /**
@@ -2950,8 +2886,8 @@ const repIndiceCierreFiltrado = computed(() =>
   repIndiceCierre.value.filter(c => c.label)
 )
 
-/** Índice de apertura: OTs agrupadas por la persona que las abrió (soporta múltiples personas separadas por coma). */
-const repIndiceApertura = computed(() => rankByMultiValue(repRows.value, 'Solicitante', 8).map(([label, n]) => ({ label, n })))
+/** Índice de apertura: OTs agrupadas por Solicitante (mismo cálculo que la gráfica "Solicitantes con Más Órdenes"). */
+const repIndiceApertura = computed(() => rankBy(repRows.value, 'Solicitante', 8).map(([label, n]) => ({ label, n })))
 
 /** Costo e indicadores de gestión agrupados por línea/planta y, dentro de cada una, por equipo. */
 const repCostoPlanta = computed(() => {
@@ -3015,19 +2951,6 @@ const repCostoPlanta = computed(() => {
       }
     })
     .sort((a, b) => b.costo - a.costo)
-})
-
-/** Costo acumulado por placa de vehículo. */
-const repCostoTipoVeh = computed(() => {
-  const map = new Map<string, { n: number; costo: number }>()
-  for (const r of repRows.value) {
-    const label = String(r['Placa del Vehículo'] ?? '').trim() || vehTypeLabel(String(r['Tipo de Vehículo'] ?? ''))
-    const e = map.get(label) ?? { n: 0, costo: 0 }
-    e.n++
-    e.costo += rowServicios(r) + rowInsumos(r)
-    map.set(label, e)
-  }
-  return [...map.entries()].map(([label, e]) => ({ label, ...e })).sort((a, b) => b.costo - a.costo).slice(0, 12)
 })
 
 /** Top 5 vehículos con mayor consumo y horas acumuladas en taller. */
@@ -3615,6 +3538,7 @@ async function loadData(forceRefresh = false, resetFilters = true) {
   const prevVehiculos = new Set(selectedVehiculos.value)
   const prevPlacas = new Set(selectedPlacas.value)
   const prevProveedores = new Set(selectedProveedores.value)
+  const prevProveedoresDisponibilidad = new Set(selectedProveedoresDisponibilidad.value)
   const prevEstados = new Set(selectedEstados.value)
   const prevPersonal = new Set(selectedPersonalInterno.value)
   const prevTipoCompra = new Set(selectedTipoCompra.value)
@@ -3627,6 +3551,7 @@ async function loadData(forceRefresh = false, resetFilters = true) {
     selectedVehiculos.value = new Set()
     selectedPlacas.value = new Set()
     selectedProveedores.value = new Set()
+    selectedProveedoresDisponibilidad.value = new Set()
     selectedLineas.value = new Set()
     selectedEstados.value = new Set()
     selectedPersonalInterno.value = new Set()
@@ -3655,6 +3580,7 @@ async function loadData(forceRefresh = false, resetFilters = true) {
     selectedVehiculos.value = new Set(vehiculosDisponibles.value)
     selectedPlacas.value = new Set(placasDisponibles.value)
     selectedProveedores.value = new Set(proveedoresDisponibles.value)
+    selectedProveedoresDisponibilidad.value = new Set(proveedoresDisponibilidadDisponibles.value)
     selectedEstados.value = new Set(estadosDisponibles.value)
     selectedPersonalInterno.value = new Set(personalInternoOptions)
     selectedTipoCompra.value = new Set(tipoCompraDisponibles.value)
@@ -3673,6 +3599,8 @@ async function loadData(forceRefresh = false, resetFilters = true) {
     else selectedPlacas.value = new Set(placasDisponibles.value)
     if (prevProveedores.size) selectedProveedores.value = new Set([...prevProveedores].filter(v => proveedoresDisponibles.value.includes(v)))
     else selectedProveedores.value = new Set(proveedoresDisponibles.value)
+    if (prevProveedoresDisponibilidad.size) selectedProveedoresDisponibilidad.value = new Set([...prevProveedoresDisponibilidad].filter(v => proveedoresDisponibilidadDisponibles.value.includes(v)))
+    else selectedProveedoresDisponibilidad.value = new Set(proveedoresDisponibilidadDisponibles.value)
     if (prevEstados.size) selectedEstados.value = new Set([...prevEstados].filter(v => estadosDisponibles.value.includes(v)))
     else selectedEstados.value = new Set(estadosDisponibles.value)
     if (prevPersonal.size) selectedPersonalInterno.value = new Set([...prevPersonal].filter(v => personalInternoOptions.includes(v)))
@@ -3698,6 +3626,7 @@ watch(tipoTab, () => {
     selectedVehiculos.value = new Set(vehiculosDisponibles.value)
     selectedPlacas.value = new Set(placasDisponibles.value)
     selectedProveedores.value = new Set(proveedoresDisponibles.value)
+    selectedProveedoresDisponibilidad.value = new Set(proveedoresDisponibilidadDisponibles.value)
     selectedLineas.value = new Set(lineasDisponibles.value)
     selectedEstados.value = new Set(estadosDisponibles.value)
     selectedPersonalInterno.value = new Set(personalInternoOptions)
@@ -3759,10 +3688,27 @@ const allData = computed(() => {
   }
   // Filter by tipo de mantenimiento tab
   if (tipoTab.value === 'planta') {
-    return base.filter(r => String(r['Tipo de Mantenimiento'] ?? '').trim().toUpperCase() === 'PLANTA')
+    return base.filter(r => otTipoMantenimiento(r) === 'PLANTA')
   }
-  return base.filter(r => String(r['Tipo de Mantenimiento'] ?? '').trim().toUpperCase() === 'MAQUINARIA')
+  return base.filter(r => otTipoMantenimiento(r) === 'MAQUINARIA')
 })
+
+/**
+ * Tipo de Mantenimiento efectivo de la OT: normalmente el campo 'Tipo de Mantenimiento'
+ * de la OT padre, pero si alguna sub-orden (Sub_Ordenes_Ot) tiene el sistema a intervenir
+ * SISTO-105 (Alquiler de Vehículos) se clasifica como MAQUINARIA sin importar lo que diga
+ * ese campo, para que su costo nunca quede fuera de las pestañas y del Costo Total General.
+ */
+/** true si alguna sub-orden (Sub_Ordenes_Ot) de la OT tiene el sistema SISTO-105 (Alquiler de Vehículos). */
+function otEsAlquilerVehiculos(r: Record<string, unknown>): boolean {
+  const subs = (r['_subOrdenes'] as { sistema?: string }[] | undefined) ?? []
+  return subs.some(s => String(s?.sistema ?? '').trim().toUpperCase() === 'SISTO-105')
+}
+
+function otTipoMantenimiento(r: Record<string, unknown>): string {
+  if (otEsAlquilerVehiculos(r)) return 'MAQUINARIA'
+  return String(r['Tipo de Mantenimiento'] ?? '').trim().toUpperCase()
+}
 
 const MEZCLAS_EXCLUIDAS_CONCRETO = new Set([
   'CA ARENA',
@@ -4020,6 +3966,20 @@ const proveedoresDisponibles = computed(() => {
   return [...map].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
 })
 
+/** Proveedores reales de la hoja "Reporte Placa Disponibilidad" (distintos de los
+ *  proveedores de servicio de OT) — usados como opciones del filtro solo dentro de la
+ *  pestaña Disponibilidad, para no ofrecer nombres que no existen en esa hoja. */
+const proveedoresDisponibilidadDisponibles = computed(() => {
+  const plantaKeyDisp = isConcretos.value ? 'concretos' : isAcacias.value ? 'acacias' : 'cuncia'
+  const placas = disp.data?.planta === plantaKeyDisp ? (disp.data?.placas ?? []) : []
+  const map = new Set<string>()
+  for (const r of placas) {
+    const p = String(r['Proveedor_Texto'] ?? r['Proveedor'] ?? r['PROVEEDOR'] ?? '').trim()
+    if (p) map.add(toTitleCase(p))
+  }
+  return [...map].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
+})
+
 const estadosDisponibles = computed(() => {
   const map = new Set<string>()
   for (const r of allData.value) {
@@ -4077,11 +4037,12 @@ function applyOtMultiFilters(base: Record<string, unknown>[]): Record<string, un
 
 const dataFilteredMain = computed(() => applyOtMultiFilters(filteredData.value))
 
-/** Proveedores activos para la pestaña Disponibilidad: mismo criterio que el filtro de OT
+/** Proveedores activos para la pestaña Disponibilidad — usa su propia selección
+ *  (selectedProveedoresDisponibilidad), no la de OT: son proveedores distintos
  *  (null = todos seleccionados → sin filtro). */
 const provFiltroDisponibilidad = computed<string[] | null>(() => {
-  const active = selectedProveedores.value.size > 0 && selectedProveedores.value.size !== proveedoresDisponibles.value.length
-  return active ? [...selectedProveedores.value] : null
+  const active = selectedProveedoresDisponibilidad.value.size > 0 && selectedProveedoresDisponibilidad.value.size !== proveedoresDisponibilidadDisponibles.value.length
+  return active ? [...selectedProveedoresDisponibilidad.value] : null
 })
 
 const dataFilteredMainExpanded = computed(() => applyOtMultiFilters(filteredDataExpanded.value))
@@ -4113,6 +4074,7 @@ function onClearFilters() {
   selectedVehiculos.value = new Set(vehiculosDisponibles.value)
   selectedPlacas.value = new Set(placasDisponibles.value)
   selectedProveedores.value = new Set(proveedoresDisponibles.value)
+  selectedProveedoresDisponibilidad.value = new Set(proveedoresDisponibilidadDisponibles.value)
   selectedEstados.value = new Set(estadosDisponibles.value)
   selectedPersonalInterno.value = new Set(personalInternoOptions)
   selectedTipoCompra.value = new Set(tipoCompraDisponibles.value)
@@ -4206,6 +4168,16 @@ const generalKpi = computed(() => {
   }
   return { serv, ins, total: serv + ins, count: dataFilteredNoAcpm.value.length }
 })
+
+/** Costo de OT con sub-orden Alquiler de Vehículos (SISTO-105) — informativo, ya incluido en Int/Ext. */
+const alqTotal = computed(() => {
+  let t = 0
+  for (const r of dataFilteredNoAcpm.value) {
+    if (otEsAlquilerVehiculos(r)) t += rowCosto(r)
+  }
+  return t
+})
+const alqPct = computed(() => totalGeneral.value > 0 ? ((alqTotal.value / totalGeneral.value) * 100).toFixed(1) : '0.0')
 
 const totalProd = computed(() => {
   let t = 0
@@ -4423,10 +4395,9 @@ function computeMonthlyEfficiency(sourceMaintenanceRows: Record<string, unknown>
   }
 
   for (const r of sourceMaintenanceRows) {
-    // Se agrupa por la fecha de CIERRE (cuando se realiza el gasto); si la OT sigue
-    // abierta, se usa la fecha de creación para no perderla del todo.
-    const f = otCloseSerial(r) || r['FECHA'] || r['Fecha']
-    const d = parseRowDate(f)
+    // Se agrupa por la fecha de CIERRE (cuando se realiza el gasto). Sin fecha de
+    // cierre registrada, la OT no entra en la tendencia mensual.
+    const d = parseRowDate(otCloseSerial(r))
     if (!d) continue
     const y = d.getUTCFullYear()
     const mIdx = d.getUTCMonth()
@@ -4656,7 +4627,7 @@ const repTendenciaMensual = computed(() => {
   }))
   const prevByMonth = new Map<string, { prev: number; tot: number }>()
   for (const r of repRows.value) {
-    const d = parseRowDate(otCloseSerial(r) || r['FECHA'])
+    const d = parseRowDate(otCloseSerial(r))
     if (!d) continue
     const key = `${d.getUTCFullYear()} ${MESES_ES[d.getUTCMonth()]}`
     const e = prevByMonth.get(key) ?? { prev: 0, tot: 0 }
@@ -5084,7 +5055,7 @@ const claseMantenimientoIntRanking = computed(() => rankBy(intRows.value, 'Clase
 const motivosNoEjecucionIntRanking = computed(() => rankBy(intRows.value.filter(r => String(r['Motivo No Ejecución'] ?? '').trim()), 'Motivo No Ejecución', 10))
 const personalIntRanking = computed(() => computePersonalRanking(intRows.value, 10))
 const solicitantesIntRanking = computed(() => rankBy(intRows.value, 'Solicitante', 10))
-const responsablesCierreIntRanking = computed(() => rankBy(intRows.value, 'Responsable Cierre', 10))
+const responsablesCierreIntRanking = computed(() => rankByMultiValue(intRows.value, 'Responsable Cierre', 10))
 const jornadaIntRanking = computed(() => rankBy(intRows.value, 'Jornada', 6))
 
 const extKpi = computed(() => {
@@ -5168,7 +5139,7 @@ const tiposTrabajoExtRanking = computed(() => rankBy(extRows.value, 'Tipo Trabaj
 const claseMantenimientoExtRanking = computed(() => rankBy(extRows.value, 'Clase Mantenimiento', 10))
 const motivosNoEjecucionExtRanking = computed(() => rankBy(extRows.value.filter(r => String(r['Motivo No Ejecución'] ?? '').trim()), 'Motivo No Ejecución', 10))
 const solicitantesExtRanking = computed(() => rankBy(extRows.value, 'Solicitante', 10))
-const responsablesCierreExtRanking = computed(() => rankBy(extRows.value, 'Responsable Cierre', 10))
+const responsablesCierreExtRanking = computed(() => rankByMultiValue(extRows.value, 'Responsable Cierre', 10))
 const jornadaExtRanking = computed(() => rankBy(extRows.value, 'Jornada', 6))
 
 
@@ -5451,20 +5422,25 @@ const rankingDetailRows = computed(() => {
   const field = selectedRankingField.value!
   const val = String(selectedRankingValue.value!).trim().toLowerCase()
   const scope = selectedRankingScope.value
-  const base = scope === 'int' ? intRows.value : scope === 'ext' ? extRows.value : dataFilteredNoAcpm.value
+  // "Órdenes Diarias" se agrupa por fecha de RECEPCIÓN (dataFilteredByRegistro), no por
+  // fecha de cierre — el detalle debe salir del mismo conjunto de filas y usar la misma
+  // fecha, o el clic en una barra puede no coincidir con lo que la barra muestra.
+  const base = field === 'Fecha'
+    ? (scope === 'int' ? partitionRegistro.value.int : scope === 'ext' ? partitionRegistro.value.ext : dataFilteredByRegistro.value)
+    : (scope === 'int' ? intRows.value : scope === 'ext' ? extRows.value : dataFilteredNoAcpm.value)
   return base.filter(r => {
     if (field === 'Sistema') {
       const subs = r['_subOrdenes'] as any[]
       if (!Array.isArray(subs)) return false
       return subs.some(s => String(s?.sistemaTexto || s?.sistema || '').trim().toLowerCase() === val)
     }
-    if (field === 'Personal') {
-      const raw = String(r['Personal'] ?? '').trim()
+    if (field === 'Personal' || field === 'Responsable Cierre') {
+      const raw = String(r[field] ?? '').trim()
       if (!raw) return false
       return raw.split(',').map(s => s.trim().toLowerCase()).includes(val)
     }
     if (field === 'Fecha') {
-      const lbl = fechaToDiariasLabel(Number(r['FECHA']))
+      const lbl = fechaToDiariasLabel(otRecepcionSerial(r))
       return lbl.toLowerCase() === val
     }
     return String(r[field] ?? '').trim().toLowerCase() === val
@@ -5687,9 +5663,9 @@ const solicitantesExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankB
 const solicitantesIntExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(intRows.value, 'Solicitante'), 'Órdenes')))
 const solicitantesExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(extRows.value, 'Solicitante'), 'Órdenes')))
 
-const responsablesCierreExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(dataFilteredMain.value, 'Responsable Cierre'), 'Órdenes')))
-const responsablesCierreIntExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(intRows.value, 'Responsable Cierre'), 'Órdenes')))
-const responsablesCierreExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankBy(extRows.value, 'Responsable Cierre'), 'Órdenes')))
+const responsablesCierreExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankByMultiValue(dataFilteredMain.value, 'Responsable Cierre'), 'Órdenes')))
+const responsablesCierreIntExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankByMultiValue(intRows.value, 'Responsable Cierre'), 'Órdenes')))
+const responsablesCierreExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(rankByMultiValue(extRows.value, 'Responsable Cierre'), 'Órdenes')))
 
 const sistemasExpandOpt = computed(() => markRaw(buildCountBarColorOpt(computeSistemasRanking(dataFilteredMain.value), 'Intervenciones')))
 const sistemasIntExpandOpt = computed(() => markRaw(buildCountBarColorOpt(computeSistemasRanking(intRows.value), 'Intervenciones')))
@@ -7770,6 +7746,36 @@ ul.res li::before {
 .placa-detail-table .pill { padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; display: inline-block; }
 .placa-detail-table .pill.ok { background: #dcfce7; color: #166534; }
 .placa-detail-table .pill.warn { background: #fef3c7; color: #92400e; }
+
+/* ─────────────────────────────────────────────────────────────
+   Responsive — endurecido para tablet / teléfono
+   ───────────────────────────────────────────────────────────── */
+.kpi-row, .charts-grid, .charts-grid > *, .ots-section, .informe-section { min-width: 0; max-width: 100%; }
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+@media (max-width: 1024px) {
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  /* El header deja de ser fijo: en pantallas chicas los filtros envueltos tapaban el contenido. */
+  .sticky-top { position: static; }
+}
+
+@media (max-width: 768px) {
+  .filter-quick-nav { flex-wrap: wrap; }
+  /* El informe conserva una forma legible y su sección hace scroll lateral. */
+  :deep(.reporte-doc) { min-width: 620px; }
+}
+
+@media (max-width: 560px) {
+  .kpi-row { grid-template-columns: 1fr; gap: 8px; }
+  .page-header { gap: 8px; padding: 8px 0; }
+  .header-actions { gap: 6px; }
+  .action-btn { padding: 6px 10px; font-size: 11px; }
+  .action-btn.clear.is-hidden { display: none; }
+  .tab-btn { padding: 8px 14px; font-size: 13px; }
+  .section-title { font-size: 16px; }
+  .filter-quick-nav { width: 100%; }
+  .filter-quick-nav .quick-nav-btn { flex: 1 1 auto; }
+}
 </style>
 
 <style>

@@ -22,24 +22,51 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
     getSheetData(otKey, 'Cronologia', forceRefresh),
   ])
 
-  // 4 hojas opcionales en paralelo (antes eran 4 await secuenciales → ~800ms extra)
-  const [plantasMaquinariaRes, personalInternoRes, solicitantesRes, proveedoresRes] = await Promise.allSettled([
+  // 7 hojas opcionales en paralelo (antes eran awaits secuenciales → más lento)
+  const [plantasMaquinariaRes, personalInternoRes, solicitantesRes, proveedoresRes, sistemasRes, nombreSolicitanteRes, nombreQuienApruebaRes] = await Promise.allSettled([
     getSheetData(maestroKey, 'Plantas/Maquinaria', forceRefresh),
     getSheetData(maestroKey, 'GRAVICON_INTERNO_OT', forceRefresh),
-    getSheetData(otKey, 'SOLICITANTES_OT', forceRefresh),
+    getSheetData(maestroKey, 'SOLICITANTES_OT', forceRefresh),
     getSheetData(maestroKey, 'PROVEEDORES_OT', forceRefresh),
+    getSheetData(maestroKey, 'SISTEMAS_OT', forceRefresh),
+    getSheetData(maestroKey, 'NOMBRE_SOLICITANTE', forceRefresh),
+    getSheetData(maestroKey, 'NOMBRE_QUIEN_APRUEBA', forceRefresh),
   ])
 
   const plantasMaquinariaSheet = plantasMaquinariaRes.status === 'fulfilled' ? plantasMaquinariaRes.value : { rows: [] as Record<string, unknown>[] }
   const personalInternoSheet = personalInternoRes.status === 'fulfilled' ? personalInternoRes.value : { rows: [] as Record<string, unknown>[] }
   const solicitantesSheet = solicitantesRes.status === 'fulfilled' ? solicitantesRes.value : { rows: [] as Record<string, unknown>[] }
   const proveedoresSheet = proveedoresRes.status === 'fulfilled' ? proveedoresRes.value : { rows: [] as Record<string, unknown>[] }
+  const sistemasSheet = sistemasRes.status === 'fulfilled' ? sistemasRes.value : { rows: [] as Record<string, unknown>[] }
+  const nombreSolicitanteSheet = nombreSolicitanteRes.status === 'fulfilled' ? nombreSolicitanteRes.value : { rows: [] as Record<string, unknown>[] }
+  const nombreQuienApruebaSheet = nombreQuienApruebaRes.status === 'fulfilled' ? nombreQuienApruebaRes.value : { rows: [] as Record<string, unknown>[] }
 
   const solicitantesMap = new Map<string, string>()
   for (const r of solicitantesSheet.rows) {
-    const id = String(r['ID'] ?? '').trim()
-    const nombre = String(r['Nombre'] ?? '').trim()
+    const id = String(r['Id_Registro'] ?? '').trim()
+    const nombre = String(r['NOMBRE'] ?? '').trim()
     if (id && nombre) solicitantesMap.set(id, nombre)
+  }
+
+  const sistemasMap = new Map<string, string>()
+  for (const r of sistemasSheet.rows) {
+    const id = String(r['Id_Registro'] ?? '').trim()
+    const nombre = String(r['Sistemas_intervenir'] ?? '').trim()
+    if (id && nombre) sistemasMap.set(id, nombre)
+  }
+
+  const nombreSolicitanteMap = new Map<string, string>()
+  for (const r of nombreSolicitanteSheet.rows) {
+    const id = String(r['Id_Registro'] ?? '').trim()
+    const nombre = String(r['NOMBRE Y APELLIDO'] ?? '').trim()
+    if (id && nombre) nombreSolicitanteMap.set(id, nombre)
+  }
+
+  const nombreQuienApruebaMap = new Map<string, string>()
+  for (const r of nombreQuienApruebaSheet.rows) {
+    const id = String(r['Id_Registro'] ?? '').trim()
+    const nombre = String(r['NOMBRE Y APELLIDO'] ?? '').trim()
+    if (id && nombre) nombreQuienApruebaMap.set(id, nombre)
   }
 
   const proveedoresMap = new Map<string, string>()
@@ -83,7 +110,7 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
     if (!subMap.has(id)) subMap.set(id, [])
     subMap.get(id)!.push({
       sistema: String(r['Sistema_a_intervenir'] ?? '').trim(),
-      sistemaTexto: String(r['Sistema_a_intervenir_Texto'] ?? '').trim(),
+      sistemaTexto: sistemasMap.get(String(r['Sistema_a_intervenir'] ?? '').trim()) || String(r['Sistema_a_intervenir'] ?? '').trim(),
       descripcion: String(r['Descripción_Trabajo'] ?? '').trim(),
     })
   }
@@ -129,10 +156,10 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
       tipoCompra: String(r['Tipo de Compra'] ?? ''),
       centroCosto: String(r['CENTRO DE COSTO'] ?? ''),
       solicitante: String(r['Nombre del Solicitante'] ?? ''),
-      solicitanteTexto: String(r['Nombre del Solicitante_Texto'] ?? ''),
+      solicitanteTexto: (() => { const v = String(r['Nombre del Solicitante'] ?? '').trim(); return nombreSolicitanteMap.get(v) || solicitantesMap.get(v) || v })(),
       cargSolicitante: String(r['Cargo del Solicitante'] ?? ''),
       aprueba: String(r['Nombre de quien aprueba'] ?? ''),
-      apruebaTexto: String(r['Nombre de quien aprueba_Texto'] ?? ''),
+      apruebaTexto: nombreQuienApruebaMap.get(String(r['Nombre de quien aprueba'] ?? '').trim()) || String(r['Nombre de quien aprueba'] ?? '').trim(),
       cargoAprueba: String(r['Cargo de quien aprueba'] ?? ''),
       fechaGeneracion: r['Fecha_de_Generacion'],
       fechaEmision: r['Fecha_de_Emision_Correo'],
@@ -221,17 +248,17 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
       'Estado': String(ot['Estado'] ?? ''),
       'Tipo de Mantenimiento': String(ot['Tipo de Mantenimiento'] ?? ''),
       'Tipo de OT': String(ot['Tipo de OT'] ?? ''),
-      'Tipo de Vehículo': String(ot['Planta/Maquinaria_Texto'] ?? ''),
+      'Tipo de Vehículo': vehiculoDescMap.get(String(ot['Planta/Maquinaria'] ?? '').trim()) || '',
       'Tipo Vehículo': tipoVehiculoMap.get(String(ot['Planta/Maquinaria'] ?? '').trim()) || '',
       'Placa del Vehículo': placaMap.get(String(ot['Planta/Maquinaria'] ?? '').trim()) || '',
       'Vehiculo Descripción': vehiculoDescMap.get(String(ot['Planta/Maquinaria'] ?? '').trim()) || '',
       'Prioridad': String(ot['Prioridad'] ?? ''),
-      'Solicitante': String(ot['Solicitante_Texto'] ?? ''),
+      'Solicitante': solicitantesMap.get(String(ot['Solicitante'] ?? '').trim()) || '',
       'Fuente_Novedad': String(ot['Fuente_Novedad'] ?? ''),
       'PROVEEDOR_ID': String(ot['Responsable_Proveedor'] ?? '').trim(),
       'PROVEEDOR': proveedoresMap.get(String(ot['Responsable_Proveedor'] ?? '').trim()) || String(ot['Responsable_Proveedor'] ?? ''),
       'Jornada': String(ot['Jornada'] ?? ''),
-      'Personal': String(ot['Personal_Intervención_Texto'] ?? ''),
+      'Personal': personalInvolucrado.map(p => p.nombre).filter(Boolean).join(', '),
       'Duración (horas)': typeof ot['Duración_Estimada'] === 'number' ? Math.round(ot['Duración_Estimada'] * 24 * 100) / 100 : null,
       'Tipo Trabajo': String(ot['Tipo_de_Trabajo'] ?? ''),
       'Clase Mantenimiento': String(ot['Clase_Mantenimiento'] ?? ''),
@@ -249,7 +276,7 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
       'Posición Llanta': String(ot['POSICIÓN_LLANTA'] ?? ''),
       'Requiere Pedido': String(ot['¿REQUIERE SOLICITUD DE PEDIDO/ALMACEN?'] ?? ''),
       'Motivo No Ejecución': String(ot['Motivo de No Ejecución'] ?? ''),
-      'Responsable Cierre': solicitantesMap.get(String(ot['Responsable_Cierre'] ?? '').trim()) || String(ot['Responsable_Cierre_Texto'] ?? ''),
+      'Responsable Cierre': solicitantesMap.get(String(ot['Responsable_Cierre'] ?? '').trim()) || '',
       'Fecha Generación': ot['Fecha_Generacion'],
       'Enlace PDF': String(ot['Enlace_PDF'] ?? ''),
       'Observaciones': obsParts.join(' | '),
