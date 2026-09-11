@@ -115,7 +115,7 @@
       <div id="sec-general" class="section-anchor"></div>
       <div class="kpi-row">
         <KpiCard :value="$$(totalGeneral)" label="Costo Total General" accent="#15223c" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${intPct}%)</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${extPct}%)</span></div>` + (alqTotal > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Alq</span> <strong>${$$(alqTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${alqPct}%)</span></div>` : '')" />
-        <KpiCard :value="$$(servicios)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intServ)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extServ)}</strong></div>`" />
+        <KpiCard :value="$$(servicios)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intServSinAlq)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extServSinAlq)}</strong></div>` + (alqServ > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Alq</span> <strong>${$$(alqServ)}</strong></div>` : '')" />
         <KpiCard :value="$$(insumos)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intIns)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extIns)}</strong></div>`" />
         <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" :detail="isConcretos ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${fmt(totalProd)} m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Agregados</span> <strong>${fmt(totalProdAgg)} m³</strong></div>` : ''" />
         <KpiCard v-if="isConcretos" :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${$$(costoM3)}/m³</strong></div>` + (totalProdAgg > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Con agregados</span> <strong>${$$(costoM3ConAgg)}/m³</strong></div>` : '')" />
@@ -129,6 +129,7 @@
         <KpiCard :value="otDuracionEstimadaProm + ' h'" label="Duración Estimada Promedio" accent="#8B5CF6" icon="clock" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntDuracionEstimadaProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtDuracionEstimadaProm}h</strong></div>`" />
         <KpiCard :value="otTiempoRealProm + ' h'" label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntTiempoRealProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtTiempoRealProm}h</strong></div>`" />
         <KpiCard :value="otConSopledPct + '%'" label="% OT con Pedido de Almacén" accent="#10B981" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntConSopledPct}%</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtConSopledPct}%</strong></div>`" />
+        <KpiCard v-if="isConcretos" :value="$$(costoTotalOtMes)" label="Costo Total OT en el Mes" accent="#0EA5E9" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(costoTotalOtMesInt)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(costoTotalOtMesExt)}</strong></div><div class='kpi-detail-row' style='color:var(--text-tertiary);font-size:10px'>Por Fecha de Registro — mismo rango de fechas filtrado</div>`" />
       </div>
 
       <div class="ots-bar">
@@ -196,7 +197,7 @@
 
     <div class="kpi-row">
       <KpiCard :value="$$(intTotal)" label="Costo Total Interno" accent="#15223c" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Gasto</span> <strong>${intPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del total general</span></div>`" />
-      <KpiCard :value="$$(intServ)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intTotal > 0 ? ((intServ / intTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto interno</span></div>`" />
+      <KpiCard :value="$$(intServSinAlq)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intTotal > 0 ? ((intServSinAlq / intTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto interno</span></div>`" />
       <KpiCard :value="$$(intIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-int'>Int</span> <strong>${intTotal > 0 ? ((intIns / intTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto interno</span></div>`" />
       <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
       <KpiCard :value="$$(intCostoM3)" label="Costo por m³" :accent="intCostoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
@@ -276,7 +277,7 @@
 
     <div class="kpi-row">
       <KpiCard :value="$$(extTotal)" label="Costo Total Externo" accent="#15223c" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Gasto</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del total general</span></div>`" />
-      <KpiCard :value="$$(extServ)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-ext'>Ext</span> <strong>${extTotal > 0 ? ((extServ / extTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto externo</span></div>`" />
+      <KpiCard :value="$$(extServSinAlq)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-ext'>Ext</span> <strong>${extTotal > 0 ? ((extServSinAlq / extTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto externo</span></div>`" />
       <KpiCard :value="$$(extIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Ext</span> <strong>${extTotal > 0 ? ((extIns / extTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto externo</span></div>`" />
       <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
       <KpiCard :value="$$(extCostoM3)" label="Costo por m³" :accent="extCostoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
@@ -442,8 +443,8 @@
 
           <!-- Tarjetas KPI Oficiales -->
           <div class="kpi-row compact-kpi">
-            <KpiCard label="Costo Acumulado" accent="#1D4ED8" icon="dollar" :value="$$(repCostoTotal)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(repCostosProv.interno)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${repCostosProv.pctInt}%)</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(repCostosProv.externo)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${repCostosProv.pctExt}%)</span></div>`" />
-            <KpiCard label="Costo Servicios" accent="#0EA5E9" icon="settings" :value="$$(repCostoServTotal)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(repCostosProv.servInt)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(repCostosProv.servExt)}</strong></div>`" />
+            <KpiCard label="Costo Acumulado" accent="#1D4ED8" icon="dollar" :value="$$(repCostoTotal)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(repCostosProv.interno)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${repCostosProv.pctInt}%)</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(repCostosProv.externo)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${repCostosProv.pctExt}%)</span></div>` + (repCostosProv.alq > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Alq</span> <strong>${$$(repCostosProv.alq)}</strong></div>` : '')" />
+            <KpiCard label="Costo Servicios" accent="#0EA5E9" icon="settings" :value="$$(repCostoServTotal)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(repCostosProv.servIntSinAlq)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(repCostosProv.servExtSinAlq)}</strong></div>` + (repCostosProv.alqServ > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Alq</span> <strong>${$$(repCostosProv.alqServ)}</strong></div>` : '')" />
             <KpiCard label="Costo Insumos" accent="#EF4444" icon="package" :value="$$(repCostoInsumosTotal)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(repCostosProv.insInt)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(repCostosProv.insExt)}</strong></div>`" />
             <KpiCard label="Total Producción" accent="#10B981" icon="trending-up" :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" :detail="isConcretos ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${fmt(totalProd)} m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Agregados</span> <strong>${fmt(totalProdAgg)} m³</strong></div>` : ''" />
             <KpiCard v-if="isConcretos" label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :value="$$(costoM3)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${$$(costoM3)}/m³</strong></div>` + (totalProdAgg > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Con agregados</span> <strong>${$$(costoM3ConAgg)}/m³</strong></div>` : '')" />
@@ -464,6 +465,7 @@
             <KpiCard label="Duración Promedio" accent="#8B5CF6" icon="clock" :value="otDuracionEstimadaProm + ' h'" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntDuracionEstimadaProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtDuracionEstimadaProm}h</strong></div>`" />
             <KpiCard label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" :value="otTiempoRealProm + ' h'" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntTiempoRealProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtTiempoRealProm}h</strong></div>`" />
             <KpiCard label="% OT con Pedido de Almacén" accent="#10B981" icon="package" :value="otConSopledPct + '%'" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntConSopledPct}%</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtConSopledPct}%</strong></div>`" />
+            <KpiCard v-if="isConcretos" label="Costo Total OT en el Mes" accent="#0EA5E9" icon="dollar" :value="$$(costoTotalOtMes)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(costoTotalOtMesInt)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(costoTotalOtMesExt)}</strong></div><div class='kpi-detail-row' style='color:var(--text-tertiary);font-size:10px'>Por Fecha de Registro — mismo rango de fechas filtrado</div>`" />
           </div>
 
           <!-- Nota de metodología del filtro por fecha -->
@@ -1095,7 +1097,7 @@
       <div id="sec-ger-general" class="section-anchor"></div>
       <div class="kpi-row">
         <KpiCard :value="$$(totalGeneral)" label="Costo Total General" accent="#15223c" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${intPct}%)</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${extPct}%)</span></div>` + (alqTotal > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Alq</span> <strong>${$$(alqTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${alqPct}%)</span></div>` : '')" />
-        <KpiCard :value="$$(servicios)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intServ)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extServ)}</strong></div>`" />
+        <KpiCard :value="$$(servicios)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intServSinAlq)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extServSinAlq)}</strong></div>` + (alqServ > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Alq</span> <strong>${$$(alqServ)}</strong></div>` : '')" />
         <KpiCard :value="$$(insumos)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intIns)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extIns)}</strong></div>`" />
         <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" :detail="isConcretos ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${fmt(totalProd)} m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Agregados</span> <strong>${fmt(totalProdAgg)} m³</strong></div>` : ''" />
         <KpiCard v-if="isConcretos" :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${$$(costoM3)}/m³</strong></div>` + (totalProdAgg > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Con agregados</span> <strong>${$$(costoM3ConAgg)}/m³</strong></div>` : '')" />
@@ -1105,6 +1107,7 @@
         <KpiCard :value="promCierreDia.toFixed(1)" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasActivos > 0 ? (otsIntEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasActivos > 0 ? (otsExtEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div>`" />
         <KpiCard :value="String(estadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.abiertas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.abiertas)}</span></div>`" />
         <KpiCard :value="String(estadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.cerradas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.cerradas)}</span></div>`" />
+        <KpiCard v-if="isConcretos" :value="$$(costoTotalOtMes)" label="Costo Total OT en el Mes" accent="#0EA5E9" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(costoTotalOtMesInt)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(costoTotalOtMesExt)}</strong></div><div class='kpi-detail-row' style='color:var(--text-tertiary);font-size:10px'>Por Fecha de Registro — mismo rango de fechas filtrado</div>`" />
       </div>
 
       <div class="ots-bar">
@@ -1168,7 +1171,7 @@
 
       <div class="kpi-row">
         <KpiCard :value="$$(intTotal)" label="Costo Total Interno" accent="#15223c" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Gasto</span> <strong>${intPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del total general</span></div>`" />
-        <KpiCard :value="$$(intServ)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intTotal > 0 ? ((intServ / intTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto interno</span></div>`" />
+        <KpiCard :value="$$(intServSinAlq)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intTotal > 0 ? ((intServSinAlq / intTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto interno</span></div>`" />
         <KpiCard :value="$$(intIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-int'>Int</span> <strong>${intTotal > 0 ? ((intIns / intTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto interno</span></div>`" />
         <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
         <KpiCard :value="$$(intCostoM3)" label="Costo por m³" :accent="intCostoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
@@ -1240,7 +1243,7 @@
 
       <div class="kpi-row">
         <KpiCard :value="$$(extTotal)" label="Costo Total Externo" accent="#15223c" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Gasto</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del total general</span></div>`" />
-        <KpiCard :value="$$(extServ)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-ext'>Ext</span> <strong>${extTotal > 0 ? ((extServ / extTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto externo</span></div>`" />
+        <KpiCard :value="$$(extServSinAlq)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-ext'>Ext</span> <strong>${extTotal > 0 ? ((extServSinAlq / extTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto externo</span></div>`" />
         <KpiCard :value="$$(extIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Ext</span> <strong>${extTotal > 0 ? ((extIns / extTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto externo</span></div>`" />
         <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
         <KpiCard :value="$$(extCostoM3)" label="Costo por m³" :accent="extCostoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
@@ -1304,6 +1307,7 @@
     </template>
 
     <Teleport to="body">
+      <Transition name="modal-pop">
       <div v-if="detalleOT" class="modal-overlay" @click.self="detalleOT = null">
         <div class="modal-panel ot-modal-panel">
           <button class="modal-close" @click="detalleOT = null">✕</button>
@@ -1520,7 +1524,9 @@
 
         </div>
       </div>
+      </Transition>
 
+      <Transition name="modal-pop">
       <div v-if="sopledDetail" class="modal-overlay" @click.self="sopledDetail = null">
         <div class="modal-panel sopled-panel">
           <button class="modal-close" @click="sopledDetail = null">✕</button>
@@ -1664,11 +1670,13 @@
           </div>
         </div>
       </div>
+      </Transition>
 
     </Teleport>
 
     <!-- Modal detalle por placa — click en Costos por Placa -->
     <Teleport to="body">
+      <Transition name="modal-pop">
       <div v-if="showPlacaDetail" class="placa-detail-overlay" @click.self="closePlacaDetail">
         <div class="placa-detail-panel">
           <div class="placa-detail-top">
@@ -1683,10 +1691,12 @@
           </div>
         </div>
       </div>
+      </Transition>
     </Teleport>
 
     <!-- Modal detalle por mes/planta — click en Eficiencia y Costos Generales (mismo estilo que Costos por Placa) -->
     <Teleport to="body">
+      <Transition name="modal-pop">
       <div v-if="showMesDetail" class="placa-detail-overlay" @click.self="closeMesDetail">
         <div class="placa-detail-panel">
           <div class="placa-detail-top">
@@ -1701,10 +1711,12 @@
           </div>
         </div>
       </div>
+      </Transition>
     </Teleport>
 
     <!-- Modal detalle por ranking — click en cualquier gráfica (mismo estilo que Costos por Placa) -->
     <Teleport to="body">
+      <Transition name="modal-pop">
       <div v-if="showRankingDetail" class="placa-detail-overlay" @click.self="closeRankingDetail">
         <div class="placa-detail-panel">
           <div class="placa-detail-top">
@@ -1719,6 +1731,7 @@
           </div>
         </div>
       </div>
+      </Transition>
     </Teleport>
 
       </template> <!-- cierre v-else que envuelve sub-tabs Planta/Maquinaria -->
@@ -3008,11 +3021,21 @@ const repFallasRecurrentes = computed(() => {
 const repCostosProv = computed(() => {
   let interno = 0, externo = 0, nInt = 0, nExt = 0
   let servInt = 0, servExt = 0, insInt = 0, insExt = 0
+  // Alquiler de Vehículos (SISTO-105) se reporta aparte — mismo criterio que las
+  // tarjetas KPI del panel en vivo. alqServInt/alqServExt son la porción de
+  // servInt/servExt que hay que restar para mostrar "Costo Servicios sin alquiler".
+  let alq = 0, alqServ = 0, alqServInt = 0, alqServExt = 0
   for (const r of repRows.value) {
     const s = rowServicios(r), i = rowInsumos(r)
     const c = s + i
-    if (isInterno(r)) { interno += c; nInt++; servInt += s; insInt += i }
+    const esInt = isInterno(r)
+    if (esInt) { interno += c; nInt++; servInt += s; insInt += i }
     else { externo += c; nExt++; servExt += s; insExt += i }
+    if (otEsAlquilerVehiculos(r)) {
+      alq += c; alqServ += s
+      if (esInt) alqServInt += s
+      else alqServExt += s
+    }
   }
   const total = interno + externo
   return {
@@ -3020,6 +3043,9 @@ const repCostosProv = computed(() => {
     servInt, servExt, insInt, insExt,
     pctInt: total ? Math.round((interno / total) * 100) : 0,
     pctExt: total ? Math.round((externo / total) * 100) : 0,
+    alq, alqServ,
+    servIntSinAlq: servInt - alqServInt,
+    servExtSinAlq: servExt - alqServExt,
   }
 })
 
@@ -3699,10 +3725,16 @@ const allData = computed(() => {
  * SISTO-105 (Alquiler de Vehículos) se clasifica como MAQUINARIA sin importar lo que diga
  * ese campo, para que su costo nunca quede fuera de las pestañas y del Costo Total General.
  */
-/** true si alguna sub-orden (Sub_Ordenes_Ot) de la OT tiene el sistema SISTO-105 (Alquiler de Vehículos). */
+/** true si alguna sub-orden (Sub_Ordenes_Ot) de la OT tiene el sistema SISTO-105 (Alquiler de
+ *  Vehículos). Compara por ID y por texto: en Cuncía la columna de ID real de esa hoja está
+ *  mal rotulada en el spreadsheet, así que el ID casi nunca llega — el texto sí es confiable. */
 function otEsAlquilerVehiculos(r: Record<string, unknown>): boolean {
-  const subs = (r['_subOrdenes'] as { sistema?: string }[] | undefined) ?? []
-  return subs.some(s => String(s?.sistema ?? '').trim().toUpperCase() === 'SISTO-105')
+  const subs = (r['_subOrdenes'] as { sistema?: string; sistemaTexto?: string }[] | undefined) ?? []
+  return subs.some(s => {
+    const id = String(s?.sistema ?? '').trim().toUpperCase()
+    const texto = String(s?.sistemaTexto ?? '').trim().toUpperCase()
+    return id === 'SISTO-105' || texto.includes('ALQUILER DE VEHIC')
+  })
 }
 
 function otTipoMantenimiento(r: Record<string, unknown>): string {
@@ -4179,6 +4211,24 @@ const alqTotal = computed(() => {
 })
 const alqPct = computed(() => totalGeneral.value > 0 ? ((alqTotal.value / totalGeneral.value) * 100).toFixed(1) : '0.0')
 
+/** Costo de SERVICIOS de OT de Alquiler de Vehículos (SISTO-105), por si cayeron en Int o Ext.
+ *  A diferencia de alqTotal (informativo), en la tarjeta "Costos Servicios" sí se resta de
+ *  Int/Ext — el alquiler no debe contar ni como interno ni como externo, se muestra aparte. */
+const alqServInt = computed(() => {
+  let t = 0
+  for (const r of intRows.value) if (otEsAlquilerVehiculos(r)) t += rowServicios(r)
+  return t
+})
+const alqServExt = computed(() => {
+  let t = 0
+  for (const r of extRows.value) if (otEsAlquilerVehiculos(r)) t += rowServicios(r)
+  return t
+})
+const alqServ = computed(() => alqServInt.value + alqServExt.value)
+/** Costos Servicios de Int/Ext ya sin el alquiler (para la tarjeta "Costos Servicios"). */
+const intServSinAlq = computed(() => intServ.value - alqServInt.value)
+const extServSinAlq = computed(() => extServ.value - alqServExt.value)
+
 const totalProd = computed(() => {
   let t = 0
   for (const r of prodFiltered.value) {
@@ -4263,6 +4313,22 @@ const partitionRegistro = computed(() => {
 const intCountRegistro = computed(() => partitionRegistro.value.int.length)
 const extCountRegistro = computed(() => partitionRegistro.value.ext.length)
 const promOtDia = computed(() => (otDiasRegistro.value > 0 ? dataFilteredByRegistro.value.length / otDiasRegistro.value : 0))
+
+/** OT filtradas por Fecha de Registro (no recepción ni cierre), dentro del mismo rango de
+ *  fechas seleccionado arriba — base de la tarjeta "Costo Total OT en el Mes" (Concretos). */
+const dataFilteredByFechaRegistro = computed(() => {
+  const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
+  const until = fechaFin.value ? dateToSerial(fechaFin.value) + 1 : Infinity
+  const base = allData.value.filter(r => {
+    const v = otDateOnlySerial(r['FECHA'])
+    if (v <= 0) return false
+    return v >= since && v < until
+  })
+  return applyOtMultiFilters(base)
+})
+const costoTotalOtMes = computed(() => dataFilteredByFechaRegistro.value.reduce((s, r) => s + rowCosto(r), 0))
+const costoTotalOtMesInt = computed(() => dataFilteredByFechaRegistro.value.reduce((s, r) => s + (isInterno(r) ? rowCosto(r) : 0), 0))
+const costoTotalOtMesExt = computed(() => dataFilteredByFechaRegistro.value.reduce((s, r) => s + (isInterno(r) ? 0 : rowCosto(r)), 0))
 
 // ================= GRÁFICA: EFICIENCIA DE MANTENIMIENTO Y COSTO UNITARIO =================
 const MESES_ES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
@@ -7016,7 +7082,8 @@ ul.res li::before {
 /* Modal — diseño profesional */
 .modal-overlay {
   position: fixed; inset: 0; z-index: 9999;
-  background: rgba(0,0,0,.65);
+  background: rgba(15,23,42,.55);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
   display: flex; align-items: center; justify-content: center;
   padding: 20px;
 }
@@ -7027,9 +7094,16 @@ ul.res li::before {
   max-height: 92vh; overflow-y: auto;
   box-shadow: 0 25px 80px rgba(0,0,0,.5);
   position: relative;
-  animation: modalIn .25s ease;
+  animation: modalIn .32s cubic-bezier(.34,1.56,.64,1);
 }
-@keyframes modalIn { from { opacity:0; transform:translateY(16px) scale(.98) } to { opacity:1; transform:translateY(0) scale(1) } }
+@keyframes modalIn { from { opacity:0; transform:translateY(16px) scale(.94) } to { opacity:1; transform:translateY(0) scale(1) } }
+/* Transición de entrada/salida de los modales (fondo se desvanece, panel se achica al salir) */
+.modal-pop-enter-active, .modal-pop-leave-active { transition: opacity 0.2s ease; }
+.modal-pop-enter-from, .modal-pop-leave-to { opacity: 0; }
+.modal-pop-leave-active .modal-panel,
+.modal-pop-leave-active .placa-detail-panel { transition: transform 0.2s ease, opacity 0.2s ease; }
+.modal-pop-leave-to .modal-panel,
+.modal-pop-leave-to .placa-detail-panel { transform: scale(0.96); opacity: 0; }
 .modal-close {
   position: absolute; top: 16px; right: 16px; z-index: 5;
   width: 38px; height: 38px; border: 1px solid #d1d5db; border-radius: 50%;
@@ -7730,8 +7804,8 @@ ul.res li::before {
   .section-sub { font-size: 11px; }
   .placa-detail-panel { width: 100vw; max-height: 92vh; }
 }
-.placa-detail-overlay { position: fixed; inset: 0; z-index: 9998; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; padding: 20px; }
-.placa-detail-panel { background: var(--card-bg, #fff); border-radius: 16px; width: 95vw; max-width: 1100px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+.placa-detail-overlay { position: fixed; inset: 0; z-index: 9998; background: rgba(15,23,42,.45); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.placa-detail-panel { background: var(--card-bg, #fff); border-radius: 16px; width: 95vw; max-width: 1100px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.3); animation: modalIn .32s cubic-bezier(.34,1.56,.64,1); }
 .placa-detail-top { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--card-border, #e5e7eb); }
 .placa-detail-title { font-size: 16px; font-weight: 700; margin: 0; color: var(--text-primary, #1f2937); }
 .placa-detail-sub { font-size: 12px; color: var(--text-secondary, #6b7280); margin: 2px 0 0; }
