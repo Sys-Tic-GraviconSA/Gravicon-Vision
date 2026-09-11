@@ -54,15 +54,6 @@
           :value="String(kpis.flotaPropia)"
         />
 
-        <!-- En Concretos la disponibilidad no considera flota alquilada (sí en el informe). -->
-        <KpiCard
-          v-if="!isConcretosPlanta"
-          label="Alquilados"
-          accent="#2a3f6b"
-          icon="truck"
-          :value="String(kpis.alquilados)"
-        />
-
         <KpiCard
           label="Operativos"
           accent="#10B981"
@@ -111,56 +102,115 @@
       <!-- GRÁFICAS DE DISPONIBILIDAD (todas las plantas)           -->
       <!-- ======================================================= -->
 
-        <!-- Gráficas: Disponibilidad por Equipo + Incidencia de Mantenimiento (ref: foto 1) -->
-        <div class="charts-grid cols-2">
+        <!-- Disponibilidad Operativa por Equipo: Mejores / Menos Eficientes en un solo gráfico -->
+        <div class="charts-grid cols-1">
           <ChartCard
             title="Disponibilidad Operativa por Equipo"
-            description="% de días operativos sobre el total del período"
+            :description="(equipoRankMode === 'mejor' ? '% de días operativos sobre el total del período — de mayor a menor disponibilidad' : '% de días operativos sobre el total del período — de menor a mayor disponibilidad') + ' — clic en una placa para ver el detalle día a día'"
             :option="dispEquipoOpt"
             :expand-option="dispEquipoFullOpt"
             :height="540"
-          />
-          <ChartCard
-            title="Incidencia de Mantenimiento por Equipo"
-            description="% de días en mantenimiento vs. días totales del período"
-            :option="incidenciaMantenimientoOpt"
-            :expand-option="incidenciaMantenimientoFullOpt"
-            :height="540"
-          />
+            clickable
+            @chart-click="onEquipoClick"
+          >
+            <template #toolbar>
+              <div class="area-filtro-row" style="margin: 0;">
+                <span class="area-filtro-label">Ver</span>
+                <div class="almacen-view-toggle" style="margin-bottom: 0;">
+                  <button class="av-btn" :class="{ active: equipoRankMode === 'mejor' }" @click="equipoRankMode = 'mejor'">Mejores</button>
+                  <button class="av-btn" :class="{ active: equipoRankMode === 'noEficiente' }" @click="equipoRankMode = 'noEficiente'">Menos Eficientes</button>
+                </div>
+              </div>
+            </template>
+          </ChartCard>
         </div>
 
-        <!-- Clasificación de equipo: promedio + días fuera de servicio -->
-        <div v-if="!isConcretosPlanta && disponibilidadMensualClasif.filas.length" class="charts-grid cols-2" style="margin-top: 14px;">
+        <!-- Detalle día a día al hacer clic en una placa de "Disponibilidad Operativa por Equipo" -->
+        <Teleport to="body">
+        <Transition name="modal-pop">
+          <div v-if="showEquipoDetail" class="disp-detail-overlay" @click.self="closeEquipoDetail">
+            <div class="disp-detail-panel">
+              <div class="disp-detail-top">
+                <div>
+                  <h3 class="disp-detail-title">{{ equipoDetailPlaca }}</h3>
+                  <p class="disp-detail-sub">{{ equipoDetailResumen.total }} días · {{ equipoDetailResumen.disponible }} disponible · {{ equipoDetailResumen.parcial }} parcial · {{ equipoDetailResumen.noDisponible }} no disponible · {{ equipoDetailResumen.sinInspeccion }} sin inspección</p>
+                </div>
+                <button class="disp-detail-close" @click="closeEquipoDetail">✕</button>
+              </div>
+              <div class="disp-detail-table-wrap">
+                <table class="disp-detail-table">
+                  <thead>
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Localización</th>
+                      <th class="r">% Score</th>
+                      <th>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="row in equipoDetailRows" :key="row.fecha">
+                      <td class="bold">{{ row.fechaLabel }}</td>
+                      <td>{{ row.loc }}</td>
+                      <td class="r">{{ row.pct }}%</td>
+                      <td :class="row.estado === 'Disponible' ? 'green' : row.estado === 'Parcial' ? 'yellow' : row.estado === 'No Disponible' ? 'red' : 'muted'">{{ row.estado }}</td>
+                    </tr>
+                    <tr v-if="!equipoDetailRows.length"><td colspan="4" class="empty-table">Sin datos en el rango filtrado</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </Transition>
+        </Teleport>
+
+        <!-- Clasificación de equipo: promedio de disponibilidad por familia -->
+        <div v-if="!isConcretosPlanta && disponibilidadMensualClasif.filas.length" class="charts-grid cols-1" style="margin-top: 14px;">
           <ChartCard
             title="Disponibilidad Promedio por Clasificación"
-            description="Promedio del período por familia de equipo (maquinaria propia) — semáforo 85 / 75 %"
+            description="Promedio del período por familia de equipo (maquinaria propia) — semáforo 85 / 75 % — clic en una barra para ver el detalle por placa"
             :option="dispPorClasifOpt"
             :height="300"
-          />
-          <ChartCard
-            title="Días Fuera de Servicio por Clasificación"
-            description="Días-equipo no operativos (parcial = 0,5) acumulados en el período por familia"
-            :option="dispDiasFueraClasifOpt"
-            :height="300"
+            clickable
+            @chart-click="onClasifClick"
           />
         </div>
 
-        <!-- Composición por estado + evolución mensual -->
-        <div v-if="dispRowsBase.length" class="charts-grid cols-2" style="margin-top: 14px;">
+        <!-- Evolución mensual por clasificación -->
+        <div v-if="dispRowsBase.length && !isConcretosPlanta && disponibilidadMensualClasif.meses.length >= 2" class="charts-grid" style="margin-top: 14px;">
           <ChartCard
-            title="Composición de la Flota por Estado"
-            description="Reparto de días-equipo inspeccionados: operativo pleno, parcial y fuera de servicio"
-            :option="dispEstadoDonutOpt"
-            :height="360"
-          />
-          <ChartCard
-            v-if="!isConcretosPlanta && disponibilidadMensualClasif.meses.length >= 2"
             title="Evolución Mensual por Clasificación"
             description="% de disponibilidad mes a mes por familia de equipo"
             :option="dispEvolucionClasifOpt"
             :height="360"
           />
         </div>
+
+        <!-- Detalle por placa al hacer clic en una familia de "Disponibilidad Promedio por Clasificación" -->
+        <Teleport to="body">
+        <Transition name="modal-pop">
+          <div v-if="showClasifDetail" class="disp-detail-overlay" @click.self="closeClasifDetail">
+            <div class="disp-detail-panel">
+              <div class="disp-detail-top">
+                <div>
+                  <h3 class="disp-detail-title">{{ clasifDetailFamiliaLabel }}</h3>
+                  <p class="disp-detail-sub">{{ clasifDetailRows.length }} placas · rango filtrado</p>
+                </div>
+                <button class="disp-detail-close" @click="closeClasifDetail">✕</button>
+              </div>
+              <div class="disp-detail-table-wrap" style="padding: 8px;">
+                <ChartCard
+                  v-if="clasifDetailRows.length"
+                  title=""
+                  :option="clasifDetailOpt"
+                  :height="Math.max(200, clasifDetailRows.length * 34)"
+                  hide-actions
+                />
+                <div v-else class="empty-table">Sin datos en el rango filtrado</div>
+              </div>
+            </div>
+          </div>
+        </Transition>
+        </Teleport>
 
         <!-- Tendencia diaria de disponibilidad global (última) -->
         <div v-if="dispRowsBase.length" class="charts-grid" style="margin-top: 14px;">
@@ -1049,9 +1099,11 @@ const activePlacasRows = computed(() => {
     rows = props.data || []
   }
 
-  // Concretos, SOLO en la vista Gráficas: la disponibilidad es solo de flota propia
-  // (las alquiladas se excluyen). En el Informe se deja la flota completa, tal cual.
-  if (isConcretosPlanta.value && dispView.value === 'graficas') {
+  // SOLO en la vista Gráficas, en todas las plantas: la disponibilidad es solo de
+  // flota propia (las alquiladas se excluyen). En el Informe se deja la flota completa
+  // en activePlacasRows porque informeKpis/informeFlotaAlquilada necesitan verlas para
+  // reportarlas aparte.
+  if (dispView.value === 'graficas') {
     rows = rows.filter(r => !getInspectionDetails(r).esAlquilado)
   }
 
@@ -2386,8 +2438,9 @@ const ES_PLANTA_FIJA = /TRITURADORA|CHANCADORA|\bPLANTA\b|ZARANDA|CRIBA|\bBANDA\
  * Fila "Cumplimiento" = promedio ponderado por número de equipos de cada clasificación.
  */
 const disponibilidadMensualClasif = computed(() => {
-  const buckets = CLASIF_DISPONIBILIDAD.value.map(c => ({
+  const buckets = CLASIF_DISPONIBILIDAD.value.map((c, idx) => ({
     id: c.id,
+    idx,
     label: c.label,
     placas: new Set<string>(),
     meses: new Map<string, { sum: number; count: number }>(),
@@ -2437,7 +2490,7 @@ const disponibilidadMensualClasif = computed(() => {
         totCount += c.count
       }
       const prom = totCount > 0 ? Math.round((totSum / totCount) * 100) : null
-      return { id: b.id, label: b.label, nEquipos: b.placas.size, celdas, prom }
+      return { id: b.id, idx: b.idx, label: b.label, nEquipos: b.placas.size, celdas, prom }
     })
     .filter(f => f.nEquipos > 0 || f.celdas.some(c => c != null))
 
@@ -2679,7 +2732,6 @@ function renderAllCharts() {
       const flota = k.flotaTotal
       const dc = dp >= 80 ? '#16a34a' : dp >= 65 ? '#e8a020' : '#dc2626'
       chart.setOption({
-        animation: false,
         title: {
           text: dp + '%',
           subtext: 'DISPONIBILIDAD\n' + opTot + ' de ' + flota + ' equipos',
@@ -2707,7 +2759,6 @@ function renderAllCharts() {
       const dataMap: Record<string, { op: number; alq: number; parc: number; no: number }> = {}
       rows.forEach(r => { dataMap[r.tipo] = { op: r.opProp, alq: r.opAlq || 0, parc: r.parcial || 0, no: r.noOp } })
       chart.setOption({
-        animation: false,
         grid: { top: 2, bottom: 2, left: 145, right: 40 },
         yAxis: { type: 'category', data: keys, axisLine: { show: false }, axisTick: { show: false },
           axisLabel: { margin: 4, textStyle: { color: CP, fontWeight: 'bold', fontSize: 10 } } },
@@ -2786,7 +2837,6 @@ function renderAllCharts() {
       sedes.forEach(s => { const d = sedeMap.get(s)!; maxSede = Math.max(maxSede, d.op + d.alq + d.no + d.parc) })
       const yMax = Math.max(10, Math.ceil(maxSede / 10) * 10)
       chart.setOption({
-        animation: false,
         legend: { top: 0, right: 0, textStyle: { fontSize: 9 } },
         grid: { top: 30, bottom: 30, left: 40, right: 20 },
         xAxis: { type: 'category', data: sedes, axisLabel: { fontSize: 11, color: CP, fontWeight: 'bold' } },
@@ -2866,7 +2916,6 @@ function renderAllCharts() {
           }
         })
         chart.setOption({
-          animation: false,
           color: seriesTend.map(s => (s.itemStyle as any).color),
           legend: { top: 4, right: 10, icon: 'circle', itemWidth: 10, itemHeight: 10, itemGap: 16,
             textStyle: { fontSize: 11, color: CP, fontWeight: 'bold' } },
@@ -2895,7 +2944,6 @@ function renderAllCharts() {
         const fechas = trend.points.map(p => p.dateLabel)
         const pcts = trend.points.map(p => p.pct)
         chart.setOption({
-          animation: false,
           color: ['#3B82F6'],
           tooltip: {
             trigger: 'axis',
@@ -2940,7 +2988,6 @@ function renderAllCharts() {
       if (!chart) return
       const dc = pct >= 80 ? '#16a34a' : pct >= 50 ? '#e8a020' : '#dc2626'
       chart.setOption({
-        animation: false,
         title: { text: pct + '%', subtext: 'CUMPLIMIENTO', x: 'center', y: 'center',
           textStyle: { fontSize: 18, fontWeight: '900', color: dc, fontFamily: 'Arial' },
           subtextStyle: { fontSize: 6.5, color: '#666', fontWeight: 'bold', fontFamily: 'Arial' } },
@@ -3305,6 +3352,20 @@ const dispEquipoList = computed<EquipoDisp[]>(() => {
   return equipos
 })
 
+/** Toggle "Disponibilidad Operativa por Equipo": mejores primero, o menos eficientes primero
+ *  (mismo dato de dispEquipoList, invierte el orden — reemplaza la antigua gráfica separada
+ *  "Incidencia de Mantenimiento por Equipo", que mostraba lo mismo del lado contrario). */
+const equipoRankMode = ref<'mejor' | 'noEficiente'>('mejor')
+const dispEquipoListOrdered = computed<EquipoDisp[]>(() => {
+  const list = dispEquipoList.value
+  if (equipoRankMode.value === 'mejor') return list
+  return [...list].sort((a, b) =>
+    a.dispPctRaw - b.dispPctRaw ||
+    a.diasOp - b.diasOp ||
+    a.placa.localeCompare(b.placa, 'es'),
+  )
+})
+
 function buildDispEquipoOption(equipos: EquipoDisp[], limit?: number) {
   const list = limit ? equipos.slice(0, limit) : equipos
   const records = activePlacasRows.value
@@ -3320,7 +3381,7 @@ function buildDispEquipoOption(equipos: EquipoDisp[], limit?: number) {
   const totalDiasMant = Math.max(0, diasTotalesPosibles - totalDiasOp)
   const avgDiasOp = cantidadVehiculos > 0 ? +(totalDiasOp / cantidadVehiculos).toFixed(1) : 0
   const avgDiasMant = cantidadVehiculos > 0 ? +(totalDiasMant / cantidadVehiculos).toFixed(1) : 0
-  const semColor = (pct: number) => pct >= 85 ? '#10b981' : pct >= 60 ? '#f59e0b' : '#ef4444'
+  const avgDispPct = equipos.length > 0 ? Math.round(equipos.reduce((s, e) => s + e.dispPct, 0) / equipos.length) : 0
   return markRaw({
     tooltip: {
       trigger: 'axis',
@@ -3328,8 +3389,8 @@ function buildDispEquipoOption(equipos: EquipoDisp[], limit?: number) {
       formatter: (params: any[]) => {
         const p = params[0]
         const eq = p.data
-        const color = semColor(p.value)
-        return `<div style="font-size:12px"><strong>${p.name}</strong> ${eq?.tipo ? `<span style="color:#888">(${eq.tipo})</span>` : ''}<hr style="margin:4px 0;border:none;border-top:1px solid #e5e7eb"/><div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color}"></span><strong>${p.value}%</strong> Disponibilidad</div><div style="margin-top:4px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981"></span>Op.: <strong>${eq?.diasOp}</strong> d</div><div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444"></span>No Op.: <strong>${eq?.diasNoOp}</strong> d</div><hr style="margin:4px 0;border:none;border-top:1px solid #e5e7eb"/><div style="color:#6b7280;font-size:11px">Prom. Op. <strong>${avgDiasOp}</strong> d · Prom. Mant. <strong>${avgDiasMant}</strong> d</div></div>`
+        const color = semColorPct(p.value)
+        return `<div style="font-size:12px"><strong>${p.name}</strong> ${eq?.tipo ? `<span style="color:#888">(${eq.tipo})</span>` : ''}<hr style="margin:4px 0;border:none;border-top:1px solid #e5e7eb"/><div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color}"></span><strong>${p.value}%</strong> Disponibilidad</div><div style="margin-top:4px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981"></span>Días disponible (rango filtrado): <strong>${eq?.diasOp}</strong> d</div><div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444"></span>Días no disponible: <strong>${eq?.diasNoOp}</strong> d</div><hr style="margin:4px 0;border:none;border-top:1px solid #e5e7eb"/><div style="color:#6b7280;font-size:11px">Promedio de disponibilidad de la flota: <strong>${avgDispPct}%</strong> · Prom. Op. <strong>${avgDiasOp}</strong> d · Prom. Mant. <strong>${avgDiasMant}</strong> d</div></div>`
       },
     },
     grid: { left: '3%', right: '20%', bottom: 24, top: 30, containLabel: true },
@@ -3351,37 +3412,20 @@ function buildDispEquipoOption(equipos: EquipoDisp[], limit?: number) {
     series: [{
       name: 'Disponibilidad',
       type: 'bar',
-      barMaxWidth: 34,
-      barMinHeight: 4,
-      barCategoryGap: '32%',
-      showBackground: true,
-      backgroundStyle: {
-        color: isDark.value ? 'rgba(255,255,255,0.05)' : 'rgba(15,23,42,0.05)',
-        borderRadius: [0, 4, 4, 0],
-      },
-      data: list.map(e => {
-        const c = e.dispPct >= 85 ? '#10b981' : e.dispPct >= 60 ? '#f59e0b' : '#ef4444'
-        return {
-          value: e.dispPct,
-          diasOp: e.diasOp,
-          diasNoOp: e.diasNoOp,
-          tipo: e.tipo,
-          itemStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-              { offset: 0, color: c + 'cc' },
-              { offset: 1, color: c },
-            ]),
-            borderRadius: [0, 4, 4, 0],
-            shadowBlur: 6,
-            shadowColor: c + '55',
-            shadowOffsetY: 1,
-          },
-        }
-      }),
-      emphasis: { focus: 'series' as const, itemStyle: { shadowBlur: 14, shadowColor: 'rgba(0,0,0,0.25)' } },
+      barWidth: '65%',
+      data: list.map(e => ({
+        value: e.dispPct,
+        diasOp: e.diasOp,
+        diasNoOp: e.diasNoOp,
+        tipo: e.tipo,
+        itemStyle: { color: semColorPct(e.dispPct), borderRadius: [0, 4, 4, 0] as [number, number, number, number] },
+      })),
       label: {
-        ...pillLabelBase.value,
-        position: 'right' as const, distance: 6,
+        show: true,
+        position: 'right' as const,
+        fontWeight: 600 as const,
+        fontSize: 11,
+        color: textColor.value,
         formatter: (p: any) => `${p.value}%  ·  ${p.data.diasOp} d`,
       },
       labelLayout: { hideOverlap: true },
@@ -3389,116 +3433,99 @@ function buildDispEquipoOption(equipos: EquipoDisp[], limit?: number) {
   })
 }
 
-const dispEquipoOpt = computed(() => buildDispEquipoOption(dispEquipoList.value, 12))
-const dispEquipoFullOpt = computed(() => buildDispEquipoOption(dispEquipoList.value))
+const dispEquipoOpt = computed(() => buildDispEquipoOption(dispEquipoListOrdered.value, 12))
+const dispEquipoFullOpt = computed(() => buildDispEquipoOption(dispEquipoListOrdered.value))
 
-type EquipoMant = { placa: string; mantPct: number; diasMant: number; diasOp: number; tipo: string }
+/* Nota: la antigua gráfica "Incidencia de Mantenimiento por Equipo" (con su propio
+ * EquipoMant/incidenciaMantenimientoList/buildIncidenciaOption) se retiró: mostraba el
+ * mismo dato (mismos días op/no-op por placa) solo que invertido — ahora ese caso lo
+ * cubre el toggle "Menos Eficientes" de arriba sobre la misma gráfica. */
 
-const incidenciaMantenimientoList = computed<EquipoMant[]>(() => {
-  const records = activePlacasRows.value
-  const equiposMap = new Map<string, { placa: string; diasMant: number; diasOp: number; count: number; tipo: string }>()
+/** Detalle día a día al hacer clic en una placa de "Disponibilidad Operativa por Equipo"
+ *  (mismo estilo que el detalle de Órdenes de Trabajo: todas las inspecciones de esa
+ *  placa dentro del rango de fechas filtrado). */
+const showEquipoDetail = ref(false)
+const equipoDetailPlaca = ref<string | null>(null)
 
-  for (const r of records) {
+function onEquipoClick(params: any) {
+  const p = Array.isArray(params) ? params[0] : params
+  const placa = p?.name ?? p?.data?.placa
+  if (!placa) return
+  equipoDetailPlaca.value = placa
+  showEquipoDetail.value = true
+}
+function closeEquipoDetail() { showEquipoDetail.value = false }
+
+interface EquipoDiaDetail { fecha: string; fechaLabel: string; estado: 'Disponible' | 'Parcial' | 'No Disponible' | 'Sin Inspección'; pct: number; loc: string }
+
+/** Un día del rango puede no tener inspección registrada — se lista igual, marcado
+ *  "Sin Inspección", para no confundirlo con un "No Disponible" real (no inventar). */
+const equipoDetailRows = computed<EquipoDiaDetail[]>(() => {
+  if (!equipoDetailPlaca.value) return []
+  const placa = equipoDetailPlaca.value
+
+  // Inspecciones de esta placa por día (puede haber más de una por día, ej. AM/PM:
+  // se promedia el score de ese día).
+  const byDay = new Map<string, { scoreSum: number; count: number; loc: string }>()
+  for (const r of activePlacasRows.value) {
+    const info = getInspectionDetails(r)
+    if (info.placa !== placa) continue
     const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
     if (!d) continue
-    const info = getInspectionDetails(r)
-    if (!info.placa) continue
-    const existing = equiposMap.get(info.placa) ?? {
-      placa: info.placa,
-      diasMant: 0,
-      diasOp: 0,
-      count: 0,
-      tipo: info.baseTipo + (info.esAlquilado ? ' [Alq]' : ''),
-    }
-    if (info.isNoOp || info.esEnTaller) existing.diasMant++
-    else existing.diasOp++
-    existing.count++
-    equiposMap.set(info.placa, existing)
+    const key = getDateKey(d)
+    const cur = byDay.get(key) ?? { scoreSum: 0, count: 0, loc: info.loc }
+    cur.scoreSum += info.score
+    cur.count++
+    byDay.set(key, cur)
   }
 
-  const equipos: EquipoMant[] = [...equiposMap.values()].map(e => ({
-    placa: e.placa,
-    mantPct: e.count > 0 ? Math.round((e.diasMant / e.count) * 100) : 0,
-    diasMant: e.diasMant,
-    diasOp: e.diasOp,
-    tipo: e.tipo,
-  }))
+  // Rango a listar: el filtro de fecha activo; si no hay filtro, el rango real de
+  // fechas con datos de esta placa.
+  let desde = props.fechaInicio || ''
+  let hasta = props.fechaFin || ''
+  if (!desde || !hasta) {
+    const keys = [...byDay.keys()].sort()
+    if (!keys.length) return []
+    if (!desde) desde = keys[0]
+    if (!hasta) hasta = keys[keys.length - 1]
+  }
+  const start = parseSerialDate(desde)
+  const end = parseSerialDate(hasta)
+  if (!start || !end) return []
 
-  equipos.sort((a, b) => b.mantPct - a.mantPct || b.diasMant - a.diasMant)
-  return equipos
+  const rows: EquipoDiaDetail[] = []
+  for (let t = start.getTime(); t <= end.getTime(); t += 86400000) {
+    const d = new Date(t)
+    const key = getDateKey(d)
+    const fechaLabel = d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+    const day = byDay.get(key)
+    if (!day) {
+      rows.push({ fecha: key, fechaLabel, estado: 'Sin Inspección', pct: 0, loc: '—' })
+      continue
+    }
+    const avgScore = day.count > 0 ? day.scoreSum / day.count : 0
+    rows.push({
+      fecha: key,
+      fechaLabel,
+      estado: avgScore < 0.1 ? 'No Disponible' : avgScore < 0.9 ? 'Parcial' : 'Disponible',
+      pct: Math.round(avgScore * 100),
+      loc: day.loc,
+    })
+  }
+  return rows
 })
 
-function buildIncidenciaOption(equipos: EquipoMant[], limit?: number) {
-  const list = limit ? equipos.slice(0, limit) : equipos
-  const records = activePlacasRows.value
-  const diasEnPeriodo = new Set<string>()
-  for (const r of records) {
-    const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
-    if (d) diasEnPeriodo.add(getDateKey(d))
+const equipoDetailResumen = computed(() => {
+  const rows = equipoDetailRows.value
+  let disponible = 0, parcial = 0, noDisponible = 0, sinInspeccion = 0
+  for (const r of rows) {
+    if (r.estado === 'Disponible') disponible++
+    else if (r.estado === 'Parcial') parcial++
+    else if (r.estado === 'No Disponible') noDisponible++
+    else sinInspeccion++
   }
-  const diasDelMes = diasEnPeriodo.size || 1
-  const cantidadVehiculos = equipos.length || 1
-  const diasTotalesPosibles = cantidadVehiculos * diasDelMes
-  const totalDiasOp = equipos.reduce((s, e) => s + e.diasOp, 0)
-  const totalDiasMant = Math.max(0, diasTotalesPosibles - totalDiasOp)
-  const avgDiasOp = cantidadVehiculos > 0 ? +(totalDiasOp / cantidadVehiculos).toFixed(1) : 0
-  const avgDiasMant = cantidadVehiculos > 0 ? +(totalDiasMant / cantidadVehiculos).toFixed(1) : 0
-  const semColor = (pct: number) => pct <= 15 ? '#10b981' : pct <= 40 ? '#f59e0b' : '#ef4444'
-  return markRaw({
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      formatter: (params: any[]) => {
-        const p = params[0]
-        const eq = p.data
-        const color = semColor(p.value)
-        return `<div style="font-size:12px"><strong>${p.name}</strong> ${eq?.tipo ? `<span style="color:#888">(${eq.tipo})</span>` : ''}<hr style="margin:4px 0;border:none;border-top:1px solid #e5e7eb"/><div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color}"></span><strong>${p.value}%</strong> Incidencia Mant.</div><div style="margin-top:4px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981"></span>Op.: <strong>${eq?.diasOp}</strong> d</div><div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444"></span>No Op.: <strong>${eq?.diasMant}</strong> d</div><hr style="margin:4px 0;border:none;border-top:1px solid #e5e7eb"/><div style="color:#6b7280;font-size:11px">Prom. Op. <strong>${avgDiasOp}</strong> d · Prom. Mant. <strong>${avgDiasMant}</strong> d</div></div>`
-      },
-    },
-    grid: { left: '3%', right: '20%', bottom: 24, top: 30, containLabel: true },
-    xAxis: {
-      type: 'value', min: 0, max: 100,
-      axisLabel: { formatter: '{value}%', color: textColor.value, fontSize: 10 },
-      axisLine: { show: false },
-      axisTick: { show: false },
-      splitLine: { lineStyle: { color: splitLineColor.value, type: 'dashed' as const } },
-    },
-    yAxis: {
-      type: 'category',
-      inverse: true,
-      data: list.map(e => e.placa),
-      axisTick: { show: false },
-      axisLine: { show: false },
-      axisLabel: { color: titleColor.value, fontSize: 11, fontWeight: 'bold', width: 96, overflow: 'truncate' },
-    },
-    series: [{
-      name: 'Incidencia Mantenimiento',
-      type: 'bar',
-      barMaxWidth: 30,
-      barCategoryGap: '28%',
-      data: list.map(e => ({
-        value: e.mantPct,
-        diasMant: e.diasMant,
-        diasOp: e.diasOp,
-        tipo: e.tipo,
-        itemStyle: {
-          color: e.mantPct >= 50 ? '#ef4444' : e.mantPct >= 25 ? '#f59e0b' : '#10b981',
-          borderRadius: [0, 4, 4, 0],
-        },
-      })),
-      emphasis: { focus: 'series' as const, itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } },
-      label: {
-        ...pillLabelBase.value,
-        position: 'right' as const, distance: 6,
-        formatter: (p: any) => `${p.value}%  ·  ${p.data.diasMant} d`,
-      },
-      labelLayout: { hideOverlap: true },
-    }],
-  })
-}
-
-const incidenciaMantenimientoOpt = computed(() => buildIncidenciaOption(incidenciaMantenimientoList.value, 12))
-const incidenciaMantenimientoFullOpt = computed(() => buildIncidenciaOption(incidenciaMantenimientoList.value))
+  return { total: rows.length, disponible, parcial, noDisponible, sinInspeccion }
+})
 
 // ===================================================================
 // GRÁFICAS ADICIONALES DE DISPONIBILIDAD (vista Gráficas)
@@ -3549,6 +3576,8 @@ const dispRowsBase = computed<DispRowBase[]>(() => {
 })
 
 const CLASIF_COLORS = ['#2563eb', '#8b5cf6', '#0ea5e9', '#f59e0b', '#64748b']
+/** Semáforo por % de disponibilidad — a diferencia de las gráficas de ranking de OT,
+ *  acá el color sí importa (bueno/malo), no solo diferencia cada barra. */
 const semColorPct = (p: number) => (p >= 85 ? '#16a34a' : p >= 75 ? '#d99a2b' : '#ef4444')
 
 /** A. Tendencia diaria de disponibilidad global. */
@@ -3698,20 +3727,114 @@ const dispPorClasifOpt = computed(() => {
     },
     series: [{
       type: 'bar',
-      barMaxWidth: 34,
-      barCategoryGap: '40%',
+      barWidth: '65%',
       data: filas.map(f => ({
         value: f.prom,
         nEq: f.nEquipos,
-        itemStyle: { color: semColorPct(f.prom ?? 0), borderRadius: [0, 4, 4, 0] },
+        idx: f.idx,
+        itemStyle: { color: semColorPct(f.prom ?? 0), borderRadius: [0, 4, 4, 0] as [number, number, number, number] },
       })),
-      emphasis: { focus: 'series' as const, itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } },
       label: {
-        ...pillLabelBase.value,
+        show: true,
         position: 'right' as const,
-        distance: 6,
-        formatter: (p: any) => `${p.value}%  ·  ${p.data.nEq} eq`,
+        fontWeight: 600 as const,
+        fontSize: 11,
         color: titleColor.value,
+        formatter: (p: any) => `${p.value}%  ·  ${p.data.nEq} eq`,
+      },
+    }],
+  })
+})
+
+/** Detalle por placa al hacer clic en una barra de "Disponibilidad Promedio por Clasificación". */
+const showClasifDetail = ref(false)
+const clasifDetailIdx = ref<number | null>(null)
+const clasifDetailFamiliaLabel = computed(() =>
+  clasifDetailIdx.value != null ? (CLASIF_DISPONIBILIDAD.value[clasifDetailIdx.value]?.label ?? '') : ''
+)
+
+function onClasifClick(params: any) {
+  const p = Array.isArray(params) ? params[0] : params
+  const idx = p?.data?.idx
+  if (idx == null) return
+  clasifDetailIdx.value = idx
+  showClasifDetail.value = true
+}
+function closeClasifDetail() { showClasifDetail.value = false }
+
+interface ClasifPlacaDetail { placa: string; tipo: string; diasOp: number; diasParcial: number; diasNoOp: number; pct: number }
+
+/** Días disponible/parcial/no disponible por placa de la familia clickeada, en el rango
+ *  de fechas filtrado (mismo criterio que dispRowsBase: flota propia, maquinaria móvil). */
+const clasifDetailRows = computed<ClasifPlacaDetail[]>(() => {
+  if (clasifDetailIdx.value == null) return []
+  const idx = clasifDetailIdx.value
+  const map = new Map<string, { placa: string; tipo: string; diasOp: number; diasParcial: number; diasNoOp: number }>()
+  for (const r of dispRowsBase.value) {
+    if (r.clasif !== idx) continue
+    const cur = map.get(r.placa) ?? { placa: r.placa, tipo: r.tipo, diasOp: 0, diasParcial: 0, diasNoOp: 0 }
+    if (r.isNoOp) cur.diasNoOp++
+    else if (r.isParcial) cur.diasParcial++
+    else cur.diasOp++
+    map.set(r.placa, cur)
+  }
+  return [...map.values()]
+    .map(e => {
+      const total = e.diasOp + e.diasParcial + e.diasNoOp
+      const pct = total > 0 ? Math.round(((e.diasOp + e.diasParcial * 0.5) / total) * 100) : 0
+      return { ...e, pct }
+    })
+    .sort((a, b) => b.pct - a.pct || a.placa.localeCompare(b.placa, 'es'))
+})
+
+/** Gráfica de barras horizontales del detalle por placa (clic en una familia de
+ *  "Disponibilidad Promedio por Clasificación") — mismo estilo que dispPorClasifOpt. */
+const clasifDetailOpt = computed(() => {
+  const rows = clasifDetailRows.value
+  return markRaw({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: (params: any[]) => {
+        const p = params[0]
+        const r = p.data
+        return `<strong>${p.name}</strong> <span style="color:#888">(${r?.tipo ?? ''})</span><br/>${p.value}% disponibilidad<br/><span style="color:#888">${r?.diasOp} d disponible · ${r?.diasParcial} d parcial · ${r?.diasNoOp} d no disponible</span>`
+      },
+    },
+    grid: { left: '3%', right: '18%', bottom: 24, top: 12, containLabel: true },
+    xAxis: {
+      type: 'value', min: 0, max: 100,
+      axisLabel: { formatter: '{value}%', color: textColor.value, fontSize: 10 },
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { lineStyle: { color: splitLineColor.value, type: 'dashed' as const } },
+    },
+    yAxis: {
+      type: 'category',
+      inverse: true,
+      data: rows.map(r => r.placa),
+      axisTick: { show: false },
+      axisLine: { show: false },
+      axisLabel: { color: titleColor.value, fontSize: 11, fontWeight: 'bold' },
+    },
+    series: [{
+      type: 'bar',
+      barWidth: '65%',
+      data: rows.map(r => ({
+        value: r.pct,
+        tipo: r.tipo,
+        diasOp: r.diasOp,
+        diasParcial: r.diasParcial,
+        diasNoOp: r.diasNoOp,
+        itemStyle: { color: semColorPct(r.pct), borderRadius: [0, 4, 4, 0] as [number, number, number, number] },
+      })),
+      label: {
+        show: true,
+        position: 'right' as const,
+        fontWeight: 600 as const,
+        fontSize: 11,
+        color: titleColor.value,
+        formatter: (p: any) => `${p.value}%  ·  ${p.data.tipo}`,
       },
     }],
   })
@@ -3777,87 +3900,6 @@ const dispEvolucionClasifOpt = computed(() => {
   })
 })
 
-/** E-alt. Días-equipo fuera de servicio por clasificación (cuando hay un solo mes). */
-const dispDiasFueraClasifOpt = computed(() => {
-  const acc = CLASIF_DISPONIBILIDAD.value.map(c => ({ label: c.label, dias: 0 }))
-  for (const r of dispRowsBase.value) {
-    if (r.isNoOp) acc[r.clasif].dias += 1
-    else if (r.isParcial) acc[r.clasif].dias += 0.5
-  }
-  const filas = acc.filter(a => a.dias > 0).sort((a, b) => a.dias - b.dias)
-  return markRaw({
-    textStyle: { fontFamily: 'Lato, sans-serif' },
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      valueFormatter: (v: number) => `${v} días-equipo`,
-    },
-    grid: { left: 40, right: 40, bottom: 20, top: 12, containLabel: true },
-    xAxis: {
-      type: 'value',
-      axisLabel: { color: textColor.value, fontSize: 10 },
-      axisLine: { show: false },
-      axisTick: { show: false },
-      splitLine: { lineStyle: { color: splitLineColor.value, type: 'dashed' as const } },
-    },
-    yAxis: {
-      type: 'category',
-      data: filas.map(f => f.label),
-      axisTick: { show: false },
-      axisLine: { show: false },
-      axisLabel: { color: titleColor.value, fontSize: 11, fontWeight: 'bold' },
-    },
-    series: [{
-      type: 'bar',
-      barMaxWidth: 34,
-      barCategoryGap: '40%',
-      data: filas.map(f => f.dias),
-      itemStyle: { color: '#ef4444', borderRadius: [0, 4, 4, 0] },
-      emphasis: { focus: 'series' as const, itemStyle: { shadowBlur: 10, shadowColor: 'rgba(239,68,68,0.35)' } },
-      label: { ...pillLabelBase.value, position: 'right' as const, distance: 6, formatter: '{c} d' },
-    }],
-  })
-})
-
-/** D. Composición de la flota por estado (dona). */
-const dispEstadoDonutOpt = computed(() => {
-  let op = 0
-  let par = 0
-  let no = 0
-  for (const r of dispRowsBase.value) {
-    if (r.isOp) op++
-    else if (r.isParcial) par++
-    else no++
-  }
-  const total = op + par + no || 1
-  return markRaw({
-    tooltip: {
-      trigger: 'item',
-      formatter: (p: any) => `${p.name}<br/><strong>${p.value}</strong> días-equipo (${Math.round((p.value / total) * 100)}%)`,
-    },
-    legend: {
-      bottom: 0,
-      icon: 'circle',
-      itemWidth: 10,
-      itemHeight: 10,
-      textStyle: { color: textColor.value, fontSize: 11, fontWeight: 600 as const },
-    },
-    series: [{
-      type: 'pie',
-      radius: ['45%', '72%'],
-      center: ['50%', '46%'],
-      avoidLabelOverlap: true,
-      itemStyle: { borderColor: isDark.value ? '#0f172a' : '#fff', borderWidth: 2 },
-      emphasis: { scale: true, scaleSize: 6 },
-      label: { ...pillLabelBase.value, formatter: '{d}%' },
-      data: [
-        { name: 'Operativo pleno', value: op, itemStyle: { color: '#16a34a' } },
-        { name: 'Parcial', value: par, itemStyle: { color: '#d99a2b' } },
-        { name: 'Fuera de servicio', value: no, itemStyle: { color: '#ef4444' } },
-      ],
-    }],
-  })
-})
 </script>
 
 <style scoped>
@@ -4090,6 +4132,7 @@ const dispEstadoDonutOpt = computed(() => {
 .red { color: #dc2626; }
 .green { color: #16a34a; }
 .yellow { color: #b8860b; }
+.muted { color: var(--text-secondary, #94a3b8); }
 
 .table-total-row td {
   background: #f1f5f9 !important;
@@ -4948,6 +4991,26 @@ ul.res li::before {
 .pct-high { color: #16a34a; font-weight: 700; }
 .pct-mid  { color: #b8860b; font-weight: 700; }
 .pct-low  { color: #a90707; font-weight: 700; }
+
+/* Modal de detalle por placa al hacer clic en "Disponibilidad Promedio por Clasificación" */
+.disp-detail-overlay { position: fixed; inset: 0; z-index: 9998; background: rgba(15,23,42,.45); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.disp-detail-panel { background: var(--card-bg, #fff); border-radius: 16px; width: 95vw; max-width: 720px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+/* Transición de entrada/salida de los modales de detalle — rebote leve al entrar */
+.modal-pop-enter-active, .modal-pop-leave-active { transition: opacity 0.2s ease; }
+.modal-pop-enter-from, .modal-pop-leave-to { opacity: 0; }
+.modal-pop-enter-active .disp-detail-panel { transition: transform 0.32s cubic-bezier(.34,1.56,.64,1); }
+.modal-pop-leave-active .disp-detail-panel { transition: transform 0.18s ease; }
+.modal-pop-enter-from .disp-detail-panel, .modal-pop-leave-to .disp-detail-panel { transform: scale(0.92) translateY(8px); }
+.disp-detail-top { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--card-border, #e2e8f0); }
+.disp-detail-title { font-size: 16px; font-weight: 700; margin: 0; color: var(--text-primary, #1f2937); }
+.disp-detail-sub { font-size: 12px; color: var(--text-secondary, #6b7280); margin: 2px 0 0; }
+.disp-detail-close { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #d1d5db; background: #fff; cursor: pointer; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.disp-detail-close:hover { background: #ef4444; border-color: #ef4444; color: #fff; }
+.disp-detail-table-wrap { overflow: auto; flex: 1; padding: 12px; }
+.disp-detail-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.disp-detail-table th { position: sticky; top: 0; background: var(--bg-alt, #f8fafc); font-weight: 600; text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--card-border, #e5e7eb); white-space: nowrap; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
+.disp-detail-table td { padding: 7px 10px; border-bottom: 1px solid var(--card-border, #f1f5f9); }
+.disp-detail-table th.r, .disp-detail-table td.r { text-align: right; }
 
 /* Responsive — informe/tareas usables en tablet / teléfono */
 @media (max-width: 1200px) {

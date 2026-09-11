@@ -4,6 +4,7 @@
       <div class="chart-header-text">
         <h3 v-if="title" class="chart-title">{{ title }}</h3>
         <p v-if="description" class="chart-desc">{{ description }}</p>
+        <div v-if="$slots.toolbar" class="chart-toolbar"><slot name="toolbar" /></div>
       </div>
       <div class="chart-actions" v-if="hasData && !hideActions">
         <button class="action-btn" title="Expandir" @click="openExpanded">
@@ -241,6 +242,9 @@ onBeforeUnmount(() => {
   color: var(--text-secondary);
   margin: 4px 0 0;
   line-height: 1.4;
+}
+.chart-toolbar {
+  margin: 8px 0 0;
 }
 .chart-actions {
   display: flex;
