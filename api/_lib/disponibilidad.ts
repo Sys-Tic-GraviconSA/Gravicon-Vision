@@ -23,14 +23,18 @@ export async function loadDisponibilidadData(planta: string, forceRefresh = fals
       const proveedoresPromise = SPREADSHEETS[maestroKey]
         ? getSheetData(maestroKey, 'PROVEEDORES_OT', forceRefresh).catch(() => ({ rows: [] as Record<string, unknown>[] }))
         : Promise.resolve({ rows: [] as Record<string, unknown>[] })
+      const solicitantesPromise = SPREADSHEETS[maestroKey]
+        ? getSheetData(maestroKey, 'SOLICITANTES_OT', forceRefresh).catch(() => ({ rows: [] as Record<string, unknown>[] }))
+        : Promise.resolve({ rows: [] as Record<string, unknown>[] })
 
-      const [placasSheet, tareasSheet, resumenSheet, plantasMaq, personalSheet, proveedoresSheet] = await Promise.all([
+      const [placasSheet, tareasSheet, resumenSheet, plantasMaq, personalSheet, proveedoresSheet, solicitantesSheet] = await Promise.all([
         getSheetData(key, 'Reporte Placa Disponibilidad', forceRefresh).catch(() => ({ rows: [] as Record<string, unknown>[] })),
         getSheetData(key, 'Tareas Seguimiento', forceRefresh).catch(() => ({ rows: [] as Record<string, unknown>[] })),
         getSheetData(key, 'Resumen Diario Disponibilidad', forceRefresh).catch(() => ({ rows: [] as Record<string, unknown>[] })),
         plantasMaqPromise,
         personalPromise,
         proveedoresPromise,
+        solicitantesPromise,
       ])
 
       // Maestro de proveedores: Id_Registro → Nombre_Proveedor (misma hoja que usan las OT)
@@ -41,6 +45,18 @@ export async function loadDisponibilidadData(planta: string, forceRefresh = fals
         if (id && nombre) {
           proveedoresMap.set(id, nombre)
           proveedoresMap.set(id.toUpperCase(), nombre)
+        }
+      }
+
+      // Maestro de solicitantes (SOL-xxx): usado para resolver "Supervisor" de Reporte Placa
+      // Disponibilidad, que referencia esta misma hoja (no GRAVICON_INTERNO_OT).
+      const solicitantesMap = new Map<string, string>()
+      for (const r of solicitantesSheet.rows) {
+        const id = String(r['Id_Registro'] ?? '').trim()
+        const nombre = String(r['NOMBRE'] ?? '').trim()
+        if (id && nombre) {
+          solicitantesMap.set(id, nombre)
+          solicitantesMap.set(id.toUpperCase(), nombre)
         }
       }
 
@@ -55,15 +71,14 @@ export async function loadDisponibilidadData(planta: string, forceRefresh = fals
       tareas = tareasSheet.rows
       resumen = resumenSheet.rows
 
-      // 2b. Enriquecer tareas: resolver Placa ID → Placa_Texto usando maestroMap
+      // 2b. Enriquecer tareas: resolver Placa ID → nombre de placa usando maestroMap
+      // (no se lee Placa_Texto de la hoja, no es confiable en todas las plantas).
       for (const t of tareas) {
         const idRef = String(t['Placa'] ?? t['PLACA'] ?? '').trim()
-        const placaTexto = String(t['Placa_Texto'] ?? '').trim()
-        const maestro = maestroMap.get(idRef) || maestroMap.get(placaTexto) || maestroMap.get(idRef.toUpperCase()) || maestroMap.get(placaTexto.toUpperCase()) || {}
-        const resolvedPlaca = placaTexto || String(maestro['PLACA'] ?? maestro['Placa_Texto'] ?? '')
-        if (resolvedPlaca) {
-          t['Placa_Texto'] = resolvedPlaca
-        }
+        if (!idRef) continue
+        const maestro = maestroMap.get(idRef) || maestroMap.get(idRef.toUpperCase())
+        const resolvedPlaca = String(maestro?.['PLACA'] ?? '').trim() || idRef
+        t['Placa_Texto'] = resolvedPlaca
       }
 
       // 2c. Resolver IDs de Responsable → nombre via GRAVICON_INTERNO_OT (solo Cuncía, ya cargado en paralelo)
@@ -86,8 +101,7 @@ export async function loadDisponibilidadData(planta: string, forceRefresh = fals
       // 3. Normalizar y enriquecer las filas de Reporte Placa Disponibilidad
       placas = placasSheet.rows.map(r => {
         const idRef = String(r['Placa'] ?? '').trim()
-        const placaTexto = String(r['Placa_Texto'] ?? '').trim()
-        const maestro = maestroMap.get(idRef) || maestroMap.get(placaTexto) || maestroMap.get(idRef.toUpperCase()) || maestroMap.get(placaTexto.toUpperCase()) || {}
+        const maestro = maestroMap.get(idRef) || maestroMap.get(idRef.toUpperCase()) || {}
 
         const rawLoc = String(
           r['Localizacion'] ||
@@ -108,13 +122,16 @@ export async function loadDisponibilidadData(planta: string, forceRefresh = fals
         // Proveedor: la hoja de disponibilidad guarda el ID (ej. PROV-003). Se resuelve al
         // mismo Nombre_Proveedor que usan las OT para que el filtro de Proveedor haga match.
         const provIdRaw = String(r['Proveedor'] ?? r['Proveedor_ID'] ?? r['PROVEEDOR'] ?? '').trim()
-        const provTextoRaw = String(r['Proveedor_Texto'] ?? '').trim()
-        const provNombre = provTextoRaw
-          || proveedoresMap.get(provIdRaw)
+        const provNombre = proveedoresMap.get(provIdRaw)
           || proveedoresMap.get(provIdRaw.toUpperCase())
           || provIdRaw
 
-        const finalPlacaTexto = placaTexto || String(maestro['PLACA'] ?? idRef)
+        // Supervisor: la hoja guarda un ID de SOLICITANTES_OT (ej. SOL-002), no de
+        // GRAVICON_INTERNO_OT.
+        const supIdRaw = String(r['Supervisor'] ?? '').trim()
+        const supervisorNombre = solicitantesMap.get(supIdRaw) || solicitantesMap.get(supIdRaw.toUpperCase()) || supIdRaw || '—'
+
+        const finalPlacaTexto = String(maestro['PLACA'] ?? idRef)
         const finalTipo = String(r['Tipo de Vehiculos'] || maestro['TIPO'] || 'MAQUINARIA').trim()
         // Área de Trabajo del maestro: PLANTA | MAQUINARIA | DUAL — clasifica el activo
         const areaTrabajo = String(
@@ -127,7 +144,7 @@ export async function loadDisponibilidadData(planta: string, forceRefresh = fals
           'Tipo de Vehiculos': finalTipo,
           'Área de Trabajo': areaTrabajo,
           Localizacion: rawLoc,
-          Supervisor: r['Supervisor_Texto'] || r['Supervisor'] || '—',
+          Supervisor: supervisorNombre,
           Proveedor_ID: provIdRaw,
           Proveedor_Texto: provNombre,
         }

@@ -22,8 +22,8 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
     getSheetData(otKey, 'Cronologia', forceRefresh),
   ])
 
-  // 7 hojas opcionales en paralelo (antes eran awaits secuenciales → más lento)
-  const [plantasMaquinariaRes, personalInternoRes, solicitantesRes, proveedoresRes, sistemasRes, nombreSolicitanteRes, nombreQuienApruebaRes] = await Promise.allSettled([
+  // 9 hojas opcionales en paralelo (antes eran awaits secuenciales → más lento)
+  const [plantasMaquinariaRes, personalInternoRes, solicitantesRes, proveedoresRes, sistemasRes, nombreSolicitanteRes, nombreQuienApruebaRes, solpedProcesoRes, solpedItemsRes] = await Promise.allSettled([
     getSheetData(maestroKey, 'Plantas/Maquinaria', forceRefresh),
     getSheetData(maestroKey, 'GRAVICON_INTERNO_OT', forceRefresh),
     getSheetData(maestroKey, 'SOLICITANTES_OT', forceRefresh),
@@ -31,6 +31,8 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
     getSheetData(maestroKey, 'SISTEMAS_OT', forceRefresh),
     getSheetData(maestroKey, 'NOMBRE_SOLICITANTE', forceRefresh),
     getSheetData(maestroKey, 'NOMBRE_QUIEN_APRUEBA', forceRefresh),
+    getSheetData(maestroKey, 'SOLPED_PROCESO', forceRefresh),
+    getSheetData(maestroKey, 'SOLPED_ITEMS', forceRefresh),
   ])
 
   const plantasMaquinariaSheet = plantasMaquinariaRes.status === 'fulfilled' ? plantasMaquinariaRes.value : { rows: [] as Record<string, unknown>[] }
@@ -40,6 +42,8 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
   const sistemasSheet = sistemasRes.status === 'fulfilled' ? sistemasRes.value : { rows: [] as Record<string, unknown>[] }
   const nombreSolicitanteSheet = nombreSolicitanteRes.status === 'fulfilled' ? nombreSolicitanteRes.value : { rows: [] as Record<string, unknown>[] }
   const nombreQuienApruebaSheet = nombreQuienApruebaRes.status === 'fulfilled' ? nombreQuienApruebaRes.value : { rows: [] as Record<string, unknown>[] }
+  const solpedProcesoSheet = solpedProcesoRes.status === 'fulfilled' ? solpedProcesoRes.value : { rows: [] as Record<string, unknown>[] }
+  const solpedItemsSheet = solpedItemsRes.status === 'fulfilled' ? solpedItemsRes.value : { rows: [] as Record<string, unknown>[] }
 
   const solicitantesMap = new Map<string, string>()
   for (const r of solicitantesSheet.rows) {
@@ -69,6 +73,20 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
     if (id && nombre) nombreQuienApruebaMap.set(id, nombre)
   }
 
+  const solpedProcesoMap = new Map<string, string>()
+  for (const r of solpedProcesoSheet.rows) {
+    const id = String(r['Id_Registro'] ?? '').trim()
+    const nombre = String(r['Proceso'] ?? '').trim()
+    if (id && nombre) solpedProcesoMap.set(id, nombre)
+  }
+
+  const solpedItemsMap = new Map<string, string>()
+  for (const r of solpedItemsSheet.rows) {
+    const id = String(r['Id_Registro'] ?? '').trim()
+    const nombre = String(r['SOLPED_ITEMS'] ?? '').trim()
+    if (id && nombre) solpedItemsMap.set(id, nombre)
+  }
+
   const proveedoresMap = new Map<string, string>()
   for (const r of proveedoresSheet.rows) {
     const id = String(r['Id_Registro'] ?? '').trim()
@@ -77,7 +95,6 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
   }
 
   const personalInternoMap = new Map<string, { nombre: string; cargo: string; precio: number }>()
-  const personalInternoByName = new Map<string, { nombre: string; cargo: string; precio: number }>()
   for (const r of personalInternoSheet.rows) {
     const id = String(r['Id_Registro'] ?? '').trim()
     if (!id) continue
@@ -85,9 +102,7 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
     const cargo = String(r['CARGO'] ?? '').trim()
     const priceKey = ['Precio_Servicio', 'Precio', 'Valor', 'Tarifa', 'Costo'].find(k => r[k] !== undefined)
     const precio = priceKey ? (Number(r[priceKey]) || 0) : 0
-    const info = { nombre, cargo, precio }
-    personalInternoMap.set(id, info)
-    if (nombre) personalInternoByName.set(nombre.toLowerCase(), info)
+    personalInternoMap.set(id, { nombre, cargo, precio })
   }
 
   const placaMap = new Map<string, string>()
@@ -108,9 +123,13 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
     const id = String(r['ID_OT'] ?? '')
     if (!id) continue
     if (!subMap.has(id)) subMap.set(id, [])
+    // En la hoja de Cuncía la columna de ID real de esta tabla está mal rotulada como
+    // "Columna 5" en vez de "Sistema_a_intervenir" — se lee de ahí si la columna con el
+    // nombre correcto no trae nada.
+    const sistemaId = String(r['Sistema_a_intervenir'] ?? r['Columna 5'] ?? '').trim()
     subMap.get(id)!.push({
-      sistema: String(r['Sistema_a_intervenir'] ?? '').trim(),
-      sistemaTexto: sistemasMap.get(String(r['Sistema_a_intervenir'] ?? '').trim()) || String(r['Sistema_a_intervenir'] ?? '').trim(),
+      sistema: sistemaId,
+      sistemaTexto: sistemasMap.get(sistemaId) ?? '',
       descripcion: String(r['Descripción_Trabajo'] ?? '').trim(),
     })
   }
@@ -125,7 +144,7 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
       cantidad: Number(r['CANTIDAD']) || 0,
       referencia: String(r['REFERENCIA'] ?? '').trim(),
       descripcion: String(r['DESCRIPCIÓN'] ?? '').trim(),
-      descripcionTexto: String(r['DESCRIPCIÓN_Texto'] ?? '').trim(),
+      descripcionTexto: solpedItemsMap.get(String(r['DESCRIPCIÓN'] ?? '').trim()) ?? '',
       und: String(r['UNID DE MEDIDA'] ?? '').trim(),
       observacion: String(r['OBSERVACIÓN'] ?? '').trim(),
       motivoNoSalida: String(r['Motivo_de_No_Salida'] ?? '').trim(),
@@ -152,7 +171,7 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
       hora: typeof r['Hora_Registro'] === 'number' ? r['Hora_Registro'] : null,
       enlacePdf: String(r['Enlace_Pdf'] ?? ''),
       proceso: String(r['Proceso'] ?? ''),
-      procesoTexto: String(r['Proceso_Texto'] ?? ''),
+      procesoTexto: solpedProcesoMap.get(String(r['Proceso'] ?? '').trim()) ?? '',
       tipoCompra: String(r['Tipo de Compra'] ?? ''),
       centroCosto: String(r['CENTRO DE COSTO'] ?? ''),
       solicitante: String(r['Nombre del Solicitante'] ?? ''),
@@ -199,42 +218,19 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
     }
 
     const ids = String(ot['Personal_Intervención'] ?? '').split(',').map(s => s.trim()).filter(Boolean)
-    const names = String(ot['Personal_Intervención_Texto'] ?? '').split(',').map(s => s.trim()).filter(Boolean)
 
     const personalInvolucrado: { id: string; nombre: string; cargo: string; precio: number; costo: number }[] = []
     const costoServicios = Number(ot['Precio_Servicio']) || 0
+    const costoPorPersona = ids.length > 0 ? costoServicios / ids.length : costoServicios
 
-    const maxLength = Math.max(ids.length, names.length)
-    const costoPorPersona = maxLength > 0 ? costoServicios / maxLength : costoServicios
-
-    for (let i = 0; i < maxLength; i++) {
-      const id = ids[i] || ''
-      const nameFromOt = names[i] || ''
-      
-      let nombre = nameFromOt
-      let cargo = ''
-      let precio = 0
-
-      if (id && personalInternoMap.has(id)) {
-        const info = personalInternoMap.get(id)!
-        nombre = info.nombre || nombre
-        cargo = info.cargo
-        precio = info.precio
-      } else if (nameFromOt) {
-        const info = personalInternoByName.get(nameFromOt.toLowerCase())
-        if (info) {
-          nombre = info.nombre
-          cargo = info.cargo
-          precio = info.precio
-        }
-      }
-
+    for (const id of ids) {
+      const info = personalInternoMap.get(id)
       personalInvolucrado.push({
         id,
-        nombre,
-        cargo,
-        precio,
-        costo: costoPorPersona
+        nombre: info?.nombre ?? '',
+        cargo: info?.cargo ?? '',
+        precio: info?.precio ?? 0,
+        costo: costoPorPersona,
       })
     }
 
