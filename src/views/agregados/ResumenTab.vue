@@ -377,4 +377,8 @@ const totalLineaOpt = computed(() => {
   .kpi-row { grid-template-columns: repeat(2, 1fr); }
   .kpi-row-3 { grid-template-columns: repeat(2, 1fr); }
 }
+@media (max-width: 480px) {
+  .kpi-row { grid-template-columns: 1fr; }
+  .kpi-row-3 { grid-template-columns: 1fr; }
+}
 </style>

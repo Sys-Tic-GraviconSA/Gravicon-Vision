@@ -748,5 +748,12 @@ async function generarPdf() {
 :root[data-theme="dark"] .ck.alerta { background: rgba(220,38,38,.14); border-color: rgba(220,38,38,.4); }
 :root[data-theme="dark"] .report-header { border-bottom-color: #3b4a6b; }
 
-@media (max-width: 640px) { .report-two { grid-template-columns: 1fr; } .compact-kpi { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) {
+  .report-two { grid-template-columns: 1fr; }
+  .compact-kpi { grid-template-columns: repeat(2, 1fr); }
+  .table-wrap table { min-width: 480px; }
+}
+@media (max-width: 380px) {
+  .compact-kpi { grid-template-columns: 1fr; }
+}
 </style>

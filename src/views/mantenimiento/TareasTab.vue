@@ -1217,7 +1217,12 @@ watch(() => props.planta, () => {
 }
 @media (max-width: 768px) {
   .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .compact-kpi { grid-template-columns: 1fr; }
   .almacen-view-toggle { flex-wrap: wrap; }
+  .table-wrap table { min-width: 560px; }
+}
+@media (max-width: 480px) {
+  .kpi-row { grid-template-columns: 1fr; }
 }
 @media print {
   .almacen-view-toggle,

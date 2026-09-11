@@ -878,7 +878,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, markRaw, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, markRaw, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import KpiCard from '../../components/dashboard/KpiCard.vue'
 import ChartCard from '../../components/dashboard/ChartCard.vue'
 import { useTheme } from '../../composables/useTheme'
@@ -1050,17 +1050,20 @@ const activePlacasRows = computed(() => {
   }
 
   // Concretos, SOLO en la vista Gráficas: la disponibilidad es solo de flota propia
-  // (las alquiladas se excluyen) y se puede acotar por Área de Trabajo (Planta / Maquinaria)
-  // del maestro. En el Informe se deja la flota completa, tal cual.
+  // (las alquiladas se excluyen). En el Informe se deja la flota completa, tal cual.
   if (isConcretosPlanta.value && dispView.value === 'graficas') {
     rows = rows.filter(r => !getInspectionDetails(r).esAlquilado)
-    if (areaFiltro.value !== 'todos') {
-      const want = areaFiltro.value
-      rows = rows.filter(r => {
-        const a = areaTrabajoClasif(r)
-        return a === 'dual' || a === want
-      })
-    }
+  }
+
+  // Filtro Planta/Maquinaria/Todos (pestaña superior del dashboard) — se acota por la
+  // columna autoritativa "Área de Trabajo" del maestro, igual en todas las plantas, no
+  // solo en Concretos. Solo en Gráficas, igual que el resto de filtros de esta sección.
+  if (dispView.value === 'graficas' && areaFiltro.value !== 'todos') {
+    const want = areaFiltro.value
+    rows = rows.filter(r => {
+      const a = areaTrabajoClasif(r)
+      return a === 'dual' || a === want
+    })
   }
 
   // Filtro de Proveedor — mismo comportamiento que en la pestaña Órdenes de Trabajo:
@@ -2636,23 +2639,41 @@ const chartCumpAyerRef = ref<HTMLElement | null>(null)
 
 const CP = '#2b2256'
 
-const chartInstances: echarts.ECharts[] = []
+const chartInstances = new Map<string, echarts.ECharts>()
 
 function destroyCharts() {
   chartInstances.forEach(c => c.dispose())
-  chartInstances.length = 0
+  chartInstances.clear()
+}
+onUnmounted(destroyCharts)
+
+/**
+ * Reutiliza la instancia de ECharts del canvas `key` si el DOM sigue siendo el mismo
+ * (evita destruir/recrear el contexto de render en cada cambio de filtro); si el
+ * elemento cambió (ej. se desmontó al cambiar de pestaña) o no existía, la crea.
+ */
+function getChart(key: string, el: HTMLElement | null): echarts.ECharts | null {
+  if (!el) return null
+  const existing = chartInstances.get(key)
+  if (existing) {
+    if (existing.getDom() === el) return existing
+    existing.dispose()
+    chartInstances.delete(key)
+  }
+  const chart = echarts.init(el, null, { renderer: 'canvas' })
+  chartInstances.set(key, chart)
+  return chart
 }
 
 function renderAllCharts() {
-  destroyCharts()
   nextTick(() => {
     const k = informeKpis.value
     const catData = matrizCategoriaData.value
 
     // ── 1. Donut Disponibilidad Global ──
-    if (chartDispRef.value) {
-      const chart = echarts.init(chartDispRef.value, null, { renderer: 'canvas' })
-      chartInstances.push(chart)
+    const chartDisp = getChart('disp', chartDispRef.value)
+    if (chartDisp) {
+      const chart = chartDisp
       const dp = k.dispPropiaPct
       const opTot = k.operativos
       const flota = k.flotaTotal
@@ -2669,13 +2690,13 @@ function renderAllCharts() {
         series: [{ type: 'pie', radius: ['62%', '82%'], avoidLabelOverlap: false, label: { show: false },
           data: [{ value: dp, itemStyle: { color: dc } }, { value: 100 - dp, itemStyle: { color: '#e0d8ec' } }]
         }]
-      })
+      }, true)
     }
 
     // ── 2. Barras horizontales por Tipo ──
-    if (chartTipoRef.value) {
-      const chart = echarts.init(chartTipoRef.value, null, { renderer: 'canvas' })
-      chartInstances.push(chart)
+    const chartTipo = getChart('tipo', chartTipoRef.value)
+    if (chartTipo) {
+      const chart = chartTipo
       const rows = catData.rows
       const keys = rows.map(r => r.tipo)
       const dataOp = rows.map(r => r.opProp)
@@ -2724,13 +2745,13 @@ function renderAllCharts() {
             }
           }
         ]
-      })
+      }, true)
     }
 
     // ── 3. Barras verticales por Sede ──
-    if (chartSedeRef.value) {
-      const chart = echarts.init(chartSedeRef.value, null, { renderer: 'canvas' })
-      chartInstances.push(chart)
+    const chartSede = getChart('sede', chartSedeRef.value)
+    if (chartSede) {
+      const chart = chartSede
       const records = activePlacasRows.value
       const targetIso = effectiveCorteIso.value
       const sedeMap = new Map<string, { op: number; alq: number; parc: number; no: number }>()
@@ -2803,13 +2824,13 @@ function renderAllCharts() {
             }
           }
         ]
-      })
+      }, true)
     }
 
     // ── 4. Línea tendencia AM vs PM vs Proyección D+1 por sede ──
-    if (chartTendenciaRef.value) {
-      const chart = echarts.init(chartTendenciaRef.value, null, { renderer: 'canvas' })
-      chartInstances.push(chart)
+    const chartTendencia = getChart('tendencia', chartTendenciaRef.value)
+    if (chartTendencia) {
+      const chart = chartTendencia
       const sedesData = tendenciaSedesAmPm.value
       if (sedesData.length > 0) {
         // Diseño "Órdenes Diarias": etiquetas píldora, rejilla clara, ejes limpios.
@@ -2859,14 +2880,16 @@ function renderAllCharts() {
             axisLabel: { show: false },
             splitLine: { lineStyle: { color: '#e5e7eb', width: 1, type: 'dashed' } } },
           series: seriesTend
-        })
+        }, true)
+      } else {
+        chart.clear()
       }
     }
 
     // ── 5. Línea tendencia mensual — mismo diseño que "Órdenes Diarias" de Órdenes de Trabajo ──
-    if (chartMensualRef.value) {
-      const chart = echarts.init(chartMensualRef.value, null, { renderer: 'canvas' })
-      chartInstances.push(chart)
+    const chartMensual = getChart('mensual', chartMensualRef.value)
+    if (chartMensual) {
+      const chart = chartMensual
       const trend = svgTrend.value
       if (trend && trend.points.length > 0) {
         const fechas = trend.points.map(p => p.dateLabel)
@@ -2905,15 +2928,16 @@ function renderAllCharts() {
               borderRadius: 4
             }
           }]
-        })
+        }, true)
+      } else {
+        chart.clear()
       }
     }
 
     // ── 6. Donuts de Cumplimiento ──
-    function renderCump(el: HTMLElement | null, pct: number) {
-      if (!el) return
-      const chart = echarts.init(el, null, { renderer: 'canvas' })
-      chartInstances.push(chart)
+    function renderCump(key: string, el: HTMLElement | null, pct: number) {
+      const chart = getChart(key, el)
+      if (!chart) return
       const dc = pct >= 80 ? '#16a34a' : pct >= 50 ? '#e8a020' : '#dc2626'
       chart.setOption({
         animation: false,
@@ -2923,10 +2947,10 @@ function renderAllCharts() {
         series: [{ type: 'pie', radius: ['68%', '84%'], avoidLabelOverlap: false, label: { show: false },
           data: [{ value: pct, itemStyle: { color: dc } }, { value: 100 - pct, itemStyle: { color: '#e0d8ec' } }]
         }]
-      })
+      }, true)
     }
-    renderCump(chartCumpAyerRef.value, cumplimientoGlobalPctPrevio1.value)
-    renderCump(chartCumpHoyRef.value, cumplimientoGlobalPctPrevio2.value)
+    renderCump('cumpAyer', chartCumpAyerRef.value, cumplimientoGlobalPctPrevio1.value)
+    renderCump('cumpHoy', chartCumpHoyRef.value, cumplimientoGlobalPctPrevio2.value)
   })
 }
 
@@ -4924,4 +4948,25 @@ ul.res li::before {
 .pct-high { color: #16a34a; font-weight: 700; }
 .pct-mid  { color: #b8860b; font-weight: 700; }
 .pct-low  { color: #a90707; font-weight: 700; }
+
+/* Responsive — informe/tareas usables en tablet / teléfono */
+@media (max-width: 1200px) {
+  .resumen-ejecutivo-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .compact-kpi { grid-template-columns: repeat(2, 1fr); }
+  .compact-grid { grid-template-columns: 1fr; }
+  .resumen-ejecutivo-grid { grid-template-columns: repeat(2, 1fr); }
+  .comp-grid { flex-direction: column; }
+  .comp-inner { flex-direction: column; align-items: center; }
+  .comp-sup-cell { width: 100%; }
+  /* Las tablas del informe (.table-wrap/.clasif-table-wrap ya tienen overflow-x:auto)
+     necesitan un ancho mínimo para no aplastar columnas ilegibles en pantallas angostas. */
+  .table-wrap table { min-width: 560px; }
+  .clasif-table-wrap table { min-width: 480px; }
+}
+@media (max-width: 480px) {
+  .compact-kpi { grid-template-columns: 1fr; }
+  .resumen-ejecutivo-grid { grid-template-columns: 1fr; }
+}
 </style>

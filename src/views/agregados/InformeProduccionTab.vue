@@ -890,6 +890,10 @@ async function generarPdf() {
   .kpi-row, .kpi-row-3 { grid-template-columns: repeat(2, 1fr); }
   .report-header { flex-direction: column; align-items: flex-start; }
   .report-header-meta { text-align: left; }
+  .table-wrap table { min-width: 560px; }
+}
+@media (max-width: 480px) {
+  .kpi-row, .kpi-row-3 { grid-template-columns: 1fr; }
 }
 
 /* Ocultar acciones del gráfico dentro del documento oficial (evita que salgan en PDF/impresión) */
