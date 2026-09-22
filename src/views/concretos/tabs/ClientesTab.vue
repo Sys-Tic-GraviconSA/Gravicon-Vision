@@ -6,11 +6,9 @@
       <KpiCard label="Promedio / Cliente" accent="#F59E0B" icon="trending-up">{{ fmt(promedioCliente) }} M³</KpiCard>
     </div>
 
-    <div class="charts-grid cols-1">
+    <div class="charts-grid cols-2-1">
       <ChartCard title="Top 10 Clientes por Volumen" :option="topClientesOpt" tall />
-    </div>
-    <div class="charts-grid cols-2" style="margin-top:22px">
-      <ChartCard title="Clientes por Planta" :option="clientesPlantaOpt" />
+      <ChartCard title="Clientes por Planta" :option="clientesPlantaOpt" tall />
     </div>
 
     <div style="margin-top: 24px;">
@@ -35,6 +33,7 @@ import { computed, markRaw } from 'vue'
 import { useTheme } from '../../../composables/useTheme'
 import { useViewportWidth } from '../../../composables/useViewportWidth'
 import { hBarLayout, hBarAxisLabel, hBarGrid, hBarTooltip, hBarValueSpace } from '../../../utils/chartLayout'
+import { colorPlanta, colorPrincipal, fmtM3, fmtPct, leyenda, paleta, etiquetaValor } from '../../../utils/concretoCharts'
 import KpiCard from '../../../components/dashboard/KpiCard.vue'
 import ChartCard from '../../../components/dashboard/ChartCard.vue'
 import DataTable from '../../../components/dashboard/DataTable.vue'
@@ -56,63 +55,47 @@ const promedioCliente = computed(() =>
 
 const { theme } = useTheme()
 const viewportW = useViewportWidth()
-const PIE_COLORS = ['#E8913A', '#3B82F6', '#22C55E', '#A855F7', '#06B6D4', '#EF4444', '#F59E0B', '#EC4899']
-
-const labelStyle = computed(() => ({
-  show: true,
-  fontSize: 11,
-  fontWeight: 600 as const,
-  color: theme.value === 'light' ? '#374151' : '#e2e8f0',
-  backgroundColor: theme.value === 'light' ? 'rgba(255,255,255,.85)' : 'rgba(30,41,59,.85)',
-  padding: [2, 6],
-  borderRadius: 4,
-  formatter: (p: any) => p.value.toLocaleString('es-CO'),
-}))
 
 function fmt(n: number) { return n?.toLocaleString('es-CO') ?? '0' }
 
+/** Top 10 clientes: un solo color, con m³ y participación sobre el total */
 const topClientesOpt = computed(() => {
   const top = clientes.value.slice(0, 10)
+  const t = theme.value
+  const total = totalVol.value || 1
   const names = top.map(c => c.cliente).reverse()
-  const valueTexts = top.map(c => c.volDespachado.toLocaleString('es-CO'))
-  const layout = hBarLayout(names, hBarValueSpace(valueTexts, 34), viewportW.value)
+  const textos = top.map(c => `${fmtM3(c.volDespachado, 0)} · ${fmtPct(c.volDespachado / total * 100)}`)
+  const layout = hBarLayout(names, hBarValueSpace(textos, 60), viewportW.value)
   return markRaw({
-    color: PIE_COLORS,
-    tooltip: hBarTooltip(names, (v) => v.toLocaleString('es-CO') + ' m³'),
+    tooltip: hBarTooltip(names, (v) => fmtM3(v)),
     grid: hBarGrid(layout.labelSpace, layout.valueSpace),
-    xAxis: { type: 'value' as const, axisLabel: { show: false } },
-    yAxis: {
-      type: 'category' as const,
-      data: names,
-      axisLabel: hBarAxisLabel(layout.labelSpace),
-    },
+    xAxis: { type: 'value' as const, show: false },
+    yAxis: { type: 'category' as const, data: names, axisTick: { show: false }, axisLine: { show: false }, axisLabel: hBarAxisLabel(layout.labelSpace) },
     series: [{
-      type: 'bar' as const,
-      colorBy: 'data' as const,
-      data: top.map(c => c.volDespachado).reverse(),
-      itemStyle: { borderRadius: [0, 4, 4, 0] },
-      label: { ...labelStyle.value, position: 'right' as const },
+      type: 'bar' as const, barMaxWidth: 22,
+      data: top.map((c, i) => ({ value: +c.volDespachado.toFixed(1), itemStyle: { color: i < 3 ? colorPrincipal(t) : (t === 'light' ? '#3b5b9a' : '#3b82f6'), borderRadius: [0, 3, 3, 0] } })).reverse(),
+      label: etiquetaValor(t, 'right', v => `${fmtM3(v, 0)} · ${fmtPct(v / total * 100)}`),
     }],
   })
 })
 
+/** Clientes por planta: dona con el color de cada planta y el total al centro */
 const clientesPlantaOpt = computed(() => {
   const cp = props.data.clientesPorPlanta
   if (!cp) return markRaw({ series: [] })
-  const labels = ['Acacias', 'Restrepo', 'Villavicencio']
-  const data = labels.map(p => ({
-    name: p,
-    value: (cp as Record<string, { volDespachado: number }[]>)[p]?.length ?? 0,
-  }))
+  const t = theme.value
+  const labels = ['Villavicencio', 'Acacias', 'Restrepo'] as const
+  const data = labels.map(p => ({ name: p, value: cp[p]?.length ?? 0, itemStyle: { color: colorPlanta(p, t) } }))
+  const total = data.reduce((s, d) => s + d.value, 0)
   return markRaw({
-    color: PIE_COLORS,
-    tooltip: { trigger: 'item' as const, formatter: '{b}: {c} clientes ({d}%)' },
+    tooltip: { trigger: 'item' as const, formatter: (x: any) => `${x.name}: <b>${x.value}</b> clientes (${fmtPct(x.percent)})` },
+    legend: leyenda(t, { top: 'bottom', right: 'center', orient: 'vertical',
+      formatter: (n: string) => { const d = data.find(x => x.name === n); return `${n}  ${d?.value ?? 0} · ${fmtPct(total ? (d?.value ?? 0) / total * 100 : 0, 0)}` } }),
+    title: { text: String(total), subtext: 'CLIENTES', left: 'center', top: '33%',
+      textStyle: { fontSize: 24, fontWeight: 900, color: paleta(t).texto }, subtextStyle: { fontSize: 10, fontWeight: 'bold', color: paleta(t).textoSuave } },
     series: [{
-      type: 'pie' as const,
-      radius: ['40%', '70%'],
-      center: ['50%', '55%'],
-      data,
-      label: { fontSize: 12, fontWeight: 600, color: theme.value === 'light' ? '#374151' : '#e2e8f0' },
+      type: 'pie' as const, radius: ['46%', '68%'], center: ['50%', '42%'], data,
+      label: { show: false },
     }],
   })
 })
@@ -125,5 +108,7 @@ const clientesPlantaOpt = computed(() => {
 .charts-grid { display: grid; gap: 22px; margin-top: 24px; min-width: 0; }
 .charts-grid.cols-1 { grid-template-columns: 1fr; }
 .charts-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+.charts-grid.cols-2-1 { grid-template-columns: 2fr 1fr; }
+@media (max-width: 1024px) { .charts-grid.cols-2-1 { grid-template-columns: 1fr; } }
 .charts-grid > * { min-width: 0; }
 </style>

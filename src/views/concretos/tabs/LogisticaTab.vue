@@ -26,6 +26,7 @@ import { computed, markRaw } from 'vue'
 import { useTheme } from '../../../composables/useTheme'
 import { useViewportWidth } from '../../../composables/useViewportWidth'
 import { hBarLayout, hBarAxisLabel, hBarGrid, hBarTooltip, hBarValueSpace } from '../../../utils/chartLayout'
+import { colorPrincipal, fmtNum, fmtM3, leyenda, ejeValor, ejeCategoria, etiquetaValor, AMBAR, VERDE } from '../../../utils/concretoCharts'
 import KpiCard from '../../../components/dashboard/KpiCard.vue'
 import ChartCard from '../../../components/dashboard/ChartCard.vue'
 import type { DashboardData, PlantOpData } from '../../../types'
@@ -41,56 +42,49 @@ function fmt(n: number) { return n?.toLocaleString('es-CO') ?? '0' }
 const { theme } = useTheme()
 const viewportW = useViewportWidth()
 
-const labelStyle = computed(() => ({
-  show: true,
-  fontSize: 11,
-  fontWeight: 600 as const,
-  color: theme.value === 'light' ? '#374151' : '#e2e8f0',
-  backgroundColor: theme.value === 'light' ? 'rgba(255,255,255,.85)' : 'rgba(30,41,59,.85)',
-  padding: [2, 6],
-  borderRadius: 4,
-  formatter: (p: any) => p.value.toLocaleString('es-CO'),
-}))
-const baseGrid = { left: 60, right: 30, bottom: 60, top: 50, containLabel: true }
-
 const tod = computed(() => props.plantOp?.Todas)
 
+/** Distribución horaria: volumen por hora (barras), despachos (línea) y hora pico marcada */
 const horarioOpt = computed(() => {
-  const horario = (tod.value?.horario ?? []).filter((h: any) => h.hora >= 4 && h.hora <= 17)
+  const horario = (tod.value?.horario ?? []).filter(h => h.hora >= 4 && h.hora <= 17)
+  const t = theme.value
+  const vals = horario.map(h => +h.volDespachado.toFixed(1))
+  const pico = Math.max(0, ...vals)
   return markRaw({
-    color: ['#3B82F6', '#E8913A'],
-    tooltip: { trigger: 'axis' as const },
-    grid: baseGrid,
-    xAxis: { type: 'category' as const, data: horario.map((h: any) => h.label), axisLabel: { fontWeight: 600 as const, fontSize: 10 } },
-    yAxis: { type: 'value' as const, axisLabel: { show: false } },
-    series: [{
-      type: 'line',
-      data: horario.map((h: any) => h.volDespachado),
-      areaStyle: { opacity: 0.2, color: '#3B82F6' },
-      smooth: true, showSymbol: false,
-      name: 'Vol. m³',
-    }],
+    tooltip: { trigger: 'axis' as const, axisPointer: { type: 'shadow' as const } },
+    legend: leyenda(t),
+    grid: { left: 8, right: 8, bottom: 24, top: 40, containLabel: true },
+    xAxis: ejeCategoria(t, horario.map(h => h.label)),
+    yAxis: [ejeValor(t), ejeValor(t, 'Despachos', { splitLine: { show: false } })],
+    series: [
+      { name: 'Vol. m³', type: 'bar', barMaxWidth: 30,
+        data: vals.map(v => ({ value: v, itemStyle: { color: v === pico && pico > 0 ? AMBAR : colorPrincipal(t), borderRadius: [3, 3, 0, 0] } })),
+        label: etiquetaValor(t, 'top', v => (v ? fmtNum(v, 0) : '')),
+        tooltip: { valueFormatter: (v: unknown) => fmtM3(Number(v)) } },
+      { name: 'Despachos', type: 'line', yAxisIndex: 1, data: horario.map(h => h.despachos), smooth: true, symbolSize: 6,
+        lineStyle: { width: 2, color: VERDE }, itemStyle: { color: VERDE } },
+    ],
   })
 })
 
-const PIE_COLORS = ['#E8913A', '#3B82F6', '#22C55E', '#A855F7', '#06B6D4', '#EF4444', '#F59E0B', '#EC4899']
-
+/** Equipos de bombeo: m³ bombeados y número de servicios */
 const bombasOpt = computed(() => {
   const bombas = props.data.bombas ?? []
-  const names = bombas.map((b: any) => b.bomba).reverse()
-  const valueTexts = bombas.map((b: any) => b.volBombeado.toLocaleString('es-CO'))
-  const layout = hBarLayout(names, hBarValueSpace(valueTexts, 34), viewportW.value)
+  const t = theme.value
+  const names = bombas.map(b => b.bomba).reverse()
+  const textos = bombas.map(b => `${fmtM3(b.volBombeado, 0)} · ${b.bombeos ?? b.servicios} serv.`)
+  const layout = hBarLayout(names, hBarValueSpace(textos, 60), viewportW.value)
+  const rev = [...bombas].reverse()
   return markRaw({
-    color: PIE_COLORS,
-    tooltip: hBarTooltip(names, (v) => v.toLocaleString('es-CO') + ' m³'),
+    tooltip: hBarTooltip(names, (v) => fmtM3(v)),
     grid: hBarGrid(layout.labelSpace, layout.valueSpace),
-    xAxis: { type: 'value' as const, axisLabel: { show: false } },
-    yAxis: {
-      type: 'category' as const,
-      data: names,
-      axisLabel: hBarAxisLabel(layout.labelSpace),
-    },
-    series: [{ type: 'bar', colorBy: 'data' as const, data: bombas.map((b: any) => b.volBombeado).reverse(), label: { ...labelStyle.value, position: 'right' as const } }],
+    xAxis: { type: 'value' as const, show: false },
+    yAxis: { type: 'category' as const, data: names, axisTick: { show: false }, axisLine: { show: false }, axisLabel: hBarAxisLabel(layout.labelSpace) },
+    series: [{
+      type: 'bar', barMaxWidth: 20, data: rev.map(b => +b.volBombeado.toFixed(1)),
+      itemStyle: { color: colorPrincipal(t), borderRadius: [0, 3, 3, 0] },
+      label: etiquetaValor(t, 'right', (v, i) => `${fmtM3(v, 0)} · ${rev[i].bombeos ?? rev[i].servicios} serv.`),
+    }],
   })
 })
 </script>

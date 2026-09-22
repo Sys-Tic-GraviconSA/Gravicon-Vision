@@ -15,7 +15,7 @@
         :key="p"
         class="filter-btn"
         :class="{ active: selectedPlanta === p }"
-        :style="{ '--p-color': colorMap[p] || '#E8913A' }"
+        :style="{ '--p-color': colorMap[p] }"
         @click="selectedPlanta = p"
       >{{ p === 'Todas' ? '⊕ Todas' : p }}</button>
     </div>
@@ -41,116 +41,107 @@ import KpiCard from '../../../components/dashboard/KpiCard.vue'
 import ChartCard from '../../../components/dashboard/ChartCard.vue'
 import type { DashboardData, PlantOpData } from '../../../types'
 import { fmtDate } from '../../../composables/useDashboardData'
+import { useTheme } from '../../../composables/useTheme'
+import {
+  colorPlanta, colorPrincipal, fmtNum, fmtM3, leyenda, ejeValor, ejeCategoria, etiquetaValor, lineaPromedio, AMBAR, VERDE,
+} from '../../../utils/concretoCharts'
 
 const props = defineProps<{
   data: DashboardData
   plantOp?: Record<string, PlantOpData>
 }>()
 
+const { theme } = useTheme()
 const selectedPlanta = ref('Todas')
-const plantas = ['Todas', 'Acacias', 'Restrepo', 'Villavicencio']
-const colorMap: Record<string, string> = { Todas: '#E8913A', Acacias: '#E8913A', Restrepo: '#3B82F6', Villavicencio: '#22C55E' }
-const currentColor = computed(() => colorMap[selectedPlanta.value] || '#E8913A')
+const plantas = ['Todas', 'Villavicencio', 'Acacias', 'Restrepo']
+const colorMap = computed<Record<string, string>>(() => Object.fromEntries(
+  plantas.map(p => [p, p === 'Todas' ? colorPrincipal(theme.value) : colorPlanta(p, theme.value)])))
+const currentColor = computed(() => colorMap.value[selectedPlanta.value] || colorPrincipal(theme.value))
 
 const plantData = computed(() => props.plantOp?.[selectedPlanta.value])
 const plantKpis = computed(() => plantData.value?.kpis ?? { totalVol: 0, despachos: 0, clientes: 0, obras: 0, promDespacho: 0, diasOp: 0, pctBombeo: 0 })
 
 function fmt(n: number) { return n?.toLocaleString('es-CO') ?? '0' }
+const gridBase = { left: 8, right: 8, bottom: 24, top: 40, containLabel: true }
 
-const baseGrid = { left: 60, right: 30, bottom: 60, top: 50, containLabel: true }
-
+/** Volumen diario con media móvil de 7 días y promedio del periodo */
 const tendenciaOpt = computed(() => {
   const d = plantData.value?.diario ?? []
-  const movAvg = d.map((x: any, i: number) => {
-    const w = d.slice(Math.max(0, i - 6), i + 1)
-    const avg = w.reduce((s: number, v: any) => s + v.volDespachado, 0) / (w.length || 1)
-    return { ...x, mediaMovil: Math.round(avg) }
-  })
+  const t = theme.value
   const c = currentColor.value
+  const movAvg = d.map((_, i) => {
+    const w = d.slice(Math.max(0, i - 6), i + 1)
+    return +(w.reduce((s, v) => s + v.volDespachado, 0) / (w.length || 1)).toFixed(1)
+  })
   return markRaw({
-    color: [c, c],
-    tooltip: { trigger: 'axis' as const },
-    grid: baseGrid,
-    xAxis: {
-      type: 'category' as const,
-      data: movAvg.map((r: any) => fmtDate(r.fecha)),
-      axisLabel: { fontWeight: 600 as const, fontSize: 9, rotate: movAvg.length > 20 ? 45 : 0 },
-    },
-    yAxis: { type: 'value' as const, axisLabel: { show: false } },
+    tooltip: { trigger: 'axis' as const, axisPointer: { type: 'shadow' as const }, valueFormatter: (v: unknown) => fmtM3(Number(v)) },
+    legend: leyenda(t),
+    grid: { ...gridBase, bottom: d.length > 20 ? 50 : 24 },
+    xAxis: ejeCategoria(t, d.map(r => fmtDate(r.fecha)), { axisLabel: { fontWeight: 600, fontSize: 9, rotate: d.length > 20 ? 45 : 0 } }),
+    yAxis: ejeValor(t),
     series: [
-      { name: 'Vol. Diario', type: 'bar', data: movAvg.map((r: any) => r.volDespachado), itemStyle: { opacity: 0.35, color: c } },
-      { name: 'Media 7d', type: 'line', data: movAvg.map((r: any) => r.mediaMovil), smooth: true, showSymbol: false, lineStyle: { width: 2.5, color: c } },
+      { name: 'Vol. diario', type: 'bar', barMaxWidth: 20, data: d.map(r => +r.volDespachado.toFixed(1)),
+        itemStyle: { color: c, opacity: 0.45, borderRadius: [2, 2, 0, 0] }, markLine: lineaPromedio(t, 'Prom.', 1) },
+      { name: 'Media móvil 7d', type: 'line', data: movAvg, smooth: true, showSymbol: false, lineStyle: { width: 2.5, color: AMBAR }, itemStyle: { color: AMBAR } },
     ],
-    legend: { bottom: 0, textStyle: { fontWeight: 600 } },
   })
 })
 
+/** Evolución semanal: volumen y clientes activos */
 const semanalOpt = computed(() => {
   const d = plantData.value?.semanal ?? []
-  const c = currentColor.value
+  const t = theme.value
   return markRaw({
-    color: [c, '#22C55E'],
-    tooltip: { trigger: 'axis' as const },
-    grid: baseGrid,
-    xAxis: { type: 'category' as const, data: d.map((r: any) => r.label), axisLabel: { fontWeight: 600 as const, fontSize: 11 } },
-    yAxis: [
-      { type: 'value' as const, axisLabel: { show: false } },
-      { type: 'value' as const, axisLabel: { show: false } },
-    ],
+    tooltip: { trigger: 'axis' as const, axisPointer: { type: 'shadow' as const } },
+    legend: leyenda(t),
+    grid: gridBase,
+    xAxis: ejeCategoria(t, d.map(r => r.label)),
+    yAxis: [ejeValor(t), ejeValor(t, 'Clientes', { splitLine: { show: false } })],
     series: [
-      { name: 'Vol. m³', type: 'bar', data: d.map((r: any) => r.volDespachado), itemStyle: { opacity: 0.6, color: c } },
-      { name: 'Clientes Activos', type: 'line', yAxisIndex: 1, data: d.map((r: any) => r.clientesActivos), smooth: true, showSymbol: false, lineStyle: { width: 2, color: '#22C55E' } },
+      { name: 'Vol. m³', type: 'bar', barMaxWidth: 34, data: d.map(r => +r.volDespachado.toFixed(1)),
+        itemStyle: { color: currentColor.value, borderRadius: [3, 3, 0, 0] }, label: etiquetaValor(t, 'top', v => fmtNum(v, 0)),
+        tooltip: { valueFormatter: (v: unknown) => fmtM3(Number(v)) } },
+      { name: 'Clientes activos', type: 'line', yAxisIndex: 1, data: d.map(r => r.clientesActivos), smooth: true, symbolSize: 6,
+        lineStyle: { width: 2, color: VERDE }, itemStyle: { color: VERDE } },
     ],
-    legend: { bottom: 0, textStyle: { fontWeight: 600 } },
   })
 })
 
+/** Patrón por día de semana: volumen promedio y despachos */
 const diaSemanaOpt = computed(() => {
   const d = plantData.value?.diaSemana ?? []
-  const c = currentColor.value
+  const t = theme.value
   return markRaw({
-    color: [c, '#06B6D4'],
-    tooltip: { trigger: 'axis' as const },
-    grid: baseGrid,
-    xAxis: { type: 'category' as const, data: d.map((r: any) => r.dia.slice(0, 3)), axisLabel: { fontWeight: 600 as const } },
-    yAxis: [
-      { type: 'value' as const, axisLabel: { show: false } },
-      { type: 'value' as const, axisLabel: { show: false } },
-    ],
+    tooltip: { trigger: 'axis' as const, axisPointer: { type: 'shadow' as const } },
+    legend: leyenda(t),
+    grid: gridBase,
+    xAxis: ejeCategoria(t, d.map(r => r.dia.slice(0, 3))),
+    yAxis: [ejeValor(t), ejeValor(t, 'Despachos', { splitLine: { show: false } })],
     series: [
-      { name: 'Vol. m³', type: 'bar', data: d.map((r: any) => r.volDespachado), itemStyle: { opacity: 0.7, color: c } },
-      { name: '# Despachos', type: 'line', yAxisIndex: 1, data: d.map((r: any) => r.despachos), smooth: true, showSymbol: false },
+      { name: 'Vol. m³', type: 'bar', barMaxWidth: 36, data: d.map(r => +r.volDespachado.toFixed(1)),
+        itemStyle: { color: currentColor.value, borderRadius: [3, 3, 0, 0] }, label: etiquetaValor(t, 'top', v => fmtNum(v, 0)),
+        tooltip: { valueFormatter: (v: unknown) => fmtM3(Number(v)) } },
+      { name: 'Despachos', type: 'line', yAxisIndex: 1, data: d.map(r => r.despachos), smooth: true, symbolSize: 6,
+        lineStyle: { width: 2, color: AMBAR }, itemStyle: { color: AMBAR } },
     ],
-    legend: { bottom: 0, textStyle: { fontWeight: 600 } },
   })
 })
 
+/** Mapa de calor horario: intensidad del color según el volumen de cada hora */
 const calorOpt = computed(() => {
-  const d = (plantData.value?.horario ?? []).filter((h: any) => h.hora >= 4 && h.hora <= 17)
-  const maxHora = Math.max(1, ...d.map((h: any) => h.volDespachado))
+  const d = (plantData.value?.horario ?? []).filter(h => h.hora >= 4 && h.hora <= 17)
+  const maxHora = Math.max(1, ...d.map(h => h.volDespachado))
+  const t = theme.value
   const c = currentColor.value
   return markRaw({
-    tooltip: { trigger: 'axis' as const },
-    xAxis: { type: 'category' as const, data: d.map((h: any) => h.label), axisLabel: { fontWeight: 600 as const, fontSize: 10 } },
-    yAxis: { type: 'value' as const, axisLabel: { show: false } },
-    grid: baseGrid,
+    tooltip: { trigger: 'axis' as const, axisPointer: { type: 'shadow' as const }, valueFormatter: (v: unknown) => fmtM3(Number(v)) },
+    grid: gridBase,
+    xAxis: ejeCategoria(t, d.map(h => h.label)),
+    yAxis: ejeValor(t),
     series: [{
-      type: 'bar',
-      data: d.map((h: any) => ({
-        value: h.volDespachado,
-        itemStyle: {
-          color: c,
-          opacity: 0.1 + (h.volDespachado / maxHora) * 0.8,
-        },
-      })),
-      label: {
-        show: true,
-        position: 'top',
-        fontSize: 10,
-        fontWeight: 600 as const,
-        color: '#374151',
-        formatter: (p: any) => p.value.toLocaleString('es-CO'),
-      },
+      name: 'Vol. m³', type: 'bar', barMaxWidth: 30,
+      data: d.map(h => ({ value: +h.volDespachado.toFixed(1), itemStyle: { color: c, opacity: 0.15 + (h.volDespachado / maxHora) * 0.85, borderRadius: [3, 3, 0, 0] } })),
+      label: etiquetaValor(t, 'top', v => (v ? fmtNum(v, 0) : '')),
     }],
   })
 })

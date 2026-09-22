@@ -191,13 +191,17 @@ import ChartCard from '../../../components/dashboard/ChartCard.vue'
 import { parseRows } from '../../../composables/useConcretoData'
 import type { DashboardData, PlantOpData } from '../../../types'
 import type { SheetData } from '../../../stores/concreto'
+import { useTheme } from '../../../composables/useTheme'
+import { colorPlanta, colorPrincipal, fmtNum, fmtM3, leyenda, ejeValor, ejeCategoria, etiquetaValor, serieTotal, AMBAR, VERDE } from '../../../utils/concretoCharts'
 
 const props = defineProps<{
   data: DashboardData
   sheetData?: SheetData | null
   plantOp?: Record<string, PlantOpData>
 }>()
-const PC: Record<string,string> = { Acacias: '#E8913A', Restrepo: '#3B82F6', Villavicencio: '#22C55E', Todas: '#E8913A' }
+const { theme } = useTheme()
+const PC = computed<Record<string, string>>(() => Object.fromEntries(
+  ['Villavicencio', 'Acacias', 'Restrepo'].map(p => [p, colorPlanta(p, theme.value)])))
 const plantaFilter = ref('Todas')
 const selectedDay = ref<'hoy'|'ayer'>('hoy')
 
@@ -309,29 +313,65 @@ const topClientes = computed(() => {
 })
 const despachosOrdered = computed(() => [...filteredDayRows.value].sort((a, b) => (b.hora ?? 0) - (a.hora ?? 0)))
 
-// Charts
-const baseGrid = { left: 60, right: 60, bottom: 50, top: 50, containLabel: true }
+// Charts — calculadas con las remisiones del día seleccionado (antes usaban todo el rango filtrado)
+/** Distribución horaria del día: volumen por hora (barras) y despachos (línea), hora pico resaltada */
 const horarioOpt = computed(() => {
-  const horario = (props.plantOp?.Todas?.horario ?? []).filter(h => h.hora >= 4 && h.hora <= 17)
+  const t = theme.value
+  const porHora = new Map<number, { vol: number; n: number }>()
+  for (const r of filteredDayRows.value) {
+    if (r.hora == null) continue
+    const e = porHora.get(r.hora) ?? { vol: 0, n: 0 }
+    e.vol += r.cant; e.n++
+    porHora.set(r.hora, e)
+  }
+  const horas = [...porHora.keys()]
+  const desde = Math.min(5, ...horas), hasta = Math.max(17, ...horas)
+  const rango = horas.length ? Array.from({ length: hasta - desde + 1 }, (_, k) => desde + k) : []
+  const vals = rango.map(h => +(porHora.get(h)?.vol ?? 0).toFixed(1))
+  const pico = Math.max(0, ...vals)
   return markRaw({
-    color: [dayColor.value, '#10B981'],
-    tooltip: { trigger: 'axis' as const },
-    grid: baseGrid,
-    xAxis: { type: 'category' as const, data: horario.map(h => h.label), axisLabel: { fontSize: 10, fontWeight: 600 as const } },
-    yAxis: [{ type: 'value' as const, axisLabel: { show: false } }, { type: 'value' as const, axisLabel: { show: false } }],
+    tooltip: { trigger: 'axis' as const, axisPointer: { type: 'shadow' as const } },
+    legend: leyenda(t),
+    grid: { left: 8, right: 8, bottom: 24, top: 40, containLabel: true },
+    xAxis: ejeCategoria(t, rango.map(h => `${String(h).padStart(2, '0')}:00`)),
+    yAxis: [ejeValor(t), ejeValor(t, 'Despachos', { splitLine: { show: false }, minInterval: 1 })],
     series: [
-      { name: 'Vol. m³', type: 'bar', data: horario.map(h => h.volDespachado) },
-      { name: '# Despachos', type: 'line', yAxisIndex: 1, data: horario.map(h => h.despachos), smooth: true, showSymbol: false },
+      { name: 'Vol. m³', type: 'bar', barMaxWidth: 30,
+        data: vals.map(v => ({ value: v, itemStyle: { color: v === pico && pico > 0 ? AMBAR : colorPrincipal(t), borderRadius: [3, 3, 0, 0] } })),
+        label: etiquetaValor(t, 'top', v => (v ? fmtNum(v, 1) : '')),
+        tooltip: { valueFormatter: (v: unknown) => fmtM3(Number(v)) } },
+      { name: 'Despachos', type: 'line', yAxisIndex: 1, data: rango.map(h => porHora.get(h)?.n ?? 0), smooth: true, symbolSize: 6,
+        lineStyle: { width: 2, color: VERDE }, itemStyle: { color: VERDE } },
     ],
   })
 })
+
+/** Volumen del día por planta, separado en con / sin bombeo, con el total encima */
 const porPlantaOpt = computed(() => {
-  const bp = props.data.bombeoPorPlanta ?? []
+  const t = theme.value
+  const map = new Map<string, { con: number; sin: number }>()
+  for (const r of filteredDayRows.value) {
+    const e = map.get(r.planta) ?? { con: 0, sin: 0 }
+    const conBomba = !!r.servicio && r.servicio !== 'Sin Bomba'
+    if (conBomba) e.con += r.cant; else e.sin += r.cant
+    map.set(r.planta, e)
+  }
+  const orden = ['Villavicencio', 'Acacias', 'Restrepo']
+  const ps = [...map.keys()].sort((a, b) => (orden.indexOf(a) + 99) % 99 - (orden.indexOf(b) + 99) % 99)
+  const totales = ps.map(p => map.get(p)!.con + map.get(p)!.sin)
   return markRaw({
-    color: ['#E8913A'], tooltip: { trigger: 'axis' as const }, grid: baseGrid,
-    xAxis: { type: 'category' as const, data: bp.map(p => p.planta), axisLabel: { fontSize: 11, fontWeight: 600 as const } },
-    yAxis: [{ type: 'value' as const, axisLabel: { show: false } }],
-    series: [{ name: 'Vol. m³', type: 'bar', data: bp.map(p => p.conBombeo + p.sinBombeo), itemStyle: { borderRadius: [4, 4, 0, 0] } }],
+    tooltip: { trigger: 'axis' as const, axisPointer: { type: 'shadow' as const }, valueFormatter: (v: unknown) => fmtM3(Number(v)) },
+    legend: leyenda(t, { data: ['Con bombeo', 'Sin bombeo'] }),
+    grid: { left: 8, right: 8, bottom: 24, top: 40, containLabel: true },
+    xAxis: ejeCategoria(t, ps, { axisLabel: { fontSize: 11, fontWeight: 'bold' } }),
+    yAxis: ejeValor(t),
+    series: [
+      { name: 'Con bombeo', type: 'bar', stack: 'p', barMaxWidth: 60, itemStyle: { color: colorPrincipal(t) },
+        data: ps.map(p => ({ value: +map.get(p)!.con.toFixed(1), itemStyle: { color: colorPlanta(p, t) } })) },
+      { name: 'Sin bombeo', type: 'bar', stack: 'p', itemStyle: { color: colorPrincipal(t), opacity: 0.45 },
+        data: ps.map(p => ({ value: +map.get(p)!.sin.toFixed(1), itemStyle: { color: colorPlanta(p, t), opacity: 0.45, borderRadius: [3, 3, 0, 0] } })) },
+      serieTotal(totales, t, 'p', 'top', 1),
+    ],
   })
 })
 </script>

@@ -31,8 +31,12 @@ import ChartCard from '../../../components/dashboard/ChartCard.vue'
 import type { DashboardData, PlantOpData } from '../../../types'
 import { tickInterval } from '../../../utils/format'
 import { fmtDate } from '../../../composables/useDashboardData'
-import { hBarLayout, hBarAxisLabel, hBarGrid, hBarTooltip, hBarValueSpace } from '../../../utils/chartLayout'
+import { hBarLayout, hBarAxisLabel, hBarGrid, hBarValueSpace } from '../../../utils/chartLayout'
 import { useViewportWidth } from '../../../composables/useViewportWidth'
+import {
+  colorPlanta, colorPrincipal, fmtNum, fmtM3, fmtPct, leyenda, ejeValor, ejeCategoria, tooltipEje,
+  serieTotal, lineaPromedio, etiquetaValor, VERDE, ROJO, AMBAR,
+} from '../../../utils/concretoCharts'
 
 const props = defineProps<{
   data: DashboardData
@@ -46,100 +50,96 @@ const totalVol = computed(() => kpis.value.totalVolDespachado)
 function fmt(n: number) { return n?.toLocaleString('es-CO') ?? '0' }
 const { theme } = useTheme()
 const viewportW = useViewportWidth()
+const PLANTAS = ['Villavicencio', 'Acacias', 'Restrepo'] as const
 
-const labelStyle = computed(() => ({
-  show: true,
-  fontSize: 11,
-  fontWeight: 600 as const,
-  color: theme.value === 'light' ? '#374151' : '#e2e8f0',
-  backgroundColor: theme.value === 'light' ? 'rgba(255,255,255,.85)' : 'rgba(30,41,59,.85)',
-  padding: [2, 6],
-  borderRadius: 4,
-  formatter: (p: any) => p.value.toLocaleString('es-CO'),
-}))
-
-const PIE_COLORS = ['#E8913A', '#3B82F6', '#22C55E', '#A855F7', '#06B6D4', '#EF4444', '#F59E0B', '#EC4899']
-const baseGrid = { left: 60, right: 30, bottom: 60, top: 50, containLabel: true }
-
+/** Producción semanal apilada por planta, con el total de la semana encima */
 const semanalOpt = computed(() => {
   const data = props.data.semanalStacked ?? []
+  const t = theme.value
   const interval = tickInterval(data.length, 10)
+  const totales = data.map(r => PLANTAS.reduce((s, p) => s + (Number(r[p]) || 0), 0))
   return markRaw({
-    color: ['#6366F1', '#10B981', '#F59E0B'],
-    tooltip: { trigger: 'axis' as const },
-    grid: { ...baseGrid, bottom: data.length > 15 ? 80 : 60 },
-    xAxis: {
-      type: 'category' as const,
-      data: data.map((r: any) => r.semana),
-      axisLabel: { fontWeight: 600 as const, rotate: data.length > 15 ? 45 : 0, interval, fontSize: 10 },
-    },
-    yAxis: { type: 'value' as const, axisLabel: { show: false } },
+    tooltip: tooltipEje(),
+    legend: leyenda(t, { data: [...PLANTAS] }),
+    grid: { left: 8, right: 8, bottom: data.length > 15 ? 50 : 24, top: 40, containLabel: true },
+    xAxis: ejeCategoria(t, data.map(r => r.semana), { axisLabel: { fontWeight: 600, rotate: data.length > 15 ? 45 : 0, interval, fontSize: 10 } }),
+    yAxis: ejeValor(t),
     series: [
-      { name: 'Villavicencio', type: 'bar', stack: 'total', data: data.map((r: any) => r.Villavicencio), areaStyle: { opacity: 0.25 } },
-      { name: 'Acacias', type: 'bar', stack: 'total', data: data.map((r: any) => r.Acacias), areaStyle: { opacity: 0.25 } },
-      { name: 'Restrepo', type: 'bar', stack: 'total', data: data.map((r: any) => r.Restrepo), radius: [4, 4, 0, 0], areaStyle: { opacity: 0.25 } },
+      ...PLANTAS.map((p, i) => ({
+        name: p, type: 'bar', stack: 't', barMaxWidth: 34, data: data.map(r => +(Number(r[p]) || 0).toFixed(1)),
+        itemStyle: { color: colorPlanta(p, t), borderRadius: i === PLANTAS.length - 1 ? [3, 3, 0, 0] : 0 },
+      })),
+      ...(data.length <= 18 ? [serieTotal(totales, t)] : []),
     ],
-    legend: { bottom: 0, textStyle: { fontWeight: 600 } },
   })
 })
 
 const tod = computed(() => props.plantOp?.Todas)
+
+/** Tendencia diaria: barras del día, promedio del periodo y máximo/mínimo marcados */
 const tendenciaOpt = computed(() => {
   const diario = tod.value?.diario ?? []
+  const t = theme.value
+  const c = colorPrincipal(t)
+  const vals = diario.map(r => +r.volDespachado.toFixed(1))
+  const prom = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0
   return markRaw({
-    color: ['#E8913A'],
-    tooltip: { trigger: 'axis' as const },
-    grid: baseGrid,
-    xAxis: {
-      type: 'category' as const,
-      data: diario.map((r: any) => fmtDate(r.fecha)),
-      axisLabel: { fontWeight: 600 as const, fontSize: 9, rotate: diario.length > 20 ? 45 : 0 },
-    },
-    yAxis: { type: 'value' as const, axisLabel: { show: false } },
+    tooltip: tooltipEje(),
+    grid: { left: 8, right: 16, bottom: diario.length > 20 ? 50 : 24, top: 30, containLabel: true },
+    xAxis: ejeCategoria(t, diario.map(r => fmtDate(r.fecha)), { axisLabel: { fontWeight: 600, fontSize: 9, rotate: diario.length > 20 ? 45 : 0 } }),
+    yAxis: ejeValor(t),
     series: [{
-      type: 'line', data: diario.map((r: any) => r.volDespachado),
-      areaStyle: { opacity: 0.2, color: '#E8913A' },
-      smooth: true, showSymbol: false,
+      name: 'Vol. despachado', type: 'bar', barMaxWidth: 22,
+      data: vals.map(v => ({ value: v, itemStyle: { color: v >= prom ? c : (t === 'light' ? '#93c5fd' : '#1e40af'), borderRadius: [2, 2, 0, 0] } })),
+      markLine: lineaPromedio(t, 'Promedio', 1),
+      markPoint: {
+        symbolSize: 38, label: { fontSize: 9, fontWeight: 'bold', formatter: (x: any) => fmtNum(x.value, 0) },
+        data: [{ type: 'max', name: 'Máximo', itemStyle: { color: VERDE } }, { type: 'min', name: 'Mínimo', itemStyle: { color: ROJO } }],
+      },
     }],
   })
 })
 
+/** Elementos estructurales: barras horizontales con m³ y participación */
 const elementosOpt = computed(() => {
-  const elem = (props.data.elementos ?? []).slice(0, 8)
-  const names = elem.map((r: any) => r.elemento)
-  const valueTexts = elem.map((r: any) => r.volDespachado.toLocaleString('es-CO'))
-  const layout = hBarLayout(names, hBarValueSpace(valueTexts, 34), viewportW.value)
+  const elem = (props.data.elementos ?? []).slice(0, 10)
+  const t = theme.value
+  const total = (props.data.elementos ?? []).reduce((s, e) => s + e.volDespachado, 0) || 1
+  const names = elem.map(r => r.elemento).reverse()
+  const textos = elem.map(r => `${fmtM3(r.volDespachado, 0)} · ${fmtPct(r.volDespachado / total * 100)}`)
+  const layout = hBarLayout(names, hBarValueSpace(textos, 60), viewportW.value)
+  const vals = elem.map(r => r.volDespachado).reverse()
   return markRaw({
-    color: PIE_COLORS,
-    tooltip: hBarTooltip(names, (v) => v.toLocaleString('es-CO')),
+    tooltip: tooltipEje(),
     grid: hBarGrid(layout.labelSpace, layout.valueSpace),
-    xAxis: { type: 'value' as const, axisLabel: { show: false } },
-    yAxis: { type: 'category' as const, data: names.reverse(), axisLabel: hBarAxisLabel(layout.labelSpace) },
+    xAxis: { type: 'value' as const, show: false },
+    yAxis: { type: 'category' as const, data: names, axisTick: { show: false }, axisLine: { show: false }, axisLabel: hBarAxisLabel(layout.labelSpace) },
     series: [{
-      type: 'bar' as const,
-      data: elem.map((r: any) => r.volDespachado).reverse(),
-      itemStyle: { borderRadius: [0, 4, 4, 0] },
-      label: { ...labelStyle.value, position: 'right' as const },
+      name: 'Vol. despachado', type: 'bar' as const, barMaxWidth: 20, data: vals,
+      itemStyle: { color: colorPrincipal(t), borderRadius: [0, 3, 3, 0] },
+      label: etiquetaValor(t, 'right', v => `${fmtM3(v, 0)} · ${fmtPct(v / total * 100)}`),
     }],
   })
 })
 
+/** Día de semana: volumen (barras) y número de despachos (línea) */
 const diaSemanaOpt = computed(() => {
   const ds = tod.value?.diaSemana ?? []
+  const t = theme.value
   return markRaw({
-    color: ['#3B82F6', '#E8913A'],
-    tooltip: { trigger: 'axis' as const },
-    grid: baseGrid,
-    xAxis: { type: 'category' as const, data: ds.map((r: any) => r.dia), axisLabel: { fontWeight: 600 as const } },
-    yAxis: [
-      { type: 'value' as const, axisLabel: { show: false } },
-      { type: 'value' as const, axisLabel: { show: false } },
-    ],
+    tooltip: { trigger: 'axis' as const, axisPointer: { type: 'shadow' as const } },
+    legend: leyenda(t),
+    grid: { left: 8, right: 8, bottom: 24, top: 40, containLabel: true },
+    xAxis: ejeCategoria(t, ds.map(r => r.dia)),
+    yAxis: [ejeValor(t), ejeValor(t, 'Despachos', { splitLine: { show: false } })],
     series: [
-      { name: 'Vol. m³', type: 'bar', data: ds.map((r: any) => r.volDespachado), label: { ...labelStyle.value, show: false } },
-      { name: '# Despachos', type: 'line', yAxisIndex: 1, data: ds.map((r: any) => r.despachos), smooth: true, showSymbol: false },
+      { name: 'Vol. m³', type: 'bar', barMaxWidth: 36, data: ds.map(r => +r.volDespachado.toFixed(1)),
+        itemStyle: { color: colorPrincipal(t), borderRadius: [3, 3, 0, 0] },
+        label: etiquetaValor(t, 'top', v => fmtNum(v, 0)),
+        tooltip: { valueFormatter: (v: unknown) => fmtM3(Number(v)) } },
+      { name: 'Despachos', type: 'line', yAxisIndex: 1, data: ds.map(r => r.despachos), smooth: true, symbolSize: 7,
+        lineStyle: { width: 2.5, color: AMBAR }, itemStyle: { color: AMBAR } },
     ],
-    legend: { bottom: 0, textStyle: { fontWeight: 600 } },
   })
 })
 </script>

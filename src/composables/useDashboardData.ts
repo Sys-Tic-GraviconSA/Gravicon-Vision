@@ -53,12 +53,13 @@ export function useDashboardData(data: ComputedRef<SheetData | null>, lastUpdate
     const aggRows = rows.value.filter(r => r.isAgg)
 
     function extractResistencia(mezcla: string): string {
-      const values = mezcla.match(/\b(14|17|21|24|28|35|40)\b/g)
-      if (values) {
-        const max = Math.max(...values.map(Number))
-        return `${max} MPa`
-      }
-      return '21 MPa'
+      // El código trae la resistencia pegada a letras en el 2.º bloque: "CON126 28BA7 …" → 28 MPa,
+      // "VCON615 MR40 …" → módulo de rotura MR 40. Con \b(28)\b nunca coincidía y todo quedaba en 21 MPa.
+      const m = mezcla.trim().match(/^\S+\s+(MR)?(\d{2,3})/i)
+      if (m) return m[1] ? `MR ${m[2]}` : `${m[2]} MPa`
+      const values = mezcla.match(/\b(14|17|21|24|28|31|35|40)\b/g)
+      if (values) return `${Math.max(...values.map(Number))} MPa`
+      return 'Sin dato'
     }
 
     // ── single pass: build ALL maps + accumulate KPIs ──

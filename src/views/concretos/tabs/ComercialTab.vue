@@ -24,71 +24,70 @@
 <script setup lang="ts">
 import { computed, markRaw } from 'vue'
 import { useTheme } from '../../../composables/useTheme'
+import { useViewportWidth } from '../../../composables/useViewportWidth'
+import { hBarLayout, hBarAxisLabel, hBarGrid, hBarValueSpace } from '../../../utils/chartLayout'
 import KpiCard from '../../../components/dashboard/KpiCard.vue'
 import ChartCard from '../../../components/dashboard/ChartCard.vue'
 import type { DashboardData } from '../../../types'
+import { colorPrincipal, fmtM3, fmtPct, ejeValor, ejeCategoria, leyenda, paleta, etiquetaValor, ROJO, GRIS } from '../../../utils/concretoCharts'
 
 const props = defineProps<{ data: DashboardData }>()
 
 const kpis = computed(() => props.data.kpis)
 const { theme } = useTheme()
+const viewportW = useViewportWidth()
 
-const labelStyle = computed(() => ({
-  show: true,
-  fontSize: 11,
-  fontWeight: 600 as const,
-  color: theme.value === 'light' ? '#374151' : '#e2e8f0',
-  backgroundColor: theme.value === 'light' ? 'rgba(255,255,255,.85)' : 'rgba(30,41,59,.85)',
-  padding: [2, 6],
-  borderRadius: 4,
-  formatter: (p: any) => p.value.toLocaleString('es-CO'),
-}))
-const baseGrid = { left: 60, right: 30, bottom: 60, top: 50, containLabel: true }
-
+/** Pareto: m³ por cliente (top 20) y % acumulado, con la referencia del 80% */
 const paretoOpt = computed(() => {
   const clientes = props.data.clientes ?? []
   const total = props.data.kpis.totalVolDespachado || 1
+  const t = theme.value
   let acum = 0
   const data = clientes.slice(0, 20).map(c => {
     acum += c.volDespachado
-    return { nombre: c.cliente, volumen: c.volDespachado, acumulado: +((acum / total) * 100).toFixed(1) }
+    return { nombre: c.cliente, volumen: +c.volDespachado.toFixed(1), acumulado: +((acum / total) * 100).toFixed(1) }
   })
+  const n80 = data.findIndex(r => r.acumulado >= 80)
   return markRaw({
-    color: ['#E8913A', '#EF4444'],
-    tooltip: { trigger: 'axis' as const },
-    grid: { ...baseGrid, bottom: 80 },
-    xAxis: {
-      type: 'category' as const,
-      data: data.map(r => r.nombre),
-      axisLabel: { fontWeight: 600 as const, fontSize: 9, rotate: 40, interval: 0, overflow: 'truncate', width: 80 },
-    },
+    tooltip: { trigger: 'axis' as const, axisPointer: { type: 'shadow' as const } },
+    legend: leyenda(t),
+    grid: { left: 8, right: 8, bottom: 8, top: 40, containLabel: true },
+    xAxis: ejeCategoria(t, data.map(r => r.nombre), { axisLabel: { fontWeight: 600, fontSize: 9, rotate: 40, interval: 0, overflow: 'truncate', width: 90, color: paleta(t).texto } }),
     yAxis: [
-      { type: 'value' as const, axisLabel: { show: false } },
-      { type: 'value' as const, axisLabel: { show: true, fontSize: 10, fontWeight: 600, formatter: '{value}%' }, min: 0, max: 100 },
+      ejeValor(t),
+      ejeValor(t, '% acum.', { min: 0, max: 100, splitLine: { show: false }, axisLabel: { fontSize: 10, color: paleta(t).textoSuave, formatter: '{value}%' } }),
     ],
     series: [
-      { name: 'Vol. m³', type: 'bar', data: data.map(r => r.volumen), label: { ...labelStyle.value, show: false } },
-      { name: '% Acumulado', type: 'line', yAxisIndex: 1, data: data.map(r => r.acumulado), smooth: true, showSymbol: true, symbolSize: 6, lineStyle: { width: 2 }, itemStyle: { color: '#EF4444' } },
+      { name: 'Vol. m³', type: 'bar', barMaxWidth: 26, itemStyle: { color: colorPrincipal(t) },
+        data: data.map((r, i) => ({ value: r.volumen, itemStyle: { color: n80 < 0 || i <= n80 ? colorPrincipal(t) : (t === 'light' ? '#93c5fd' : '#1e40af'), borderRadius: [2, 2, 0, 0] } })),
+        tooltip: { valueFormatter: (v: unknown) => fmtM3(Number(v)) } },
+      { name: '% acumulado', type: 'line', yAxisIndex: 1, data: data.map(r => r.acumulado), smooth: true, symbolSize: 6,
+        lineStyle: { width: 2, color: ROJO }, itemStyle: { color: ROJO },
+        tooltip: { valueFormatter: (v: unknown) => fmtPct(Number(v)) },
+        markLine: { silent: true, symbol: 'none', lineStyle: { type: 'dashed', color: GRIS },
+          label: { formatter: '80% del volumen', position: 'insideStartTop', color: paleta(t).textoSuave, fontSize: 10, fontWeight: 'bold' }, data: [{ yAxis: 80 }] } },
     ],
-    legend: { bottom: 0, textStyle: { fontWeight: 600 } },
   })
 })
 
-const PIE_COLORS = ['#E8913A', '#3B82F6', '#22C55E', '#A855F7', '#06B6D4', '#EF4444', '#F59E0B', '#EC4899', '#8B5CF6', '#14B8A6']
+/** Mix de resistencias como barras horizontales ordenadas (m³ y participación) */
 const mixResistenciasOpt = computed(() => {
-  const resist = props.data.resistencias ?? []
+  const resist = [...(props.data.resistencias ?? [])].sort((a, b) => b.volDespachado - a.volDespachado).slice(0, 12)
+  const total = (props.data.resistencias ?? []).reduce((s, r) => s + r.volDespachado, 0) || 1
+  const t = theme.value
+  const names = resist.map(r => r.resistencia).reverse()
+  const textos = resist.map(r => `${fmtM3(r.volDespachado, 0)} · ${fmtPct(r.volDespachado / total * 100)}`)
+  const layout = hBarLayout(names, hBarValueSpace(textos, 60), viewportW.value)
   return markRaw({
-    color: PIE_COLORS,
-    tooltip: { trigger: 'item' as const, formatter: '{b}: {c} m³ ({d}%)' },
+    tooltip: { trigger: 'axis' as const, axisPointer: { type: 'shadow' as const }, valueFormatter: (v: unknown) => fmtM3(Number(v)) },
+    grid: hBarGrid(layout.labelSpace, layout.valueSpace),
+    xAxis: { type: 'value' as const, show: false },
+    yAxis: { type: 'category' as const, data: names, axisTick: { show: false }, axisLine: { show: false }, axisLabel: hBarAxisLabel(layout.labelSpace) },
     series: [{
-      type: 'pie' as const,
-      radius: ['35%', '70%'],
-      center: ['50%', '55%'],
-      data: resist.map(r => ({ name: r.resistencia, value: r.volDespachado })),
-      label: { fontSize: 11, fontWeight: 600, color: theme.value === 'light' ? '#374151' : '#e2e8f0' },
-      emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.5)' } },
+      name: 'Vol. despachado', type: 'bar' as const, barMaxWidth: 18, data: resist.map(r => +r.volDespachado.toFixed(1)).reverse(),
+      itemStyle: { color: colorPrincipal(t), borderRadius: [0, 3, 3, 0] },
+      label: etiquetaValor(t, 'right', v => `${fmtM3(v, 0)} · ${fmtPct(v / total * 100)}`),
     }],
-    legend: { bottom: 0, textStyle: { fontWeight: 600 } },
   })
 })
 </script>
