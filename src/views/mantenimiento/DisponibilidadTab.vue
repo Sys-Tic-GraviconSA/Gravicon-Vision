@@ -84,13 +84,6 @@
         />
 
         <KpiCard
-          label="Cobertura de Inspección"
-          accent="#3B82F6"
-          icon="zap"
-          :value="kpis.coberturaPctLabel + '%'"
-        />
-
-        <KpiCard
           label="Días de Rezago"
           accent="#8B5CF6"
           icon="clock"
@@ -496,7 +489,6 @@
               :meta="informeKpis.salenHoy > 0 ? 'Listos para entrega' : 'Sin salidas prog.'"
               :value="String(informeKpis.salenHoy)"
             />
-            <KpiCard label="Cobertura" accent="#16A34A" icon="zap" :value="informeKpis.coberturaPctLabel + '%'" />
             <KpiCard label="Días de Rezago" accent="#1D4ED8" icon="clock" :value="String(informeKpis.diasRezago)" />
           </div>
 
@@ -504,9 +496,6 @@
           <div v-if="informeKpis.diasRezago > 2" class="report-nota alerta">
             <strong>Advertencia de Rezago ({{ informeKpis.diasRezago }} días):</strong>
             La última inspección cargada para este corte tiene más de 2 días de rezago frente a la fecha actual.
-          </div>
-          <div v-else-if="informeKpis.coberturaPct < 90" class="report-nota">
-            <strong>Nota de Cobertura:</strong> La disponibilidad se calcula sobre los {{ informeKpis.inspeccionados }} equipos efectivamente inspeccionados ({{ informeKpis.coberturaPct }}% del total).
           </div>
 
             <!-- Tendencia de Disponibilidad por Planta — AM vs PM vs Proyección D+1 -->
@@ -749,7 +738,8 @@
                       <th>Placa</th>
                       <th>OT</th>
                       <th>Actividad / Diagnóstico</th>
-                      <th class="r">Estado</th>
+                      <th class="r">Fecha de Salida</th>
+                      <th class="r">Días para Salir</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -778,7 +768,14 @@
                             <span v-else style="color: var(--text-secondary);">—</span>
                           </td>
                           <td style="font-size: 12px; color: var(--text-secondary);">{{ eq.motivo }}</td>
-                          <td class="r red">{{ eq.revAm }}</td>
+                          <td class="r" style="white-space: nowrap;" :class="{ red: eq.salidaVencida }" :title="eq.salidaTitulo">
+                            <span class="bold">{{ eq.salida }}</span>
+                            <div v-if="eq.salidaAjustada" style="font-size: 10px; color: var(--text-tertiary);">ajustada</div>
+                          </td>
+                          <!-- Días desde hoy hasta la fecha de salida -->
+                          <td class="r bold" style="white-space: nowrap;" :style="{ color: eq.diasFaltan === null ? 'var(--text-tertiary)' : eq.diasFaltan < 0 ? '#DC2626' : eq.diasFaltan === 0 ? '#16A34A' : 'inherit' }">
+                            {{ eq.diasFaltan === null ? '—' : eq.diasTxt }}
+                          </td>
                         </tr>
                       </template>
                     </template>
@@ -923,7 +920,7 @@
           <!-- CONCLUSIONES Y RESUMEN EJECUTIVO             -->
           <!-- ============================================ -->
           <div class="report-section-block">
-            <h3 class="report-block-title"><span class="title-bar"></span>Conclusiones y Resumen Ejecutivo</h3>
+            <h3 class="report-block-title"><span class="title-bar"></span>Conclusiones y resumen ejecutivo — {{ informeFechaLabel }}</h3>
             <div class="data-card" style="padding: 10px 14px;">
               <template v-for="(g, gi) in dispConclusiones" :key="gi">
                 <div class="card-head" :style="{ fontSize: '11px', fontWeight: 700, color: 'var(--navy)', marginBottom: '6px', marginTop: gi > 0 ? '10px' : '0', textTransform: 'uppercase' }">{{ g.titulo }}</div>
@@ -1397,9 +1394,7 @@ const informeKpis = computed(() => {
       dispCanchaPct: 0,
       dispPropiaPctLabel: '0',
       dispCanchaPctLabel: '0',
-      coberturaPctLabel: '0',
       salenHoy: 0,
-      coberturaPct: 0,
       inspeccionados: 0,
       diasRezago: 0,
     }
@@ -1484,8 +1479,6 @@ const informeKpis = computed(() => {
   }
   const salenHoy = salenHoySet.size
 
-  const coberturaRaw = flotaTotal > 0 ? Math.min(100, (inspectedCount / flotaTotal) * 100) : 100
-  const coberturaPct = Math.round(coberturaRaw)
 
   // Concretos: los KPIs de disponibilidad del informe se muestran con 2 decimales
   // (igual que la vista Gráficas y la fila "Cumplimiento" de la tabla mensual).
@@ -1494,7 +1487,6 @@ const informeKpis = computed(() => {
     : String(Math.round(n))
   const dispPropiaPctLabel = fmtPct(dispPropiaRaw)
   const dispCanchaPctLabel = fmtPct(dispCanchaRaw)
-  const coberturaPctLabel = fmtPct(coberturaRaw)
 
   let diasRezago = 0
   if (targetIso) {
@@ -1516,9 +1508,7 @@ const informeKpis = computed(() => {
     dispCanchaPct,
     dispPropiaPctLabel,
     dispCanchaPctLabel,
-    coberturaPctLabel,
     salenHoy,
-    coberturaPct,
     inspeccionados: inspectedCount,
     diasRezago,
   }
@@ -1576,7 +1566,15 @@ const informeEquiposEnTaller = computed(() => {
     }
   }
 
-  const result: { placa: string; tipo: string; loc: string; revAm: string; supervisor: string; motivo: string; ot: string }[] = []
+  const result: { placa: string; tipo: string; loc: string; revAm: string; supervisor: string; motivo: string; ot: string
+    salida: string; salidaIso: string; salidaAjustada: boolean; salidaVencida: boolean; salidaTitulo: string
+    diasFaltan: number | null; diasTxt: string }[] = []
+  // Días que faltan para la salida, contados desde hoy (fecha local del equipo, no UTC)
+  const ahora = new Date()
+  const hoyMs = Date.UTC(ahora.getFullYear(), ahora.getMonth(), ahora.getDate())
+  const diasHasta = (iso: string) => Math.round((Date.parse(iso + 'T00:00:00Z') - hoyMs) / 86400000)
+  const txtDias = (n: number) => n === 0 ? 'sale hoy' : n > 0 ? `faltan ${n} ${n === 1 ? 'día' : 'días'}` : `vencida hace ${-n} ${n === -1 ? 'día' : 'días'}`
+  const fmtFecha = (d: Date) => d.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })
   const seen = new Set<string>()
 
   for (const r of records) {
@@ -1624,6 +1622,12 @@ const informeEquiposEnTaller = computed(() => {
         ot = otByPlacaMap.get(info.placa.toUpperCase()) || '—'
       }
 
+      // Fecha de salida: Fecha_Salida, o Fecha_Salida_Ajustada cuando el taller la actualiza
+      const fSalida = parseSerialDate(r['Fecha_Salida'] ?? r['Fecha Salida'])
+      const fSalidaAj = parseSerialDate(r['Fecha_Salida_Ajustada'] ?? r['Fecha Salida Ajustada'])
+      const fEfectiva = fSalidaAj ?? fSalida
+      const salidaAjustada = !!fSalidaAj && (!fSalida || getDateKey(fSalidaAj) !== getDateKey(fSalida))
+
       result.push({
         placa: info.placa,
         tipo: info.baseTipo + (info.esAlquilado ? ' (Alquilada)' : ''),
@@ -1632,6 +1636,15 @@ const informeEquiposEnTaller = computed(() => {
         supervisor: info.supervisor,
         motivo,
         ot,
+        salida: fEfectiva ? fmtFecha(fEfectiva) : 'Sin fecha',
+        salidaIso: fEfectiva ? getDateKey(fEfectiva) : '',
+        salidaAjustada,
+        // Salida ya pasada frente al corte y el equipo sigue en taller
+        // Vencida: la fecha de salida ya pasó (frente a hoy) y el equipo sigue en taller
+        salidaVencida: !!fEfectiva && diasHasta(getDateKey(fEfectiva)) < 0,
+        diasFaltan: fEfectiva ? diasHasta(getDateKey(fEfectiva)) : null,
+        diasTxt: fEfectiva ? txtDias(diasHasta(getDateKey(fEfectiva))) : '',
+        salidaTitulo: salidaAjustada && fSalida ? `Fecha original ${fmtFecha(fSalida)}, ajustada al ${fmtFecha(fSalidaAj!)}` : '',
       })
     }
   }
@@ -2174,72 +2187,90 @@ interface ConclusionGrupo {
   items: string[]
 }
 
-/** Conclusiones y resumen ejecutivo altamente informativo, estructurado y analítico */
+/** Conclusiones y resumen ejecutivo: frases cortas con cifras, mismo estilo del informe de Proyección de Concretos */
 const dispConclusiones = computed((): ConclusionGrupo[] => {
-  const grupos: ConclusionGrupo[] = []
   const k = informeKpis.value
+  const targetIso = effectiveCorteIso.value
   const enTaller = informeEquiposEnTaller.value
-  const sinActividad = enTaller.filter(e => !e.motivo || e.motivo === '—' || e.motivo.includes('Fuera de servicio / En intervención'))
   const res = resumenEjecutivo.value
   const meta = 85
+  const lista = (placas: string[], n = 6) => placas.slice(0, n).join(', ') + (placas.length > n ? ` y ${placas.length - n} más` : '')
+  const fechaCorta = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`
+  const titleCase = (t: string) => t.toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase())
 
-  // 1. Disponibilidad y Cobertura de Flota
-  const operatividad: string[] = []
-  const brechaMeta = k.dispPropiaPct - meta
-  const estadoMeta = brechaMeta >= 0
-    ? `cumple la meta corporativa del ${meta}% (+${brechaMeta}% por encima)`
-    : `se sitúa a ${Math.abs(brechaMeta)} puntos porcentuales de la meta (${meta}%)`
-
-  operatividad.push(`Disponibilidad ronda AM de flota propia: ${k.dispPropiaPct}% (${k.operativosFormatted} de ${k.flotaTotal} equipos operativos), ${estadoMeta}.`)
-  operatividad.push(`Composición operativa en cancha: ${k.operativos} equipo(s) con operatividad plena (1.0) y ${k.parciales} equipo(s) con disponibilidad parcial (0.5).`)
-
+  // 1. Disponibilidad
+  const disp: string[] = []
+  const brecha = k.dispPropiaPct - meta
+  disp.push(`Disponibilidad propia de ${k.dispPropiaPctLabel}% frente a la meta de ${meta}%: ` +
+    (brecha >= 0 ? `${brecha} puntos por encima.` : `faltan ${-brecha} puntos.`) +
+    // Sobre los equipos inspeccionados en el corte (no sobre todas las placas del rango de fechas)
+    ` De ${k.operativos + k.parciales + k.noOperativos} equipos inspeccionados: ${k.operativos} operativos` +
+    `${k.parciales ? `, ${k.parciales} parciales` : ''} y ${k.noOperativos} en taller.`)
+  // Familias de equipo por debajo de la meta en el corte (flota propia)
+  const porTipo = new Map<string, { suma: number; n: number }>()
+  for (const r of activePlacasRows.value) {
+    const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
+    if (!d || getDateKey(d) !== targetIso) continue
+    const info = getInspectionDetails(r)
+    if (info.esAlquilado || !info.baseTipo) continue
+    const e = porTipo.get(info.baseTipo) ?? { suma: 0, n: 0 }
+    e.suma += info.score; e.n++; porTipo.set(info.baseTipo, e)
+  }
+  const familias = [...porTipo.entries()].map(([tipo, v]) => ({ tipo, pct: Math.round(v.suma / v.n * 100), n: v.n }))
+  const bajo = familias.filter(f => f.pct < meta).sort((a, b) => a.pct - b.pct)
+  if (bajo.length) disp.push(`Por debajo de la meta: ${bajo.slice(0, 4).map(f => `${titleCase(f.tipo)} ${f.pct}% (${f.n} eq.)`).join(', ')}.`)
+  else if (familias.length) disp.push(`Todas las familias de equipo cumplen la meta del ${meta}%.`)
   if (informeFlotaAlquilada.value.total > 0) {
-    operatividad.push(`Apoyo de flota alquilada: ${informeFlotaAlquilada.value.op} de ${informeFlotaAlquilada.value.total} unidades activas (${informeFlotaAlquilada.value.dispPct}% disp.), reforzando los frentes de trabajo.`)
+    const al = informeFlotaAlquilada.value
+    disp.push(`Flota alquilada: ${al.op} de ${al.total} operativos (${al.dispPct}%); no entra en la disponibilidad propia.`)
   }
-  if (res && res.totalPendientes > 0) {
-    operatividad.push(`Alerta de cobertura: ${res.totalPendientes} equipo(s) no registraron inspección en la jornada. Cobertura actual: ${k.coberturaPct}%.`)
-  }
-  grupos.push({ titulo: 'Disponibilidad y Cobertura de Flota', items: operatividad })
 
-  // 2. Diagnóstico de Taller e Impacto en Disponibilidad
+  // 2. Taller y salidas
   const taller: string[] = []
-  if (enTaller.length > 0) {
-    const pctInmovilizado = k.flotaTotal > 0 ? Math.round((enTaller.length / k.flotaTotal) * 100) : 0
-    taller.push(`${enTaller.length} equipo(s) en taller / fuera de servicio (${pctInmovilizado}% de la flota propia inmovilizada).`)
-
-    if (sinActividad.length > 0) {
-      const placasSinAct = sinActividad.map(e => e.placa).slice(0, 5).join(', ')
-      taller.push(`Atención requerida: ${sinActividad.length} de ellos sin actividad registrada que respalde la intervención (${placasSinAct}${sinActividad.length > 5 ? '...' : ''}).`)
-    }
-    const placasEnTaller = enTaller.map(e => e.placa).slice(0, 6).join(', ')
-    taller.push(`Equipos en intervención: ${placasEnTaller}${enTaller.length > 6 ? ` y ${enTaller.length - 6} más.` : '.'}`)
+  if (enTaller.length) {
+    const insp = k.operativos + k.parciales + k.noOperativos
+    const pct = insp ? Math.round(enTaller.length / insp * 100) : 0
+    taller.push(`${enTaller.length} equipos en taller (${pct}% de los inspeccionados): ${lista(enTaller.map(e => e.placa))}.`)
+    const hoy = enTaller.filter(e => e.diasFaltan === 0)
+    const proximas = enTaller.filter(e => (e.diasFaltan ?? -1) > 0).sort((a, b) => a.salidaIso.localeCompare(b.salidaIso))
+    const vencidas = enTaller.filter(e => e.salidaVencida)
+    const sinFecha = enTaller.filter(e => !e.salidaIso)
+    const ajustadas = enTaller.filter(e => e.salidaAjustada)
+    if (hoy.length) taller.push(`Salen hoy: ${lista(hoy.map(e => e.placa))}.`)
+    if (proximas.length) taller.push(`Próximas salidas: ${proximas.slice(0, 6).map(e => `${e.placa} el ${fechaCorta(e.salidaIso)} (${e.diasTxt})`).join(', ')}${proximas.length > 6 ? ` y ${proximas.length - 6} más` : ''}.`)
+    if (vencidas.length) taller.push(`Con la fecha de salida vencida y aún en taller: ${vencidas.map(e => `${e.placa} (${e.salida}, ${e.diasTxt})`).join(', ')}.`)
+    if (ajustadas.length) taller.push(`${ajustadas.length} con fecha de salida ajustada: ${lista(ajustadas.map(e => e.placa))}.`)
+    if (sinFecha.length) taller.push(`Sin fecha de salida registrada: ${lista(sinFecha.map(e => e.placa))}.`)
+    const sinAct = enTaller.filter(e => !e.motivo || e.motivo === '—' || e.motivo.includes('Fuera de servicio / En intervención'))
+    if (sinAct.length) taller.push(`Sin actividad de taller registrada: ${lista(sinAct.map(e => e.placa))}.`)
   } else {
-    taller.push('Excelente confiabilidad: 100% de la flota propia se encuentra operativa; sin paradas en taller registradas.')
+    taller.push('Ningún equipo propio en taller en este corte.')
   }
   if (movimientosTaller.value.hasPrev) {
-    const ing = movimientosTaller.value.ingresaron.length
-    const sal = movimientosTaller.value.salieron.length
-    taller.push(`Dinámica de taller vs corte anterior: ${ing} ingreso(s) nuevo(s) y ${sal} equipo(s) recuperado(s) retornaron a operación.`)
+    const m = movimientosTaller.value
+    const pl = (x: { placa: string }[]) => (x.length ? ` (${lista(x.map(e => e.placa), 4)})` : '')
+    taller.push(`Frente al ${m.prevLabel}: ${m.ingresaron.length} ingresaron a taller${pl(m.ingresaron)} y ${m.salieron.length} volvieron a operar${pl(m.salieron)}.`)
   }
-  grupos.push({ titulo: 'Diagnóstico de Taller e Impacto Operativo', items: taller })
 
-  // 3. Rendimiento de Supervisión y Control de Rondas
-  const supervision: string[] = []
+  // 3. Supervisión y tareas
+  const sup: string[] = []
   if (cumplimientoSupervisorPrevio1.value.length > 0 || cumplimientoSupervisorPrevio2.value.length > 0) {
-    supervision.push(`Cumplimiento de rondas e inspecciones: ${diaPrevio1Nombre.value} (${cumplimientoGlobalPctPrevio1.value}%) vs ${diaPrevio2Nombre.value} (${cumplimientoGlobalPctPrevio2.value}%).`)
+    sup.push(`Cumplimiento de rondas: ${diaPrevio1Nombre.value} ${cumplimientoGlobalPctPrevio1.value}% y ${diaPrevio2Nombre.value} ${cumplimientoGlobalPctPrevio2.value}%.`)
   }
-  if (tareasAbiertas.value.length > 0) {
-    const tareasCriticas = tareasAbiertas.value.filter(t => t.dias > 7).length
-    supervision.push(`${tareasAbiertas.value.length} tarea(s) de seguimiento abiertas en los últimos 3 días${tareasCriticas > 0 ? ` (${tareasCriticas} con más de 7 días sin cierre)` : ''}.`)
+  if (tareasAbiertas.value.length) {
+    const criticas = tareasAbiertas.value.filter(t => t.dias > 7)
+    sup.push(`${tareasAbiertas.value.length} tareas de seguimiento abiertas en los últimos 3 días` +
+      (criticas.length ? `; ${criticas.length} llevan más de 7 días (${lista(criticas.map(t => t.placa), 4)}).` : '.'))
   } else {
-    supervision.push('Sin tareas de seguimiento pendientes en la ventana de los últimos 3 días: gestión al día.')
+    sup.push('Sin tareas de seguimiento abiertas en los últimos 3 días.')
   }
-  if (res?.notasCierre) {
-    supervision.push(`Observación oficial de cierre: "${res.notasCierre}"`)
-  }
-  grupos.push({ titulo: 'Supervisión, Tareas y Control Operativo', items: supervision })
+  if (res?.notasCierre) sup.push(`Nota de cierre del día: «${res.notasCierre}».`)
 
-  return grupos
+  return [
+    { titulo: 'Disponibilidad', items: disp },
+    { titulo: 'Taller y salidas', items: taller },
+    { titulo: 'Supervisión y tareas', items: sup },
+  ]
 })
 
 // Flota alquilada detallada con chips para el informe
@@ -2650,7 +2681,6 @@ const informeAnalisisTexto = computed(() => {
   const alq = k.alquilados
   const dispPropia = k.dispPropiaPct
   const dispCancha = k.dispCanchaPct
-  const cobertura = k.coberturaPct
   const rezago = k.diasRezago
   const noOpCount = k.noOperativos
   const parcialCount = k.parciales
@@ -2660,8 +2690,7 @@ const informeAnalisisTexto = computed(() => {
   texto += `Consolidado Operativo <strong>${plantaLabel.value}</strong>: Evaluación de disponibilidad de la flota al corte del <strong>${fecha}</strong>. `
   texto += `Flota total evaluada: <strong>${totalFlota} equipos</strong> (${propias} propios${alq > 0 ? ` + ${alq} alquilados` : ''}). `
   texto += `Disponibilidad propia: <strong>${dispPropia}%</strong> | Disponibilidad en cancha: <strong>${dispCancha}%</strong>. `
-  texto += `Equipos operativos: <strong>${ops}</strong>, parciales: <strong>${parcialCount}</strong>, no operativos: <strong>${noOpCount}</strong>. `
-  texto += `Cobertura de inspección: <strong>${cobertura}%</strong>.`
+  texto += `Equipos operativos: <strong>${ops}</strong>, parciales: <strong>${parcialCount}</strong>, no operativos: <strong>${noOpCount}</strong>.`
 
   const alqInfo = informeFlotaAlquilada.value
   if (alqInfo.total > 0) {
@@ -3297,10 +3326,8 @@ const kpis = computed(() => {
       enTaller: 0,
       dispPropiaPct: 0,
       dispCanchaPct: 0,
-      coberturaPct: 0,
       dispPropiaPctLabel: '0',
       dispCanchaPctLabel: '0',
-      coberturaPctLabel: '0',
       inspeccionados: 0,
       diasRezago: 0,
     }
@@ -3362,11 +3389,9 @@ const kpis = computed(() => {
     ? (scoreSumTotal / countTotal) * 100
     : dispPropiaRaw
 
-  const coberturaRaw = flotaTotal > 0 ? Math.min(100, (inspectedCount / flotaTotal) * 100) : 100
 
   const dispPropiaPct = Math.round(dispPropiaRaw)
   const dispCanchaPct = Math.round(dispCanchaRaw)
-  const coberturaPct = Math.round(coberturaRaw)
 
   // Concretos: los KPIs de disponibilidad se muestran con 2 decimales (igual que la
   // fila "Cumplimiento" de la tabla mensual). Las demás plantas mantienen el entero.
@@ -3375,7 +3400,6 @@ const kpis = computed(() => {
     : String(Math.round(n))
   const dispPropiaPctLabel = fmtPct(dispPropiaRaw)
   const dispCanchaPctLabel = fmtPct(dispCanchaRaw)
-  const coberturaPctLabel = fmtPct(coberturaRaw)
 
   let diasRezago = 0
   if (targetIso) {
@@ -3397,10 +3421,8 @@ const kpis = computed(() => {
     enTaller: noOpCount,
     dispPropiaPct,
     dispCanchaPct,
-    coberturaPct,
     dispPropiaPctLabel,
     dispCanchaPctLabel,
-    coberturaPctLabel,
     inspeccionados: inspectedCount,
     diasRezago,
   }
