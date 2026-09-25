@@ -125,38 +125,159 @@
           </ChartCard>
         </div>
 
-        <!-- Detalle día a día al hacer clic en una placa de "Disponibilidad Operativa por Equipo" -->
+        <!-- Detalle día a día al hacer clic en una placa de "Disponibilidad Operativa por Equipo".
+             El calendario queda SIEMPRE visible arriba; al hacer clic en un día, el detalle
+             (estilo del detalle de OT: documento + Novedades + Cronología) aparece abajo, en
+             el mismo panel — no se abre otra ventana encima que tape el calendario. -->
         <Teleport to="body">
         <Transition name="modal-pop">
           <div v-if="showEquipoDetail" class="disp-detail-overlay" @click.self="closeEquipoDetail">
-            <div class="disp-detail-panel">
+            <div class="disp-detail-panel equipo-detail-panel">
               <div class="disp-detail-top">
                 <div>
-                  <h3 class="disp-detail-title">{{ equipoDetailPlaca }}</h3>
-                  <p class="disp-detail-sub">{{ equipoDetailResumen.total }} días · {{ equipoDetailResumen.disponible }} disponible · {{ equipoDetailResumen.parcial }} parcial · {{ equipoDetailResumen.noDisponible }} no disponible · {{ equipoDetailResumen.sinInspeccion }} sin inspección</p>
+                  <h3 class="disp-detail-title">{{ equipoDetailPlaca }}<span v-if="equipoDetailInfo.tipo"> — {{ equipoDetailInfo.tipo }}</span></h3>
+                  <p class="disp-detail-sub"><span v-if="equipoDetailInfo.loc">{{ equipoDetailInfo.loc }} · </span>{{ equipoDetailResumen.total }} días · {{ equipoDetailResumen.disponible }} disponible · {{ equipoDetailResumen.parcial }} parcial · {{ equipoDetailResumen.noDisponible }} no disponible · {{ equipoDetailResumen.sinInspeccion }} sin inspección</p>
                 </div>
                 <button class="disp-detail-close" @click="closeEquipoDetail">✕</button>
               </div>
-              <div class="disp-detail-table-wrap">
-                <table class="disp-detail-table">
-                  <thead>
-                    <tr>
-                      <th>Fecha</th>
-                      <th>Localización</th>
-                      <th class="r">% Score</th>
-                      <th>Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="row in equipoDetailRows" :key="row.fecha">
-                      <td class="bold">{{ row.fechaLabel }}</td>
-                      <td>{{ row.loc }}</td>
-                      <td class="r">{{ row.pct }}%</td>
-                      <td :class="row.estado === 'Disponible' ? 'green' : row.estado === 'Parcial' ? 'yellow' : row.estado === 'No Disponible' ? 'red' : 'muted'">{{ row.estado }}</td>
-                    </tr>
-                    <tr v-if="!equipoDetailRows.length"><td colspan="4" class="empty-table">Sin datos en el rango filtrado</td></tr>
-                  </tbody>
-                </table>
+
+              <!-- Calendario del rango filtrado — fijo arriba, no se oculta al ver el detalle -->
+              <div class="disp-detail-table-wrap equipo-cal-wrap" v-if="equipoDetailRows.length">
+                <div class="equipo-cal-mes" v-for="grupo in equipoDetailPorMes" :key="grupo.key">
+                  <div class="equipo-cal-mes-label">{{ grupo.label }}</div>
+                  <div class="equipo-cal-grid">
+                    <div v-for="row in grupo.dias" :key="row.fecha" class="equipo-cal-day"
+                         :class="[row.estado === 'Disponible' ? 'green' : row.estado === 'Parcial' ? 'yellow' : row.estado === 'No Disponible' ? 'red' : 'muted', diaDetailSel && diaDetailSel.fecha === row.fecha ? 'is-sel' : '']"
+                         :title="`${row.fechaLabel} — ${row.estado}${row.estado !== 'Sin Inspección' ? ' (' + row.pct + '%)' : ''}`"
+                         @click="onDiaClick(row)">
+                      <span class="equipo-cal-day-num">{{ row.dia }}</span>
+                      <span class="equipo-cal-day-pct">{{ row.estado === 'Sin Inspección' ? '—' : row.pct + '%' }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="empty-table">Sin datos en el rango filtrado</div>
+
+              <!-- Detalle del día seleccionado — debajo del calendario, diseño igual al
+                   detalle de OT (documento + Novedades + Cronología) -->
+              <div class="dia-detail-section">
+                <div v-if="!diaDetailSel" class="dia-detail-section-empty">Haz clic en un día del calendario para ver su detalle</div>
+                <template v-else>
+                  <div class="dia-detail-section-head">
+                    <h4>{{ diaDetailSel!.fechaLabel }}</h4>
+                    <button class="dia-detail-section-close" @click="closeDiaDetail" title="Cerrar detalle del día">✕</button>
+                  </div>
+                  <div class="dia-detail-workspace">
+                    <!-- VENTANA 1: Detalle de la inspección — mismo documento con logo,
+                         encabezado y folio que usa la Orden de Trabajo (.ot-doc) -->
+                    <section class="dia-window dia-window-info">
+                      <div class="ot-doc dia-doc">
+                        <div class="hdr">
+                          <div class="hdr-logo">
+                            <img src="/Logos/Logo-Gravicon-Nuevo.png" alt="GRAVICON" />
+                          </div>
+                          <div class="hdr-info">
+                            <div class="co">GRAVICON S.A. — {{ plantaLabel }}</div>
+                            <div class="ref">Disponibilidad de Flota</div>
+                            <div class="ot-title">Detalle de Inspección</div>
+                          </div>
+                          <div class="hdr-folio">
+                            <div class="folio-lbl">Placa: <span class="folio-num">{{ equipoDetailPlaca }}</span></div>
+                            <div class="folio-date">{{ diaDetailSel!.fechaLabel }}</div>
+                          </div>
+                        </div>
+
+                        <table class="meta-container">
+                          <tbody>
+                            <tr>
+                              <td class="meta-label">Estado:</td>
+                              <td class="meta-value">{{ diaDetailSel!.estado }}<span v-if="diaDetailSel!.estado !== 'Sin Inspección'"> — {{ diaDetailSel!.pct }}%</span></td>
+                              <td class="meta-label">¿En taller?:</td>
+                              <td class="meta-value">{{ diaDetailSel!.enTaller ? 'Sí' : 'No' }}</td>
+                            </tr>
+                            <tr>
+                              <td class="meta-label">Localización:</td>
+                              <td class="meta-value">{{ diaDetailSel!.loc || '—' }}</td>
+                              <td class="meta-label">Tipo Vehículo:</td>
+                              <td class="meta-value">{{ equipoDetailInfo.tipo || '—' }}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+
+                        <div class="equipo-block">
+                          <div class="equipo-tag">Mantenimiento</div>
+                          <div class="equipo-nombre">{{ diaDetailSel!.tipoMantenimiento || 'Sin mantenimiento registrado' }}</div>
+                          <table class="grid-table">
+                            <tbody>
+                              <tr>
+                                <td class="grid-label">Proveedor:</td>
+                                <td class="grid-value" colspan="3">{{ diaDetailSel!.proveedor || 'Sin proveedor registrado' }}</td>
+                              </tr>
+                              <tr>
+                                <td class="grid-label">Actividades en taller:</td>
+                                <td class="grid-value" colspan="3">{{ diaDetailSel!.actividades || '—' }}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </section>
+
+                    <!-- VENTANA 2: Novedades (Tareas Seguimiento ligadas a esta inspección) — mismo
+                         diseño de tabla "papel blanco" que usa Almacén en el detalle de OT -->
+                    <section class="dia-window dia-window-novedades">
+                      <header class="dia-window-header">
+                        <h3>Novedades</h3>
+                        <span v-if="diaDetailNovedades.length" class="ot-wh-badge">{{ diaDetailNovedades.length }} tarea{{ diaDetailNovedades.length === 1 ? '' : 's' }}</span>
+                      </header>
+                      <div class="dia-window-body">
+                        <div v-if="!diaDetailNovedades.length" class="ot-panel-placeholder">
+                          <span class="placeholder-icon">📋</span>
+                          <span class="placeholder-text">Sin novedades</span>
+                          <span class="placeholder-sub">No hay tareas registradas para este día</span>
+                        </div>
+                        <DataTable v-else title="Novedades" :data="diaNovedadTableRows" :page-size="10" :badgeFields="['Estado']" small />
+                      </div>
+                    </section>
+
+                    <!-- VENTANA 3: Cronología (hoja Cronologia_Disponilidad, ligada por ID_Inspeccion) —
+                         mismo diseño de timeline que usa la Cronología del detalle de OT -->
+                    <section class="dia-window dia-window-crono">
+                      <header class="dia-window-header">
+                        <h3>Cronología</h3>
+                      </header>
+                      <div class="dia-window-body">
+                        <div v-if="!diaDetailCronologia.length" class="ot-panel-placeholder">
+                          <span class="placeholder-icon">🕐</span>
+                          <span class="placeholder-text">Sin eventos</span>
+                          <span class="placeholder-sub">No hay registros disponibles</span>
+                        </div>
+                        <div v-else class="crono-list">
+                          <div v-for="ev in diaDetailCronologia" :key="ev.id" class="crono-item">
+                            <span class="crono-dot" :class="ev.accion.includes('CREAR') ? 'crear' : ev.accion.includes('ELIMINAR') ? 'eliminar' : 'modificar'"></span>
+                            <div class="crono-content">
+                              <div class="crono-head">
+                                <span class="crono-accion" :class="ev.accion.includes('CREAR') ? 'crear' : ev.accion.includes('ELIMINAR') ? 'eliminar' : 'modificar'">{{ ev.accion }}</span>
+                                <span class="crono-fecha">{{ ev.fecha }} <small v-if="ev.hora">{{ ev.hora }}</small></span>
+                              </div>
+                              <div v-if="ev.cambios.length" class="crono-cambios">
+                                <div v-for="(c, ci) in ev.cambios" :key="ci" class="crono-cambio">
+                                  <span class="cc-campo">{{ c.campo }}</span>
+                                  <template v-if="c.de">
+                                    <span class="cc-val cc-de">{{ c.de }}</span>
+                                    <span class="cc-arrow">→</span>
+                                  </template>
+                                  <span class="cc-val cc-a">{{ c.a }}</span>
+                                </div>
+                              </div>
+                              <div v-if="ev.usuario" class="crono-user">{{ ev.usuario }}</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </template>
               </div>
             </div>
           </div>
@@ -931,6 +1052,7 @@
 import { ref, computed, markRaw, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import KpiCard from '../../components/dashboard/KpiCard.vue'
 import ChartCard from '../../components/dashboard/ChartCard.vue'
+import DataTable from '../../components/dashboard/DataTable.vue'
 import { useTheme } from '../../composables/useTheme'
 import { useDisponibilidadStore, useMantenimientoStore } from '../../stores'
 import * as echarts from 'echarts/core'
@@ -3453,10 +3575,134 @@ function onEquipoClick(params: any) {
   if (!placa) return
   equipoDetailPlaca.value = placa
   showEquipoDetail.value = true
+  diaDetailSel.value = null
 }
-function closeEquipoDetail() { showEquipoDetail.value = false }
+function closeEquipoDetail() { showEquipoDetail.value = false; diaDetailSel.value = null }
 
-interface EquipoDiaDetail { fecha: string; fechaLabel: string; estado: 'Disponible' | 'Parcial' | 'No Disponible' | 'Sin Inspección'; pct: number; loc: string }
+/** Detalle de un día puntual (clic en una celda del calendario). */
+const diaDetailSel = ref<EquipoDiaDetail | null>(null)
+function onDiaClick(row: EquipoDiaDetail) { diaDetailSel.value = row }
+function closeDiaDetail() { diaDetailSel.value = null }
+
+interface DiaNovedad { id: string; fecha: string; estado: string; actividad: string; observaciones: string; responsable: string }
+
+/** Novedades (Tareas Seguimiento) del día seleccionado — se enlazan por ID_Inspeccion,
+ *  la llave real que une una tarea a la inspección puntual de ese día (no por
+ *  placa+ventana de fechas, que es una aproximación usada en otro lado de este archivo). */
+const diaDetailNovedades = computed<DiaNovedad[]>(() => {
+  const sel = diaDetailSel.value
+  if (!sel || !sel.inspecciones.length) return []
+  const tareas = dispStore.data?.tareas || []
+  if (!tareas.length) return []
+  const ids = new Set(sel.inspecciones)
+  const result: DiaNovedad[] = []
+  for (const t of tareas) {
+    const inspId = String(t['ID_Inspeccion'] ?? '').trim()
+    if (!inspId || !ids.has(inspId)) continue
+    const fechaReg = parseSerialDate(t['Fecha_Registro'])
+    const fecha = fechaReg ? fechaReg.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : '—'
+    result.push({
+      id: String(t['ID_Tarea'] ?? `${inspId}-${result.length}`),
+      fecha,
+      estado: String(t['Estado_Tarea'] ?? '—').trim(),
+      actividad: String(t['Actividad'] ?? '—').trim(),
+      observaciones: String(t['observaciones'] ?? '').trim(),
+      responsable: String(t['Nombre_Responsable'] ?? t['Responsable_Texto'] ?? t['Responsable'] ?? '—').trim(),
+    })
+  }
+  return result
+})
+
+/** Filas para la tabla de Novedades del día — mismo componente DataTable que usa
+ *  la ventana de Almacén en el detalle de una OT. */
+const diaNovedadTableRows = computed<Record<string, unknown>[]>(() => diaDetailNovedades.value.map(nov => ({
+  'Fecha': nov.fecha,
+  'Estado': nov.estado,
+  'Actividad': nov.actividad,
+  'Observaciones': nov.observaciones || '—',
+  'Responsable': nov.responsable,
+})))
+
+interface DiaCronoCambio { campo: string; de: string; a: string }
+interface DiaCronoEvent { id: string; fecha: string; hora: string; usuario: string; accion: string; cambios: DiaCronoCambio[] }
+
+/** Parsea "Detalle_Cambio" de Cronologia_Disponilidad: formato real confirmado en la
+ *  hoja es "...Cambios: • Campo: de -> a • Campo2: ..." (mismo formato de bullets que
+ *  usa la Cronología de las OT de Agregados). */
+function parseDispCronoCambios(detalle: string): DiaCronoCambio[] {
+  const m = detalle.match(/Cambios:\s*(.*)$/s)
+  if (!m) return []
+  const out: DiaCronoCambio[] = []
+  for (const part of m[1].split('•').map(s => s.trim()).filter(Boolean)) {
+    const ci = part.indexOf(':')
+    if (ci < 0) continue
+    const campo = part.slice(0, ci).trim()
+    if (!campo) continue
+    const rest = part.slice(ci + 1).trim()
+    const ai = rest.indexOf('->')
+    let de = '', a = ''
+    if (ai >= 0) { de = rest.slice(0, ai).trim(); a = rest.slice(ai + 2).trim() } else { a = rest }
+    if (!a) continue
+    out.push({ campo, de, a })
+  }
+  return out
+}
+
+/** Cronología del día seleccionado — se enlaza igual que las novedades, por
+ *  ID_Inspeccion, pero buscándolo entre corchetes dentro de Detalle_Cambio
+ *  (ej. "Se MODIFICÓ el Reporte de Placa [43b9bd5f]..."), que es como la hoja
+ *  Cronologia_Disponilidad referencia la inspección puntual (confirmado leyendo
+ *  datos reales — Id_Disponibilidad de esa hoja identifica el lote diario, no la
+ *  placa individual). */
+const diaDetailCronologia = computed<DiaCronoEvent[]>(() => {
+  const sel = diaDetailSel.value
+  if (!sel || !sel.inspecciones.length) return []
+  const cronologia = dispStore.data?.cronologia || []
+  if (!cronologia.length) return []
+  const result: DiaCronoEvent[] = []
+  for (const c of cronologia) {
+    const detalle = String(c['Detalle_Cambio'] ?? '')
+    if (!detalle) continue
+    if (!sel.inspecciones.some(id => detalle.includes(`[${id}]`))) continue
+    const cambios = parseDispCronoCambios(detalle)
+    if (!cambios.length) continue
+    result.push({
+      id: String(c['ID_Historial'] ?? `${result.length}`),
+      fecha: String(c['Fecha_Evento'] ?? ''),
+      hora: String(c['Hora_Evento'] ?? ''),
+      usuario: String(c['Usuario_Cambio'] ?? ''),
+      accion: String(c['Tipo_Accion'] ?? 'CAMBIO'),
+      cambios,
+    })
+  }
+  result.sort((a, b) => a.fecha === b.fecha ? a.hora.localeCompare(b.hora) : a.fecha.localeCompare(b.fecha))
+  return result
+})
+
+interface EquipoDiaDetail {
+  fecha: string; fechaLabel: string; estado: 'Disponible' | 'Parcial' | 'No Disponible' | 'Sin Inspección'; pct: number; loc: string
+  proveedor: string; enTaller: boolean; tipoMantenimiento: string; actividades: string; inspecciones: string[]
+}
+
+/** Tipo de vehículo y última localización conocida de la placa (para el encabezado del
+ *  modal, en vez de repetirla fila por fila) — se toma de la inspección más reciente. */
+const equipoDetailInfo = computed(() => {
+  if (!equipoDetailPlaca.value) return { tipo: '', loc: '' }
+  const placa = equipoDetailPlaca.value
+  let tipo = '', loc = '', lastSerial = -Infinity
+  for (const r of activePlacasRows.value) {
+    const info = getInspectionDetails(r)
+    if (info.placa !== placa) continue
+    const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
+    const serial = d ? d.getTime() : 0
+    if (serial >= lastSerial) {
+      lastSerial = serial
+      tipo = info.baseTipo
+      loc = info.loc
+    }
+  }
+  return { tipo, loc }
+})
 
 /** Un día del rango puede no tener inspección registrada — se lista igual, marcado
  *  "Sin Inspección", para no confundirlo con un "No Disponible" real (no inventar). */
@@ -3465,17 +3711,25 @@ const equipoDetailRows = computed<EquipoDiaDetail[]>(() => {
   const placa = equipoDetailPlaca.value
 
   // Inspecciones de esta placa por día (puede haber más de una por día, ej. AM/PM:
-  // se promedia el score de ese día).
-  const byDay = new Map<string, { scoreSum: number; count: number; loc: string }>()
+  // se promedia el score de ese día y se juntan proveedor/actividades de taller).
+  const byDay = new Map<string, { scoreSum: number; count: number; loc: string; proveedor: string; enTaller: boolean; tipoMantenimiento: string; actividades: string[]; inspecciones: string[] }>()
   for (const r of activePlacasRows.value) {
     const info = getInspectionDetails(r)
     if (info.placa !== placa) continue
     const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
     if (!d) continue
     const key = getDateKey(d)
-    const cur = byDay.get(key) ?? { scoreSum: 0, count: 0, loc: info.loc }
+    const cur = byDay.get(key) ?? { scoreSum: 0, count: 0, loc: info.loc, proveedor: '', enTaller: false, tipoMantenimiento: '', actividades: [], inspecciones: [] }
     cur.scoreSum += info.score
     cur.count++
+    if (!cur.proveedor && info.prov) cur.proveedor = info.prov
+    if (info.esEnTaller) cur.enTaller = true
+    const tipoMtto = String(r['Tipo Mantenimiento'] ?? '').trim()
+    if (!cur.tipoMantenimiento && tipoMtto) cur.tipoMantenimiento = tipoMtto
+    const act = String(r['Actividades en taller'] ?? r['Actividades_en_taller'] ?? '').trim()
+    if (act && !cur.actividades.includes(act)) cur.actividades.push(act)
+    const inspId = String(r['ID_Inspeccion'] ?? '').trim()
+    if (inspId && !cur.inspecciones.includes(inspId)) cur.inspecciones.push(inspId)
     byDay.set(key, cur)
   }
 
@@ -3500,7 +3754,7 @@ const equipoDetailRows = computed<EquipoDiaDetail[]>(() => {
     const fechaLabel = d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
     const day = byDay.get(key)
     if (!day) {
-      rows.push({ fecha: key, fechaLabel, estado: 'Sin Inspección', pct: 0, loc: '—' })
+      rows.push({ fecha: key, fechaLabel, estado: 'Sin Inspección', pct: 0, loc: '—', proveedor: '', enTaller: false, tipoMantenimiento: '', actividades: '', inspecciones: [] })
       continue
     }
     const avgScore = day.count > 0 ? day.scoreSum / day.count : 0
@@ -3510,9 +3764,32 @@ const equipoDetailRows = computed<EquipoDiaDetail[]>(() => {
       estado: avgScore < 0.1 ? 'No Disponible' : avgScore < 0.9 ? 'Parcial' : 'Disponible',
       pct: Math.round(avgScore * 100),
       loc: day.loc,
+      proveedor: day.proveedor,
+      enTaller: day.enTaller,
+      tipoMantenimiento: day.tipoMantenimiento,
+      actividades: day.actividades.join(' · '),
+      inspecciones: day.inspecciones,
     })
   }
   return rows
+})
+
+interface EquipoMesGroup { key: string; label: string; dias: (EquipoDiaDetail & { dia: number })[] }
+
+/** Agrupa el detalle día a día por mes, para mostrarlo como calendario (celdas chicas,
+ *  se acomodan solas en varias filas) en vez de una tabla ancha con scroll horizontal. */
+const equipoDetailPorMes = computed<EquipoMesGroup[]>(() => {
+  const map = new Map<string, (EquipoDiaDetail & { dia: number })[]>()
+  for (const row of equipoDetailRows.value) {
+    const mesKey = row.fecha.slice(0, 7)
+    if (!map.has(mesKey)) map.set(mesKey, [])
+    map.get(mesKey)!.push({ ...row, dia: Number(row.fecha.slice(8, 10)) })
+  }
+  return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([key, dias]) => {
+    const [y, m] = key.split('-').map(Number)
+    const raw = new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString('es-CO', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+    return { key, label: raw.charAt(0).toUpperCase() + raw.slice(1), dias }
+  })
 })
 
 const equipoDetailResumen = computed(() => {
@@ -4994,23 +5271,166 @@ ul.res li::before {
 
 /* Modal de detalle por placa al hacer clic en "Disponibilidad Promedio por Clasificación" */
 .disp-detail-overlay { position: fixed; inset: 0; z-index: 9998; background: rgba(15,23,42,.45); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 20px; }
-.disp-detail-panel { background: var(--card-bg, #fff); border-radius: 16px; width: 95vw; max-width: 720px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+.disp-detail-panel { background: var(--card-bg, #fff); border-radius: 16px; width: 95vw; max-width: 1100px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
 /* Transición de entrada/salida de los modales de detalle — rebote leve al entrar */
 .modal-pop-enter-active, .modal-pop-leave-active { transition: opacity 0.2s ease; }
 .modal-pop-enter-from, .modal-pop-leave-to { opacity: 0; }
 .modal-pop-enter-active .disp-detail-panel { transition: transform 0.32s cubic-bezier(.34,1.56,.64,1); }
 .modal-pop-leave-active .disp-detail-panel { transition: transform 0.18s ease; }
 .modal-pop-enter-from .disp-detail-panel, .modal-pop-leave-to .disp-detail-panel { transform: scale(0.92) translateY(8px); }
+
+/* Detalle de un día puntual — ya no es un overlay aparte: es una sección fija debajo
+ * del calendario, dentro del mismo panel de "Disponibilidad Operativa por Equipo",
+ * para que el calendario nunca quede tapado. */
+.equipo-detail-panel { max-width: 1500px; height: 92vh; }
+.equipo-cal-wrap { flex: 0 0 auto; max-height: 34vh; overflow-y: auto; border-bottom: 1px solid var(--card-border, #e2e8f0); }
+.equipo-cal-day.is-sel { outline: 2px solid var(--navy, #172954); outline-offset: -2px; }
+.dia-detail-section { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.dia-detail-section-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text-secondary, #94a3b8); font-size: 13px; padding: 24px; text-align: center; }
+.dia-detail-section-head { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 10px 20px; border-bottom: 1px solid var(--card-border, #e2e8f0); }
+.dia-detail-section-head h4 { margin: 0; font-size: 14px; font-weight: 700; color: var(--text-primary, #1f2937); }
+.dia-detail-section-close { width: 26px; height: 26px; border-radius: 50%; border: 1px solid #d1d5db; background: #fff; cursor: pointer; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.dia-detail-section-close:hover { background: #ef4444; border-color: #ef4444; color: #fff; }
+
+/* Ventana 1 — documento de la inspección, mismo diseño "papel" que el .ot-doc del
+ * detalle de OT: logo, encabezado azul y folio, tabla de metadatos, bloque de equipo. */
+.ot-doc { padding: 14px 16px; font-family: 'Lato', sans-serif; font-size: 11px; line-height: 1.3; color: #1a1a1a; background: #ffffff; }
+.ot-doc .hdr { display: table; width: 100%; border-bottom: 2px solid #3827F5; padding-bottom: 8px; margin-bottom: 12px; }
+.ot-doc .hdr-logo { display: table-cell; width: 25%; vertical-align: middle; }
+.ot-doc .hdr-logo img { max-width: 120px; height: auto; }
+.ot-doc .hdr-info { display: table-cell; width: 50%; vertical-align: middle; padding-left: 15px; }
+.ot-doc .hdr-info .co { font-size: 12px; font-weight: bold; color: #3827F5; text-transform: uppercase; }
+.ot-doc .hdr-info .ref { font-size: 9px; color: #555; margin-top: 2px; }
+.ot-doc .hdr-info .ot-title { font-size: 14px; font-weight: bold; color: #3827F5; margin-top: 4px; text-transform: uppercase; }
+.ot-doc .hdr-folio { display: table-cell; width: 25%; text-align: right; vertical-align: middle; }
+.ot-doc .folio-lbl { font-size: 10px; color: #333; font-weight: bold; }
+.ot-doc .folio-num { font-size: 13px; font-weight: bold; color: #d9534f; }
+.ot-doc .folio-date { font-size: 8.5px; color: #666; }
+.ot-doc .meta-container { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+.ot-doc .meta-container td { padding: 4px 6px; font-size: 10px; vertical-align: middle; }
+.ot-doc .meta-label { font-weight: bold; color: #333; width: 25%; }
+.ot-doc .meta-value { color: #555; border-bottom: 1px dashed #ccc; width: 25%; }
+.ot-doc .equipo-block { background: #f8f9fa; border: 1px solid #3827F5; border-radius: 4px; padding: 10px; margin-bottom: 15px; }
+.ot-doc .equipo-tag { font-size: 9px; font-weight: bold; color: #3827F5; text-transform: uppercase; }
+.ot-doc .equipo-nombre { font-size: 14px; font-weight: bold; color: #3827F5; margin-bottom: 6px; }
+.ot-doc .grid-table { width: 100%; border-collapse: collapse; }
+.ot-doc .grid-table td { padding: 4px 6px; font-size: 10.5px; vertical-align: middle; }
+.ot-doc .grid-label { color: #555; font-weight: bold; width: 25%; }
+.ot-doc .grid-value { color: #1a1a1a; }
+
+/* Workspace de 3 ventanas del detalle de día — replica exacta del diseño del modal
+ * de detalle de OT: documento a la izquierda + Novedades/Cronología a la derecha,
+ * con el mismo estilo "papel blanco, tinta oscura, azul" de esas dos ventanas. */
+.dia-detail-workspace {
+  display: grid;
+  grid-template-columns: 1fr 1.05fr;
+  grid-template-rows: 1fr 1fr;
+  grid-template-areas: "info novedades" "info crono";
+  gap: 16px;
+  padding: 16px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.dia-window { background: #ffffff; border: 1px solid #dfe3e8; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.06); min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.dia-window-info { grid-area: info; overflow-y: auto; }
+.dia-window-novedades { grid-area: novedades; }
+.dia-window-crono { grid-area: crono; }
+.dia-window-header { flex: 0 0 auto; height: 42px; display: flex; align-items: center; padding: 0 14px; border-bottom: 1px solid #e5e7eb; background: #ffffff; }
+.dia-window-header h3 { margin: 0; font-family: 'Lato', sans-serif; font-size: 12px; font-weight: 700; color: #3827f5; text-transform: uppercase; letter-spacing: .4px; }
+.dia-window-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+
+/* DataTable de Novedades — mismo tema "papel blanco" que usa Almacén en el modal OT */
+.dia-window-novedades :deep(.table-wrapper) { background: #ffffff; border: 1px solid #dfe3e8; border-radius: 8px; backdrop-filter: none; box-shadow: none; }
+.dia-window-novedades :deep(.table-header) { border-bottom: 1px solid #e5e7eb; }
+.dia-window-novedades :deep(.table-title) { color: #1a1a1a; font-family: 'Lato', sans-serif; }
+.dia-window-novedades :deep(.table-count) { color: #555; background: #f1f5f9; }
+.dia-window-novedades :deep(.search-wrapper) { background: #f1f5f9; color: #64748b; }
+.dia-window-novedades :deep(.search-input) { color: #1a1a1a; }
+.dia-window-novedades :deep(.table th) { background: #f8f9fa; color: #1a1a1a; border-bottom: 2px solid #e5e7eb; font-family: 'Lato', sans-serif; }
+.dia-window-novedades :deep(.table td) { color: #1a1a1a; border-bottom: 1px solid #eef2f7; }
+.dia-window-novedades :deep(.table tbody tr:nth-child(even) td) { background: #fafbfc; }
+.dia-window-novedades :deep(.table tbody tr:hover td) { background: #eef2ff; }
+.dia-window-novedades :deep(.table-pagination) { color: #1a1a1a; border-top-color: #e5e7eb; }
+
+@media (max-width: 900px) {
+  .equipo-detail-panel { width: 100vw; height: 100vh; max-width: none; border-radius: 0; }
+  .equipo-cal-wrap { max-height: 26vh; }
+  .dia-detail-workspace {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    grid-template-areas: "info" "novedades" "crono";
+    overflow-y: auto;
+  }
+  .dia-window-novedades, .dia-window-crono { min-height: 300px; }
+}
+
+/* Placeholder de ventana vacía (idéntico al del detalle de OT) */
+.ot-panel-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; min-height: 120px; color: #9ca3af; gap: 8px; }
+.placeholder-icon { font-size: 32px; opacity: 0.5; }
+.placeholder-text { font-size: 14px; font-weight: 600; color: #6b7280; }
+.placeholder-sub { font-size: 12px; color: #9ca3af; }
+.ot-wh-badge { margin-left: auto; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: rgba(59,130,246,.12); color: #3b82f6; }
+
+/* Cronología — mismo diseño de timeline del detalle de OT (papel blanco, tinta oscura, azul) */
+.crono-list { display: flex; flex-direction: column; padding: 14px 16px; font-family: 'Lato', sans-serif; }
+.crono-item { position: relative; padding-left: 24px; }
+.crono-item:not(:last-child)::before { content: ''; position: absolute; left: 6px; top: 16px; bottom: -4px; width: 2px; background: #e5e7eb; }
+.crono-dot { position: absolute; left: 0; top: 6px; width: 14px; height: 14px; border-radius: 50%; background: #cbd5e1; border: 2px solid #ffffff; }
+.crono-dot.modificar { background: #3827f5; }
+.crono-dot.crear { background: #10b981; }
+.crono-dot.eliminar { background: #ef4444; }
+.crono-content { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 12px; flex: 1; }
+.crono-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.crono-accion { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; padding: 2px 8px; border-radius: 8px; background: rgba(56,39,245,.1); color: #3827f5; }
+.crono-accion.crear { background: rgba(16,185,129,.12); color: #047857; }
+.crono-accion.eliminar { background: rgba(239,68,68,.12); color: #b91c1c; }
+.crono-fecha { font-size: 11px; color: #666; }
+.crono-fecha small { font-size: 10px; }
+.crono-user { font-size: 10px; color: #777; font-style: italic; }
+.crono-cambios { display: flex; flex-direction: column; gap: 3px; margin-top: 2px; }
+.crono-cambio { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; font-size: 11px; line-height: 1.45; padding: 3px 8px; border-radius: 6px; background: #f8f9fa; }
+.cc-campo { font-weight: 700; color: #1a1a1a; white-space: nowrap; }
+.cc-val { color: #555; overflow-wrap: anywhere; }
+.cc-val.cc-de { color: #ef4444; text-decoration: line-through; }
+.cc-arrow { color: #9ca3af; }
+.cc-val.cc-a { color: #047857; font-weight: 600; }
 .disp-detail-top { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--card-border, #e2e8f0); }
 .disp-detail-title { font-size: 16px; font-weight: 700; margin: 0; color: var(--text-primary, #1f2937); }
 .disp-detail-sub { font-size: 12px; color: var(--text-secondary, #6b7280); margin: 2px 0 0; }
 .disp-detail-close { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #d1d5db; background: #fff; cursor: pointer; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
 .disp-detail-close:hover { background: #ef4444; border-color: #ef4444; color: #fff; }
 .disp-detail-table-wrap { overflow: auto; flex: 1; padding: 12px; }
-.disp-detail-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.disp-detail-table th { position: sticky; top: 0; background: var(--bg-alt, #f8fafc); font-weight: 600; text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--card-border, #e5e7eb); white-space: nowrap; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
-.disp-detail-table td { padding: 7px 10px; border-bottom: 1px solid var(--card-border, #f1f5f9); }
-.disp-detail-table th.r, .disp-detail-table td.r { text-align: right; }
+
+/* Calendario del detalle día a día — celdas chicas agrupadas por mes, día + % visibles
+ * sin necesidad de hover; clic en una celda abre el detalle puntual con novedades. */
+.equipo-cal-mes { margin-bottom: 16px; }
+.equipo-cal-mes:last-child { margin-bottom: 0; }
+.equipo-cal-mes-label { font-size: 12px; font-weight: 700; color: var(--text-secondary, #64748b); text-transform: uppercase; letter-spacing: .3px; margin-bottom: 8px; }
+.equipo-cal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 6px; }
+.equipo-cal-day { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 6px 4px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; transition: transform .12s ease, box-shadow .12s ease; }
+.equipo-cal-day:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,.12); }
+.equipo-cal-day-num { font-size: 12px; font-weight: 700; }
+.equipo-cal-day-pct { font-size: 10px; font-weight: 600; opacity: .85; }
+.equipo-cal-day.green { background: rgba(22,163,74,.14); color: #16a34a; }
+.equipo-cal-day.yellow { background: rgba(184,134,11,.14); color: #b8860b; }
+.equipo-cal-day.red { background: rgba(220,38,38,.14); color: #dc2626; }
+.equipo-cal-day.muted { background: var(--card-border, #f1f5f9); color: var(--text-secondary, #94a3b8); }
+
+/* Novedades (Tareas Seguimiento) dentro del panel de detalle de día */
+.dia-detail-novedades { margin-top: 6px; padding-top: 12px; }
+.dia-detail-novedades-title { font-size: 11px; font-weight: 700; color: var(--text-secondary, #64748b); text-transform: uppercase; letter-spacing: .3px; margin: 0 0 8px; }
+.dia-detail-novedad-list { display: flex; flex-direction: column; gap: 8px; }
+.dia-detail-novedad { border: 1px solid var(--card-border, #e2e8f0); border-radius: 10px; padding: 8px 10px; }
+.dia-detail-novedad-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.dia-detail-novedad-estado { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; padding: 2px 7px; border-radius: 999px; }
+.dia-detail-novedad-estado.yellow { background: rgba(184,134,11,.14); color: #b8860b; }
+.dia-detail-novedad-estado.green { background: rgba(22,163,74,.14); color: #16a34a; }
+.dia-detail-novedad-fecha { font-size: 11px; color: var(--text-secondary, #94a3b8); }
+.dia-detail-novedad-actividad { font-size: 13px; font-weight: 600; margin: 0 0 4px; color: var(--text-primary, #1f2937); }
+.dia-detail-novedad-obs { font-size: 12px; color: var(--text-secondary, #6b7280); margin: 0 0 4px; }
+.dia-detail-novedad-resp { font-size: 11px; color: var(--text-secondary, #94a3b8); margin: 0; }
+.dia-detail-novedad-empty { font-size: 12px; color: var(--text-secondary, #94a3b8); margin: 0; }
 
 /* Responsive — informe/tareas usables en tablet / teléfono */
 @media (max-width: 1200px) {

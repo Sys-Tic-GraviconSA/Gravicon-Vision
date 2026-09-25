@@ -227,6 +227,7 @@ export const useDisponibilidadStore = defineStore('disponibilidad', () => {
     placas: Record<string, unknown>[]
     tareas: Record<string, unknown>[]
     resumen: Record<string, unknown>[]
+    cronologia: Record<string, unknown>[]
     totalPlacas: number
     totalTareas: number
     planta: string
@@ -248,6 +249,7 @@ export const useDisponibilidadStore = defineStore('disponibilidad', () => {
         placas: d?.placas ? [...d.placas] : [],
         tareas: d?.tareas ? [...d.tareas] : [],
         resumen: d?.resumen ? [...d.resumen] : [],
+        cronologia: d?.cronologia ? [...d.cronologia] : [],
       }
     } catch (e: any) {
       console.error('[disponibilidad-store]', e)
