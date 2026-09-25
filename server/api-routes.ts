@@ -247,7 +247,7 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
       const limit = 100000
       const [resPrice, resDetail] = await Promise.all([
         supabase.from('order_price').select('*', { count: 'exact', head: false }).limit(limit),
-        supabase.from('order_detail').select('remision,tiempos_hphora_programada').limit(limit),
+        supabase.from('order_detail').select('remision,tiempos_hphora_programada,bomba,operario').limit(limit),
       ])
       if (resPrice.error) throw resPrice.error
       if (resDetail.error) throw resDetail.error

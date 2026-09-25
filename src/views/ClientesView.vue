@@ -33,9 +33,9 @@
       </div>
 
       <div class="charts-grid cols-2">
-        <ChartCard title="Distribución por Planta" :option="plantaPieOpt" />
-        <ChartCard title="Evolución por Planta" :option="plantaLineOpt" />
-        <ChartCard title="Total Real vs Meta" :option="totalLineOpt" />
+        <ChartCard title="Distribución por Planta" description="M³ reales por planta y su participación" :option="plantaPieOpt" :height="320" />
+        <ChartCard title="Evolución por Planta" description="M³ reales por mes en cada planta" :option="plantaLineOpt" :height="320" />
+        <ChartCard title="Total Real vs Meta" description="M³ reales frente a la meta proyectada, por mes; encima, el % de cumplimiento" :option="totalLineOpt" :height="320" />
       </div>
 
       <div class="section-divider"></div>
@@ -154,6 +154,9 @@ import ChartCard from '../components/dashboard/ChartCard.vue'
 import DataTable from '../components/dashboard/DataTable.vue'
 import KpiCard from '../components/dashboard/KpiCard.vue'
 import MultiSelect from '../components/ui/MultiSelect.vue'
+import { use } from 'echarts/core'
+import { LabelLayout } from 'echarts/features'
+import { COLOR_PLANTA, ORDEN_PLANTAS, AZUL, FONT, fmtN, pct, nombrePlanta, punto, m3Lbl, vacio, useEstiloGraficas } from '../composables/useGraficasConcreto'
 
 const client = useClientesStore()
 
@@ -414,75 +417,92 @@ const filteredResumenPlantasMensual = computed(() => {
   })
 })
 
+// Mismos colores por planta de Concretos y Mantenimiento
 const colorMap: Record<string, string> = {
-  'Acacias': '#3B82F6',
-  'Puerto Concordia': '#10B981',
-  'Restrepo': '#F59E0B',
-  'Villavicencio': '#A855F7',
+  'Acacias': COLOR_PLANTA['Acacías'],
+  'Puerto Concordia': COLOR_PLANTA['Puerto Concordia'],
+  'Restrepo': COLOR_PLANTA['Restrepo'],
+  'Villavicencio': COLOR_PLANTA['Villavicencio'],
 }
+use([LabelLayout])  // separa las etiquetas finales de las líneas
+const colorPlanta = (p: string) => colorMap[p] ?? COLOR_PLANTA[nombrePlanta(p)] ?? AZUL
+const { isLight, chartTextColor, labelPill, base, leyenda, ejeX, ejeY } = useEstiloGraficas()
+// Orden fijo de plantas en leyendas y series, igual que en Concretos
+const ordenPlanta = (p: string) => { const i = ORDEN_PLANTAS.indexOf(nombrePlanta(p)); return i < 0 ? 99 : i }
 
 const plantaPieOpt = computed(() => {
-  const data = filteredResumenPlantas.value.map(p => ({
-    name: p.planta, value: p.real,
-    itemStyle: { color: colorMap[p.planta] },
-  }))
-  return {
-    tooltip: { trigger: 'item', formatter: '{b}: {c} M³ ({d}%)' },
+  const lista = [...filteredResumenPlantas.value].sort((a, b) => ordenPlanta(a.planta) - ordenPlanta(b.planta))
+  const total = lista.reduce((a, p) => a + p.real, 0)
+  return vacio({
+    ...base(),
+    title: {
+      text: fmtN(total, 0), subtext: 'M³ reales', left: '37%', top: '44%', textAlign: 'center',
+      textStyle: { fontFamily: FONT, fontSize: 18, fontWeight: 700, color: isLight.value ? '#0f172a' : '#f1f5f9' },
+      subtextStyle: { fontFamily: FONT, fontSize: 11, color: chartTextColor.value },
+    },
+    tooltip: { trigger: 'item' as const, formatter: (p: any) => `${punto(p.color)} <b>${p.name}</b><br/>${fmtN(p.value)} M³ (${pct(p.percent)})` },
+    legend: {
+      orient: 'vertical' as const, right: 10, top: 'middle', icon: 'circle', itemWidth: 10, itemHeight: 10, itemGap: 14,
+      textStyle: { fontFamily: FONT, fontWeight: 600 as const, color: chartTextColor.value, fontSize: 11 },
+      formatter: (n: string) => { const x = lista.find(y => y.planta === n); return x ? `${n}  ${fmtN(x.real, 0)} M³` : n },
+    },
     series: [{
-      type: 'pie', radius: ['30%', '60%'],
-      data,
-      label: { formatter: '{b}\n{c} M³' },
+      type: 'pie' as const, radius: ['42%', '68%'], center: ['38%', '55%'], avoidLabelOverlap: true,
+      itemStyle: { borderRadius: 4, borderColor: isLight.value ? '#fff' : '#0b0f1a', borderWidth: 2 },
+      label: { show: true, formatter: (p: any) => pct(p.percent), fontSize: 11, fontWeight: 600, fontFamily: FONT, color: chartTextColor.value },
+      data: lista.map(p => ({ name: p.planta, value: p.real, itemStyle: { color: colorPlanta(p.planta) } })),
     }],
-  }
+  }, lista.length > 0)
 })
 
 const plantaLineOpt = computed(() => {
   const mensual = filteredResumenPlantasMensual.value
-  if (!mensual.length) return {}
-  const mesesArr = mensual.map(m => m.mes)
-  const todasLasPlantas = [...new Set(mensual.flatMap(m => m.plantas.map(p => p.planta)))]
-  const series = todasLasPlantas.map((planta) => ({
-    name: planta, type: 'line', smooth: true,
-    data: mensual.map(m => m.plantas.find(p => p.planta === planta)?.real ?? 0),
-    lineStyle: { width: 2.5, color: colorMap[planta] },
-    symbolSize: 6,
-    areaStyle: { color: colorMap[planta], opacity: 0.08 },
-  }))
-  return {
-    color: todasLasPlantas.map(p => colorMap[p]),
-    tooltip: { trigger: 'axis' },
-    legend: { data: todasLasPlantas, bottom: 0 },
-    grid: { left: 60, right: 20, bottom: 40, top: 20 },
-    xAxis: { type: 'category', data: mesesArr },
-    yAxis: { type: 'value' },
-    series,
-  }
+  const plantas = [...new Set(mensual.flatMap(m => m.plantas.map(p => p.planta)))].sort((a, b) => ordenPlanta(a) - ordenPlanta(b))
+  return vacio({
+    ...base(),
+    tooltip: {
+      trigger: 'axis' as const,
+      formatter: (params: any[]) => `<b>${params[0].axisValueLabel}</b><br/>` +
+        params.map(p => `${punto(colorPlanta(p.seriesName))} ${p.seriesName}: <b>${fmtN(p.value)} M³</b>`).join('<br/>') +
+        `<br/>${punto('#1f2937')} Total: <b>${fmtN(params.reduce((a, p) => a + (Number(p.value) || 0), 0))} M³</b>`,
+    },
+    legend: leyenda(plantas.map(p => ({ name: p, itemStyle: { color: colorPlanta(p) } }))),
+    grid: { left: 20, right: 60, bottom: 30, top: 50, containLabel: true },
+    xAxis: ejeX(mensual.map(m => m.mes), { boundaryGap: false }),
+    yAxis: ejeY(),
+    series: plantas.map(planta => ({
+      name: planta, type: 'line' as const, smooth: 0.3, symbol: 'circle', symbolSize: 7, emphasis: { focus: 'series' as const },
+      data: mensual.map(m => m.plantas.find(p => p.planta === planta)?.real ?? 0),
+      lineStyle: { width: 2.5, color: colorPlanta(planta) }, itemStyle: { color: colorPlanta(planta) },
+      areaStyle: { color: colorPlanta(planta), opacity: 0.08 },
+      endLabel: { ...labelPill.value, formatter: (x: any) => m3Lbl(x.value) }, labelLayout: { moveOverlap: 'shiftY' as const },
+    })),
+  }, mensual.length > 0)
 })
 
 const totalLineOpt = computed(() => {
   const mesesArr = months.value
-  if (!mesesArr.length) return {}
   const totals = filteredResumenMensual.value
-  return {
-    tooltip: { trigger: 'axis' },
-    legend: { data: ['Real Total', 'Meta Total'], bottom: 0 },
-    grid: { left: 60, right: 20, bottom: 40, top: 20 },
-    xAxis: { type: 'category', data: mesesArr },
-    yAxis: { type: 'value' },
+  const gris = isLight.value ? '#cbd5e1' : '#334155'
+  const cump = (i: number) => (totals[i]?.proy ? totals[i].real / totals[i].proy * 100 : 0)
+  return vacio({
+    ...base(),
+    tooltip: {
+      trigger: 'axis' as const, axisPointer: { type: 'shadow' as const },
+      formatter: (params: any[]) => { const i = params[0].dataIndex, t = totals[i]
+        return `<b>${params[0].axisValueLabel}</b><br/>${punto(gris)} Meta: <b>${fmtN(t.proy)} M³</b><br/>${punto(AZUL)} Real: <b>${fmtN(t.real)} M³</b><br/>` +
+          `${punto(cump(i) >= 100 ? '#16A34A' : '#DC2626')} Cumplimiento: <b>${pct(cump(i))}</b> · diferencia ${t.real - t.proy >= 0 ? '+' : ''}${fmtN(t.real - t.proy)} M³` },
+    },
+    legend: leyenda([{ name: 'Meta Total', itemStyle: { color: gris } }, { name: 'Real Total', itemStyle: { color: AZUL } }]),
+    grid: { left: 20, right: 30, bottom: 30, top: 50, containLabel: true },
+    xAxis: ejeX(mesesArr),
+    yAxis: ejeY(),
     series: [
-      {
-        name: 'Real Total', type: 'line', smooth: true,
-        data: totals.map(m => m.real),
-        lineStyle: { width: 3 }, symbolSize: 7,
-        areaStyle: { opacity: 0.1 },
-      },
-      {
-        name: 'Meta Total', type: 'line', smooth: true,
-        data: totals.map(m => m.proy),
-        lineStyle: { width: 3, type: 'dashed' }, symbolSize: 7,
-      },
+      { name: 'Meta Total', type: 'bar' as const, barMaxWidth: 28, data: totals.map(m => m.proy), itemStyle: { color: gris, borderRadius: [4, 4, 0, 0] } },
+      { name: 'Real Total', type: 'bar' as const, barMaxWidth: 28, data: totals.map(m => m.real), itemStyle: { color: AZUL, borderRadius: [4, 4, 0, 0] },
+        label: { ...labelPill.value, position: 'top' as const, formatter: (x: any) => pct(cump(x.dataIndex), 0) } },
     ],
-  }
+  }, mesesArr.length > 0)
 })
 </script>
 

@@ -422,6 +422,9 @@ async function handleLogout() {
 .main {
   margin-left: var(--sidebar-width);
   flex: 1;
+  /* Sin esto el <main> (ítem flex) crece hasta el ancho mínimo de su contenido y en celular
+     la página se corta a la derecha; las tablas anchas ya traen su propio scroll horizontal */
+  min-width: 0;
   min-height: 100vh;
   transition: margin-left var(--transition-slow), background-color var(--transition-base);
   position: relative;
