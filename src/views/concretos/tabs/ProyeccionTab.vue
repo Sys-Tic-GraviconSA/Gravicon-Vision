@@ -47,7 +47,8 @@
             Seguimiento a la <strong>proyección mensual de clientes de concreto</strong> de {{ mesLbl }}: meta en m³ por planta y cliente
             frente a lo ejecutado al <strong>{{ corteLargo }}</strong>, ritmo esperado según el avance del mes, desviación, faltante y m³
             diarios necesarios para cumplir. Incluye el avance de cada cliente proyectado, el seguimiento día a día, la
-            <strong>producción por vehículo</strong> y el control de calidad del dato. Fuente: proyecciones_clientes, proyecciones_planta y order_price.
+            <strong>producción por vehículo</strong> y el control de calidad del dato. La proyección de cada planta es el total de la proyección
+            de sus clientes. Fuente: proyecciones_clientes, proyecciones_planta (despacho diario) y order_price.
           </p>
         </div>
 
@@ -132,7 +133,7 @@
 
         <div class="report-section-block">
           <h3 class="report-block-title"><span class="title-bar"></span>Despacho diario por planta vs. meta diaria — {{ mesLbl }}</h3>
-          <p class="section-note">m³ por día y planta; la línea es la meta diaria ({{ fmtN(metaDiaria) }} m³/día = meta del mes ÷ {{ diasOpMes }} días operativos).</p>
+          <p class="section-note">m³ por día y planta; la línea es la meta diaria ({{ fmtN(metaDiaria) }} m³/día = total de la proyección de clientes ÷ {{ diasOpMes }} días operativos).</p>
           <div ref="chDiarioRef" class="echart" style="height: 300px"></div>
         </div>
 
@@ -422,6 +423,7 @@ const kpis = computed<KpiDef[]>(() => {
 })
 
 // ---------------------------------------------------------------- Seguimiento diario (proyecciones_planta; si no hay, order_price)
+// La proyección de la planta es el total de la proyección de sus clientes (no se usa proyectado_diario_general)
 const metaDiaria = computed(() => (diasOpMes.value ? T.value.meta / diasOpMes.value : 0))
 const diario = computed(() => {
   const pp = ppRows.value.filter(r => String(r.fecha ?? '').startsWith(pref.value) && String(r.fecha) <= corteIso.value)
@@ -437,7 +439,7 @@ const diario = computed(() => {
     const total = Object.values(porPlanta).reduce((a, v) => a + v, 0)
     if (total > 0 || !esDomingo(d)) dias.push({ iso, porPlanta, total })
   }
-  return { dias, fuente: usarPP ? 'proyecciones_planta' : 'order_price', metaGeneralVacia: pp.length > 0 && pp.every(r => num(r.proyectado_diario_general) === 0) }
+  return { dias, fuente: usarPP ? 'proyecciones_planta' : 'order_price' }
 })
 
 // ---------------------------------------------------------------- Histórico del año
@@ -509,8 +511,6 @@ const avisos = computed(() => {
   if (cero.length) out.push({ nivel: 'medio', titulo: `${cero.length} ${cero.length === 1 ? 'cliente proyectado sin' : 'clientes proyectados sin'} ningún despacho en el mes`,
     texto: cero.map(({ p, c }) => `${titulo(c.cliente)} (${titulo(c.obra)}, ${p}): ${fmtN(c.meta, 0)} m³`).join('; ') +
       `. Suman ${fmtN(cero.reduce((a, x) => a + x.c.meta, 0), 0)} m³ de meta sin avance.` })
-  if (diario.value.metaGeneralVacia) out.push({ nivel: 'medio', titulo: 'Meta diaria general sin cargar',
-    texto: `En proyecciones_planta el campo proyectado_diario_general está en 0 todos los días del mes. La meta diaria se calcula como meta del mes ÷ ${diasOpMes.value} días operativos (${fmtN(metaDiaria.value)} m³/día).` })
   for (const p of plantas.value) if (P.value[p].meta && P.value[p].real === 0)
     out.push({ nivel: 'medio', titulo: `${p}: meta de ${fmtN(P.value[p].meta, 0)} m³ sin despachos`, texto: 'No hay despachos de la planta en el mes; el cumplimiento queda en 0%.' })
   const sinMixer = remMes.value.filter(r => !r.mixer)

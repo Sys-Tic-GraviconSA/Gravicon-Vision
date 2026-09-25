@@ -1,5 +1,6 @@
 <template>
-  <div class="page-layout">
+  <!-- Va dentro de ConcretosView, que ya pone el margen y el ancho máximo de la página -->
+  <div class="produccion-view">
     <template v-if="store.loading">
       <div class="page-state"><div class="spinner" /><span>Cargando datos de concretos...</span></div>
     </template>
@@ -29,6 +30,7 @@
           </div>
         </header>
 
+        <!-- Dos secciones (Producción Planta y Proyección Comercial), cada una con sus gráficas y su informe -->
         <nav class="tab-bar">
           <button
             v-for="t in tabs"
@@ -40,42 +42,38 @@
         </nav>
       </div>
 
-      <ResumenTab v-if="tab === 'resumen'" :data="DATA" :plant-op="PLANT_OP" />
-      <DiarioTab v-else-if="tab === 'diario'" :data="DATA" :sheet-data="plantFilteredSheetData" :plant-op="PLANT_OP" />
-      <PlantasTab v-else-if="tab === 'plantas'" :data="DATA" />
-      <ComercialTab v-else-if="tab === 'comercial'" :data="DATA" />
-      <ClientesTab v-else-if="tab === 'clientes'" :data="DATA" />
-      <LogisticaTab v-else-if="tab === 'logistica'" :data="DATA" :plant-op="PLANT_OP" />
-      <OperativoTab v-else-if="tab === 'operativo'" :data="DATA" :plant-op="PLANT_OP" />
-      <InformeTab v-else-if="tab === 'informe'" :rows="plantFilteredSheetData?.rows ?? []" :corte="fechaFin" :total-count="store.data?.total" />
-      <ProyeccionTab v-else-if="tab === 'proyeccion'" :rows="plantFilteredSheetData?.rows ?? []" :corte="fechaFin" />
+      <!-- Mismo selector de vista que Agregados y Mantenimiento -->
+      <VistaToggle v-model="vista" :opciones="vistas" />
+
+      <template v-if="tab === 'produccion'">
+        <GraficasTab v-if="vista === 'graficas'" :rows="plantFilteredSheetData?.rows ?? []" :desde="fechaInicio" :hasta="fechaFin" />
+        <InformeTab v-else :rows="plantFilteredSheetData?.rows ?? []" :corte="fechaFin" :total-count="store.data?.total" />
+      </template>
+      <template v-else>
+        <ProyeccionGraficasTab v-if="vista === 'graficas'" :rows="plantFilteredSheetData?.rows ?? []" :corte="fechaFin" :plantas-filtro="plantasFiltro" />
+        <ProyeccionTab v-else :rows="plantFilteredSheetData?.rows ?? []" :corte="fechaFin" />
+      </template>
     </template>
   </div>
 </template>
 
 /**
  * ProduccionView.vue — Dashboard de producción de concreto premezclado.
- * Orquesta tabs (Resumen, Diario, Plantas, Comercial, Clientes, Logística,
- * Operativo, Agregados) y aplica filtros globales (fechas, plantas, comercial).
- * Usa useConcretoStore, useDashboardData y useConcretoData.
+ * Dos secciones, Producción Planta y Proyección Comercial, cada una con sus gráficas y su informe, y aplica filtros
+ * globales (fechas, plantas, comercial). Usa useConcretoStore.
  */
 <script setup lang="ts">
 import { ref, computed, watch, onErrorCaptured, onMounted } from 'vue'
 import { useConcretoStore } from '../../stores/concreto'
 import FilterBar from '../../components/dashboard/FilterBar.vue'
-import { useDashboardData } from '../../composables/useDashboardData'
 import MultiSelect from '../../components/ui/MultiSelect.vue'
 import { serialToDate, dateToSerial } from '../../utils/dates'
 
-import ResumenTab from './tabs/ResumenTab.vue'
-import DiarioTab from './tabs/DiarioTab.vue'
-import PlantasTab from './tabs/PlantasTab.vue'
-import ComercialTab from './tabs/ComercialTab.vue'
-import ClientesTab from './tabs/ClientesTab.vue'
-import LogisticaTab from './tabs/LogisticaTab.vue'
-import OperativoTab from './tabs/OperativoTab.vue'
+import GraficasTab from './tabs/GraficasTab.vue'
+import VistaToggle from '../../components/ui/VistaToggle.vue'
 import InformeTab from './tabs/InformeTab.vue'
 import ProyeccionTab from './tabs/ProyeccionTab.vue'
+import ProyeccionGraficasTab from './tabs/ProyeccionGraficasTab.vue'
 
 onErrorCaptured((err, _vm, info) => {
   console.error('[ProduccionView Error]', err, info)
@@ -94,13 +92,15 @@ const plants = computed(() => {
   return [...set].sort()
 })
 
+// Las remisiones sin comercial se agrupan en una opción propia; antes pasaban siempre el filtro
+const SIN_COMERCIAL = 'Sin comercial'
+function comercialDe(r: Record<string, unknown>): string {
+  return String(r['Comercial'] ?? '').trim() || SIN_COMERCIAL
+}
 const comerciales = computed(() => {
   const set = new Set<string>()
-  for (const r of rows.value) {
-    const val = String(r['Comercial'] ?? '').trim()
-    if (val) set.add(val)
-  }
-  return [...set].sort()
+  for (const r of rows.value) set.add(comercialDe(r))
+  return [...set].sort((a, b) => (a === SIN_COMERCIAL ? 1 : b === SIN_COMERCIAL ? -1 : a.localeCompare(b)))
 })
 
 const fechaInicio = ref('')
@@ -129,31 +129,26 @@ const filteredRows = computed(() => {
     const v = r['Fecha']
     const fechaOk = typeof v === 'number' && v >= since && v <= until
     const plantOk = selectedPlants.value.size === 0 || selectedPlants.value.has(String(r['Planta'] ?? ''))
-    const comercialVal = String(r['Comercial'] ?? '').trim()
-    const comercialOk = selectedComerciales.value.size === 0 || !comercialVal || selectedComerciales.value.has(comercialVal)
+    const comercialOk = selectedComerciales.value.size === 0 || selectedComerciales.value.has(comercialDe(r))
     return fechaOk && plantOk && comercialOk
   })
 })
 
-const filteredSheetData = computed(() => {
-  const d = store.data
-  if (!d) return null
-  return { headers: d.headers, rows: filteredRows.value, total: filteredRows.value.length }
-})
-
-// Separate filtered data for DiarioTab: only plant+commercial filters, NO date range
-// DiarioTab handles its own date (hoy/ayer), so date-range must not restrict it
+// Los informes solo usan filtros de planta+comercial; la fecha fin es su corte
 const plantFilteredSheetData = computed(() => {
   const d = store.data
   if (!d) return null
   const filtered = rows.value.filter(r => {
     const plantOk = selectedPlants.value.size === 0 || selectedPlants.value.has(String(r['Planta'] ?? ''))
-    const comercialVal = String(r['Comercial'] ?? '').trim()
-    const comercialOk = selectedComerciales.value.size === 0 || !comercialVal || selectedComerciales.value.has(comercialVal)
+    const comercialOk = selectedComerciales.value.size === 0 || selectedComerciales.value.has(comercialDe(r))
     return plantOk && comercialOk
   })
   return { headers: d.headers, rows: filtered, total: filtered.length }
 })
+
+// Plantas marcadas en el filtro (null = todas); las metas de proyección no vienen en order_price y se filtran aparte
+const plantasFiltro = computed(() =>
+  selectedPlants.value.size === 0 || selectedPlants.value.size === plants.value.length ? null : [...selectedPlants.value])
 
 function onDateRangeFilter(range: { from: string | null; to: string | null }) {
   fechaInicio.value = range.from ?? ''
@@ -172,48 +167,47 @@ function daysBetween(from: string, to: string): number {
 }
 
 const freshness = computed(() => {
-  const m = DATA.value.meta
-  if (!m?.fechaFin) return null
+  const serials = filteredRows.value.map(r => Number(r['Fecha'])).filter(v => !isNaN(v))
+  if (!serials.length) return null
+  const d = serialToDate(Math.max(...serials))
+  const m = { fechaFin: `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}` }
+  const updateLabel = store.lastUpdate ? new Date(store.lastUpdate).toLocaleString('es-CO') : ''
   const lag = daysBetween(m.fechaFin, todayBogotaKey())
-  const updateLabel = m.lastUpdate ? new Date(m.lastUpdate).toLocaleString('es-CO') : ''
   if (lag <= 1) return { label: `Datos al día ${m.fechaFin}`, cls: 'fresh-ok', title: `Actualizado: ${updateLabel}` }
   if (lag <= 3) return { label: `Retraso ${lag} días`, cls: 'fresh-warn', title: `Último dato: ${m.fechaFin} · Actualizado: ${updateLabel}` }
   return { label: `Desactualizado ${lag} días`, cls: 'fresh-danger', title: `Último dato: ${m.fechaFin} · Actualizado: ${updateLabel}` }
 })
 
-const lastUpdateRef = computed(() => store.lastUpdate)
-const { DATA, PLANT_OP } = useDashboardData(filteredSheetData, lastUpdateRef)
-
-const tab = ref('resumen')
+const tab = ref<'produccion' | 'proyeccion'>('produccion')
 const tabs = [
-  { id: 'resumen', label: 'Resumen' },
-  { id: 'diario', label: 'Diario' },
-  { id: 'plantas', label: 'Plantas' },
-  { id: 'comercial', label: 'Comercial' },
-  { id: 'clientes', label: 'Clientes' },
-  { id: 'logistica', label: 'Logística' },
-  { id: 'operativo', label: 'Operativo' },
+  { id: 'produccion' as const, label: 'Producción Planta' },
+  { id: 'proyeccion' as const, label: 'Proyección Comercial' },
+]
+const vista = ref('graficas')
+const vistas = [
+  { id: 'graficas', label: 'Gráficas' },
   { id: 'informe', label: 'Informe' },
-  { id: 'proyeccion', label: 'Proyección' },
 ]
 </script>
 
 <style scoped>
+.produccion-view { min-width: 0; }
+
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   flex-wrap: wrap;
   gap: 12px;
-  padding: 16px 0;
+  padding: 8px 0;
 }
 
 .page-title {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0 0 24px;
+  margin: 0;
   letter-spacing: -0.4px;
   display: flex;
   align-items: center;
@@ -241,6 +235,7 @@ const tabs = [
 
 .tab-bar {
   display: flex;
+  align-items: center;
   gap: 4px;
   border-bottom: 1px solid var(--card-border);
   margin-bottom: 24px;
@@ -349,6 +344,7 @@ const tabs = [
   color: #EF4444;
   border: 1px solid rgba(239,68,68,.3);
 }
+
 
 @media (max-width: 768px) {
   .page-header { flex-direction: column; align-items: flex-start; }

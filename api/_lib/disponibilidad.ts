@@ -5,6 +5,7 @@ export async function loadDisponibilidadData(planta: string, forceRefresh = fals
   let placas: Record<string, unknown>[] = []
   let tareas: Record<string, unknown>[] = []
   let resumen: Record<string, unknown>[] = []
+  let cronologia: Record<string, unknown>[] = []
 
   const p = planta.toLowerCase()
   const key = `ordenes_ot_${p}`
@@ -27,10 +28,12 @@ export async function loadDisponibilidadData(planta: string, forceRefresh = fals
         ? getSheetData(maestroKey, 'SOLICITANTES_OT', forceRefresh).catch(() => ({ rows: [] as Record<string, unknown>[] }))
         : Promise.resolve({ rows: [] as Record<string, unknown>[] })
 
-      const [placasSheet, tareasSheet, resumenSheet, plantasMaq, personalSheet, proveedoresSheet, solicitantesSheet] = await Promise.all([
+      const [placasSheet, tareasSheet, resumenSheet, cronologiaSheet, plantasMaq, personalSheet, proveedoresSheet, solicitantesSheet] = await Promise.all([
         getSheetData(key, 'Reporte Placa Disponibilidad', forceRefresh).catch(() => ({ rows: [] as Record<string, unknown>[] })),
         getSheetData(key, 'Tareas Seguimiento', forceRefresh).catch(() => ({ rows: [] as Record<string, unknown>[] })),
         getSheetData(key, 'Resumen Diario Disponibilidad', forceRefresh).catch(() => ({ rows: [] as Record<string, unknown>[] })),
+        // Nombre real de la hoja tiene un typo ("Disponilidad", sin la segunda "b") — no inventar, es así en el sheet.
+        getSheetData(key, 'Cronologia_Disponilidad', forceRefresh).catch(() => ({ rows: [] as Record<string, unknown>[] })),
         plantasMaqPromise,
         personalPromise,
         proveedoresPromise,
@@ -70,6 +73,7 @@ export async function loadDisponibilidadData(planta: string, forceRefresh = fals
 
       tareas = tareasSheet.rows
       resumen = resumenSheet.rows
+      cronologia = cronologiaSheet.rows
 
       // 2b. Enriquecer tareas: resolver Placa ID → nombre de placa usando maestroMap
       // (no se lee Placa_Texto de la hoja, no es confiable en todas las plantas).
@@ -158,6 +162,7 @@ export async function loadDisponibilidadData(planta: string, forceRefresh = fals
     placas,
     tareas,
     resumen,
+    cronologia,
     totalPlacas: placas.length,
     totalTareas: tareas.length,
     planta: p,
