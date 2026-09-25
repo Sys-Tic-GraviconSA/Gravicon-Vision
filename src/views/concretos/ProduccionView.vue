@@ -48,6 +48,7 @@
       <LogisticaTab v-else-if="tab === 'logistica'" :data="DATA" :plant-op="PLANT_OP" />
       <OperativoTab v-else-if="tab === 'operativo'" :data="DATA" :plant-op="PLANT_OP" />
       <InformeTab v-else-if="tab === 'informe'" :rows="plantFilteredSheetData?.rows ?? []" :corte="fechaFin" :total-count="store.data?.total" />
+      <ProyeccionTab v-else-if="tab === 'proyeccion'" :rows="plantFilteredSheetData?.rows ?? []" :corte="fechaFin" />
     </template>
   </div>
 </template>
@@ -74,6 +75,7 @@ import ClientesTab from './tabs/ClientesTab.vue'
 import LogisticaTab from './tabs/LogisticaTab.vue'
 import OperativoTab from './tabs/OperativoTab.vue'
 import InformeTab from './tabs/InformeTab.vue'
+import ProyeccionTab from './tabs/ProyeccionTab.vue'
 
 onErrorCaptured((err, _vm, info) => {
   console.error('[ProduccionView Error]', err, info)
@@ -192,6 +194,7 @@ const tabs = [
   { id: 'logistica', label: 'Logística' },
   { id: 'operativo', label: 'Operativo' },
   { id: 'informe', label: 'Informe' },
+  { id: 'proyeccion', label: 'Proyección' },
 ]
 </script>
 
