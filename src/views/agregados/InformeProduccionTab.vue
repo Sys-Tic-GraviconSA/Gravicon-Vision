@@ -1,277 +1,293 @@
 <template>
-  <div class="informe-produccion">
+  <div class="informe-tab">
     <div class="informe-control-bar">
       <div class="icb-info">
-        <span class="icb-tag">Reporte Oficial de Producción</span>
-        <span class="icb-title">Producción {{ config.plantName }} — {{ selectedLabel }}</span>
+        <span class="icb-tag">Reporte oficial de producción</span>
+        <span class="icb-title">Informe Ejecutivo de Producción — {{ planta }}</span>
       </div>
       <div class="icb-actions">
-        <select v-model="selectedMonthKey" class="month-select">
-          <option v-for="m in availableMonths" :key="m.key" :value="m.key">{{ m.label }}</option>
-        </select>
-        <button class="tb-btn primary" @click="generarPdf" :disabled="!hasData || generandoPdf" title="Generar y descargar archivo PDF oficial">
-          <svg v-if="!generandoPdf" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          <svg v-else class="spinner-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="12"/>
-          </svg>
-          <span v-if="generandoPdf">Generando PDF...</span>
-          <span v-else>Descargar PDF</span>
+        <label class="icb-corte">
+          Mes
+          <select v-model="selectedMonthKey">
+            <option v-for="m in availableMonths" :key="m.key" :value="m.key">{{ m.label }}</option>
+          </select>
+        </label>
+        <button class="tb-btn primary" :disabled="!hasData || generandoPdf" @click="pdf">
+          <svg v-if="!generandoPdf" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          {{ generandoPdf ? 'Generando PDF…' : 'Descargar PDF' }}
         </button>
       </div>
     </div>
 
-    <div class="report-paper" v-if="hasData">
-      <div class="report-document">
+    <div v-if="!hasData" class="report-nota">No hay registros de producción para el mes seleccionado.</div>
+
+    <div v-else ref="paperRef" class="report-paper">
+      <!-- ============================================== PÁGINA 1: RESUMEN -->
+      <div class="report-page">
         <header class="report-header">
           <div class="report-header-brand">
-            <img
-              src="/Logos/Logo-Gravicon-Nuevo.png"
-              alt="Gravicon"
-              class="report-logo"
-              loading="eager"
-            />
+            <img src="/Logos/Logo-Gravicon-Nuevo.png" alt="Gravicon" class="report-logo" loading="eager" />
             <div class="report-header-text">
-              <h2>Producción {{ config.plantName }} Gravicon</h2>
-              <span>GRAVAS Y CONCRETOS S.A. · Agregados · {{ selectedLabel }}</span>
+              <h2>Producción Agregados Gravicon</h2>
+              <span>GRAVAS Y CONCRETOS S.A. · Agregados {{ planta }}</span>
             </div>
           </div>
           <div class="report-header-meta">
-            <div class="meta-item"><span>Período:</span> <strong>{{ selectedLabel }}</strong></div>
-            <div class="meta-item"><span>Código:</span> <strong>GRV-INF-PROD-{{ config.plantName.toUpperCase() }}-{{ selectedMonthKey.replace('/','').replace('-','') }}</strong></div>
-            <div class="meta-item"><span>Estado:</span> <strong>Oficial Consolidado</strong></div>
+            <div><span>Período:</span> <strong>{{ selectedLabel }}</strong></div>
+            <div><span>Código:</span> <strong>{{ codigo }}</strong></div>
+            <div class="page-counter"><span>Pág. 1 de 3</span></div>
           </div>
         </header>
 
         <div class="report-title-section">
           <h1>Informe Ejecutivo de Producción</h1>
           <p class="report-intro">
-            Análisis consolidado y diagnóstico integral del balance de producción diaria por línea de proceso, cumplimiento de metas corporativas y control de rendimientos operativos para la planta <strong>{{ config.plantName }}</strong> durante el período de <strong>{{ selectedLabel }}</strong>.
+            Balance de la producción diaria por línea de proceso de la planta <strong>{{ planta }}</strong> en
+            <strong>{{ selectedLabel }}</strong> ({{ diasTxt }}): primero los indicadores del mes frente al proyectado diario y a la meta
+            mensual, luego el comportamiento día a día, el aporte de cada línea y el historial completo, y al final la calidad del
+            dato y las conclusiones. Todo en m³. Fuente: registro diario de producción de la planta.
           </p>
         </div>
 
-        <!-- Análisis Operativo Directivo estilo Zoho -->
         <div class="report-section-block">
           <div class="zoho-analysis-box">
-            <div class="zoho-analysis-label">Análisis Operativo Directivo — Producción {{ config.plantName }}</div>
+            <div class="zoho-analysis-label">Análisis operativo</div>
             <div class="zoho-analysis-text" v-html="textoAnalisis"></div>
           </div>
         </div>
 
-        <!-- Contenedor Unificado de KPIs con espaciado homogéneo -->
-        <div class="kpis-wrapper">
-          <div class="kpi-section">
-            <h4 class="kpi-section-title">Producción Total — {{ selectedLabel }}</h4>
-            <div class="kpi-row">
-              <KpiCard label="Total M³" accent="#3B82F6" icon="chart-bar">{{ fmt(kpi.total) }}</KpiCard>
-              <KpiCard v-for="l in config.lines" :key="l.key" :label="l.label" :accent="config.palette[config.lines.indexOf(l)]" icon="layers">{{ fmt(lineTotals[l.key] || 0) }}</KpiCard>
-            </div>
-          </div>
-
-          <div class="kpi-section">
-            <h4 class="kpi-section-title">Proyectado Diario</h4>
-            <div class="kpi-row-3">
-              <KpiCard label="M³ Proyectado" accent="#EC4899" icon="trending-up">{{ fmt(kpi.proyectado) }}</KpiCard>
-              <KpiCard label="Diferencia Proy." :accent="kpi.diferenciaProy < 0 ? '#EF4444' : '#10B981'" icon="trending-up">{{ kpi.diferenciaProy >= 0 ? '+' : '' }}{{ fmt(kpi.diferenciaProy) }}</KpiCard>
-              <KpiCard label="% Cumpl. Proy." accent="#F59E0B" icon="check-circle">{{ kpi.cumplimientoProy }}</KpiCard>
-            </div>
-          </div>
-
-          <div class="kpi-section">
-            <h4 class="kpi-section-title">Meta Mensual</h4>
-            <div class="kpi-row-3">
-              <KpiCard label="Meta Mensual M³" accent="#8B5CF6" icon="target">{{ fmt(kpi.metaMensual) }}</KpiCard>
-              <KpiCard label="Diferencia Meta" :accent="kpi.diferenciaMeta < 0 ? '#EF4444' : '#10B981'" icon="trending-up">{{ kpi.diferenciaMeta >= 0 ? '+' : '' }}{{ fmt(kpi.diferenciaMeta) }}</KpiCard>
-              <KpiCard label="% Cumpl. Meta" accent="#06B6D4" icon="check-circle">{{ kpi.cumplimientoMeta }}</KpiCard>
-            </div>
+        <div class="report-section-block">
+          <h3 class="report-block-title"><span class="title-bar"></span>Producción total — {{ selectedLabel }}</h3>
+          <div class="kpi-row compact-kpi">
+            <KpiCard label="Total producido" :value="`${fmt(kpi.total)} m³`" accent="#3B82F6" icon="chart-bar" :meta="`${kpi.dias} días`" />
+            <KpiCard v-for="(l, i) in config.lines" :key="l.key" :label="l.label" :value="`${fmt(lineTotals[l.key] || 0)} m³`"
+              :accent="config.palette[i]" icon="layers" :meta="`${pctTxt(kpi.total ? (lineTotals[l.key] || 0) / kpi.total * 100 : 0)} del total`" />
+            <KpiCard label="Promedio diario" :value="`${fmt(kpi.promedio)} m³`" accent="#0EA5E9" icon="activity" meta="por día registrado" />
           </div>
         </div>
 
-        <!-- Nota de Estado / Alertas -->
+        <div class="report-section-block">
+          <h3 class="report-block-title"><span class="title-bar"></span>Proyectado diario y meta mensual</h3>
+          <div class="kpi-row compact-kpi">
+            <KpiCard label="M³ proyectado" :value="`${fmt(kpi.proyectado)} m³`" accent="#EC4899" icon="trending-up" meta="suma del proyectado diario" />
+            <KpiCard label="Diferencia vs proyectado" :value="`${signo(kpi.diferenciaProy)} m³`" :accent="kpi.diferenciaProy < 0 ? '#EF4444' : '#10B981'" icon="trending-up" />
+            <KpiCard label="% Cumpl. proyectado" :value="kpi.cumplimientoProy" accent="#F59E0B" icon="check-circle" />
+            <KpiCard label="Meta mensual" :value="`${fmt(kpi.metaMensual)} m³`" accent="#8B5CF6" icon="target" />
+            <KpiCard label="Diferencia vs meta" :value="`${signo(kpi.diferenciaMeta)} m³`" :accent="kpi.diferenciaMeta < 0 ? '#EF4444' : '#10B981'" icon="trending-up" />
+            <KpiCard label="% Cumpl. meta" :value="kpi.cumplimientoMeta" accent="#06B6D4" icon="check-circle" />
+          </div>
+        </div>
+
         <div v-if="kpi.cumplimientoMetaPct < 80" class="report-nota alerta">
-          <strong>Atención a Desempeño Operativo ({{ kpi.cumplimientoMeta }}):</strong>
-          El volumen acumulado del mes refleja una brecha de {{ fmt(Math.abs(kpi.diferenciaMeta)) }} M³ frente a la meta mensual programada.
+          <strong>Atención al desempeño ({{ kpi.cumplimientoMeta }} de la meta):</strong>
+          el volumen acumulado del mes tiene una brecha de {{ fmt(Math.abs(kpi.diferenciaMeta)) }} m³ frente a la meta mensual programada.
         </div>
         <div v-else-if="kpi.cumplimientoMetaPct >= 100" class="report-nota">
-          <strong>Meta Cumplida:</strong> El volumen acumulado ha alcanzado o superado satisfactoriamente el 100% de la meta mensual ({{ kpi.cumplimientoMeta }}).
+          <strong>Meta cumplida:</strong> el volumen acumulado alcanzó o superó el 100 % de la meta mensual ({{ kpi.cumplimientoMeta }}).
         </div>
         <div v-else class="report-nota">
-          <strong>Desempeño Operativo Estable:</strong> El volumen acumulado presenta un ritmo de cumplimiento favorable del {{ kpi.cumplimientoMeta }} frente a la meta programada.
+          <strong>Desempeño estable:</strong> el volumen acumulado va en {{ kpi.cumplimientoMeta }} de la meta programada.
         </div>
 
-        <!-- Comportamiento Operativo Diario -->
-        <div class="report-section-block">
-          <h3 class="report-block-title"><span class="title-bar"></span>Comportamiento Operativo Diario</h3>
-          <div class="data-card" style="padding:14px 18px;">
-            <ChartCard title="" :option="chartOpt" :height="300" hide-actions />
-          </div>
-        </div>
-
-        <!-- Historial de Operación Diaria -->
-        <div class="report-section-block">
-          <h3 class="report-block-title"><span class="title-bar"></span>Historial de Operación Diaria ({{ selectedLabel }})</h3>
-          <div class="data-card">
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th class="idx-col">#</th>
-                    <th>Fecha</th>
-                    <th v-for="l in config.lines" :key="l.key" class="r">{{ l.label }}</th>
-                    <th class="r">Total M³</th>
-                    <th class="r">Proy. Día</th>
-                    <th class="r">Dif. M³</th>
-                    <th class="r">% Cump.</th>
-                    <th class="obs-header">Observaciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(row, idx) in tablaRows" :key="row.Fecha + row['Total de M³'] + idx">
-                    <td class="idx">{{ idx + 1 }}</td>
-                    <td class="bold date-col">{{ row.Fecha }}</td>
-                    <td v-for="l in config.lines" :key="l.key" class="r">{{ fmt((row as any)[l.key]) }}</td>
-                    <td class="r bold accent-text">{{ fmt(row['Total de M³']) }}</td>
-                    <td class="r">{{ fmt(row['M³ Proyectado']) }}</td>
-                    <td class="r" :style="{ color: (row as any)['Diferencia'] >= 0 ? '#1f7a3d' : '#a90707', fontWeight: 700 }">
-                      {{ (row as any)['Diferencia'] >= 0 ? '+' : '' }}{{ fmt((row as any)['Diferencia']) }}
-                    </td>
-                    <td class="r">
-                      <span class="pill" :class="pillClassCumplimiento(row['% CumplimientoNum'])">
-                        {{ row['% Cumplimiento'] }}
-                      </span>
-                    </td>
-                    <td class="obs-cell" :title="row.Observaciones">{{ row.Observaciones || '—' }}</td>
-                  </tr>
-                  <tr class="table-total-row">
-                    <td class="idx bold">Σ</td>
-                    <td class="bold">TOTAL</td>
-                    <td v-for="l in config.lines" :key="l.key" class="r bold">{{ fmt((totales as any)[l.key] || 0) }}</td>
-                    <td class="r bold accent-text">{{ fmt(totales['Total de M³']) }}</td>
-                    <td class="r bold">{{ fmt(totales['M³ Proyectado']) }}</td>
-                    <td class="r bold" :style="{ color: (totales as any)['Diferencia'] >= 0 ? '#1f7a3d' : '#a90707' }">
-                      {{ (totales as any)['Diferencia'] >= 0 ? '+' : '' }}{{ fmt((totales as any)['Diferencia']) }}
-                    </td>
-                    <td class="r bold">
-                      <span class="pill" :class="pillClassCumplimiento(totales['% CumplimientoNum'])">
-                        {{ totales['% Cumplimiento'] }}
-                      </span>
-                    </td>
-                    <td class="obs-cell table-total-empty">—</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <footer class="report-footer">
-          <span>Informe Ejecutivo de Producción — Gravas y Concretos S.A.</span>
-          <span>Documento Oficial Consolidado</span>
-        </footer>
+        <footer class="report-footer"><span>Informe Ejecutivo de Producción — {{ planta }}</span><span>Documento oficial<span class="fp-num"> | Página 1 de 3</span></span></footer>
       </div>
-    </div>
 
-    <div v-else class="informe-empty">
-      <span class="placeholder-icon">📄</span>
-      <span class="placeholder-text">Sin datos para el periodo</span>
-      <span class="placeholder-sub">Selecciona un mes con registros</span>
+      <!-- ============================================== PÁGINA 2: COMPORTAMIENTO Y LÍNEAS -->
+      <div class="report-page">
+        <div class="report-salto-superior"></div>
+        <div class="report-section-block">
+          <h3 class="report-block-title"><span class="title-bar"></span>Comportamiento operativo diario — {{ selectedLabel }}</h3>
+          <p class="section-note">m³ producidos por día; la línea punteada es el promedio diario del mes ({{ fmt(kpi.promedio) }} m³).</p>
+          <VChart class="echart" :option="chartOpt" autoresize style="height: 300px" />
+        </div>
+
+        <div class="report-section-block">
+          <h3 class="report-block-title"><span class="title-bar"></span>Aporte por línea de producción — {{ selectedLabel }}</h3>
+          <div class="data-card"><div class="table-wrap">
+            <table>
+              <thead><tr><th>Línea</th><th class="r">m³ producidos</th><th class="r">Part.</th><th class="r">Días con producción</th><th class="r">Promedio por día con producción</th><th class="r">Mejor día</th></tr></thead>
+              <tbody>
+                <tr v-for="(l, i) in resumenLineas" :key="l.key">
+                  <td class="bold"><span class="dot" :style="{ background: config.palette[i] }"></span>{{ l.label }}</td>
+                  <td class="r bold">{{ fmt(l.total) }}</td>
+                  <td class="r">{{ pctTxt(l.part) }}</td>
+                  <td class="r">{{ l.dias }}</td>
+                  <td class="r">{{ fmt(l.promedio) }}</td>
+                  <td class="r">{{ l.mejor ? `${fmt(l.mejor.valor)} (${l.mejor.fecha})` : '—' }}</td>
+                </tr>
+              </tbody>
+              <tfoot><tr class="table-total-row"><td>Total</td><td class="r">{{ fmt(kpi.total) }}</td><td class="r">100 %</td><td class="r">{{ kpi.diasConProduccion }}</td><td class="r">{{ fmt(kpi.diasConProduccion ? kpi.total / kpi.diasConProduccion : 0) }}</td><td class="r">{{ mejorDia ? `${fmt(mejorDia.total)} (${mejorDia.fecha})` : '—' }}</td></tr></tfoot>
+            </table>
+          </div></div>
+        </div>
+
+        <footer class="report-footer"><span>Informe Ejecutivo de Producción — {{ planta }}</span><span>Documento oficial<span class="fp-num"> | Página 2 de 3</span></span></footer>
+      </div>
+
+      <!-- ============================================== PÁGINA 3: HISTORIAL, CALIDAD Y CONCLUSIONES -->
+      <div class="report-page">
+        <div class="report-salto-superior"></div>
+        <div class="report-section-block">
+          <h3 class="report-block-title"><span class="title-bar"></span>Historial de operación diaria — {{ selectedLabel }}</h3>
+          <div class="data-card"><div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th class="idx">#</th><th>Fecha</th>
+                  <th v-for="l in config.lines" :key="l.key" class="r">{{ l.label }}</th>
+                  <th class="r">Total m³</th><th class="r">Proy. día</th><th class="r">Dif. m³</th><th class="r">% Cump.</th><th>Observaciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(row, idx) in tablaRows" :key="row.Fecha + idx" :class="{ alerta: row.total === 0 }">
+                  <td class="idx">{{ idx + 1 }}</td>
+                  <td class="bold nowrap">{{ row.Fecha }}</td>
+                  <td v-for="l in config.lines" :key="l.key" class="r">{{ fmt(row.lineas[l.key]) }}</td>
+                  <td class="r bold accent-text">{{ fmt(row.total) }}</td>
+                  <td class="r">{{ fmt(row.proyectado) }}</td>
+                  <td class="r bold" :class="row.diferencia >= 0 ? 'green' : 'red'">{{ signo(row.diferencia) }}</td>
+                  <td class="r"><span class="pill" :class="pillClassCumplimiento(row.cumplimiento)">{{ pctTxt(row.cumplimiento) }}</span></td>
+                  <td class="obs" :title="row.observaciones">{{ row.observaciones || '—' }}</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr class="table-total-row">
+                  <td class="idx">Σ</td><td>Total</td>
+                  <td v-for="l in config.lines" :key="l.key" class="r">{{ fmt(lineTotals[l.key] || 0) }}</td>
+                  <td class="r">{{ fmt(kpi.total) }}</td><td class="r">{{ fmt(kpi.proyectado) }}</td>
+                  <td class="r" :class="kpi.diferenciaProy >= 0 ? 'green' : 'red'">{{ signo(kpi.diferenciaProy) }}</td>
+                  <td class="r"><span class="pill" :class="pillClassCumplimiento(kpi.cumplimientoProyPct)">{{ kpi.cumplimientoProy }}</span></td>
+                  <td>—</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div></div>
+          <div class="ley-sem">
+            <span><i style="background:#1f7a3d"></i>Cumplimiento del proyectado ≥ 95 %</span>
+            <span><i style="background:#b8860b"></i>75 % a 95 %</span>
+            <span><i style="background:#a90707"></i>Menos de 75 %</span>
+          </div>
+        </div>
+
+        <div class="report-section-block">
+          <h3 class="report-block-title"><span class="title-bar"></span>Control de calidad del dato — {{ selectedLabel }}</h3>
+          <div v-if="avisos.length" class="avisos">
+            <div v-for="a in avisos" :key="a.titulo" class="aviso" :class="a.nivel"><span class="ico">!</span><div><b>{{ a.titulo }}</b>{{ a.texto }}</div></div>
+          </div>
+          <p v-else class="section-note">Sin hallazgos: todos los días tienen producción, proyectado y meta registrados.</p>
+        </div>
+
+        <div class="report-section-block">
+          <h3 class="report-block-title"><span class="title-bar"></span>Conclusiones y resumen ejecutivo — {{ selectedLabel }}</h3>
+          <ul class="res"><li v-for="(c, i) in conclusiones" :key="i" v-html="c"></li></ul>
+        </div>
+
+        <footer class="report-footer"><span>Informe Ejecutivo de Producción — {{ planta }}</span><span>Documento oficial<span class="fp-num"> | Página 3 de 3</span></span></footer>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, nextTick } from 'vue'
+/**
+ * InformeProduccionTab.vue — Informe ejecutivo de producción de una planta de agregados
+ * (/:planta/produccion/informe). Mismo estilo que los informes de Facturación y Concretos
+ * (hoja .report-paper, informe.css): encabezado oficial, análisis, KPIs compactos, comportamiento
+ * diario, aporte por línea, historial, calidad del dato y conclusiones. PDF continuo de 297 mm.
+ * Recibe las filas diarias ya filtradas por el filtro de fechas de la vista de Producción.
+ */
+import { computed, ref, watch } from 'vue'
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { LineChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent, MarkLineComponent } from 'echarts/components'
+import VChart from 'vue-echarts'
+import KpiCard from '../../components/dashboard/KpiCard.vue'
 import { serialToDate } from '../../utils/dates'
 import { fmt } from '../../utils/format'
-import KpiCard from '../../components/dashboard/KpiCard.vue'
-import ChartCard from '../../components/dashboard/ChartCard.vue'
-import { useTheme } from '../../composables/useTheme'
+import { descargarInformePdf } from '../../utils/pdfInforme'
 import type { PlantConfig } from './ResumenTab.vue'
+
+use([CanvasRenderer, LineChart, GridComponent, TooltipComponent, MarkLineComponent])
 
 const props = defineProps<{
   config: PlantConfig
   data: Record<string, unknown>[]
 }>()
 
-const { theme } = useTheme()
-const chartTextColor = computed(() => theme.value === 'light' ? '#475569' : '#94a3b8')
+// Nombre de la planta con tilde para los textos del informe
+const planta = computed(() => props.config.plantName.replace(/^Cuncia$/i, 'Cuncía').replace(/^Acacias$/i, 'Acacías'))
 
-const generandoPdf = ref(false)
+const pctTxt = (n: number) => `${(Number.isFinite(n) ? n : 0).toLocaleString('es-CO', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`
+const signo = (n: number) => (n >= 0 ? '+' : '') + fmt(n)
 
-/** Extrae el valor de observación soportando 'observacion' (Supabase) y variantes */
+/** Extrae la observación del día soportando 'observacion' (Supabase) y variantes */
 function getObservacion(r: Record<string, unknown>): string {
   const val = r['observacion'] ?? r['Observacion'] ?? r['observaciones'] ?? r['Observaciones'] ?? r['OBSERVACION'] ?? r['OBSERVACIONES'] ?? r['Observación'] ?? r['Novedad'] ?? r['novedad'] ?? r['Novedades'] ?? r['novedades'] ?? r['Nota'] ?? r['nota'] ?? ''
   return String(val ?? '').trim()
 }
+const serialDe = (r: Record<string, unknown>) => Number(r['Fecha'] ?? r['fecha'] ?? r['FECHA'])
+const totalDe = (r: Record<string, unknown>) => Number(r['Total de M³'] ?? r['total_m3']) || 0
+const proyDe = (r: Record<string, unknown>) => Number(r['M³ Proyectado'] ?? r['m3_proyectado']) || 0
+const claveMes = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+const fechaCorta = (d: Date) => `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}`
 
+// ── Mes del informe (el más reciente por defecto) ──
 const availableMonths = computed(() => {
   const map = new Map<string, { label: string; first: number }>()
   for (const r of props.data) {
-    const fecha = Number(r['Fecha'] ?? r['fecha'] ?? r['FECHA'])
-    if (!fecha) continue
-    const d = serialToDate(fecha)
-    const key = d.toLocaleDateString('es-CO', { year: 'numeric', month: '2-digit', timeZone: 'UTC' })
-    const label = d.toLocaleDateString('es-CO', { month: 'long', year: 'numeric', timeZone: 'UTC' })
-    if (!map.has(key)) map.set(key, { label: label.charAt(0).toUpperCase() + label.slice(1), first: fecha })
+    const s = serialDe(r)
+    if (!s) continue
+    const d = serialToDate(s)
+    const k = claveMes(d)
+    if (!map.has(k)) {
+      const label = d.toLocaleDateString('es-CO', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+      map.set(k, { label: label.charAt(0).toUpperCase() + label.slice(1), first: s })
+    }
   }
-  return [...map.entries()].sort((a,b)=>a[1].first-b[1].first).map(([k,v])=>({ key:k, label:v.label, first:v.first }))
+  return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([key, v]) => ({ key, ...v }))
 })
-
 const selectedMonthKey = ref('')
-watch(availableMonths, (list) => {
-  if (list.length) selectedMonthKey.value = list[list.length-1].key
+watch(availableMonths, list => {
+  if (list.length && !list.some(m => m.key === selectedMonthKey.value)) selectedMonthKey.value = list[list.length - 1].key
 }, { immediate: true })
+const selectedLabel = computed(() => availableMonths.value.find(m => m.key === selectedMonthKey.value)?.label ?? '')
+const codigo = computed(() => `GRV-INF-${selectedMonthKey.value.replace('-', '')}-AGR-${planta.value.normalize('NFD').replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 3)}-PROD`)
 
-const selectedLabel = computed(() => availableMonths.value.find(m=>m.key===selectedMonthKey.value)?.label ?? '')
-
-const monthData = computed(() => {
-  if (!selectedMonthKey.value) return props.data
-  return props.data.filter(r => {
-    const fecha = Number(r['Fecha'] ?? r['fecha'] ?? r['FECHA'])
-    if (!fecha) return false
-    const d = serialToDate(fecha)
-    const key = d.toLocaleDateString('es-CO', { year: 'numeric', month: '2-digit', timeZone: 'UTC' })
-    return key === selectedMonthKey.value
-  })
-})
-
+const monthData = computed(() => props.data
+  .filter(r => { const s = serialDe(r); return s && claveMes(serialToDate(s)) === selectedMonthKey.value })
+  .sort((a, b) => serialDe(a) - serialDe(b)))
 const hasData = computed(() => monthData.value.length > 0)
 
+// ── Indicadores del mes ──
 const kpi = computed(() => {
   const rows = monthData.value
   let total = 0, proyectado = 0, metaMensual = 0
-  const metaByMonth = new Map<string, number>()
+  const metaPorMes = new Map<string, number>()
   for (const r of rows) {
-    total += Number(r['Total de M³'] ?? r['total_m3']) || 0
-    proyectado += Number(r['M³ Proyectado'] ?? r['m3_proyectado']) || 0
-    const fecha = Number(r['Fecha'] ?? r['fecha'] ?? r['FECHA'])
-    if (!fecha) continue
-    const d = serialToDate(fecha)
-    const key = d.toLocaleDateString('es-CO', { year: 'numeric', month: '2-digit', timeZone: 'UTC' })
-    if (!metaByMonth.has(key)) metaByMonth.set(key, Number(r['Meta Mensual M³'] ?? r['meta_mensual_m3']) || 0)
+    total += totalDe(r)
+    proyectado += proyDe(r)
+    const s = serialDe(r)
+    if (!s) continue
+    const k = claveMes(serialToDate(s))
+    if (!metaPorMes.has(k)) metaPorMes.set(k, Number(r['Meta Mensual M³'] ?? r['meta_mensual_m3']) || 0)
   }
-  for (const v of metaByMonth.values()) metaMensual += v
-  const diferenciaMeta = total - metaMensual
-  const diferenciaProy = total - proyectado
-  const cumplimientoMetaPct = metaMensual > 0 ? (total / metaMensual * 100) : 0
-  const cumplimientoProyPct = proyectado > 0 ? (total / proyectado * 100) : 0
-  const promedio = rows.length > 0 ? total / rows.length : 0
+  for (const v of metaPorMes.values()) metaMensual += v
+  const cumplimientoMetaPct = metaMensual > 0 ? total / metaMensual * 100 : 0
+  const cumplimientoProyPct = proyectado > 0 ? total / proyectado * 100 : 0
   return {
-    total,
-    proyectado,
-    metaMensual,
-    diferenciaMeta,
-    diferenciaProy,
-    cumplimientoMetaPct,
-    cumplimientoProyPct,
-    cumplimientoMeta: cumplimientoMetaPct.toFixed(1) + '%',
-    cumplimientoProy: cumplimientoProyPct.toFixed(1) + '%',
-    promedio: Math.round(promedio),
+    total, proyectado, metaMensual,
+    diferenciaMeta: total - metaMensual,
+    diferenciaProy: total - proyectado,
+    cumplimientoMetaPct, cumplimientoProyPct,
+    cumplimientoMeta: pctTxt(cumplimientoMetaPct),
+    cumplimientoProy: pctTxt(cumplimientoProyPct),
+    dias: rows.length,
+    diasConProduccion: rows.filter(r => totalDe(r) > 0).length,
+    promedio: rows.length ? Math.round(total / rows.length) : 0,
   }
 })
+const diasTxt = computed(() => `${kpi.value.dias} ${kpi.value.dias === 1 ? 'día registrado' : 'días registrados'}`)
 
 const lineTotals = computed(() => {
   const t: Record<string, number> = {}
@@ -279,640 +295,145 @@ const lineTotals = computed(() => {
   return t
 })
 
-const textoAnalisis = computed(() => {
-  if (!monthData.value.length) return 'Sin datos para el periodo seleccionado.'
-  
-  const plant = props.config.plantName
-  const periodo = selectedLabel.value
-  const total = fmt(kpi.value.total)
-  const meta = fmt(kpi.value.metaMensual)
-  const proy = fmt(kpi.value.proyectado)
-  const cMeta = kpi.value.cumplimientoMeta
-  const cProy = kpi.value.cumplimientoProy
-  const difMeta = (kpi.value.diferenciaMeta >= 0 ? '+' : '') + fmt(kpi.value.diferenciaMeta)
-  const prom = fmt(kpi.value.promedio)
-  const diasCount = monthData.value.length
+// ── Tabla diaria ──
+const tablaRows = computed(() => monthData.value.map(r => {
+  const s = serialDe(r)
+  const d = s ? serialToDate(s) : null
+  const total = totalDe(r), proyectado = proyDe(r)
+  // % de cumplimiento contra el proyectado del día; si no hay proyectado se usa el de la hoja
+  let cumplimiento = 0
+  if (proyectado > 0) cumplimiento = total / proyectado * 100
+  else if (r['% Cumplimiento'] != null || r['cumplimiento'] != null) {
+    const raw = Number(r['% Cumplimiento'] ?? r['cumplimiento']) || 0
+    cumplimiento = raw > 0 && raw <= 1 ? raw * 100 : raw
+  }
+  return {
+    Fecha: d ? d.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }) : '',
+    corta: d ? fechaCorta(d) : '',
+    lineas: Object.fromEntries(props.config.lines.map(l => [l.key, Number(r[l.key]) || 0])) as Record<string, number>,
+    total, proyectado, diferencia: total - proyectado, cumplimiento,
+    observaciones: getObservacion(r),
+  }
+}))
 
-  // Desglose por frentes / líneas
-  const linesDesc = props.config.lines.map(l => {
-    const lTot = lineTotals.value[l.key] || 0
-    const pct = kpi.value.total > 0 ? ((lTot / kpi.value.total) * 100).toFixed(1) : '0.0'
-    return `${l.label}: <strong>${fmt(lTot)} M³</strong> (${pct}%)`
-  }).join(' · ')
+const mejorDia = computed(() => tablaRows.value.reduce<{ total: number; fecha: string } | null>((m, r) => (!m || r.total > m.total ? { total: r.total, fecha: r.corta } : m), null))
 
-  let txt = `Consolidado Operativo <strong>${plant}</strong> — <strong>${periodo}</strong>: Volumen neto acumulado de <strong>${total} M³</strong> frente a una meta mensual de <strong>${meta} M³</strong> (cumplimiento del <strong>${cMeta}</strong>) y un proyectado diario acumulado de <strong>${proy} M³</strong> (efectividad del <strong>${cProy}</strong>). `
-  txt += `Brecha neta frente a la meta: <strong>${difMeta} M³</strong> con un promedio diario de producción de <strong>${prom} M³ / día</strong> a lo largo de <strong>${diasCount} jornadas operativas</strong>. `
-  txt += `<strong>Aporte por Línea de Producción:</strong> ${linesDesc}.`
+const resumenLineas = computed(() => props.config.lines.map(l => {
+  const vals = tablaRows.value.map(r => ({ v: r.lineas[l.key] || 0, fecha: r.corta }))
+  const conProd = vals.filter(x => x.v > 0)
+  const total = lineTotals.value[l.key] || 0
+  const mejor = conProd.reduce<{ valor: number; fecha: string } | null>((m, x) => (!m || x.v > m.valor ? { valor: x.v, fecha: x.fecha } : m), null)
+  return { key: l.key, label: l.label, total, part: kpi.value.total ? total / kpi.value.total * 100 : 0,
+    dias: conProd.length, promedio: conProd.length ? total / conProd.length : 0, mejor }
+}))
 
-  return txt
-})
-
-const tablaRows = computed(() => {
-  return monthData.value.map(r => {
-    const serial = Number(r['Fecha'] ?? r['fecha'] ?? r['FECHA'])
-    const d = serial ? serialToDate(serial) : null
-    const fechaStr = d ? d.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }) : ''
-    const total = Number(r['Total de M³'] ?? r['total_m3']) || 0
-    const proy = Number(r['M³ Proyectado'] ?? r['m3_proyectado']) || 0
-    const obs = getObservacion(r)
-    
-    // Cálculo de % Cumplimiento en base 100
-    let cumpPct = 0
-    if (proy > 0) {
-      cumpPct = (total / proy) * 100
-    } else if (r['% Cumplimiento'] != null || r['cumplimiento'] != null) {
-      const rawCump = Number(r['% Cumplimiento'] ?? r['cumplimiento']) || 0
-      cumpPct = (rawCump > 0 && rawCump <= 1) ? rawCump * 100 : rawCump
-    }
-
-    return {
-      Fecha: fechaStr,
-      ...Object.fromEntries(props.config.lines.map(l => [l.key, Number(r[l.key]) || 0])),
-      'Total de M³': total,
-      'M³ Proyectado': proy,
-      'Diferencia': total - proy,
-      '% CumplimientoNum': cumpPct,
-      '% Cumplimiento': cumpPct.toFixed(1) + '%',
-      Observaciones: obs,
-    }
-  })
-})
-
-const totales = computed(() => {
-  const t: Record<string, any> = {}
-  for (const l of props.config.lines) t[l.key] = monthData.value.reduce((s, r) => s + (Number(r[l.key]) || 0), 0)
-  const totalM3 = monthData.value.reduce((s, r) => s + (Number(r['Total de M³'] ?? r['total_m3']) || 0), 0)
-  const totalProy = monthData.value.reduce((s, r) => s + (Number(r['M³ Proyectado'] ?? r['m3_proyectado']) || 0), 0)
-  t['Total de M³'] = totalM3
-  t['M³ Proyectado'] = totalProy
-  t['Diferencia'] = totalM3 - totalProy
-  const cumpPct = totalProy > 0 ? (totalM3 / totalProy * 100) : 0
-  t['% CumplimientoNum'] = cumpPct
-  t['% Cumplimiento'] = totalProy > 0 ? cumpPct.toFixed(1) + '%' : '0.0%'
-  return t
-})
-
-function pillClassCumplimiento(pctVal: any): string {
-  const num = Number(pctVal) || 0
-  if (num >= 95) return 'p-verde'
-  if (num >= 75) return 'p-ambar'
+function pillClassCumplimiento(n: number): string {
+  if (n >= 95) return 'p-verde'
+  if (n >= 75) return 'p-ambar'
   return 'p-rojo'
 }
 
-const chartOpt = computed(() => {
-  const labels = monthData.value.map(r => {
-    const serial = Number(r['Fecha'] ?? r['fecha'] ?? r['FECHA'])
-    if (!serial) return ''
-    const d = serialToDate(serial)
-    return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}`
-  })
-  const total = monthData.value.map(r => Number(r['Total de M³'] ?? r['total_m3']) || 0)
-  const totalGeneral = props.data.reduce((s, r) => s + (Number(r['Total de M³'] ?? r['total_m3']) || 0), 0)
-  const promedioMes = monthData.value.length > 0 ? Math.round(kpi.value.total / monthData.value.length) : 0
+// ── Textos generados de los datos ──
+const textoAnalisis = computed(() => {
+  const k = kpi.value
+  const lineas = resumenLineas.value.map(l => `${l.label}: <strong>${fmt(l.total)} m³</strong> (${pctTxt(l.part)})`).join(' · ')
+  return `En <strong>${selectedLabel.value}</strong> la planta <strong>${planta.value}</strong> produjo <strong>${fmt(k.total)} m³</strong> ` +
+    `frente a una meta mensual de <strong>${fmt(k.metaMensual)} m³</strong> (cumplimiento del <strong>${k.cumplimientoMeta}</strong>) ` +
+    `y a un proyectado diario acumulado de <strong>${fmt(k.proyectado)} m³</strong> (efectividad del <strong>${k.cumplimientoProy}</strong>). ` +
+    `La brecha frente a la meta es de <strong>${signo(k.diferenciaMeta)} m³</strong>, con un promedio de <strong>${fmt(k.promedio)} m³ por día</strong> ` +
+    `en ${diasTxt.value}. <strong>Aporte por línea:</strong> ${lineas}.`
+})
 
+const avisos = computed(() => {
+  const out: { nivel: 'alto' | 'medio'; titulo: string; texto: string }[] = []
+  const sinProd = tablaRows.value.filter(r => r.total === 0)
+  if (sinProd.length) out.push({ nivel: 'medio', titulo: `${sinProd.length} ${sinProd.length === 1 ? 'día' : 'días'} con producción en cero`,
+    texto: `${sinProd.map(r => r.corta).join(', ')}. Pueden ser días sin operación o registros aún no cargados; revisar las observaciones.` })
+  const sinProy = tablaRows.value.filter(r => r.total > 0 && r.proyectado === 0)
+  if (sinProy.length) out.push({ nivel: 'medio', titulo: `${sinProy.length} ${sinProy.length === 1 ? 'día' : 'días'} sin proyectado diario`,
+    texto: `${sinProy.map(r => r.corta).join(', ')}: el cumplimiento del día no se puede medir contra el proyectado.` })
+  const bajos = tablaRows.value.filter(r => r.proyectado > 0 && r.total > 0 && r.cumplimiento < 75)
+  if (bajos.length) out.push({ nivel: 'alto', titulo: `${bajos.length} ${bajos.length === 1 ? 'día' : 'días'} por debajo del 75 % del proyectado`,
+    texto: bajos.map(r => `${r.corta} (${pctTxt(r.cumplimiento)})`).join(', ') + '.' })
+  if (!kpi.value.metaMensual) out.push({ nivel: 'alto', titulo: 'Sin meta mensual registrada', texto: 'El mes no tiene meta mensual en la hoja de producción; el cumplimiento de meta queda en 0 %.' })
+  return out
+})
+
+const conclusiones = computed(() => {
+  const k = kpi.value
+  const out: string[] = []
+  out.push(`La planta produjo <strong>${fmt(k.total)} m³</strong> en ${diasTxt.value}: <strong>${k.cumplimientoMeta}</strong> de la meta mensual y <strong>${k.cumplimientoProy}</strong> del proyectado diario.`)
+  const lider = [...resumenLineas.value].sort((a, b) => b.total - a.total)[0]
+  if (lider && lider.total) out.push(`La línea con más producción fue <strong>${lider.label}</strong> con ${fmt(lider.total)} m³ (${pctTxt(lider.part)} del total).`)
+  if (mejorDia.value && mejorDia.value.total) out.push(`El mejor día fue el <strong>${mejorDia.value.fecha}</strong> con ${fmt(mejorDia.value.total)} m³.`)
+  const sobre = tablaRows.value.filter(r => r.proyectado > 0 && r.cumplimiento >= 95).length
+  const conProy = tablaRows.value.filter(r => r.proyectado > 0).length
+  if (conProy) out.push(`${sobre} de ${conProy} días con proyectado alcanzaron al menos el 95 % de lo proyectado.`)
+  const conObs = tablaRows.value.filter(r => r.observaciones).length
+  if (conObs) out.push(`${conObs} ${conObs === 1 ? 'día tiene' : 'días tienen'} observaciones registradas (ver historial).`)
+  if (avisos.value.length) out.push(`Calidad del dato: ${avisos.value.length} ${avisos.value.length === 1 ? 'hallazgo' : 'hallazgos'} para revisar (ver sección anterior).`)
+  return out
+})
+
+// ── Gráfica (colores para papel blanco; en tema oscuro el CSS pone un panel claro detrás de .echart) ──
+const chartOpt = computed(() => {
+  const labels = tablaRows.value.map(r => r.corta)
+  const total = tablaRows.value.map(r => r.total)
+  const prom = kpi.value.promedio
   return {
-    color: ['#1d4ed8', '#10B981'],
+    animation: false,
     textStyle: { fontFamily: 'Lato, Segoe UI, sans-serif' },
     tooltip: {
       trigger: 'axis' as const,
-      formatter: (params: any) => {
-        const p = Array.isArray(params) ? params[0] : params
-        const idx = p?.dataIndex ?? 0
-        const val = Number(total[idx] || 0)
-        return `<div style="font-size:12px; line-height:1.6;"><b>Día ${labels[idx] || ''}</b><br/>Total del día: <b>${fmt(val)} M³</b><br/>Total general: <b>${fmt(totalGeneral)} M³</b></div>`
-      }
+      formatter: (ps: any[]) => { const i = ps[0]?.dataIndex ?? 0
+        return `<b>Día ${labels[i]}</b><br/>Producción: <b>${fmt(total[i])} m³</b><br/>Proyectado: ${fmt(tablaRows.value[i].proyectado)} m³` },
     },
-    grid: { left: 40, right: 30, bottom: 35, top: 40, containLabel: true },
-    xAxis: {
-      type: 'category' as const,
-      data: labels,
-      axisLabel: { color: chartTextColor.value, fontSize: 9.5, interval: 0, rotate: labels.length > 20 ? 45 : 0 },
-      axisLine: { lineStyle: { color: '#cbd5e1' } }
-    },
-    yAxis: {
-      type: 'value' as const,
-      max: (value: { max: number }) => Math.ceil(value.max * 1.15),
-      axisLabel: { color: chartTextColor.value, fontSize: 9.5, formatter: (val: number) => fmt(val) },
-      splitLine: { show: true, lineStyle: { color: '#f1f5f9' } }
-    },
-    series: [
-      {
-        name: 'Producción Total (m³)',
-        type: 'line' as const,
-        smooth: 0.25,
-        data: total,
-        areaStyle: { opacity: 0.09, color: '#2563eb' },
-        lineStyle: { width: 2.5, color: '#1d4ed8' },
-        showSymbol: true,
-        symbol: 'circle',
-        symbolSize: 7,
-        itemStyle: { color: '#1d4ed8', borderColor: '#ffffff', borderWidth: 2 },
-        label: {
-          show: true,
-          position: 'top' as const,
-          distance: 5,
-          formatter: (p: any) => fmt(p.value),
-          fontSize: 8.5,
-          fontWeight: 700 as const,
-          color: '#1e3a8a',
-          backgroundColor: 'rgba(255, 255, 255, 0.92)',
-          padding: [1, 3] as [number, number],
-          borderRadius: 3,
-        },
-        markLine: {
-          symbol: 'none',
-          label: {
-            show: true,
-            position: 'end' as const,
-            formatter: `Prom: ${fmt(promedioMes)} M³`,
-            color: '#10b981',
-            fontSize: 9.5,
-            fontWeight: 700 as const,
-            backgroundColor: 'rgba(255,255,255,.92)',
-            padding: [2, 5] as [number, number],
-            borderRadius: 4
-          },
-          lineStyle: { color: '#10b981', type: 'dashed' as const, width: 1.8 },
-          data: [{ yAxis: promedioMes }]
-        }
-      }
-    ]
+    grid: { left: 12, right: 90, bottom: 10, top: 28, containLabel: true },
+    xAxis: { type: 'category' as const, data: labels, axisLabel: { color: '#475569', fontSize: 9.5, rotate: labels.length > 20 ? 45 : 0 }, axisLine: { lineStyle: { color: '#cbd5e1' } }, axisTick: { show: false } },
+    yAxis: { type: 'value' as const, max: (v: { max: number }) => Math.ceil(v.max * 1.15), axisLabel: { color: '#475569', fontSize: 9.5, formatter: (v: number) => fmt(v) }, splitLine: { lineStyle: { color: '#eef2f7' } } },
+    series: [{
+      name: 'Producción (m³)', type: 'line' as const, smooth: 0.25, data: total,
+      areaStyle: { opacity: 0.08, color: '#2563eb' }, lineStyle: { width: 2.2, color: '#1d4ed8' },
+      symbol: 'circle', symbolSize: 6, itemStyle: { color: '#1d4ed8', borderColor: '#fff', borderWidth: 2 },
+      label: { show: labels.length <= 31, position: 'top' as const, distance: 5, fontSize: 8.5, fontWeight: 700 as const, color: '#1e3a8a', formatter: (p: any) => fmt(p.value) },
+      markLine: {
+        symbol: 'none', silent: true,
+        label: { show: true, position: 'end' as const, formatter: `Prom. ${fmt(prom)} m³`, color: '#10b981', fontSize: 9.5, fontWeight: 700 as const },
+        lineStyle: { color: '#10b981', type: 'dashed' as const, width: 1.6 },
+        data: [{ yAxis: prom }],
+      },
+    }],
   }
 })
 
-async function generarPdf() {
-  if (generandoPdf.value || !hasData.value) return
+// ── PDF ──
+const paperRef = ref<HTMLElement | null>(null)
+const generandoPdf = ref(false)
+async function pdf() {
+  if (!paperRef.value || generandoPdf.value) return
   generandoPdf.value = true
   try {
-    await nextTick()
-    await new Promise(r => setTimeout(r, 400))
-    const elemento = (document.querySelector('.informe-produccion .report-document') || document.querySelector('.informe-produccion .report-paper')) as HTMLElement
-    if (!elemento) return
-    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')])
-    const root = document.documentElement
-    const temaPrevio = root.getAttribute('data-theme')
-    root.setAttribute('data-theme', 'light')
-    root.classList.add('light')
-    root.classList.remove('dark')
-    await new Promise(r => requestAnimationFrame(() => r(null)))
-    try {
-      // Pre-carga de imágenes (logo) para evitar canvas tainted / huecos pálidos
-      const imgs = Array.from(elemento.querySelectorAll('img')) as HTMLImageElement[]
-      await Promise.all(imgs.map(img => img.complete && img.naturalWidth > 0 ? Promise.resolve(null) : new Promise<void>(res => { img.onload = () => res(); img.onerror = () => res(); setTimeout(() => res(), 1500) })))
-      await new Promise(r => requestAnimationFrame(() => r(null)))
-      // Zoom: el PDF es imagen raster (canvas -> PNG). A más scale, más píxeles y menos borroso al ampliar.
-      // Con logo local same-origin y sin estilos universales, 2.5 es nítido sin volverse pálido (3 ya se veía washed).
-      const canvas = await html2canvas(elemento, {
-        scale: 2.5,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        onclone: (clonedDoc: Document) => {
-          const style = clonedDoc.createElement('style')
-          style.textContent = '.chart-actions{display:none!important}'
-          clonedDoc.head.appendChild(style)
-        },
-      })
-      const imgW = 210
-      const imgH = (canvas.height * imgW) / canvas.width
-      const pdf = new jsPDF({ unit: 'mm', format: [imgW, imgH], orientation: 'portrait' })
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, imgW, imgH, undefined, 'FAST')
-      pdf.save(`Informe_Produccion_${props.config.plantName}_${selectedLabel.value.replace(/ /g, '_')}.pdf`)
-    } finally {
-      if (temaPrevio) {
-        root.setAttribute('data-theme', temaPrevio)
-        if (temaPrevio === 'dark') { root.classList.add('dark'); root.classList.remove('light') }
-      }
-    }
+    await descargarInformePdf(paperRef.value, `Informe_Produccion_${planta.value.normalize('NFD').replace(/[^A-Za-z]/g, '')}_${selectedMonthKey.value}.pdf`)
   } catch (e) {
-    console.error('[generarPdf]', e)
+    console.error('[informe-produccion] Error generando PDF:', e)
   } finally {
     generandoPdf.value = false
   }
 }
 </script>
 
+<style scoped src="../concretos/tabs/informe.css"></style>
 <style scoped>
-.informe-produccion {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.informe-control-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: var(--card-bg, #ffffff);
-  border: 1px solid var(--card-border, #e2e8f0);
-  border-radius: 8px;
-  padding: 12px 18px;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-.icb-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.icb-tag {
-  background: #172954;
-  color: #ffffff;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  padding: 3px 8px;
-  border-radius: 4px;
-  letter-spacing: 0.5px;
-}
-.icb-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text-primary, #0f172a);
-}
-.icb-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.month-select {
-  padding: 7px 12px;
-  border: 1.5px solid var(--card-border, #cbd5e1);
-  border-radius: 6px;
-  background: var(--card-bg, #ffffff);
-  color: var(--text-primary, #0f172a);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  outline: none;
-}
-.month-select:focus {
-  border-color: #172954;
-}
-
-/* Botón corporativo oficial */
-.tb-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  border: none;
-  transition: all 0.2s ease;
-}
-.tb-btn.primary {
-  background: #172954;
-  color: #ffffff;
-  box-shadow: 0 2px 6px rgba(23, 41, 84, 0.25);
-}
-.tb-btn.primary:hover:not(:disabled) {
-  background: #1e3a8a;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(23, 41, 84, 0.35);
-}
-.tb-btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-.spinner-icon {
-  animation: spin 1s linear infinite;
-}
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-/* Contenedor Continuo tipo Documento Ejecutivo */
-.report-paper {
-  background: transparent;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-}
-.report-document {
-  width: 100%;
-  padding: 32px 40px;
-  background: #ffffff;
-  color: #1a1a2e;
-  border: 1px solid var(--card-border, #e2e8f0);
-  border-radius: 6px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  box-sizing: border-box;
-  font-family: 'Lato', 'Segoe UI', Arial, sans-serif;
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-/* Membrete y encabezado */
-.report-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 2.5px solid var(--navy, #172954);
-  padding-bottom: 12px;
-  position: relative;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-.report-header::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  bottom: -2.5px;
-  width: 80px;
-  height: 2.5px;
-  background: #a90707;
-}
-.report-header-brand {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-.report-logo {
-  height: 50px;
-  max-width: 200px;
-  width: auto;
-  object-fit: contain;
-  display: block;
-}
-.report-header-text h2 {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--navy, #172954);
-  margin: 0;
-}
-.report-header-text span {
-  font-size: 12.5px;
-  color: var(--text-secondary, #64748b);
-}
-.report-header-meta {
-  text-align: right;
-  font-size: 12.5px;
-  color: var(--text-secondary, #64748b);
-  line-height: 1.4;
-}
-.report-header-meta strong {
-  color: var(--text-primary, #0f172a);
-}
-
-/* Título e introducción */
-.report-title-section {
-  text-align: center;
-  margin: 4px 0 8px;
-  width: 100%;
-}
-.report-title-section h1 {
-  font-size: 22px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: var(--text-primary, #0f172a);
-  margin: 0 0 6px;
-}
-.report-intro {
-  font-size: 13px;
-  color: var(--text-secondary, #475569);
-  width: 100%;
-  max-width: 100%;
-  margin: 6px 0 0 0;
-  line-height: 1.65;
-  text-align: justify;
-  box-sizing: border-box;
-}
-
-/* Análisis Operativo Directivo estilo Zoho */
-.zoho-analysis-box {
-  background-color: var(--card-bg-hover, #f8fafc);
-  padding: 12px 16px;
-  border-radius: 6px;
-  border-left: 3.5px solid var(--navy, #172954);
-  width: 100%;
-  box-sizing: border-box;
-}
-.zoho-analysis-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-secondary, #64748b);
-  text-transform: uppercase;
-  margin-bottom: 4px;
-  letter-spacing: 0.5px;
-}
-.zoho-analysis-text {
-  font-size: 12.5px;
-  color: var(--text-primary, #334155);
-  line-height: 1.55;
-  text-align: justify;
-}
-
-/* Bloques y títulos */
-.report-section-block {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.report-block-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: var(--navy, #172954);
-  margin: 0;
-}
-.title-bar {
-  display: inline-block;
-  width: 4px;
-  height: 15px;
-  background: #2563eb;
-  border-radius: 2px;
-}
-
-.report-nota {
-  border-left: 3.5px solid var(--navy, #172954);
-  background: var(--card-bg-hover, #f8fafc);
-  padding: 10px 14px;
-  font-size: 12.5px;
-  color: var(--text-primary, #0f172a);
-  border-radius: 0 6px 6px 0;
-  line-height: 1.5;
-}
-.report-nota.alerta {
-  border-left-color: #a90707;
-  background: #fdf1f1;
-  color: #7f1d1d;
-}
-
-/* Tarjetas KPI */
-.kpis-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
-}
-.kpi-section {
-  margin: 0;
-  padding: 0;
-}
-.kpi-section-title {
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--text-secondary, #64748b);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin: 0 0 5px 2px;
-}
-.kpi-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-}
-.kpi-row-3 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-}
-
-/* Tablas de datos */
-.data-card {
-  background: #ffffff;
-  border: 1px solid var(--card-border, #e2e8f0);
-  border-radius: 6px;
-  overflow: hidden;
-}
-.table-wrap {
-  width: 100%;
-  overflow-x: auto;
-}
-.table-wrap table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-  font-family: inherit;
-}
-.table-wrap th {
-  background: #f8fafc;
-  color: var(--navy, #172954);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  padding: 8px 12px;
-  border-bottom: 1.5px solid var(--card-border, #e2e8f0);
-  text-align: left;
-}
-.table-wrap th.r, .table-wrap td.r { text-align: right; }
-.table-wrap td {
-  padding: 6.5px 12px;
-  border-bottom: 1px solid var(--card-border, #f1f5f9);
-  vertical-align: middle;
-}
-.table-wrap tr:hover td { background: #f8fafc; }
-.table-total-row {
-  background: #f1f5f9;
-  font-weight: 700;
-}
-.table-total-row td {
-  border-top: 2px solid #cbd5e1;
-  border-bottom: none;
-  padding: 8px 12px;
-}
-.idx-col, .idx { width: 26px; text-align: center; color: var(--text-secondary, #94a3b8); font-size: 11px; }
-.bold { font-weight: 700; }
-.accent-text { color: var(--navy, #172954); font-size: 12.5px; }
-.date-col { white-space: nowrap; font-weight: 600; }
-
-/* Columna de Observaciones */
-.obs-header { min-width: 180px; }
-.obs-cell {
-  font-size: 11.5px;
-  color: var(--text-secondary, #475569);
-  max-width: 240px;
-  white-space: normal;
-  line-height: 1.4;
-}
-.table-total-empty { text-align: center; color: #94a3b8; }
-
-/* Pills de porcentaje */
-.pill {
-  display: inline-block;
-  padding: 2px 7px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
-}
-.p-rojo { background: #fdeaea; color: #a90707; }
-.p-verde { background: #e9f4ed; color: #1f7a3d; }
-.p-ambar { background: #fef7ea; color: #92400e; }
-
-/* Pie de informe */
-.report-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-top: 1px solid var(--card-border, #e2e8f0);
-  padding-top: 12px;
-  font-size: 11.5px;
-  color: var(--text-secondary, #94a3b8);
-  margin-top: 8px;
-}
-
-.informe-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 20px;
-  background: var(--card-bg, #ffffff);
-  border: 1px dashed var(--card-border, #cbd5e1);
-  border-radius: 8px;
-  gap: 8px;
-  color: var(--text-secondary, #64748b);
-}
-.placeholder-icon { font-size: 36px; }
-.placeholder-text { font-size: 15px; font-weight: 600; color: var(--text-primary, #0f172a); }
-.placeholder-sub { font-size: 12px; }
-
-@media (max-width: 768px) {
-  .report-document { padding: 16px; }
-  .kpi-row, .kpi-row-3 { grid-template-columns: repeat(2, 1fr); }
-  .report-header { flex-direction: column; align-items: flex-start; }
-  .report-header-meta { text-align: left; }
-  .table-wrap table { min-width: 560px; }
-}
-@media (max-width: 480px) {
-  .kpi-row, .kpi-row-3 { grid-template-columns: 1fr; }
-}
-
-/* Ocultar acciones del gráfico dentro del documento oficial (evita que salgan en PDF/impresión) */
-.report-document :deep(.chart-actions) {
-  display: none !important;
-}
-.report-document :deep(.chart-header) {
-  margin-bottom: 0 !important;
-}
-.report-document :deep(.chart-card) {
-  border: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-}
-
-@media print {
-  .informe-control-bar { display: none !important; }
-  .report-document { box-shadow: none; border: none; padding: 0; }
-  .chart-actions { display: none !important; }
-}
+.icb-corte select { font: inherit; padding: 5px 8px; border: 1px solid var(--card-border); border-radius: 6px; background: var(--card-bg); color: var(--text-primary); }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; }
+.nowrap { white-space: nowrap; }
+.obs { max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-secondary); }
+/* Cinco KPIs (total + 3 líneas + promedio en Cuncía): una sola fila */
+.compact-kpi:has(> :nth-child(5):last-child) { grid-template-columns: repeat(5, 1fr); }
+/* Seis KPIs de proyectado y meta: tres por fila en pantallas anchas */
+.compact-kpi:has(> :nth-child(6)) { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 1100px) { .compact-kpi:has(> :nth-child(6)), .compact-kpi:has(> :nth-child(5):last-child) { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .compact-kpi:has(> :nth-child(6)), .compact-kpi:has(> :nth-child(5):last-child) { grid-template-columns: 1fr 1fr; } }
+/* En el PDF las observaciones se ven completas */
+.pdf-capturing .obs { white-space: normal; max-width: none; }
 </style>
-
