@@ -1,11 +1,12 @@
 <template>
   <div class="page-layout">
-    <div v-if="loading && !mant.cunciaData && !mant.acaciasData && !mant.concretosData" class="loading-state">Cargando datos de mantenimiento...</div>
+    <SkeletonLoader v-if="loading && !mant.cunciaData && !mant.acaciasData && !mant.concretosData" variant="dashboard" :kpis="4" :charts="3" label="Cargando datos de mantenimiento…" />
     <div v-else-if="error && !mant.cunciaData && !mant.acaciasData && !mant.concretosData" class="error-state">{{ error }}</div>
     <div v-else>
       <div class="sticky-top">
         <header class="page-header">
-          <h2 class="page-title">{{ isConcretos ? 'Concretos' : 'Agregados' }} Mantenimiento {{ isConcretos ? (props.localizacion || '') : plantaLabel }}</h2>
+          <!-- La planta ya la muestra PlantaLayout -->
+          <h2 class="page-title">Mantenimiento<template v-if="isConcretos && props.localizacion"> · {{ props.localizacion }}</template></h2>
           <div class="header-actions">
             <div class="filter-group">
               <FilterBar ref="filterBarRef" :data="allData" date-field="Fecha Cierre" :showProvider="false" @dateRangeFilter="onDateRangeFilter" @clear="onClearFilters" />
@@ -51,7 +52,7 @@
         </header>
       </div>
       <nav class="tab-bar">
-        <button v-for="t in tipoTabs" :key="t.id" class="tab-btn" :class="{ active: tipoTab === t.id }" @click="tipoTab = t.id">{{ t.label }}</button>
+        <RouterLink v-for="t in tipoTabs" :key="t.id" :to="rutaMant.enlace({ area: t.id })" class="tab-btn" :class="{ active: tipoTab === t.id }" :aria-current="tipoTab === t.id ? 'page' : undefined">{{ t.label }}</RouterLink>
       </nav>
 
       <!-- Inspección de Llantas: vista propia (solo Concretos) -->
@@ -71,10 +72,7 @@
 
       <template v-else>
       <nav class="sub-tab-bar">
-        <button class="sub-tab-btn" :class="{ active: subTab === 'dashboard' }" @click="subTab = 'dashboard'">Órdenes de Trabajo</button>
-        <button class="sub-tab-btn" :class="{ active: subTab === 'almacen' }" @click="subTab = 'almacen'">Almacén</button>
-        <button class="sub-tab-btn" :class="{ active: subTab === 'gerencial' }" @click="subTab = 'gerencial'">Gerencial</button>
-        <button class="sub-tab-btn" :class="{ active: subTab === 'disponibilidad' }" @click="subTab = 'disponibilidad'">Disponibilidad</button>
+        <RouterLink v-for="p in paneles" :key="p.id" :to="rutaMant.enlace({ panel: p.id })" class="sub-tab-btn" :class="{ active: subTab === p.id }" :aria-current="subTab === p.id ? 'page' : undefined">{{ p.label }}</RouterLink>
       </nav>
 
       <!-- Disponibilidad: el área (Planta/Maquinaria) la impone la pestaña activa -->
@@ -91,18 +89,18 @@
 
       <template v-if="subTab === 'dashboard'">
       <div class="almacen-view-toggle">
-        <button class="av-btn" :class="{ active: dashboardView === 'resumen' }" @click="dashboardView = 'resumen'">
+        <RouterLink class="av-btn" :to="rutaMant.enlace({ ot: 'resumen' })" replace :class="{ active: dashboardView === 'resumen' }">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           Gráficas
-        </button>
-        <button class="av-btn" :class="{ active: dashboardView === 'ordenes' }" @click="dashboardView = 'ordenes'">
+        </RouterLink>
+        <RouterLink class="av-btn" :to="rutaMant.enlace({ ot: 'ordenes' })" replace :class="{ active: dashboardView === 'ordenes' }">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           Órdenes de Trabajo
-        </button>
-        <button class="av-btn" :class="{ active: dashboardView === 'informe' }" @click="dashboardView = 'informe'">
+        </RouterLink>
+        <RouterLink class="av-btn" :to="rutaMant.enlace({ ot: 'informe' })" replace :class="{ active: dashboardView === 'informe' }">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           Informe
-        </button>
+        </RouterLink>
         <button v-if="dashboardView === 'resumen'" class="av-btn av-btn-pdf" :disabled="generandoGraficasPdf" @click="generarGraficasPdf">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           {{ generandoGraficasPdf ? 'Generando PDF…' : 'Descargar todo en PDF' }}
@@ -1045,14 +1043,14 @@
     <template v-if="subTab === 'almacen'">
     <div class="ots-section">
       <div class="almacen-view-toggle">
-        <button class="av-btn" :class="{ active: almacenView === 'graficos' }" @click="almacenView = 'graficos'">
+        <RouterLink class="av-btn" :to="rutaMant.enlace({ almacen: 'graficos' })" replace :class="{ active: almacenView === 'graficos' }">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           Gráficas
-        </button>
-        <button class="av-btn" :class="{ active: almacenView === 'solicitudes' }" @click="almacenView = 'solicitudes'">
+        </RouterLink>
+        <RouterLink class="av-btn" :to="rutaMant.enlace({ almacen: 'solicitudes' })" replace :class="{ active: almacenView === 'solicitudes' }">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           Solicitudes
-        </button>
+        </RouterLink>
       </div>
 
       <template v-if="almacenView === 'graficos'">
@@ -1747,9 +1745,12 @@
  * costo por M³, tendencias mensuales y detalle por orden de trabajo.
  */
 <script setup lang="ts">
+import SkeletonLoader from '../components/ui/SkeletonLoader.vue'
 import { computed, markRaw, nextTick, onMounted, ref, watch } from 'vue'
 import { useMantenimientoStore, useProduccionStore, useDisponibilidadStore } from '../stores'
 import { useConcretoStore } from '../stores/concreto'
+import { useRutaMantenimiento } from '../composables/useRutaMantenimiento'
+import { useAuthStore } from '../stores/auth'
 import ChartCard from '../components/dashboard/ChartCard.vue'
 import DisponibilidadTab from './mantenimiento/DisponibilidadTab.vue'
 import TareasTab from './mantenimiento/TareasTab.vue'
@@ -1765,6 +1766,7 @@ import { hBarLayout, hBarAxisLabel, hBarGrid, hBarTooltip, hBarValueSpace } from
 import { useViewportWidth } from '../composables/useViewportWidth'
 
 const props = defineProps<{ planta: string; localizacion?: string }>()
+const authStore = useAuthStore()
 
 const plantaLabel = computed(() => {
   const p = props.planta?.toLowerCase()
@@ -1779,16 +1781,29 @@ const isConcretos = computed(() => props.planta?.toLowerCase() === 'concretos')
 const metaM3 = computed(() => (isConcretos.value ? 22000 : 3000))
 const metaM3Label = computed(() => `Meta: $${metaM3.value.toLocaleString('es-CO')}/m³`)
 
-const tipoTab = ref('planta')
+// Navegación en la ruta: /:planta/mantenimiento/:area/:seccion/:vista (ver useRutaMantenimiento)
+const rutaMant = useRutaMantenimiento({ normalizar: true })
+const tipoTab = rutaMant.area
+const subTab = rutaMant.panel
+const dashboardView = rutaMant.vistaOT
+const almacenView = rutaMant.vistaAlmacen
 const tipoTabs = computed(() => [
-  { id: 'planta', label: 'Planta' },
-  { id: 'maquinaria', label: 'Maquinaria' },
-  ...(isConcretos.value ? [{ id: 'inspeccion', label: 'Inspección' }] : []),
-  { id: 'tareas', label: 'Tareas' },
+  { id: 'planta' as const, label: 'Planta' },
+  { id: 'maquinaria' as const, label: 'Maquinaria' },
+  ...(isConcretos.value ? [{ id: 'inspeccion' as const, label: 'Inspección' }] : []),
+  { id: 'tareas' as const, label: 'Tareas' },
+// Permisos por vista (Configuración): se ocultan las áreas que el usuario no tiene permitidas
+].filter(t => authStore.canView(`${props.planta}/mantenimiento/${t.id}`)))
+// Si el área de la ruta no existe en esta planta o no está permitida, se muestra la primera permitida
+watch(tipoTabs, ts => { if (ts.length && !ts.some(t => t.id === tipoTab.value)) rutaMant.ir({ area: ts[0].id }, true) }, { immediate: true })
+const paneles = computed(() => [
+  { id: 'dashboard' as const, label: 'Órdenes de Trabajo' },
+  { id: 'almacen' as const, label: 'Almacén' },
+  { id: 'gerencial' as const, label: 'Gerencial' },
+  ...(puedeDisponibilidad.value ? [{ id: 'disponibilidad' as const, label: 'Disponibilidad' }] : []),
 ])
-const subTab = ref<'dashboard' | 'almacen' | 'gerencial' | 'disponibilidad'>('dashboard')
-const dashboardView = ref<'resumen' | 'ordenes' | 'informe'>('resumen')
-const almacenView = ref<'graficos' | 'solicitudes'>('graficos')
+const puedeDisponibilidad = computed(() => authStore.canView(`${props.planta}/mantenimiento/disponibilidad`))
+watch([subTab, puedeDisponibilidad], ([p, ok]) => { if (p === 'disponibilidad' && !ok) rutaMant.ir({ panel: 'dashboard' }, true) }, { immediate: true })
 function scrollToSec(id: string) {
   const el = document.getElementById(id)
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -6005,18 +6020,24 @@ const sistemasExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(comput
   .page-header {
     align-items: flex-start;
   }
+  /* Filtros en filas compactas (como Producción), no uno debajo del otro */
+  .header-actions { width: 100%; flex-wrap: wrap; }
   .filter-group {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .filter-group .filter-bar,
-  .filter-group .multi-select {
-    width: 100%;
-  }
-  .sub-tab-bar {
+    flex-direction: row;
     flex-wrap: wrap;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
     gap: 4px;
   }
+  .filter-group > * { flex: 1 1 auto; }
+  .filter-quick-nav { width: 100%; }
+  /* Secciones en una sola fila deslizable */
+  .sub-tab-bar {
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+  .sub-tab-btn { white-space: nowrap; }
   .sub-tab-btn {
     flex: 1 1 auto;
     text-align: center;
@@ -6189,11 +6210,18 @@ const sistemasExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(comput
 .tab-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.08); }
 .tab-btn.active { color: var(--accent); font-weight: 600; border-bottom-color: var(--accent); background: rgba(255,255,255,0.12); }
 
+/* Las pestañas son enlaces (RouterLink): se quitan los estilos de <a> */
+a.tab-btn, a.sub-tab-btn, a.av-btn { text-decoration: none; display: inline-flex; align-items: center; gap: 7px; }
+a.tab-btn:focus-visible, a.sub-tab-btn:focus-visible, a.av-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 .sub-tab-bar {
   display: flex;
   gap: 2px;
   margin-bottom: 20px;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.sub-tab-bar::-webkit-scrollbar { display: none; }
 .sub-tab-btn {
   padding: 6px 16px;
   border: none;

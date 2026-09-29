@@ -5,13 +5,48 @@ import { buildLlantasData } from '../api/_lib/llantas.js'
 import { loadDisponibilidadData } from '../api/_lib/disponibilidad.js'
 import { loadCunciaProduccion, loadAcaciasProduccion } from '../api/_lib/produccion.js'
 import { SPREADSHEETS } from '../api/_lib/google.js'
+import { loadFacturacion, compactar, SUCURSALES, type PlantaFacturacion } from '../api/_lib/facturacion.js'
 import {
   getSupabaseAdmin,
   authenticateRequest,
+  requireSuperAdmin,
+  requireView,
+  invalidatePermsCache,
+  getUserPerms,
+  audit,
+  verifyPassword,
+  isBanned,
+  isSuperAdmin,
+  getUserRole,
   handleLogin,
+  getClientIp,
+  checkLockout,
+  recordFailedAttempt,
+  sanitizeEmail,
+  validateEmail,
+  validatePassword,
 } from '../api/_lib/auth-helpers.js'
 
 const VALID_KEYS = new Set(Object.keys(SPREADSHEETS))
+
+/** Formato permitido para claves de vista, p. ej. `cuncia/mantenimiento/planta`. */
+const VISTA_KEY_RE = /^[a-z0-9]+(\/[a-z0-9-]+){0,4}$/
+
+/** Valida y normaliza el mapa { vista: permitido } recibido del cliente. */
+function sanitizePerms(raw: unknown): Record<string, boolean> | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+  const entries = Object.entries(raw as Record<string, unknown>)
+  if (entries.length > 200) return null
+  const out: Record<string, boolean> = {}
+  for (const [k, v] of entries) {
+    if (!VISTA_KEY_RE.test(k) || typeof v !== 'boolean') return null
+    out[k] = v
+  }
+  return out
+}
+
+/** Hosts permitidos para /api/pdf-resolve (evita usarlo como proxy SSRF). */
+const PDF_RESOLVE_HOSTS = new Set(['drive.google.com', 'docs.google.com', 'goo.gl', 'forms.gle'])
 
 /**
  * Crea un router Express con todas las rutas de la API.
@@ -34,7 +69,7 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
   })
 
   /** GET /api/spreadsheets - Lista todos los spreadsheets registrados. */
-  router.get('/spreadsheets', authenticateRequest, async (_req, res) => {
+  router.get('/spreadsheets', authenticateRequest, requireSuperAdmin, async (_req, res) => {
     try {
       const list = Object.entries(SPREADSHEETS).map(([key, id]) => ({ key, id }))
       res.json(list)
@@ -45,7 +80,7 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
   })
 
   /** GET /api/spreadsheets/meta?key= - Metadatos de un spreadsheet. */
-  router.get('/spreadsheets/meta', authenticateRequest, async (req, res) => {
+  router.get('/spreadsheets/meta', authenticateRequest, requireSuperAdmin, async (req, res) => {
     try {
       const key = req.query.key as string
       if (!key || !VALID_KEYS.has(key)) {
@@ -60,7 +95,7 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
   })
 
   /** GET /api/spreadsheets/data?key=&sheet= - Datos de un spreadsheet/hoja. */
-  router.get('/spreadsheets/data', authenticateRequest, async (req, res) => {
+  router.get('/spreadsheets/data', authenticateRequest, requireSuperAdmin, async (req, res) => {
     try {
       const key = req.query.key as string
       if (!key || !VALID_KEYS.has(key)) {
@@ -79,7 +114,7 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
   })
 
   /** GET /api/spreadsheets/analyze?key= - Análisis de un spreadsheet. */
-  router.get('/spreadsheets/analyze', authenticateRequest, async (req, res) => {
+  router.get('/spreadsheets/analyze', authenticateRequest, requireSuperAdmin, async (req, res) => {
     try {
       const key = req.query.key as string
       if (!key || !VALID_KEYS.has(key)) {
@@ -96,7 +131,7 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
   })
 
   /** GET /api/analyze-all - Analiza todos los spreadsheets. */
-  router.get('/analyze-all', authenticateRequest, async (_req, res) => {
+  router.get('/analyze-all', authenticateRequest, requireSuperAdmin, async (_req, res) => {
     try {
       const results = await analyzeAll()
       res.json(results)
@@ -107,7 +142,7 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
   })
 
   /** GET /api/proyecciones-clientes/data - Proyecciones de clientes desde Supabase. */
-  router.get('/proyecciones-clientes/data', authenticateRequest, async (_req, res) => {
+  router.get('/proyecciones-clientes/data', authenticateRequest, requireView(['concretos', 'clientes']), async (_req, res) => {
     try {
       const supabase = getSupabaseAdmin()
       const { data, error } = await supabase
@@ -124,7 +159,7 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
   })
 
   /** GET /api/proyecciones-planta/data - Proyecciones diarias por planta. */
-  router.get('/proyecciones-planta/data', authenticateRequest, async (_req, res) => {
+  router.get('/proyecciones-planta/data', authenticateRequest, requireView(['concretos']), async (_req, res) => {
     try {
       const supabase = getSupabaseAdmin()
       const { data, error } = await supabase
@@ -141,7 +176,7 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
   })
 
   /** GET /api/mantenimiento-ot-cuncia/data - OT Cuncía + Sub OT + Sopled + Sub Sopled. */
-  router.get('/mantenimiento-ot-cuncia/data', authenticateRequest, async (req, res) => {
+  router.get('/mantenimiento-ot-cuncia/data', authenticateRequest, requireView(['cuncia/mantenimiento']), async (req, res) => {
     try {
       const force = req.query.force === 'true'
       const rows = await buildMantenimientoOtRows('ordenes_ot_cuncia', 'maestro_cuncia', 'CUNCIA', force)
@@ -153,7 +188,7 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
   })
 
   /** GET /api/mantenimiento-ot-acacias/data - OT Acacias + Sub OT + Sopled + Sub Sopled. */
-  router.get('/mantenimiento-ot-acacias/data', authenticateRequest, async (req, res) => {
+  router.get('/mantenimiento-ot-acacias/data', authenticateRequest, requireView(['acacias/mantenimiento']), async (req, res) => {
     try {
       const force = req.query.force === 'true'
       const rows = await buildMantenimientoOtRows('ordenes_ot_acacias', 'maestro_acacias', 'ACACIAS', force)
@@ -165,7 +200,7 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
   })
 
   /** GET /api/mantenimiento-ot-concretos/data - OT Concretos + Sub OT + Sopled + Sub Sopled. */
-  router.get('/mantenimiento-ot-concretos/data', authenticateRequest, async (req, res) => {
+  router.get('/mantenimiento-ot-concretos/data', authenticateRequest, requireView(['concretos/mantenimiento']), async (req, res) => {
     try {
       const force = req.query.force === 'true'
       const rows = await buildMantenimientoOtRows('ordenes_ot_concretos', 'maestro_concretos', 'CONCRETOS', force)
@@ -177,7 +212,7 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
   })
 
   /** GET /api/llantas/data - Inventario de llantas + inspecciones + detalle (FleetControl_Llantas). */
-  router.get('/llantas/data', authenticateRequest, async (req, res) => {
+  router.get('/llantas/data', authenticateRequest, requireView(['cuncia/mantenimiento', 'acacias/mantenimiento', 'concretos/mantenimiento']), async (req, res) => {
     try {
       const force = req.query.force === 'true'
       const data = await buildLlantasData(force)
@@ -189,7 +224,7 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
   })
 
   /** GET /api/disponibilidad/data - Datos de disponibilidad placa a placa y tareas por planta. */
-  router.get('/disponibilidad/data', authenticateRequest, async (req, res) => {
+  router.get('/disponibilidad/data', authenticateRequest, requireView(req => [`${String(req.query.planta ?? 'cuncia').toLowerCase()}/mantenimiento`]), async (req, res) => {
     try {
       const planta = (String(req.query.planta ?? 'cuncia').toLowerCase()) as any
       const force = req.query.force === 'true'
@@ -202,7 +237,7 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
   })
 
   /** GET /api/produccion-agregados-acacias/data - Producción agregados Acacias (Supabase). */
-  router.get('/produccion-agregados-acacias/data', authenticateRequest, async (_req, res) => {
+  router.get('/produccion-agregados-acacias/data', authenticateRequest, requireView(['acacias']), async (_req, res) => {
     try {
       const result = await loadAcaciasProduccion()
       res.json(result)
@@ -213,7 +248,7 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
   })
 
   /** GET /api/produccion-agregados-cuncia/data - Producción agregados Cuncia (Supabase). */
-  router.get('/produccion-agregados-cuncia/data', authenticateRequest, async (_req, res) => {
+  router.get('/produccion-agregados-cuncia/data', authenticateRequest, requireView(['cuncia']), async (_req, res) => {
     try {
       const result = await loadCunciaProduccion()
       res.json(result)
@@ -224,7 +259,7 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
   })
 
   /** GET /api/programacion-agregados/data - Programación de agregados desde Zoho Creator. */
-  router.get('/programacion-agregados/data', authenticateRequest, async (_req, res) => {
+  router.get('/programacion-agregados/data', authenticateRequest, requireView(['cuncia/programacion', 'acacias/programacion']), async (_req, res) => {
     try {
       const supabase = getSupabaseAdmin()
       const { data, error } = await supabase
@@ -241,7 +276,7 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
   })
 
   /** GET /api/concreto/data - Datos de concreto (order_price + order_detail). */
-  router.get('/concreto/data', authenticateRequest, async (_req, res) => {
+  router.get('/concreto/data', authenticateRequest, requireView(['concretos']), async (_req, res) => {
     try {
       const supabase = getSupabaseAdmin()
       const limit = 100000
@@ -261,16 +296,87 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
     }
   })
 
-  /** GET /api/admin/users - Lista usuarios reales de Supabase Auth (solo admin) */
-  router.get('/admin/users', authenticateRequest, async (req, res) => {
+  /** GET /api/facturacion-agregados/data?planta=cuncia|acacias&force=true - Facturación Novasoft (Excel en Drive) de una planta */
+  router.get('/facturacion-agregados/data',
+    authenticateRequest,
+    requireView(req => [`${String(req.query.planta ?? '').toLowerCase()}/facturacion`]),
+    async (req, res) => {
+      const planta = String(req.query.planta ?? '').toLowerCase()
+      if (!(planta in SUCURSALES)) return res.status(400).json({ error: 'Planta inválida' })
+      try {
+        res.json(compactar(await loadFacturacion(planta as PlantaFacturacion, req.query.force === 'true')))
+      } catch (err: any) {
+        console.error('[facturacion-agregados]', err?.message ?? err)
+        res.status(err?.status ?? 500).json({ error: err?.status === 503 ? err.message : 'No se pudo leer el archivo de facturación.' })
+      }
+    })
+
+  /** GET /api/me - Rol efectivo y permisos de vista del usuario autenticado. */
+  router.get('/me', authenticateRequest, async (req, res) => {
+    const user = (req as any).user
+    let perms: Record<string, boolean> = {}
+    try {
+      perms = await getUserPerms(user.email)
+    } catch (err) {
+      // Sin permisos verificables el frontend bloquea todo salvo Configuración.
+      console.error('[me] permisos_vista:', err)
+      perms = { cuncia: false, acacias: false, concretos: false, clientes: false }
+    }
+    res.json({
+      email: user.email,
+      role: getUserRole(user),
+      superadmin: isSuperAdmin(user),
+      mustChangePassword: !!user.app_metadata?.must_change_password,
+      perms,
+    })
+  })
+
+  /** POST /api/me/password - Cambia la contraseña propia verificando la actual. */
+  router.post('/me/password', authenticateRequest, async (req, res) => {
     try {
       const user = (req as any).user
-      const role = (user as any)?.user_metadata?.role || (user as any)?.app_metadata?.role
-      if (role !== 'admin') return res.status(403).json({ error: 'Forbidden: solo admin' })
-      const supabase = getSupabaseAdmin()
-      const { data, error } = await supabase.auth.admin.listUsers()
+      const current = typeof req.body?.currentPassword === 'string' ? req.body.currentPassword : ''
+      const next = typeof req.body?.newPassword === 'string' ? req.body.newPassword : ''
+      if (!current || !next) return res.status(400).json({ error: 'Complete la contraseña actual y la nueva.' })
+      const pwError = validatePassword(next)
+      if (pwError) return res.status(400).json({ error: pwError })
+      if (next === current) return res.status(400).json({ error: 'La nueva contraseña debe ser distinta a la actual.' })
+
+      const ip = getClientIp(req)
+      const lock = await checkLockout(user.email, ip)
+      if (lock.isLocked) return res.status(429).json({ error: 'Demasiados intentos. Intente más tarde.' })
+      if (!(await verifyPassword(user.email, current))) {
+        await recordFailedAttempt(user.email, ip)
+        return res.status(400).json({ error: 'La contraseña actual no es correcta.' })
+      }
+
+      const { error } = await getSupabaseAdmin().auth.admin.updateUserById(user.id, {
+        password: next,
+        app_metadata: { ...user.app_metadata, must_change_password: false },
+      })
       if (error) throw error
-      const users = data.users.map(u => ({ id: u.id, email: u.email, role: (u.user_metadata as any)?.role || (u.app_metadata as any)?.role || 'usuario', created_at: u.created_at }))
+      await audit(req, 'password.change', user.email)
+      res.json({ ok: true })
+    } catch (err) {
+      console.error('[me-password]', err)
+      res.status(500).json({ error: 'No se pudo cambiar la contraseña.' })
+    }
+  })
+
+  /** GET /api/admin/users - Lista usuarios reales de Supabase Auth (solo super-admin) */
+  router.get('/admin/users', authenticateRequest, requireSuperAdmin, async (_req, res) => {
+    try {
+      const { data, error } = await getSupabaseAdmin().auth.admin.listUsers({ perPage: 1000 })
+      if (error) throw error
+      const users = data.users.map(u => ({
+        id: u.id,
+        email: u.email,
+        role: getUserRole(u),
+        created_at: u.created_at,
+        last_sign_in_at: u.last_sign_in_at ?? null,
+        banned: isBanned(u as any),
+        must_change_password: !!(u.app_metadata as any)?.must_change_password,
+      }))
       res.json({ users })
     } catch (err) {
       console.error('[admin-users]', err)
@@ -278,13 +384,119 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
     }
   })
 
-  /** GET /api/admin/permisos?email= - Permisos de un usuario */
-  router.get('/admin/permisos', authenticateRequest, async (req, res) => {
+  /** POST /api/admin/users - Crea un usuario nuevo (solo super-admin / sys.tic). */
+  router.post('/admin/users', authenticateRequest, requireSuperAdmin, async (req, res) => {
     try {
-      const email = String(req.query.email ?? '').trim()
-      if (!email) return res.status(400).json({ error: 'email requerido' })
+      const email = sanitizeEmail(req.body?.email)
+      const password = typeof req.body?.password === 'string' ? req.body.password : ''
+      const role = req.body?.role === 'admin' ? 'admin' : 'usuario'
+      const perms = sanitizePerms(req.body?.perms)
+
+      if (!email || !validateEmail(email)) return res.status(400).json({ error: 'Correo inválido.' })
+      const pwError = validatePassword(password)
+      if (pwError) return res.status(400).json({ error: pwError })
+
       const supabase = getSupabaseAdmin()
-      const { data, error } = await supabase.from('permisos_vista').select('vista,permitido').eq('email', email)
+      const { data, error } = await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        // El rol va en app_metadata: el usuario no puede modificarlo desde el cliente.
+        // La contraseña es temporal: se exige cambiarla en el primer ingreso.
+        app_metadata: { role, must_change_password: true },
+      })
+      if (error) {
+        const msg = /already|registered|exists/i.test(error.message) ? 'Ya existe un usuario con ese correo.' : 'No se pudo crear el usuario.'
+        console.error('[admin-users-create]', error.message)
+        return res.status(400).json({ error: msg })
+      }
+
+      if (perms && Object.keys(perms).length) {
+        const rows = Object.entries(perms).map(([vista, permitido]) => ({ email, vista, permitido, user_id: data.user.id }))
+        const { error: permError } = await (supabase as any).from('permisos_vista').insert(rows)
+        if (permError) console.error('[admin-users-create-perms]', permError)
+      }
+
+      await audit(req, 'user.create', email, { role, perms: perms ? Object.keys(perms).filter(k => perms[k]).length : 0 })
+      res.status(201).json({ user: { id: data.user.id, email, role, created_at: data.user.created_at } })
+    } catch (err) {
+      console.error('[admin-users-create]', err)
+      res.status(500).json({ error: 'Error interno' })
+    }
+  })
+
+  /** Busca un usuario por id y rechaza operar sobre el super-admin. */
+  async function loadTargetUser(req: any, res: any) {
+    const id = String(req.params.id ?? '')
+    if (!/^[0-9a-f-]{36}$/i.test(id)) { res.status(400).json({ error: 'Usuario inválido.' }); return null }
+    const { data, error } = await getSupabaseAdmin().auth.admin.getUserById(id)
+    if (error || !data.user) { res.status(404).json({ error: 'Usuario no encontrado.' }); return null }
+    if (isSuperAdmin(data.user)) { res.status(400).json({ error: 'No se puede modificar la cuenta del administrador del sistema.' }); return null }
+    return data.user
+  }
+
+  /** POST /api/admin/users/:id/block - Bloquea o desbloquea una cuenta (solo super-admin). */
+  router.post('/admin/users/:id/block', authenticateRequest, requireSuperAdmin, async (req, res) => {
+    try {
+      const target = await loadTargetUser(req, res)
+      if (!target) return
+      const blocked = req.body?.blocked === true
+      // ~100 años = bloqueo indefinido; authenticateRequest rechaza sus tokens vigentes al instante.
+      const { error } = await getSupabaseAdmin().auth.admin.updateUserById(target.id, { ban_duration: blocked ? '876000h' : 'none' })
+      if (error) throw error
+      await audit(req, blocked ? 'user.block' : 'user.unblock', target.email ?? target.id)
+      res.json({ ok: true, blocked })
+    } catch (err) {
+      console.error('[admin-block]', err)
+      res.status(500).json({ error: 'No se pudo actualizar la cuenta.' })
+    }
+  })
+
+  /** POST /api/admin/users/:id/role - Cambia el rol (usuario/admin) (solo super-admin). */
+  router.post('/admin/users/:id/role', authenticateRequest, requireSuperAdmin, async (req, res) => {
+    try {
+      const target = await loadTargetUser(req, res)
+      if (!target) return
+      const role = req.body?.role === 'admin' ? 'admin' : 'usuario'
+      const { error } = await getSupabaseAdmin().auth.admin.updateUserById(target.id, { app_metadata: { ...target.app_metadata, role } })
+      if (error) throw error
+      await audit(req, 'user.role', target.email ?? target.id, { role })
+      res.json({ ok: true, role })
+    } catch (err) {
+      console.error('[admin-role]', err)
+      res.status(500).json({ error: 'No se pudo cambiar el rol.' })
+    }
+  })
+
+  /** POST /api/admin/users/:id/reset-password - Asigna contraseña temporal (solo super-admin). */
+  router.post('/admin/users/:id/reset-password', authenticateRequest, requireSuperAdmin, async (req, res) => {
+    try {
+      const target = await loadTargetUser(req, res)
+      if (!target) return
+      const password = typeof req.body?.password === 'string' ? req.body.password : ''
+      const pwError = validatePassword(password)
+      if (pwError) return res.status(400).json({ error: pwError })
+      const { error } = await getSupabaseAdmin().auth.admin.updateUserById(target.id, {
+        password,
+        app_metadata: { ...target.app_metadata, must_change_password: true },
+      })
+      if (error) throw error
+      await audit(req, 'user.reset_password', target.email ?? target.id)
+      res.json({ ok: true })
+    } catch (err) {
+      console.error('[admin-reset-password]', err)
+      res.status(500).json({ error: 'No se pudo restablecer la contraseña.' })
+    }
+  })
+
+  /** GET /api/admin/permisos?email= - Permisos de un usuario (solo super-admin) */
+  router.get('/admin/permisos', authenticateRequest, requireSuperAdmin, async (req, res) => {
+    try {
+      const email = sanitizeEmail(String(req.query.email ?? ''))
+      if (!email || !validateEmail(email)) return res.status(400).json({ error: 'email requerido' })
+      const { data, error } = await (getSupabaseAdmin() as any).from('permisos_vista').select('vista,permitido').eq('email', email)
+      // Tabla aún no creada (migración 003 pendiente): sin permisos guardados, se avisa al panel
+      if (error?.code === 'PGRST205') return res.json({ perms: [], migracionPendiente: true })
       if (error) throw error
       res.json({ perms: data ?? [] })
     } catch (err) {
@@ -293,24 +505,28 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
     }
   })
 
-  /** POST /api/admin/permisos - Guardar permisos (solo admin) */
-  router.post('/admin/permisos', authenticateRequest, async (req, res) => {
+  /** POST /api/admin/permisos - Guardar permisos (solo super-admin) */
+  router.post('/admin/permisos', authenticateRequest, requireSuperAdmin, async (req, res) => {
     try {
-      const user = (req as any).user
-      const role = (user as any)?.user_metadata?.role || (user as any)?.app_metadata?.role
-      if (role !== 'admin') return res.status(403).json({ error: 'Forbidden: solo admin' })
-      const { email, perms } = req.body as { email: string; perms: Record<string, boolean> }
-      if (!email || !perms || typeof perms !== 'object') return res.status(400).json({ error: 'email y perms requeridos' })
-      const supabase = getSupabaseAdmin()
-      const { data: list } = await supabase.auth.admin.listUsers()
-      const target = list.users.find(u => u.email === email)
-      const user_id = target?.id ?? null
-      await (supabase as any).from('permisos_vista').delete().eq('email', email)
-      const rows = Object.entries(perms).map(([vista, permitido]) => ({ email, vista, permitido, user_id }))
+      const email = sanitizeEmail(req.body?.email)
+      const perms = sanitizePerms(req.body?.perms)
+      if (!email || !validateEmail(email) || !perms) return res.status(400).json({ error: 'email y perms requeridos' })
+      const supabase = getSupabaseAdmin() as any
+      const { data: list, error: listError } = await supabase.auth.admin.listUsers({ perPage: 1000 })
+      if (listError) throw listError
+      const target = list.users.find((u: any) => u.email?.toLowerCase() === email)
+      if (!target) return res.status(404).json({ error: 'Usuario no encontrado.' })
+      if (isSuperAdmin(target)) return res.status(400).json({ error: 'El administrador del sistema siempre tiene acceso total.' })
+
+      const rows = Object.entries(perms).map(([vista, permitido]) => ({
+        email, vista, permitido, user_id: target.id, updated_at: new Date().toISOString(),
+      }))
       if (rows.length) {
-        const { error } = await (supabase as any).from('permisos_vista').insert(rows as any)
+        const { error } = await supabase.from('permisos_vista').upsert(rows, { onConflict: 'email,vista' })
         if (error) throw error
       }
+      invalidatePermsCache(email)
+      await audit(req, 'perms.update', email, { denegadas: Object.keys(perms).filter(k => !perms[k]) })
       res.json({ ok: true })
     } catch (err) {
       console.error('[admin-permisos-post]', err)
@@ -319,10 +535,15 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
   })
 
   /** GET /api/pdf-resolve - Resuelve redirecciones de enlaces PDF de Google Drive. */
-  router.get('/pdf-resolve', async (req, res) => {
+  router.get('/pdf-resolve', authenticateRequest, async (req, res) => {
     const url = req.query.url
     if (typeof url !== 'string' || !url) {
       return res.status(400).json({ error: 'url required' })
+    }
+    let parsed: URL
+    try { parsed = new URL(url) } catch { return res.status(400).json({ error: 'url inválida' }) }
+    if (parsed.protocol !== 'https:' || !PDF_RESOLVE_HOSTS.has(parsed.hostname)) {
+      return res.status(400).json({ error: 'Host no permitido' })
     }
     try {
       const resp = await fetch(url, { redirect: 'follow' })

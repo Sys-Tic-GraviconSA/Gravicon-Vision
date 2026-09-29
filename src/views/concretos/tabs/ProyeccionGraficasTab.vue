@@ -14,7 +14,7 @@
       </label>
     </div>
 
-    <div v-if="clientesStore.loading && !proyecciones.length" class="gt-vacio">Cargando proyecciones…</div>
+    <SkeletonLoader v-if="clientesStore.loading && !proyecciones.length" :kpis="4" :charts="3" label="Cargando proyecciones…" />
     <div v-else-if="clientesStore.error" class="gt-vacio">No se pudieron cargar las proyecciones: {{ clientesStore.error }}</div>
     <div v-else-if="!filasMes.length" class="gt-vacio">No hay proyección de clientes para {{ mesLbl }}.</div>
 
@@ -29,7 +29,7 @@
         <ChartCard title="Avance Acumulado del Mes" description="m³ de concreto acumulados día a día, meta lineal y proyección al cierre al ritmo actual" :option="optAvance" :height="340" />
       </div>
       <div class="charts-grid cols-1">
-        <ChartCard title="Despacho Diario vs. Meta Diaria" :description="`m³ de concreto por día, apilado por planta · línea: meta diaria de ${fmtN(metaDiaria, 0)} m³ (total de la proyección de clientes ÷ ${diasOpMes} días operativos)`" :option="optDiario" :height="340" />
+        <ChartCard title="Despacho Diario vs. Meta Diaria" :description="`m³ de concreto por día (desglose por planta en el tooltip) · línea: meta diaria de ${fmtN(metaDiaria, 0)} m³ (total de la proyección de clientes ÷ ${diasOpMes} días operativos)`" :option="optDiario" :height="340" />
       </div>
 
       <h3 class="section-title"><span class="title-bar"></span>Clientes proyectados</h3>
@@ -59,6 +59,7 @@
  * (concreto, sin agregados). Mismo estilo de Producción y Mantenimiento (useGraficasConcreto).
  */
 <script setup lang="ts">
+import SkeletonLoader from '../../../components/ui/SkeletonLoader.vue'
 import { ref, computed, watch, onMounted } from 'vue'
 import KpiCard from '../../../components/dashboard/KpiCard.vue'
 import ChartCard from '../../../components/dashboard/ChartCard.vue'
@@ -83,11 +84,13 @@ const props = defineProps<{
   corte?: string
   /** Plantas marcadas en el filtro global (null = todas) */
   plantasFiltro?: string[] | null
+  /** Clientes marcados en el filtro global (null = todos); se cruzan por nombre normalizado */
+  clientesFiltro?: string[] | null
 }>()
 
 const TOP = 10
 const VERDE = '#16A34A', AMBAR = '#F59E0B', ROJO = '#DC2626'
-const { isLight, chartTextColor, labelPill, labelDentro, base, leyenda, ejeX, ejeY, barrasH } = useEstiloGraficas()
+const { isLight, chartTextColor, labelPill, labelDentro, base, leyenda, ejeX, ejeY, barrasH, movil } = useEstiloGraficas()
 const gris = computed(() => (isLight.value ? '#cbd5e1' : '#334155'))
 const tinta = computed(() => (isLight.value ? '#0f172a' : '#f1f5f9'))
 
@@ -106,12 +109,14 @@ onMounted(() => { if (!clientesStore.data && !clientesStore.loading) clientesSto
 interface Proy { mes: string; planta: string; cliente: string; obra: string; tipo: string; meta: number; real: number }
 const proyecciones = computed<Proy[]>(() => {
   const filtro = props.plantasFiltro ? new Set(props.plantasFiltro.map(nombrePlanta)) : null
+  const filtroCli = props.clientesFiltro ? new Set(props.clientesFiltro.map(norm)) : null
   return (clientesStore.allRows as Record<string, unknown>[])
     .map(r => ({
       mes: String(r.fecha ?? '').slice(0, 7), planta: nombrePlanta(r.planta), cliente: String(r.nombre_cliente ?? '').trim(),
       obra: String(r.obra ?? '').trim(), tipo: String(r.tipo ?? ''), meta: num(r.m3_proyectado), real: num(r.cantidad_m3),
     }))
-    .filter(r => r.mes && (!filtro || filtro.has(r.planta)))
+    // Con filtro de clientes se quitan las filas genéricas de calle: no son de ningún cliente elegido
+    .filter(r => r.mes && (!filtro || filtro.has(r.planta)) && (!filtroCli || filtroCli.has(norm(r.cliente))))
 })
 // Fila genérica «CLIENTE / CALLE» dentro de lo proyectado (misma regla del informe)
 const esCalle = (r: Proy) => norm(r.cliente) === 'CLIENTE' && norm(r.obra) === 'CALLE'
@@ -218,7 +223,7 @@ const optMetaPlanta = computed(() => {
       },
     },
     legend: leyenda([{ name: 'Meta', itemStyle: { color: gris.value } }, { name: 'Ejecutado', itemStyle: { color: AZUL } }]),
-    grid: { left: 20, right: 30, bottom: 30, top: 50, containLabel: true },
+    grid: { left: 12, right: 20, bottom: 24, top: 40, containLabel: true },
     xAxis: ejeX(lista.map(x => x.planta)),
     yAxis: ejeY(),
     series: [
@@ -277,12 +282,12 @@ const optAvance = computed(() => {
       ...(hayProy ? [{ name: 'Proyección al cierre', itemStyle: { color: '#94a3b8' } }] : []),
       { name: 'Meta (lineal)', itemStyle: { color: VERDE } },
     ]),
-    grid: { left: 20, right: 70, bottom: 30, top: 50, containLabel: true },
+    grid: { left: 12, right: movil.value ? 48 : 70, bottom: 24, top: 40, containLabel: true },
     xAxis: ejeX(dias.map(d => d.slice(8, 10)), { boundaryGap: false }),
     yAxis: ejeY(),
     series: [
-      { name: 'Ejecutado acumulado', type: 'line' as const, data: real, smooth: 0.2, symbol: 'none', lineStyle: { width: 2.5, color: AZUL }, itemStyle: { color: AZUL },
-        areaStyle: { opacity: 0.18, color: AZUL }, endLabel: { ...labelPill.value, formatter: (x: any) => m3Lbl(x.value) }, labelLayout: { moveOverlap: 'shiftY' as const } },
+      { name: 'Ejecutado acumulado', type: 'line' as const, data: real, smooth: 0.2, symbol: 'none', lineStyle: { width: 2, color: AZUL }, itemStyle: { color: AZUL },
+        areaStyle: { opacity: 0.08, color: AZUL }, endLabel: { ...labelPill.value, formatter: (x: any) => m3Lbl(x.value) }, labelLayout: { moveOverlap: 'shiftY' as const } },
       ...(hayProy ? [{ name: 'Proyección al cierre', type: 'line' as const, data: proyeccion, symbol: 'none', lineStyle: { width: 2, type: 'dashed' as const, color: '#94a3b8' },
         itemStyle: { color: '#94a3b8' }, endLabel: { ...labelPill.value, formatter: (x: any) => `≈ ${m3Lbl(x.value)}` }, labelLayout: { moveOverlap: 'shiftY' as const } }] : []),
       { name: 'Meta (lineal)', type: 'line' as const, data: metaLinea, symbol: 'none', lineStyle: { width: 1.5, color: VERDE, opacity: 0.8 }, itemStyle: { color: VERDE },
@@ -308,19 +313,16 @@ const optDiario = computed(() => {
           `<br/>${punto(tinta.value)} Total: <b>${fmtN(t)} m³</b><br/>${punto(t >= metaDiaria.value ? VERDE : ROJO)} Frente a la meta diaria: <b>${sg(t - metaDiaria.value)} m³</b>`
       },
     },
-    legend: leyenda([...ps.map(p => ({ name: p, itemStyle: { color: color(p) } })), { name: 'Meta diaria', itemStyle: { color: VERDE } }]),
-    grid: { left: 20, right: 30, bottom: 30, top: 50, containLabel: true },
+    legend: leyenda([{ name: 'Despacho del día', itemStyle: { color: AZUL } }, { name: 'Meta diaria', itemStyle: { color: VERDE } }]),
+    grid: { left: 12, right: 20, bottom: 24, top: 40, containLabel: true },
     xAxis: ejeX(dias.map(d => d.slice(8, 10))),
     yAxis: ejeY(),
     series: [
-      ...ps.map((p, i) => ({
-        name: p, type: 'bar' as const, stack: 'd', barMaxWidth: 30, emphasis,
-        data: dias.map(iso => +(m[iso]?.[p] ?? 0).toFixed(1)),
-        itemStyle: { color: color(p), borderRadius: (i === ps.length - 1 ? [4, 4, 0, 0] : 0) as any },
-      })),
-      { name: '__total', type: 'bar' as const, stack: 'd', tooltip: { show: false },
-        data: dias.map(iso => ({ value: 0, label: { show: total(iso) > 0 } })),
-        label: { ...labelPill.value, position: 'top' as const, distance: 4, formatter: (x: any) => m3Lbl(total(dias[x.dataIndex])) } },
+      // Una barra por día con el total (sin apilar) para compararla con la meta; el desglose por planta va en el tooltip
+      { name: 'Despacho del día', type: 'bar' as const, barMaxWidth: 30, emphasis,
+        data: dias.map(iso => ({ value: +total(iso).toFixed(1), label: { show: total(iso) > 0 } })),
+        itemStyle: { color: AZUL, borderRadius: [4, 4, 0, 0] as any },
+        label: { ...labelPill.value, position: 'top' as const, distance: 4, formatter: (x: any) => m3Lbl(x.value) } },
       { name: 'Meta diaria', type: 'line' as const, data: dias.map(() => Math.round(metaDiaria.value)), symbol: 'none',
         lineStyle: { color: VERDE, type: 'dashed' as const, width: 1.5 }, itemStyle: { color: VERDE }, tooltip: { show: false } },
     ],
@@ -356,13 +358,13 @@ const optSemaforo = computed(() => {
       return `${punto(g.color)} <b>${g.nombre}</b>: ${g.n} clientes (${pct(p.percent)})<br/>Meta ${fmtN(g.meta, 0)} m³ · ejecutado ${fmtN(g.real)} m³<br/>` +
         `<span style="color:#94a3b8;font-size:10px">${g.nombres.slice(0, 6).join(', ')}${g.nombres.length > 6 ? ` y ${g.nombres.length - 6} más` : ''}</span>` } },
     legend: {
-      orient: 'vertical' as const, right: 10, top: 'middle', icon: 'circle', itemWidth: 10, itemHeight: 10, itemGap: 14,
+      ...(movil.value ? { type: 'scroll' as const, orient: 'horizontal' as const, left: 'center', bottom: 0 } : { orient: 'vertical' as const, right: 10, top: 'middle' }), icon: 'circle', itemWidth: 8, itemHeight: 8, itemGap: 12,
       textStyle: { fontWeight: 600 as const, color: chartTextColor.value, fontSize: 11 },
       formatter: (nm: string) => { const g = lista.find(x => x.nombre === nm); return g ? `${nm}  ${g.n} · ${fmtN(g.meta, 0)} m³ meta` : nm },
     },
     series: [{
-      type: 'pie' as const, radius: ['42%', '68%'], center: ['38%', '55%'], avoidLabelOverlap: true,
-      itemStyle: { borderRadius: 4, borderColor: isLight.value ? '#fff' : '#0b0f1a', borderWidth: 2 },
+      type: 'pie' as const, radius: movil.value ? ['38%', '60%'] : ['42%', '68%'], center: movil.value ? ['50%', '42%'] : ['38%', '55%'], avoidLabelOverlap: true,
+      itemStyle: { borderRadius: 2, borderColor: isLight.value ? '#fff' : '#0b0f1a', borderWidth: 2 },
       label: { show: true, formatter: (p: any) => String(lista[p.dataIndex].n), fontSize: 12, fontWeight: 700, color: chartTextColor.value },
       data: lista.map(g => ({ name: g.nombre, value: g.n, itemStyle: { color: g.color } })),
     }],
@@ -373,18 +375,16 @@ const optOrigen = computed(() => {
   const lista = plantas.value.map(p => ({ planta: p, proy: P.value[p].realClientes, calle: P.value[p].realCalle, nCalle: P.value[p].nCalle }))
   const cCalle = isLight.value ? '#94a3b8' : '#475569'
   const tot = (x: typeof lista[number]) => x.proy + x.calle
-  // Solo se rotula el tramo si es ancho frente a la barra más larga de la gráfica
-  const maxTot = Math.max(...lista.map(tot), 1)
-  const lbl = (v: number, i: number) => (tot(lista[i]) && v >= maxTot * 0.1 ? pct(v / tot(lista[i]) * 100, 0) : '')
+  const txt = (v: number, i: number) => `${m3Lbl(v)} m³ · ${pct(tot(lista[i]) ? v / tot(lista[i]) * 100 : 0, 0)}`
+  const serie = (name: string, c: string, data: number[]) => ({
+    name, type: 'bar', barMaxWidth: 18, barGap: '15%', data, itemStyle: { color: c, borderRadius: [0, 4, 4, 0] },
+    label: { ...labelPill.value, position: 'right', formatter: (x: any) => txt(x.value, x.dataIndex) },
+  })
+  const proy = lista.map(x => +x.proy.toFixed(1)), calle = lista.map(x => +x.calle.toFixed(1))
   return vacio({
-    ...barrasH(lista.map(x => x.planta), [
-      { name: 'Clientes proyectados', type: 'bar', stack: 'o', barWidth: '55%', data: lista.map(x => +x.proy.toFixed(1)),
-        itemStyle: { color: AZUL }, label: { ...labelDentro, formatter: (x: any) => lbl(x.value, x.dataIndex) } },
-      { name: 'Clientes de calle', type: 'bar', stack: 'o', barWidth: '55%', data: lista.map(x => +x.calle.toFixed(1)),
-        itemStyle: { color: cCalle, borderRadius: [0, 4, 4, 0] }, label: { ...labelDentro, formatter: (x: any) => lbl(x.value, x.dataIndex) } },
-      { name: '__total', type: 'bar', stack: 'o', data: lista.map(() => 0), tooltip: { show: false },
-        label: { ...labelPill.value, position: 'right', formatter: (x: any) => m3Lbl(tot(lista[x.dataIndex])) + ' m³' } },
-    ], lista.map(x => m3Lbl(tot(x)) + ' m³'), {
+    // Proyectados y de calle lado a lado por planta (sin apilar)
+    ...barrasH(lista.map(x => x.planta), [serie('Clientes proyectados', AZUL, proy), serie('Clientes de calle', cCalle, calle)],
+      [...proy, ...calle].map((v, i) => txt(v, i % lista.length)), {
       trigger: 'axis', axisPointer: { type: 'shadow' },
       formatter: (params: any[]) => { const x = lista[params[0].dataIndex]
         return `<b>${x.planta}</b><br/>${punto(AZUL)} Clientes proyectados: <b>${fmtN(x.proy)} m³</b><br/>` +
@@ -410,9 +410,13 @@ function opcionClientes(lista: Cli[]) {
         `${punto(tinta.value)} Esperado a la fecha: <b>${fmtN(c.esperado, 0)} m³</b> · desviación ${sg(c.desv)} m³<br/>${punto(ROJO)} Faltan: <b>${fmtN(Math.max(c.meta - c.real, 0))} m³</b>` },
   }, false), lista.length > 0)
 }
-const clientesPorMeta = computed(() => [...clientes.value].sort((a, b) => b.meta - a.meta))
-const optClientes = computed(() => opcionClientes(clientesPorMeta.value.slice(0, TOP)))
-const optClientesTodos = computed(() => opcionClientes(clientesPorMeta.value))
+const clientesPorMeta = computed(() => [...clientes.value].sort((a, b) => b.meta - a.meta || b.real - a.real))
+// El Top se elige por meta, pero se muestra de la barra más larga a la más corta (arriba la más alta):
+// un cliente que supera su meta tiene la barra de ejecutado más larga que la de meta.
+const largo = (c: Cli) => Math.max(c.meta, c.real)
+const porBarra = (lista: Cli[]) => [...lista].sort((a, b) => largo(b) - largo(a) || b.real - a.real)
+const optClientes = computed(() => opcionClientes(porBarra(clientesPorMeta.value.slice(0, TOP))))
+const optClientesTodos = computed(() => opcionClientes(porBarra(clientesPorMeta.value)))
 
 const optDesviacion = computed(() => {
   const orden = [...clientes.value].filter(c => c.meta > 0).sort((a, b) => a.desv - b.desv)
@@ -453,7 +457,7 @@ const optHistorico = computed(() => {
         return `<b>${x.mes}</b><br/>${punto(gris.value)} Meta: <b>${fmtN(x.meta, 0)} m³</b><br/>${punto(AZUL)} Ejecutado: <b>${fmtN(x.real)} m³</b><br/>` +
           `${punto(x.cump >= 100 ? VERDE : ROJO)} Cumplimiento: <b>${pct(x.cump)}</b>` } },
     legend: leyenda([{ name: 'Meta', itemStyle: { color: gris.value } }, { name: 'Ejecutado', itemStyle: { color: AZUL } }]),
-    grid: { left: 20, right: 30, bottom: 30, top: 50, containLabel: true },
+    grid: { left: 12, right: 20, bottom: 24, top: 40, containLabel: true },
     xAxis: ejeX(filas.map(x => x.mes)),
     yAxis: ejeY(),
     series: [
@@ -474,13 +478,13 @@ const optHistoricoPlanta = computed(() => {
         return `<b>${f.mes}</b><br/>` + ps.filter(p => f.porPlanta[p]).map(p =>
           `${punto(color(p))} ${p}: <b>${pct(f.porPlanta[p].cump)}</b> <span style="color:#94a3b8;font-size:10px">${fmtN(f.porPlanta[p].real, 0)} de ${fmtN(f.porPlanta[p].meta, 0)} m³</span>`).join('<br/>') } },
     legend: leyenda(ps.map(p => ({ name: p, itemStyle: { color: color(p) } }))),
-    grid: { left: 20, right: 60, bottom: 30, top: 50, containLabel: true },
+    grid: { left: 12, right: movil.value ? 40 : 60, bottom: 24, top: 40, containLabel: true },
     xAxis: ejeX(filas.map(x => x.mes), { boundaryGap: false }),
     yAxis: ejeY({ max: (v: { max: number }) => Math.max(120, Math.ceil(v.max * 1.1)) }),
     series: ps.map((p, i) => ({
-      name: p, type: 'line' as const, smooth: 0.3, symbol: 'circle', symbolSize: 8, connectNulls: true, emphasis: { focus: 'series' as const },
+      name: p, type: 'line' as const, smooth: 0.3, symbol: 'circle', symbolSize: 5, connectNulls: true, emphasis: { focus: 'series' as const },
       data: filas.map(f => (f.porPlanta[p] ? +f.porPlanta[p].cump.toFixed(1) : null)),
-      lineStyle: { width: 2.5, color: color(p) }, itemStyle: { color: color(p) },
+      lineStyle: { width: 2, color: color(p) }, itemStyle: { color: color(p) },
       endLabel: { ...labelPill.value, formatter: (x: any) => pct(x.value, 0) }, labelLayout: { moveOverlap: 'shiftY' as const },
       ...(i === 0 ? { markLine: { silent: true, symbol: 'none', label: { show: false }, lineStyle: { color: VERDE, type: 'dashed' as const, width: 1.5 }, data: [{ yAxis: 100 }] } } : {}),
     })),
@@ -515,4 +519,14 @@ const optHistoricoPlanta = computed(() => {
 .section-sub { font-size: 12px; color: var(--text-tertiary); margin: 6px 0 0; }
 .charts-grid { margin-top: 16px; }
 .charts-grid.cols-1 { grid-template-columns: minmax(0, 1fr); }
+
+@media (max-width: 768px) {
+  .gt-bar { padding: 10px 12px; margin-bottom: 14px; gap: 10px; }
+  .gt-periodo { font-size: 14px; }
+  .gt-sub { font-size: 11px; }
+  .gt-mes { width: 100%; }
+  .gt-mes select { flex: 1; font-size: 16px; }
+  .section-title { font-size: 15px; margin-top: 22px; }
+  .charts-grid { margin-top: 12px; gap: 12px; }
+}
 </style>

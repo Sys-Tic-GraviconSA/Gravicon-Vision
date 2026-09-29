@@ -1,26 +1,21 @@
 <template>
   <div class="tareas-tab">
     <div class="almacen-view-toggle">
-      <button class="av-btn" :class="{ active: tareasView === 'graficas' }" @click="tareasView = 'graficas'">
+      <RouterLink class="av-btn" :to="rutaMant.enlace({ tareas: 'graficas' })" replace :class="{ active: tareasView === 'graficas' }">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         Gráficas
-      </button>
-      <button class="av-btn" :class="{ active: tareasView === 'tabla' }" @click="tareasView = 'tabla'">
+      </RouterLink>
+      <RouterLink class="av-btn" :to="rutaMant.enlace({ tareas: 'tabla' })" replace :class="{ active: tareasView === 'tabla' }">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
         Tabla
-      </button>
-      <button class="av-btn" :class="{ active: tareasView === 'informe' }" @click="tareasView = 'informe'">
+      </RouterLink>
+      <RouterLink class="av-btn" :to="rutaMant.enlace({ tareas: 'informe' })" replace :class="{ active: tareasView === 'informe' }">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
         Informe
-      </button>
+      </RouterLink>
     </div>
 
-    <div v-if="dispStore.loading" class="disp-loading-banner">
-      <svg class="disp-spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-        <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-      </svg>
-      Cargando tareas — {{ plantaLabel }}...
-    </div>
+    <SkeletonLoader v-if="dispStore.loading" :variant="tareasView === 'tabla' ? 'table' : tareasView === 'informe' ? 'report' : 'charts'" :kpis="4" :charts="2" :label="`Cargando tareas — ${plantaLabel}…`" />
     <div v-else-if="dispStore.error" class="disp-error-banner">
       {{ dispStore.error }}
       <button class="disp-retry-btn" @click="dispStore.fetchDisponibilidad(plantaKey, true)">Reintentar</button>
@@ -288,7 +283,9 @@
 </template>
 
 <script setup lang="ts">
+import SkeletonLoader from '../../components/ui/SkeletonLoader.vue'
 import { ref, computed, onMounted, watch, markRaw, nextTick } from 'vue'
+import { useRutaMantenimiento } from '../../composables/useRutaMantenimiento'
 import { useDisponibilidadStore } from '../../stores'
 import KpiCard from '../../components/dashboard/KpiCard.vue'
 import ChartCard from '../../components/dashboard/ChartCard.vue'
@@ -304,7 +301,9 @@ const props = defineProps<{
 
 const dispStore = useDisponibilidadStore()
 const { theme } = useTheme()
-const tareasView = ref<'graficas' | 'tabla' | 'informe'>('graficas')
+// Vista en la ruta: /:planta/mantenimiento/tareas/:vista
+const rutaMant = useRutaMantenimiento()
+const tareasView = rutaMant.vistaTareas
 const generandoPdf = ref(false)
 
 const palette = ['#15223c', '#3B82F6', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899', '#84CC16', '#F97316', '#64748B', '#A855F7']
@@ -781,6 +780,8 @@ watch(() => props.planta, () => {
   margin-bottom: 20px;
   flex-wrap: wrap;
 }
+a.av-btn { text-decoration: none; }
+a.av-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .av-btn {
   display: inline-flex;
   align-items: center;

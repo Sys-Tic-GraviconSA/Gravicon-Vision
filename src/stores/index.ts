@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed, shallowRef } from 'vue'
 import { useAuthStore } from './auth'
 import type { SheetData } from './concreto'
+import type { DatosFacturacion } from '../types/facturacion'
 
 /*
  * Stores de datos del dashboard: Producción, Mantenimiento y Clientes.
@@ -24,7 +25,11 @@ async function fetchApi<T>(path: string): Promise<T> {
   const headers: Record<string, string> = {}
   if (token) headers['Authorization'] = `Bearer ${token}`
   const res = await fetch(path, { headers })
-  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  if (!res.ok) {
+    let msg = `API error: ${res.status}`
+    try { msg = (await res.json()).error || msg } catch { /* respuesta sin JSON */ }
+    throw new Error(msg)
+  }
   return res.json()
 }
 
@@ -228,6 +233,7 @@ export const useDisponibilidadStore = defineStore('disponibilidad', () => {
     tareas: Record<string, unknown>[]
     resumen: Record<string, unknown>[]
     cronologia: Record<string, unknown>[]
+    combustible: Record<string, unknown>[]
     totalPlacas: number
     totalTareas: number
     planta: string
@@ -250,6 +256,7 @@ export const useDisponibilidadStore = defineStore('disponibilidad', () => {
         tareas: d?.tareas ? [...d.tareas] : [],
         resumen: d?.resumen ? [...d.resumen] : [],
         cronologia: d?.cronologia ? [...d.cronologia] : [],
+        combustible: d?.combustible ? [...d.combustible] : [],
       }
     } catch (e: any) {
       console.error('[disponibilidad-store]', e)
@@ -262,3 +269,30 @@ export const useDisponibilidadStore = defineStore('disponibilidad', () => {
   return { data, loading, error, fetchDisponibilidad }
 })
 
+
+/** Store: Facturación de agregados (Novasoft, Excel en Drive) — una entrada por planta */
+export const useFacturacionStore = defineStore('facturacion', () => {
+  const data = shallowRef<Partial<Record<'cuncia' | 'acacias', DatosFacturacion>>>({})
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+
+  /** Descarga la facturación de la planta; `force` pide al servidor releer el archivo de Drive */
+  async function fetchFacturacion(planta: 'cuncia' | 'acacias', force = false) {
+    loading.value = true; error.value = null
+    try {
+      // Formato compacto del servidor: filas como listas y textos repetidos como índices a un diccionario
+      const r = await fetchApi<Omit<DatosFacturacion, 'lineas'> & { columnas: string[]; diccionarios: Record<string, string[]>; filas: unknown[][] }>(
+        `/api/facturacion-agregados/data?planta=${planta}${force ? '&force=true' : ''}`)
+      const { columnas, diccionarios, filas, ...resto } = r
+      const lineas = filas.map(f => Object.fromEntries(columnas.map((c, i) => {
+        const v = f[i]
+        if (diccionarios[c]) return [c, diccionarios[c][v as number]]
+        return [c, c === 'factorPropio' ? v === 1 : v]
+      }))) as unknown as DatosFacturacion['lineas']
+      data.value = { ...data.value, [planta]: { ...resto, lineas } }
+    } catch (e: any) { console.error('[facturacion]', e); error.value = e.message }
+    finally { loading.value = false }
+  }
+
+  return { data, loading, error, fetchFacturacion }
+})

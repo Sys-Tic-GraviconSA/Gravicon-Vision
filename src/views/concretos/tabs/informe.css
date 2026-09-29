@@ -135,6 +135,62 @@ ul.res li::before { content: "■"; position: absolute; left: 0; top: 4px; color
   .fila-charts > * { flex: none !important; width: 100%; }
 }
 @media (max-width: 640px) {
-  .compact-kpi { grid-template-columns: 1fr; }
-  .report-page { padding: 6mm 4mm; }
+  .compact-kpi { grid-template-columns: 1fr 1fr; gap: 6px; }
+  /* En pantalla la hoja no necesita alto A4; el PDF se arma igual al descargar */
+  .report-page { padding: 14px 12px; min-height: 0; gap: 12px; }
+  .report-header { flex-direction: column; gap: 8px; }
+  .report-header-meta { text-align: left; }
+  .report-logo { height: 36px; }
+  .informe-control-bar { padding: 10px 12px; }
+  .icb-actions { width: 100%; }
+  .icb-actions > * { flex: 1 1 auto; }
+  .icb-corte input, .icb-corte select { font-size: 16px; }
+  .zoho-analysis-box { padding: 10px 12px; }
+  .table-wrap th:first-child, .table-wrap td:first-child { position: sticky; left: 0; background: #fff; z-index: 1; }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Tema oscuro SOLO en pantalla. La hoja se ve oscura mientras se consulta; al descargar,
+ * el PDF agrega .pdf-capturing al papel y todo esto deja de aplicar, así el PDF sale
+ * exactamente igual que siempre (hoja blanca).
+ * ───────────────────────────────────────────────────────────────────────────── */
+[data-theme="dark"] .report-paper:not(.pdf-capturing) {
+  --navy: #93c5fd; --card-bg: #111827; --card-bg-hover: #1a2233; --card-border: rgba(255, 255, 255, 0.09); --card-border-hover: rgba(255, 255, 255, 0.16);
+  --text-primary: #f1f5f9; --text-secondary: #a3b1c6; --text-tertiary: #7c8aa0; --bg-alt: #1a2233;
+  --accent-light: rgba(96, 165, 250, 0.12);
+}
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .report-page { background: #0f1623; color: #e2e8f0; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35); }
+/* El logo es azul oscuro: va sobre una placa blanca para que se lea */
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .report-logo { background: #fff; padding: 4px 8px; border-radius: 6px; box-sizing: content-box; }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .data-card { background: var(--card-bg); }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .table-wrap table,
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .aviso,
+[data-theme="dark"] .report-paper:not(.pdf-capturing) ul.res li { color: #e2e8f0; }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .table-wrap th { background: #172033; }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .table-wrap td { border-bottom-color: rgba(255, 255, 255, 0.06); }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .table-wrap tr:hover td { background: #172033; }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .table-wrap tr.hoy td { background: rgba(59, 130, 246, 0.14); }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .table-wrap tr.alerta td { background: rgba(239, 68, 68, 0.12); }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .table-wrap tr.calle td { background: rgba(255, 255, 255, 0.03); }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .table-total-row td { background: #172033 !important; border-top-color: rgba(255, 255, 255, 0.14) !important; }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) tr.subtotal td { background: rgba(147, 197, 253, 0.08); border-bottom-color: rgba(255, 255, 255, 0.14); }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) td.grp { background: rgba(147, 197, 253, 0.04); }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .table-wrap th:first-child,
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .table-wrap td:first-child { background-color: inherit; }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .red { color: #f87171; }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .green { color: #4ade80; }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .zoho-analysis-text :deep(.red) { color: #f87171; }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .zoho-analysis-text :deep(.green) { color: #4ade80; }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .p-rojo { background: rgba(239, 68, 68, 0.16); color: #fca5a5; }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .p-verde { background: rgba(34, 197, 94, 0.16); color: #86efac; }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .p-ambar { background: rgba(245, 158, 11, 0.16); color: #fcd34d; }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .p-gris { background: rgba(148, 163, 184, 0.16); color: #cbd5e1; }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .report-nota.alerta { background: rgba(239, 68, 68, 0.12); color: #fca5a5; }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .aviso.alto { background: rgba(239, 68, 68, 0.10); border-color: rgba(239, 68, 68, 0.3); }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .aviso.medio { background: rgba(245, 158, 11, 0.10); border-color: rgba(245, 158, 11, 0.3); }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .aviso .ico { color: #f87171; }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .aviso.medio .ico { color: #fcd34d; }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) ul.res li { border-bottom-color: rgba(255, 255, 255, 0.06); }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .ley-sem { background: #172033; color: #cbd5e1; }
+/* Gráficas del informe: se dibujan con colores para papel blanco; en oscuro van sobre un panel claro para que se lean */
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .echart { background: #f8fafc; border-radius: 6px; }

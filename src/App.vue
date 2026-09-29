@@ -35,8 +35,8 @@
             <svg v-if="!collapsed" class="chevron" :class="{ open: openMenus.agr }" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
           <div v-if="!collapsed && openMenus.agr" class="nav-children">
-            <router-link to="/cuncia" class="nav-child" active-class="active" @click="handleLinkClick">Cuncia</router-link>
-            <router-link to="/acacias" class="nav-child" active-class="active" @click="handleLinkClick">Acacias</router-link>
+            <router-link v-if="authStore.canView('cuncia')" to="/cuncia" class="nav-child" active-class="active" @click="handleLinkClick">Cuncia</router-link>
+            <router-link v-if="authStore.canView('acacias')" to="/acacias" class="nav-child" active-class="active" @click="handleLinkClick">Acacias</router-link>
           </div>
 
           <button class="nav-section" :class="{ active: openMenus.concreto }" @click="toggle('concreto')">
@@ -45,7 +45,7 @@
             <svg v-if="!collapsed" class="chevron" :class="{ open: openMenus.concreto }" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
           <div v-if="!collapsed && openMenus.concreto" class="nav-children">
-            <router-link to="/concretos" class="nav-child" active-class="active" @click="handleLinkClick">General</router-link>
+            <router-link v-if="authStore.canView('concretos')" to="/concretos" class="nav-child" active-class="active" @click="handleLinkClick">General</router-link>
           </div>
         </nav>
 
@@ -63,7 +63,7 @@
           <div v-if="showUserMenu" class="user-menu">
             <div class="user-menu-header">
               <strong style="font-size:12px; display:block; overflow:hidden; text-overflow:ellipsis;">{{ authStore.userEmail }}</strong>
-              <span class="role-badge" :class="userRole==='admin'?'role-admin':''">{{ userRole }}</span>
+              <span class="role-badge" :class="userRole==='admin' || userRole==='superadmin' ? 'role-admin' : ''">{{ userRole }}</span>
             </div>
             <router-link to="/admin" class="user-menu-item" @click="closeUserMenu">Configuración</router-link>
             <div class="user-menu-divider"></div>
@@ -110,6 +110,7 @@ import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { useTheme } from './composables/useTheme'
+import { useIdleLogout } from './composables/useIdleLogout'
 
 const route = useRoute()
 const router = useRouter()
@@ -130,7 +131,7 @@ onUnmounted(() => document.removeEventListener('click', handleDocClick))
 const openMenus = reactive({ agr: true, concreto: true })
 
 const userInitial = computed(() => authStore.userEmail.charAt(0).toUpperCase())
-const userRole = computed(() => (authStore.user as any)?.user_metadata?.role || (authStore.user as any)?.app_metadata?.role || 'usuario')
+const userRole = computed(() => authStore.role)
 const showUserMenu = ref(false)
 function toggleUserMenu() { showUserMenu.value = !showUserMenu.value }
 function closeUserMenu() { showUserMenu.value = false }
@@ -149,6 +150,12 @@ async function handleLogout() {
   await authStore.signOut()
   router.replace('/login')
 }
+
+// Cierre automático por inactividad (30 min)
+useIdleLogout(() => authStore.isAuthenticated, async () => {
+  await authStore.signOut()
+  router.replace({ name: 'login', query: { motivo: 'inactividad' } })
+})
 </script>
 
 <style>

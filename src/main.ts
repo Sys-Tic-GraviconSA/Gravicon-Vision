@@ -13,10 +13,12 @@ async function bootstrap() {
   const app = createApp(App)
   const pinia = createPinia()
   app.use(pinia)
-  app.use(router)
 
+  // La sesión y los permisos se cargan antes de instalar el router: la primera navegación
+  // (y sus redirecciones por defecto) ya conocen qué vistas puede ver el usuario
   const auth = useAuthStore()
   await auth.initialize()
+  app.use(router)
   await router.isReady()
 
   app.mount('#app')

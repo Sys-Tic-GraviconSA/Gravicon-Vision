@@ -1,8 +1,8 @@
 <template>
-  <!-- Va dentro de ConcretosView, que ya pone el margen y el ancho máximo de la página -->
+  <!-- Va dentro de PlantaLayout (/concretos), que ya pone el margen y el ancho máximo de la página -->
   <div class="produccion-view">
     <template v-if="store.loading">
-      <div class="page-state"><div class="spinner" /><span>Cargando datos de concretos...</span></div>
+      <SkeletonLoader variant="dashboard" :kpis="4" :charts="3" label="Cargando datos de concretos…" />
     </template>
     <template v-else-if="store.error">
       <div class="page-state error">
@@ -23,57 +23,54 @@
           </h2>
           <div class="header-actions">
             <div class="filter-group">
-              <FilterBar :data="rows" date-field="Fecha" :showProvider="false" @dateRangeFilter="onDateRangeFilter" />
+              <FilterBar :data="rows" date-field="Fecha" :showProvider="false" :from="fechaInicio" :to="fechaFin" @dateRangeFilter="onDateRangeFilter" />
               <MultiSelect v-model="selectedPlants" :options="plants" label="Plantas" icon="filter" />
               <MultiSelect v-model="selectedComerciales" :options="comerciales" label="Comercial" icon="user" />
+              <MultiSelect v-model="selectedClientes" :options="clientes" label="Cliente" icon="user" searchable />
+              <button v-if="hayFiltros" class="clear-filters" title="Quitar filtros" @click="limpiarFiltros">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <span>Limpiar</span>
+              </button>
             </div>
           </div>
         </header>
 
-        <!-- Dos secciones (Producción Planta y Proyección Comercial), cada una con sus gráficas y su informe -->
-        <nav class="tab-bar">
-          <button
-            v-for="t in tabs"
-            :key="t.id"
-            class="tab-btn"
-            :class="{ active: tab === t.id }"
-            @click="tab = t.id"
-          >{{ t.label }}</button>
-        </nav>
+        <!-- Secciones: /concretos/produccion/planta/… y /concretos/produccion/proyeccion/… -->
+        <RouteTabs variant="sub" :items="secciones" :activo="seccionActiva" aria-label="Sección" />
       </div>
 
-      <!-- Mismo selector de vista que Agregados y Mantenimiento -->
-      <VistaToggle v-model="vista" :opciones="vistas" />
+      <RouteTabs variant="toggle" :items="vistas" :activo="vistaActiva" aria-label="Vista" replace />
 
-      <template v-if="tab === 'produccion'">
-        <GraficasTab v-if="vista === 'graficas'" :rows="plantFilteredSheetData?.rows ?? []" :desde="fechaInicio" :hasta="fechaFin" />
-        <InformeTab v-else :rows="plantFilteredSheetData?.rows ?? []" :corte="fechaFin" :total-count="store.data?.total" />
-      </template>
-      <template v-else>
-        <ProyeccionGraficasTab v-if="vista === 'graficas'" :rows="plantFilteredSheetData?.rows ?? []" :corte="fechaFin" :plantas-filtro="plantasFiltro" />
-        <ProyeccionTab v-else :rows="plantFilteredSheetData?.rows ?? []" :corte="fechaFin" />
-      </template>
+      <!-- Cada combinación sección/vista es una ruta hija; recibe solo las props que usa -->
+      <RouterView v-slot="{ Component }">
+        <component :is="Component" v-bind="propsHija" />
+      </RouterView>
     </template>
   </div>
 </template>
 
 /**
- * ProduccionView.vue — Dashboard de producción de concreto premezclado.
- * Dos secciones, Producción Planta y Proyección Comercial, cada una con sus gráficas y su informe, y aplica filtros
- * globales (fechas, plantas, comercial). Usa useConcretoStore.
+ * ProduccionView.vue — Producción de concreto premezclado (layout de /concretos/produccion).
+ * Carga order_price, aplica los filtros globales (fechas, plantas, comercial, cliente; todos en la URL)
+ * y renderiza la ruta hija de la sección y vista:
+ *   /concretos/produccion/planta/graficas      → GraficasTab
+ *   /concretos/produccion/planta/informe       → InformeTab
+ *   /concretos/produccion/proyeccion/graficas  → ProyeccionGraficasTab
+ *   /concretos/produccion/proyeccion/informe   → ProyeccionTab
  */
 <script setup lang="ts">
-import { ref, computed, watch, onErrorCaptured, onMounted } from 'vue'
+import SkeletonLoader from '../../components/ui/SkeletonLoader.vue'
+import { computed, onErrorCaptured, onMounted } from 'vue'
+import { useQueryDate, useQuerySet } from '../../composables/useQueryState'
 import { useConcretoStore } from '../../stores/concreto'
+import { useClientesStore } from '../../stores'
 import FilterBar from '../../components/dashboard/FilterBar.vue'
 import MultiSelect from '../../components/ui/MultiSelect.vue'
 import { serialToDate, dateToSerial } from '../../utils/dates'
 
-import GraficasTab from './tabs/GraficasTab.vue'
-import VistaToggle from '../../components/ui/VistaToggle.vue'
-import InformeTab from './tabs/InformeTab.vue'
-import ProyeccionTab from './tabs/ProyeccionTab.vue'
-import ProyeccionGraficasTab from './tabs/ProyeccionGraficasTab.vue'
+import RouteTabs from '../../components/ui/RouteTabs.vue'
+import { SECCIONES_CONCRETOS, VISTAS_CONCRETOS } from '../../config/plantas'
+import { useRoute } from 'vue-router'
 
 onErrorCaptured((err, _vm, info) => {
   console.error('[ProduccionView Error]', err, info)
@@ -81,8 +78,13 @@ onErrorCaptured((err, _vm, info) => {
   return false
 })
 
+const route = useRoute()
 const store = useConcretoStore()
-onMounted(() => { store.fetchData() })
+const clientesStore = useClientesStore()
+onMounted(() => {
+  store.fetchData()
+  if (!clientesStore.data && !clientesStore.loading) clientesStore.fetchData()
+})
 
 const rows = computed(() => store.data?.rows ?? [])
 
@@ -103,52 +105,81 @@ const comerciales = computed(() => {
   return [...set].sort((a, b) => (a === SIN_COMERCIAL ? 1 : b === SIN_COMERCIAL ? -1 : a.localeCompare(b)))
 })
 
-const fechaInicio = ref('')
-const fechaFin = ref('')
-const selectedPlants = ref(new Set<string>())
-const selectedComerciales = ref(new Set<string>())
+// Filtros guardados en la URL: sobreviven a recargar y se pueden compartir con un enlace
+const fechaInicio = useQueryDate('desde')
+const fechaFin = useQueryDate('hasta')
+const selectedPlants = useQuerySet('planta', () => plants.value)
+const selectedComerciales = useQuerySet('comercial', () => comerciales.value)
 
-watch(() => store.data, (d) => {
-  if (d?.rows && Array.isArray(d.rows) && d.rows.length > 0) {
-    const serials = d.rows.map(r => Number(r['Fecha'])).filter(v => typeof v === 'number' && !isNaN(v))
-    if (serials.length) {
-      const minD = serialToDate(Math.min(...serials))
-      const maxD = serialToDate(Math.max(...serials))
-      fechaInicio.value = `${minD.getUTCFullYear()}-${String(minD.getUTCMonth() + 1).padStart(2, '0')}-${String(minD.getUTCDate()).padStart(2, '0')}`
-      fechaFin.value = `${maxD.getUTCFullYear()}-${String(maxD.getUTCMonth() + 1).padStart(2, '0')}-${String(maxD.getUTCDate()).padStart(2, '0')}`
-    }
-    selectedPlants.value = new Set(plants.value)
-    selectedComerciales.value = new Set(comerciales.value)
+// Clientes: los de order_price más los proyectados que aún no tienen despachos
+// (se comparan sin espacios ni puntuación, igual que el cruce del informe de proyección)
+const clienteDe = (r: Record<string, unknown>) => String(r['Cliente'] ?? '').trim() || 'Sin cliente'
+const normCliente = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, '')
+const clientes = computed(() => {
+  const porNorm = new Map<string, string>()
+  for (const r of rows.value) { const c = clienteDe(r); if (!porNorm.has(normCliente(c))) porNorm.set(normCliente(c), c) }
+  for (const r of (clientesStore.allRows ?? []) as Record<string, unknown>[]) {
+    const c = String(r.nombre_cliente ?? '').trim()
+    const k = normCliente(c)
+    // «CLIENTE / CALLE» es la fila genérica de clientes de calle, no un cliente real
+    if (c && k !== 'CLIENTE' && !porNorm.has(k)) porNorm.set(k, c)
   }
+  return [...porNorm.values()].sort((a, b) => a.localeCompare(b))
 })
+const selectedClientes = useQuerySet('cliente', () => clientes.value)
+
+// Rango de fechas de los datos: es el rango por defecto cuando la URL no trae fechas
+const rangoDatos = computed(() => {
+  const serials = rows.value.map(r => Number(r['Fecha'])).filter(v => Number.isFinite(v) && v > 0)
+  if (!serials.length) return { desde: '', hasta: '' }
+  const iso = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
+  return { desde: iso(serialToDate(Math.min(...serials))), hasta: iso(serialToDate(Math.max(...serials))) }
+})
+const fechaEfectivaInicio = computed(() => fechaInicio.value || rangoDatos.value.desde)
+const fechaEfectivaFin = computed(() => fechaFin.value || rangoDatos.value.hasta)
+
+// Sin opciones marcadas = sin filtro (paso intermedio al desmarcar «Todos» para elegir unas pocas)
+const pasa = (sel: Set<string>, v: string) => sel.size === 0 || sel.has(v)
+const filtroPlanta = (r: Record<string, unknown>) => pasa(selectedPlants.value, String(r['Planta'] ?? ''))
+const filtroComercial = (r: Record<string, unknown>) => pasa(selectedComerciales.value, comercialDe(r))
+const filtroCliente = (r: Record<string, unknown>) => pasa(selectedClientes.value, clienteDe(r))
 
 const filteredRows = computed(() => {
-  const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
-  const until = fechaFin.value ? dateToSerial(fechaFin.value) : Infinity
+  const since = fechaEfectivaInicio.value ? dateToSerial(fechaEfectivaInicio.value) : -Infinity
+  const until = fechaEfectivaFin.value ? dateToSerial(fechaEfectivaFin.value) : Infinity
   return rows.value.filter(r => {
     const v = r['Fecha']
-    const fechaOk = typeof v === 'number' && v >= since && v <= until
-    const plantOk = selectedPlants.value.size === 0 || selectedPlants.value.has(String(r['Planta'] ?? ''))
-    const comercialOk = selectedComerciales.value.size === 0 || selectedComerciales.value.has(comercialDe(r))
-    return fechaOk && plantOk && comercialOk
+    return typeof v === 'number' && v >= since && v <= until && filtroPlanta(r) && filtroComercial(r) && filtroCliente(r)
   })
 })
 
-// Los informes solo usan filtros de planta+comercial; la fecha fin es su corte
+const hayFiltros = computed(() => !!(fechaInicio.value || fechaFin.value)
+  || !esTodo(selectedPlants.value, plants.value)
+  || !esTodo(selectedComerciales.value, comerciales.value)
+  || !esTodo(selectedClientes.value, clientes.value))
+function limpiarFiltros() {
+  fechaInicio.value = ''
+  fechaFin.value = ''
+  selectedPlants.value = new Set(plants.value)
+  selectedComerciales.value = new Set(comerciales.value)
+  selectedClientes.value = new Set(clientes.value)
+}
+
+// Los informes usan planta + comercial + cliente; la fecha fin es su corte
 const plantFilteredSheetData = computed(() => {
   const d = store.data
   if (!d) return null
-  const filtered = rows.value.filter(r => {
-    const plantOk = selectedPlants.value.size === 0 || selectedPlants.value.has(String(r['Planta'] ?? ''))
-    const comercialOk = selectedComerciales.value.size === 0 || selectedComerciales.value.has(comercialDe(r))
-    return plantOk && comercialOk
-  })
+  const filtered = rows.value.filter(r => filtroPlanta(r) && filtroComercial(r) && filtroCliente(r))
   return { headers: d.headers, rows: filtered, total: filtered.length }
 })
 
 // Plantas marcadas en el filtro (null = todas); las metas de proyección no vienen en order_price y se filtran aparte
+const esTodo = (sel: Set<string>, opciones: string[]) => sel.size === 0 || sel.size === opciones.length
 const plantasFiltro = computed(() =>
-  selectedPlants.value.size === 0 || selectedPlants.value.size === plants.value.length ? null : [...selectedPlants.value])
+  esTodo(selectedPlants.value, plants.value) ? null : [...selectedPlants.value])
+// Clientes marcados (null = todos); la proyección los cruza por nombre con proyecciones_clientes
+const clientesFiltro = computed(() =>
+  esTodo(selectedClientes.value, clientes.value) ? null : [...selectedClientes.value])
 
 function onDateRangeFilter(range: { from: string | null; to: string | null }) {
   fechaInicio.value = range.from ?? ''
@@ -178,16 +209,29 @@ const freshness = computed(() => {
   return { label: `Desactualizado ${lag} días`, cls: 'fresh-danger', title: `Último dato: ${m.fechaFin} · Actualizado: ${updateLabel}` }
 })
 
-const tab = ref<'produccion' | 'proyeccion'>('produccion')
-const tabs = [
-  { id: 'produccion' as const, label: 'Producción Planta' },
-  { id: 'proyeccion' as const, label: 'Proyección Comercial' },
-]
-const vista = ref('graficas')
-const vistas = [
-  { id: 'graficas', label: 'Gráficas' },
-  { id: 'informe', label: 'Informe' },
-]
+// ── Sección y vista: rutas hijas /concretos/produccion/:seccion/:vista ──
+// Los nombres de ruta son concretos-produccion-<seccion>-<vista>; al cambiar se conservan los filtros (?query)
+const partesRuta = computed(() => String(route.name ?? '').replace('concretos-produccion-', '').split('-'))
+const seccionActiva = computed(() => partesRuta.value[0] ?? 'planta')
+const vistaActiva = computed(() => partesRuta.value[1] ?? 'graficas')
+const secciones = computed(() => SECCIONES_CONCRETOS.map(s => ({
+  id: s.id, label: s.label, to: { name: `concretos-produccion-${s.id}-${vistaActiva.value}`, query: route.query },
+})))
+const vistas = computed(() => VISTAS_CONCRETOS.map(v => ({
+  id: v.id, label: v.label, to: { name: `concretos-produccion-${seccionActiva.value}-${v.id}`, query: route.query },
+})))
+
+const propsHija = computed(() => {
+  const rows = plantFilteredSheetData.value?.rows ?? []
+  switch (route.name) {
+    case 'concretos-produccion-planta-graficas':
+      return { rows, desde: fechaEfectivaInicio.value, hasta: fechaEfectivaFin.value }
+    case 'concretos-produccion-planta-informe':
+      return { rows, corte: fechaEfectivaFin.value, totalCount: store.data?.total }
+    default:
+      return { rows, corte: fechaEfectivaFin.value, plantasFiltro: plantasFiltro.value, clientesFiltro: clientesFiltro.value }
+  }
+})
 </script>
 
 <style scoped>
@@ -231,45 +275,6 @@ const vistas = [
   top: 0;
   z-index: 50;
   background: var(--bg);
-}
-
-.tab-bar {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  border-bottom: 1px solid var(--card-border);
-  margin-bottom: 24px;
-  overflow-x: auto;
-  background: rgba(255,255,255,0.06);
-  border-radius: var(--radius-md);
-  padding: 2px;
-}
-
-.tab-btn {
-  padding: 10px 20px;
-  border: none;
-  background: transparent;
-  color: var(--text-tertiary);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: all var(--transition-fast);
-  white-space: nowrap;
-  position: relative;
-  border-radius: var(--radius-sm);
-}
-
-.tab-btn:hover {
-  color: var(--text-primary);
-  background: rgba(255,255,255,0.08);
-}
-
-.tab-btn.active {
-  color: var(--accent);
-  font-weight: 600;
-  border-bottom-color: var(--accent);
-  background: rgba(255,255,255,0.12);
 }
 
 .page-state {
@@ -346,9 +351,21 @@ const vistas = [
 }
 
 
+.filter-group { flex-wrap: wrap; }
+.clear-filters {
+  display: inline-flex; align-items: center; gap: 5px; padding: 7px 10px;
+  border: none; border-radius: var(--radius-md); background: transparent; color: var(--text-tertiary);
+  font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer; transition: all var(--transition-fast);
+}
+.clear-filters:hover { background: var(--danger-light); color: var(--danger); }
+
 @media (max-width: 768px) {
-  .page-header { flex-direction: column; align-items: flex-start; }
-  .filter-group { width: 100%; }
-  .tab-btn { padding: 8px 12px; font-size: 12px; }
+  /* En celular el encabezado no se queda fijo: ocuparía media pantalla */
+  .sticky-top { position: static; }
+  .page-header { flex-direction: column; align-items: stretch; gap: 8px; padding: 4px 0; }
+  .page-title { font-size: 17px; flex-wrap: wrap; }
+  .header-actions { width: 100%; }
+  .filter-group { position: static; width: 100%; box-sizing: border-box; padding: 6px; gap: 4px; }
+  .filter-group > * { flex: 1 1 auto; }
 }
 </style>

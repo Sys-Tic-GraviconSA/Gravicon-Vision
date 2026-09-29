@@ -19,7 +19,7 @@
       </div>
     </div>
 
-    <div v-if="cargando" class="report-nota">Cargando proyecciones…</div>
+    <SkeletonLoader v-if="cargando" variant="report" label="Cargando proyecciones…" />
     <div v-else-if="errorCarga" class="report-nota alerta">No se pudieron cargar las proyecciones: {{ errorCarga }}</div>
     <div v-else-if="!hayDatos" class="report-nota">No hay proyección cargada para el mes de la fecha de corte seleccionada.</div>
 
@@ -252,6 +252,7 @@
 </template>
 
 <script setup lang="ts">
+import SkeletonLoader from '../../../components/ui/SkeletonLoader.vue'
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import KpiCard from '../../../components/dashboard/KpiCard.vue'
 import { useClientesStore } from '../../../stores'
@@ -276,6 +277,10 @@ const props = defineProps<{
   rows: Record<string, unknown>[]
   /** Fecha fin del filtro global (YYYY-MM-DD); se usa como corte por defecto */
   corte?: string
+  /** Plantas marcadas en el filtro global (null = todas) */
+  plantasFiltro?: string[] | null
+  /** Clientes marcados en el filtro global (null = todos); se cruzan por nombre normalizado */
+  clientesFiltro?: string[] | null
 }>()
 
 // ---------------------------------------------------------------- Utilidades
@@ -333,10 +338,15 @@ async function cargar() {
 
 // ---------------------------------------------------------------- Normalización
 interface Proy { mes: string; planta: string; cliente: string; obra: string; tipo: string; meta: number; real: number }
-const pc = computed<Proy[]>(() => (clientesStore.allRows as Record<string, unknown>[]).map(r => ({
-  mes: String(r.fecha ?? '').slice(0, 10), planta: nombrePlanta(r.planta), cliente: String(r.nombre_cliente ?? '').trim(),
-  obra: String(r.obra ?? '').trim(), tipo: String(r.tipo ?? ''), meta: num(r.m3_proyectado), real: num(r.cantidad_m3),
-})))
+const pc = computed<Proy[]>(() => {
+  // Mismos filtros globales de planta y cliente que el resto de Producción
+  const fPlanta = props.plantasFiltro ? new Set(props.plantasFiltro.map(nombrePlanta)) : null
+  const fCli = props.clientesFiltro ? new Set(props.clientesFiltro.map(norm)) : null
+  return (clientesStore.allRows as Record<string, unknown>[]).map(r => ({
+    mes: String(r.fecha ?? '').slice(0, 10), planta: nombrePlanta(r.planta), cliente: String(r.nombre_cliente ?? '').trim(),
+    obra: String(r.obra ?? '').trim(), tipo: String(r.tipo ?? ''), meta: num(r.m3_proyectado), real: num(r.cantidad_m3),
+  })).filter(r => (!fPlanta || fPlanta.has(r.planta)) && (!fCli || fCli.has(norm(r.cliente))))
+})
 const esCalle = (r: Proy) => norm(r.cliente) === 'CLIENTE' && norm(r.obra) === 'CALLE'
 
 interface Rem { iso: string; planta: string; cliente: string; proyecto: string; m3: number; mixer: string; conductor: string }
@@ -427,7 +437,8 @@ const kpis = computed<KpiDef[]>(() => {
 const metaDiaria = computed(() => (diasOpMes.value ? T.value.meta / diasOpMes.value : 0))
 const diario = computed(() => {
   const pp = ppRows.value.filter(r => String(r.fecha ?? '').startsWith(pref.value) && String(r.fecha) <= corteIso.value)
-  const usarPP = pp.some(r => plantas.value.some(p => num(r[PP_COL[p]]) > 0))
+  // proyecciones_planta trae totales por planta: con filtro de clientes se calcula desde las remisiones filtradas
+  const usarPP = !props.clientesFiltro && pp.some(r => plantas.value.some(p => num(r[PP_COL[p]]) > 0))
   const dias: { iso: string; porPlanta: Record<string, number>; total: number }[] = []
   for (let d = 1; d <= dia.value; d++) {
     const iso = `${pref.value}-${String(d).padStart(2, '0')}`

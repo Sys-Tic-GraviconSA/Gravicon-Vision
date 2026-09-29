@@ -67,7 +67,7 @@ import { BarChart, LineChart, PieChart, RadarChart } from 'echarts/charts'
 import {
   GridComponent, TooltipComponent, TitleComponent,
   LegendComponent, DataZoomComponent, RadarComponent,
-  MarkLineComponent, MarkAreaComponent, MarkPointComponent,
+  MarkLineComponent, MarkAreaComponent, MarkPointComponent, GraphicComponent,
 } from 'echarts/components'
 import VChart from 'vue-echarts'
 import EmptyState from '../ui/EmptyState.vue'
@@ -78,7 +78,7 @@ use([
   CanvasRenderer, BarChart, LineChart, PieChart, RadarChart,
   GridComponent, TooltipComponent, TitleComponent, LegendComponent,
   DataZoomComponent, RadarComponent,
-  MarkLineComponent, MarkAreaComponent, MarkPointComponent,
+  MarkLineComponent, MarkAreaComponent, MarkPointComponent, GraphicComponent,
 ])
 
 const props = withDefaults(defineProps<{
@@ -284,11 +284,20 @@ onBeforeUnmount(() => {
 
 @media (max-width: 768px) {
   .chart-card {
-    padding: 14px;
+    padding: 12px;
   }
   .chart {
-    max-height: 52vh;
+    max-height: 60vh;
   }
+  /* Descripción en máximo 2 líneas; se lee completa al expandir */
+  .chart-desc {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  /* En celular solo queda «expandir»: copiar/exportar imagen no aplica bien en pantalla táctil */
+  .chart-actions .action-btn:not(:first-child) { display: none; }
 }
 </style>
 
@@ -344,5 +353,10 @@ onBeforeUnmount(() => {
 }
 .cc-modal-chart {
   width: 100%; height: 100%;
+}
+@media (max-width: 768px) {
+  .cc-modal-overlay { padding: 0; }
+  .cc-modal-panel { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; }
+  .cc-modal-top { padding: 12px 14px 8px; flex-wrap: wrap; gap: 8px; }
 }
 </style>
