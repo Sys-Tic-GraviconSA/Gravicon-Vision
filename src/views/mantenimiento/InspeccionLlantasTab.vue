@@ -16,7 +16,7 @@
       </button>
     </div>
 
-    <div v-if="store.loading && !store.data" class="disp-banner load">Cargando inventario de llantas…</div>
+    <SkeletonLoader v-if="store.loading && !store.data" :kpis="4" :charts="2" label="Cargando inventario de llantas…" />
     <div v-else-if="store.error && !store.data" class="disp-banner err">Error: {{ store.error }}</div>
     <div v-else-if="!inv.length" class="disp-banner warn">
       Sin datos de inventario de llantas para {{ plantaLabel }}. Se lee de la hoja <strong>FleetControl_Llantas · Inventario_Llantas_Concretros</strong>.
@@ -376,6 +376,7 @@
 </template>
 
 <script setup lang="ts">
+import SkeletonLoader from '../../components/ui/SkeletonLoader.vue'
 import { computed, onMounted, ref } from 'vue'
 import { useLlantasStore } from '../../stores'
 import { useTheme } from '../../composables/useTheme'

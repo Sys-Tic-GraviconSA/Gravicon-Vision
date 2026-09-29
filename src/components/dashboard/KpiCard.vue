@@ -48,7 +48,21 @@ const props = withDefaults(defineProps<{
 })
 
 const router = useRouter()
-const accentStyle = computed(() => ({ '--accent': props.accent }))
+/**
+ * Acento en tema oscuro: los colores muy oscuros (azul marino, grafito) se pierden sobre el fondo,
+ * así que se aclaran mezclándolos con blanco. En tema claro y en la captura PDF se usa el color original.
+ */
+function aclarar(hex: string): string {
+  const m = hex.trim().match(/^#?([0-9a-f]{6})$/i)
+  if (!m) return hex
+  const n = parseInt(m[1], 16)
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+  const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
+  if (lum >= 0.3) return hex
+  const mezcla = (c: number) => Math.round(c + (255 - c) * 0.6)
+  return `rgb(${mezcla(r)}, ${mezcla(g)}, ${mezcla(b)})`
+}
+const accentStyle = computed(() => ({ '--acc-claro': props.accent, '--acc-oscuro': aclarar(props.accent) }))
 const iconName = computed(() => props.icon || '')
 const trendClass = computed(() => props.trend?.direction === 'up' ? 'trend-up' : 'trend-down')
 
@@ -58,7 +72,12 @@ function navigate() {
 </script>
 
 <style scoped>
+/* Acento según el tema (ver aclarar()); la captura PDF siempre usa el color original */
+[data-theme="dark"] .kpi-card { --acc: var(--acc-oscuro); }
+[data-theme="dark"] .pdf-capturing .kpi-card { --acc: var(--acc-claro); }
+
 .kpi-card {
+  --acc: var(--acc-claro);
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-lg);
@@ -80,7 +99,7 @@ function navigate() {
   left: 0;
   right: 0;
   height: 2px;
-  background: var(--accent);
+  background: var(--acc);
   opacity: 0.6;
 }
 
@@ -104,7 +123,7 @@ function navigate() {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: var(--accent);
+  color: var(--acc);
 }
 
 .kpi-body {
@@ -159,8 +178,13 @@ function navigate() {
 .kpi-detail :deep(.kpi-detail-row) {
   display: flex;
   align-items: center;
-  gap: 6px;
+  flex-wrap: wrap;
+  column-gap: 6px;
+  row-gap: 1px;
 }
+/* El valor nunca se parte por dentro («$ 11.998.849.992»): si no cabe, pasa entero a la línea siguiente */
+.kpi-detail :deep(.kpi-detail-row strong) { white-space: nowrap; }
+.kpi-detail :deep(.kpi-label-int), .kpi-detail :deep(.kpi-label-ext) { white-space: nowrap; }
 
 .kpi-detail :deep(.kpi-dot) {
   width: 6px;

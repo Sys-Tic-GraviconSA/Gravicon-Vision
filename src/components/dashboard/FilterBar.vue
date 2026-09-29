@@ -9,9 +9,12 @@
       </button>
       <transition name="fade">
         <div v-if="openDate" class="dropdown-menu" :class="{ 'align-right': dateAlignRight }">
+          <div class="date-presets">
+            <button v-for="p in presets" :key="p.id" type="button" class="preset-btn" :class="{ active: presetActivo === p.id }" @click="aplicarPreset(p.id)">{{ p.label }}</button>
+          </div>
           <div class="search-wrapper">
-            <input v-model="startDate" type="date" class="search-input" />
-            <input v-model="endDate" type="date" class="search-input" />
+            <label class="date-row"><span class="date-label">Desde</span><input v-model="startDate" type="date" class="search-input" :max="endDate || undefined" /></label>
+            <label class="date-row"><span class="date-label">Hasta</span><input v-model="endDate" type="date" class="search-input" :min="startDate || undefined" /></label>
           </div>
         </div>
       </transition>
@@ -35,6 +38,9 @@ const props = defineProps<{
   data: Record<string, unknown>[]
   dateField?: string
   showProvider?: boolean
+  /** Modo controlado (opcional): fechas YYYY-MM-DD que el padre mantiene, p. ej. desde la URL */
+  from?: string | null
+  to?: string | null
 }>()
 
 const showProvider = props.showProvider ?? true
@@ -49,8 +55,38 @@ const emit = defineEmits<{
 const openDate = ref(false)
 const dateAlignRight = ref(false)
 const dateRef = ref<HTMLElement | null>(null)
-const startDate = ref<string | null>(null)
-const endDate = ref<string | null>(null)
+const startDate = ref<string | null>(props.from || null)
+const endDate = ref<string | null>(props.to || null)
+
+// Modo controlado: si el padre cambia las fechas (URL, restablecer), se reflejan aquí
+watch(() => [props.from, props.to], ([f, t]) => {
+  if (f !== undefined && (f || null) !== startDate.value) startDate.value = f || null
+  if (t !== undefined && (t || null) !== endDate.value) endDate.value = t || null
+})
+
+// Atajos de rango relativos a hoy
+type PresetId = 'mes' | 'mesAnt' | '30d' | 'todo'
+const presets: { id: PresetId; label: string }[] = [
+  { id: 'mes', label: 'Este mes' }, { id: 'mesAnt', label: 'Mes anterior' }, { id: '30d', label: 'Últimos 30 días' }, { id: 'todo', label: 'Todo' },
+]
+const isoLocal = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+function rangoPreset(id: PresetId): [string | null, string | null] {
+  const hoy = new Date()
+  if (id === 'mes') return [isoLocal(new Date(hoy.getFullYear(), hoy.getMonth(), 1)), isoLocal(hoy)]
+  if (id === 'mesAnt') return [isoLocal(new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)), isoLocal(new Date(hoy.getFullYear(), hoy.getMonth(), 0))]
+  if (id === '30d') { const d = new Date(hoy); d.setDate(d.getDate() - 29); return [isoLocal(d), isoLocal(hoy)] }
+  return [null, null]
+}
+const presetActivo = computed(() => presets.find(p => {
+  const [a, b] = rangoPreset(p.id)
+  return a === startDate.value && b === endDate.value
+})?.id ?? null)
+function aplicarPreset(id: PresetId) {
+  const [a, b] = rangoPreset(id)
+  startDate.value = a
+  endDate.value = b
+  openDate.value = false
+}
 
 const mesesAbrev = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 function fmtBadgeDate(iso: string | null) {
@@ -259,10 +295,22 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
   height: 14px;
 }
 
+.date-presets { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 8px 8px 10px; border-bottom: 1px solid var(--card-border); }
+.preset-btn {
+  padding: 6px 8px; font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap;
+  border: 1px solid var(--card-border); border-radius: var(--radius-sm); background: transparent; color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+.preset-btn:hover { color: var(--text-primary); border-color: var(--card-border-hover); }
+.preset-btn.active { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
+
 @media (max-width: 768px) {
-  .dropdown-toggle { padding: 5px 8px; font-size: 12px; }
+  .dropdown-toggle { padding: 6px 10px; font-size: 12px; }
   .badge { display: none; }
   .clear-btn { padding: 5px 8px; font-size: 11px; }
-  .dropdown-menu { min-width: 200px; }
+  /* En celular el menú se ancla a la pantalla para no salirse por los lados */
+  .dropdown-menu { position: fixed; left: 12px; right: 12px; top: auto; min-width: 0; margin-top: 6px; }
+  .dropdown-menu.align-right { left: 12px; right: 12px; }
+  .search-input { font-size: 16px; } /* evita el zoom automático de iOS al enfocar */
 }
 </style>

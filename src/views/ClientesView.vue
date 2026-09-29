@@ -1,6 +1,6 @@
 <template>
   <div class="page-layout">
-    <div v-if="client.loading && !client.data" class="loading-state">Cargando datos de clientes...</div>
+    <SkeletonLoader v-if="client.loading && !client.data" variant="dashboard" :kpis="4" :charts="3" label="Cargando datos de clientes…" />
     <div v-else-if="client.error && !client.data" class="error-state">{{ client.error }}</div>
     <div v-else>
       <div class="sticky-top">
@@ -148,6 +148,7 @@
  * y evolución mensual con filtros por mes y planta.
  */
 <script setup lang="ts">
+import SkeletonLoader from '../components/ui/SkeletonLoader.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useClientesStore } from '../stores'
 import ChartCard from '../components/dashboard/ChartCard.vue'

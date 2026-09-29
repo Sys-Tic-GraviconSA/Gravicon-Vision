@@ -1,8 +1,6 @@
 <template>
   <div class="page-layout">
-    <div class="page-state" v-if="loading">
-      <div class="spinner" /><span>Cargando programación...</span>
-    </div>
+    <SkeletonLoader v-if="loading" variant="dashboard" :kpis="4" :charts="2" label="Cargando programación…" />
     <div class="page-state error" v-else-if="error">
       <span class="error-icon">!</span>
       <div><strong>Error al cargar datos</strong><p>{{ error }}</p></div>
@@ -30,7 +28,7 @@
         </header>
 
         <nav class="tab-bar">
-          <button v-for="t in tabs" :key="t.id" class="tab-btn" :class="{ active: activeTab === t.id }" @click="activeTab = t.id">{{ t.label }}</button>
+          <RouterLink v-for="t in tabs" :key="t.id" :to="{ params: { empresa: t.id } }" class="tab-btn" :class="{ active: activeTab === t.id }" :aria-current="activeTab === t.id ? 'page' : undefined">{{ t.label }}</RouterLink>
         </nav>
 
         <nav class="sub-tab-bar">
@@ -56,7 +54,9 @@
 </template>
 
 <script setup lang="ts">
+import SkeletonLoader from '../../components/ui/SkeletonLoader.vue'
 import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import KpiCard from '../../components/dashboard/KpiCard.vue'
 import DataTable from '../../components/dashboard/DataTable.vue'
@@ -74,7 +74,9 @@ const colWidths: Record<string, string> = {
 const rows = ref<any[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
-const activeTab = ref('gravicon')
+// Empresa en la ruta: /:planta/programacion/:empresa
+const route = useRoute()
+const activeTab = computed(() => (route.params.empresa === 'cliente' ? 'cliente' : 'gravicon'))
 const activeUnit = ref('')
 const fechaInicio = ref('')
 const fechaFin = ref('')
@@ -123,8 +125,8 @@ function onDateRangeFilter(range: { from: string | null; to: string | null }) {
 }
 
 const tabs = [
-  { id: 'gravicon', label: 'Gravicon/Incondor' },
-  { id: 'cliente', label: 'Transporte Cliente' },
+  { id: 'gravicon' as const, label: 'Gravicon/Incondor' },
+  { id: 'cliente' as const, label: 'Transporte Cliente' },
 ]
 
 const materialOptions = computed(() => {
@@ -376,6 +378,7 @@ const unitMaterialTables = computed(() => {
   border-radius: var(--radius-md);
   padding: 2px;
 }
+a.tab-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .tab-btn {
   padding: 10px 20px;
   border: none;

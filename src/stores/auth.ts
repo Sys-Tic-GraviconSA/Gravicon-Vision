@@ -31,6 +31,56 @@ export const useAuthStore = defineStore('auth', () => {
   /** Access token JWT actual, listo para usar en headers Authorization */
   const accessToken = computed(() => session.value?.access_token ?? null)
 
+  /**
+   * Rol y permisos de vista resueltos por el servidor (/api/me). El rol nunca se lee
+   * de user_metadata en el cliente: el usuario puede editarlo y no es confiable.
+   */
+  const profile = ref<{ role: string; superadmin: boolean; mustChangePassword: boolean; perms: Record<string, boolean> } | null>(null)
+  let profilePromise: Promise<void> | null = null
+
+  const role = computed(() => profile.value?.role ?? 'usuario')
+  const isSuperAdmin = computed(() => !!profile.value?.superadmin)
+  const mustChangePassword = computed(() => !!profile.value?.mustChangePassword)
+  /** Mientras no se verifiquen los permisos se niega todo (fail-closed). */
+  const DENY_ALL = { cuncia: false, acacias: false, concretos: false, clientes: false }
+
+  /** Carga rol y permisos del usuario autenticado. Reusa la petición en curso. */
+  function loadProfile(force = false): Promise<void> {
+    if (!session.value) { profile.value = null; return Promise.resolve() }
+    if (profilePromise && !force) return profilePromise
+    const token = session.value.access_token
+    profilePromise = (async () => {
+      try {
+        const res = await fetch('/api/me', { headers: { Authorization: `Bearer ${token}` } })
+        if (res.status === 401 || res.status === 403) {
+          // Token revocado o cuenta bloqueada: se cierra la sesión local.
+          await signOut()
+          return
+        }
+        profile.value = res.ok ? await res.json() : { role: 'usuario', superadmin: false, mustChangePassword: false, perms: DENY_ALL }
+      } catch (e) {
+        console.error('[auth] loadProfile error:', e)
+        profile.value = { role: 'usuario', superadmin: false, mustChangePassword: false, perms: DENY_ALL }
+      }
+    })()
+    return profilePromise
+  }
+
+  /**
+   * Indica si el usuario puede ver una vista (p. ej. `cuncia/mantenimiento`).
+   * Una vista queda bloqueada si ella o cualquiera de sus padres está en `false`.
+   * Sin registro explícito se permite (compatibilidad con usuarios existentes).
+   */
+  function canView(key: string): boolean {
+    if (!profile.value) return false
+    if (profile.value.superadmin) return true
+    const parts = key.split('/')
+    for (let i = 1; i <= parts.length; i++) {
+      if (profile.value.perms[parts.slice(0, i).join('/')] === false) return false
+    }
+    return true
+  }
+
   /** Referencia para desuscribir el listener onAuthStateChange */
   let authUnsubscribe: (() => void) | null = null
 
@@ -41,6 +91,7 @@ export const useAuthStore = defineStore('auth', () => {
       const { data } = await supabase.auth.getSession()
       session.value = data.session
       user.value = data.session?.user ?? null
+      if (data.session) await loadProfile(true)
     } catch (e) {
       console.error('[auth] initialize error:', e)
       session.value = null
@@ -50,9 +101,12 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     if (!authUnsubscribe) {
-      const { data: sub } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, newSession: Session | null) => {
+      const { data: sub } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, newSession: Session | null) => {
+        const prevUserId = user.value?.id
         session.value = newSession
         user.value = newSession?.user ?? null
+        if (!newSession) { profile.value = null; profilePromise = null }
+        else if (event === 'SIGNED_IN' && newSession.user.id !== prevUserId) loadProfile(true)
       })
       authUnsubscribe = sub?.subscription?.unsubscribe ?? null
     }
@@ -82,6 +136,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (sessionError) throw sessionError
     session.value = setData.session
     user.value = result.user
+    await loadProfile(true)
     return result
   }
 
@@ -96,11 +151,14 @@ export const useAuthStore = defineStore('auth', () => {
     } finally {
       session.value = null
       user.value = null
+      profile.value = null
+      profilePromise = null
     }
   }
 
   return {
     user, session, loading, isAuthenticated, userEmail, accessToken,
+    profile, role, isSuperAdmin, mustChangePassword, canView, loadProfile,
     initialize, signIn, signOut,
   }
 })

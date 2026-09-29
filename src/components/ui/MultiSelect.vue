@@ -18,14 +18,26 @@
         :style="menuStyle"
         @click.stop
       >
-        <label class="dropdown-all" @click.prevent="toggleAll">
+        <div v-if="conBuscador" class="dropdown-search">
+          <input ref="searchRef" v-model="busqueda" type="search" :placeholder="`Buscar ${label.toLowerCase()}…`" @keydown.esc="isOpen = false" />
+        </div>
+        <label v-if="!busqueda" class="dropdown-all" @click.prevent="toggleAll">
           <input type="checkbox" :checked="modelValue.size === options.length" :indeterminate="modelValue.size > 0 && modelValue.size < options.length" />
           <span>Todos</span>
         </label>
-        <label class="dropdown-item" v-for="opt in options" :key="opt" @click.prevent="toggle(opt)">
-          <input type="checkbox" :checked="modelValue.has(opt)" />
-          <span>{{ opt }}</span>
-        </label>
+        <template v-else>
+          <div class="dropdown-actions">
+            <button type="button" @click="marcarVisibles(true)">Marcar {{ visibles.length }}</button>
+            <button type="button" @click="soloVisibles">Solo estos</button>
+          </div>
+        </template>
+        <div class="dropdown-list">
+          <label class="dropdown-item" v-for="opt in visibles" :key="opt" @click.prevent="toggle(opt)">
+            <input type="checkbox" :checked="modelValue.has(opt)" />
+            <span>{{ opt }}</span>
+          </label>
+          <div v-if="!visibles.length" class="dropdown-empty">Sin resultados</div>
+        </div>
       </div>
     </Teleport>
   </div>
@@ -46,13 +58,31 @@ const props = withDefaults(defineProps<{
   options: string[]
   label: string
   icon?: string
-}>(), {})
+  /** Muestra buscador; por defecto se activa con más de 10 opciones */
+  searchable?: boolean
+}>(), { searchable: undefined })
 
 const emit = defineEmits<{
   'update:modelValue': [value: Set<string>]
 }>()
 
 const isOpen = ref(false)
+const busqueda = ref('')
+const searchRef = ref<HTMLInputElement | null>(null)
+const conBuscador = computed(() => props.searchable ?? props.options.length > 10)
+const sinTildes = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+const visibles = computed(() => {
+  const q = sinTildes(busqueda.value.trim())
+  return q ? props.options.filter(o => sinTildes(o).includes(q)) : props.options
+})
+function marcarVisibles(v: boolean) {
+  const next = new Set(props.modelValue)
+  for (const o of visibles.value) v ? next.add(o) : next.delete(o)
+  emit('update:modelValue', next)
+}
+function soloVisibles() {
+  emit('update:modelValue', new Set(visibles.value))
+}
 const alignRight = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
 const menuPos = ref({ top: 0, left: 0, right: 0 })
@@ -63,7 +93,10 @@ const menuStyle = computed(() => {
     top: `${menuPos.value.top}px`,
     zIndex: '2000',
   }
-  if (alignRight.value) {
+  if (menuPos.value.left === 12 && menuPos.value.right === 12) {
+    style.left = '12px'
+    style.right = '12px'
+  } else if (alignRight.value) {
     style.right = `${menuPos.value.right}px`
     style.left = 'auto'
   } else {
@@ -76,6 +109,12 @@ const menuStyle = computed(() => {
 function updateMenuPosition() {
   const rect = dropdownRef.value?.getBoundingClientRect()
   if (!rect) return
+  // En celular el menú ocupa el ancho de la pantalla (con margen) bajo el botón
+  if (window.innerWidth <= 768) {
+    menuPos.value = { top: rect.bottom + 6, left: 12, right: 12 }
+    alignRight.value = false
+    return
+  }
   menuPos.value = {
     top: rect.bottom + 6,
     left: rect.left,
@@ -87,8 +126,11 @@ function updateMenuPosition() {
 async function toggleOpen() {
   isOpen.value = !isOpen.value
   if (!isOpen.value) return
+  busqueda.value = ''
   await nextTick()
   updateMenuPosition()
+  // En celular no se enfoca: abriría el teclado y taparía la lista
+  if (window.innerWidth > 768) searchRef.value?.focus()
 }
 
 function toggle(opt: string) {
@@ -196,7 +238,7 @@ onUnmounted(() => {
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-xl, 0 12px 40px rgba(0,0,0,.12));
   padding: 4px;
-  max-height: 280px;
+  max-height: 340px;
   overflow-y: auto;
 }
 .dropdown-menu .dropdown-all,
@@ -228,7 +270,25 @@ onUnmounted(() => {
   padding-bottom: 9px;
   font-weight: 600;
 }
+.dropdown-menu .dropdown-search { padding: 4px 4px 6px; position: sticky; top: -4px; background: var(--bg-elevated, #fff); z-index: 1; }
+.dropdown-menu .dropdown-search input {
+  width: 100%; box-sizing: border-box; padding: 7px 10px; font-size: 13px;
+  border: 1px solid var(--card-border, #e2e8f0); border-radius: var(--radius-sm, 6px);
+  background: var(--bg, #fff); color: var(--text-primary, #1e293b); outline: none;
+}
+.dropdown-menu .dropdown-search input:focus { border-color: var(--accent, #3b82f6); }
+.dropdown-menu .dropdown-actions { display: flex; gap: 6px; padding: 2px 4px 6px; border-bottom: 1px solid var(--card-border, #e2e8f0); margin-bottom: 2px; }
+.dropdown-menu .dropdown-actions button {
+  flex: 1; padding: 5px 8px; font-size: 12px; font-weight: 600; cursor: pointer;
+  border: none; border-radius: var(--radius-sm, 6px); background: var(--accent-light, #eff6ff); color: var(--accent, #3b82f6);
+}
+.dropdown-menu .dropdown-empty { padding: 12px 10px; font-size: 12px; color: var(--text-tertiary, #64748b); text-align: center; }
+.dropdown-menu .dropdown-item span { overflow-wrap: anywhere; }
+@media (min-width: 769px) {
+  .dropdown-menu { max-width: 360px; }
+}
 @media (max-width: 768px) {
-  .dropdown-menu { min-width: 180px; }
+  .dropdown-menu { min-width: 0; max-height: 60vh; }
+  .dropdown-menu .dropdown-all, .dropdown-menu .dropdown-item { padding: 10px; }
 }
 </style>

@@ -2,9 +2,9 @@
   <div class="graficas-tab">
     <div class="gt-bar">
       <div class="gt-info">
-        <span class="gt-tag">Tablero de producción · {{ periodoLbl }}</span>
-        <span class="gt-periodo">Indicadores: {{ ventanaKpi.titulo.toLowerCase() }} — {{ tramo(ventanaKpi.desde, ventanaKpi.hasta) }}</span>
-        <span class="gt-sub">Las flechas comparan con {{ ventanaKpi.cmp }} ({{ tramo(ventanaKpi.pDesde, ventanaKpi.pHasta) }}). Las tendencias se agrupan por {{ granNombre }}.</span>
+        <span class="gt-tag">{{ periodoLbl }}</span>
+        <span class="gt-periodo">{{ ventanaKpi.titulo }} · {{ tramo(ventanaKpi.desde, ventanaKpi.hasta) }}</span>
+        <span class="gt-sub">Comparado con {{ ventanaKpi.cmp }} ({{ tramo(ventanaKpi.pDesde, ventanaKpi.pHasta) }})</span>
       </div>
       <!-- Manda sobre los KPIs y sobre la agrupación de las gráficas de tendencia -->
       <div class="gt-gran" role="group" aria-label="Ver">
@@ -22,14 +22,14 @@
       </div>
 
       <h3 class="section-title"><span class="title-bar"></span>Tendencia de despacho — por {{ granNombre }}</h3>
-      <p v-if="periodos.length > VENTANA" class="section-sub">
-        Hay {{ periodos.length }} {{ granPlural }} en el rango: las gráficas muestran las últimas {{ VENTANA }}. Arrastra la barra inferior de cada gráfica (o usa la rueda del mouse sobre ella) para ver las anteriores.
+      <p v-if="periodos.length > ventana" class="section-sub">
+        Se muestran {{ ventana }} de {{ periodos.length }} {{ granPlural }}; desliza la barra inferior para ver las anteriores.
       </p>
       <div class="charts-grid cols-1">
-        <ChartCard title="Despacho por Planta" :description="`m³ de concreto por ${granNombre}, apilado por planta (sin agregados) · promedio ${fmtN(promPeriodo)} m³ por ${granNombre} (línea punteada)`" :option="optDespacho" :height="440" tall />
+        <ChartCard title="Despacho por Planta" :description="`m³ de concreto por ${granNombre} y planta, barras lado a lado (sin agregados) · promedio ${fmtN(promPeriodo)} m³ por ${granNombre}`" :option="optDespacho" :height="440" tall />
       </div>
       <div class="charts-grid cols-2">
-        <ChartCard title="Venta Total" :description="`Venta antes de IVA por ${granNombre}: concreto con servicios y, apilados encima, los agregados`" :option="optVenta" :height="320" />
+        <ChartCard title="Venta Total" :description="`Venta antes de IVA por ${granNombre}: concreto con servicios y, en otra línea, los agregados`" :option="optVenta" :height="320" />
         <ChartCard title="Precio Promedio del Concreto" description="$ por m³ de concreto por planta, sin servicios ni agregados" :option="optPrecio" :height="320" />
       </div>
 
@@ -86,14 +86,14 @@
         <h3 class="section-title"><span class="title-bar"></span>Agregados (arena y grava)</h3>
         <p class="section-sub">Ventas de agregados registradas en order_price, principalmente en Restrepo. No se cuentan como concreto en los indicadores ni en las demás gráficas.</p>
         <div class="charts-grid cols-2">
-          <ChartCard title="Agregados Despachados" :description="`m³ de agregados por ${granNombre}, apilados por material`" :option="optAgrPeriodo" :height="320" />
+          <ChartCard title="Agregados Despachados" :description="`m³ de agregados por ${granNombre} y material`" :option="optAgrPeriodo" :height="320" />
           <ChartCard title="Agregados por Material" description="m³ y venta antes de IVA de cada material" :option="optAgrMaterial" :height="320" />
         </div>
       </template>
 
       <h3 class="section-title"><span class="title-bar"></span>Comercial y clientes</h3>
       <div class="charts-grid cols-2">
-        <ChartCard title="Venta por Comercial" description="Venta de concreto antes de IVA, apilada por planta (sin agregados)" :option="optComercial" :expand-option="optComercialTodos" :height="380" />
+        <ChartCard title="Venta por Comercial" description="Venta de concreto antes de IVA (sin agregados); color de la planta donde más vende" :option="optComercial" :expand-option="optComercialTodos" :height="380" />
         <ChartCard :title="`Ranking Top ${TOP} — Clientes por Volumen`" description="Clientes con más m³ de concreto en el período (sin agregados)" :option="optClientes" :expand-option="optClientesTodos" :height="380" />
       </div>
 
@@ -103,7 +103,7 @@
         Al lado de cada barra: m³ · viajes (o servicios de bombeo). Usa «expandir» para ver la lista completa.
       </p>
       <div class="charts-grid cols-2">
-        <ChartCard :title="`m³ por Mixer — Top ${TOP}`" description="Concreto despachado por cada mixer, apilado por planta" :option="optMixers" :expand-option="optMixersTodos" :height="380" />
+        <ChartCard :title="`m³ por Mixer — Top ${TOP}`" description="Concreto despachado por cada mixer; color de su planta principal" :option="optMixers" :expand-option="optMixersTodos" :height="380" />
         <ChartCard :title="`m³ por Conductor — Top ${TOP}`" description="Concreto despachado por cada conductor de mixer" :option="optConductores" :expand-option="optConductoresTodos" :height="380" />
         <ChartCard :title="`m³ por Bomba — Top ${TOP}`" description="Volumen bombeado por cada autobomba o estacionaria" :option="optBombas" :expand-option="optBombasTodos" :height="380" />
         <ChartCard :title="`m³ por Operario de Bombeo — Top ${TOP}`" description="Volumen bombeado por cada operario de bomba" :option="optOperarios" :expand-option="optOperariosTodos" :height="380" />
@@ -113,12 +113,15 @@
       <div class="charts-grid cols-1">
         <ChartCard
           :title="`Diseños de Mezcla más Vendidos — Top ${TOP}`"
-          :description="disenoTop ? `El más vendido es ${disenoTop.nombre}: ${fmtN(disenoTop.m3)} m³ (${pct(T.m3 ? disenoTop.m3 / T.m3 * 100 : 0)} del concreto) en ${fmtN(disenoTop.rem, 0)} remisiones · m³ por diseño, apilado por planta` : 'm³ por diseño de mezcla, apilado por planta'"
+          :description="disenoTop ? `El más vendido es ${disenoTop.nombre}: ${fmtN(disenoTop.m3)} m³ (${pct(T.m3 ? disenoTop.m3 / T.m3 * 100 : 0)} del concreto) en ${fmtN(disenoTop.rem, 0)} remisiones · m³ por diseño; color de la planta donde más se vende` : `m³ por diseño de mezcla; color de la planta donde más se vende`"
           :option="optDisenos" :expand-option="optDisenosTodos" :height="420" />
       </div>
       <div class="charts-grid cols-2">
-        <ChartCard title="Volumen por Resistencia" description="m³ de concreto según la resistencia de la mezcla (sin agregados)" :option="optResistencia" :height="320" />
-        <ChartCard title="Despacho Promedio por Día de la Semana" description="m³ promedio en los días con despacho, por planta (entre paréntesis: días del período)" :option="optSemana" :height="320" />
+        <ChartCard
+          :title="`Volumen por Resistencia — Top ${TOP}`"
+          :description="resistenciaTop ? `La más vendida es ${resistenciaTop.nombre}: ${fmtN(resistenciaTop.m3)} m³ (${pct(T.m3 ? resistenciaTop.m3 / T.m3 * 100 : 0)} del concreto) · color de la planta donde más se vende` : `m³ de concreto según la resistencia de la mezcla (sin agregados)`"
+          :option="optResistencia" :expand-option="optResistenciaTodos" :height="380" />
+        <ChartCard title="Despacho Promedio por Día de la Semana" description="m³ promedio en los días con despacho, por planta (entre paréntesis: días del período)" :option="optSemana" :height="380" />
       </div>
     </template>
   </div>
@@ -132,13 +135,14 @@
  * Mismo estilo de las gráficas de Mantenimiento (colores por planta, etiquetas en píldora, KPIs con desglose).
  */
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
+import { useQueryParam } from '../../../composables/useQueryState'
 import KpiCard from '../../../components/dashboard/KpiCard.vue'
 import ChartCard from '../../../components/dashboard/ChartCard.vue'
 import { serialToDate } from '../../../utils/dates'
 import { esAgregado } from '../../../utils/agregadosConcreto'
 import {
-  MESES_CORTOS, ORDEN_PLANTAS, COLOR_PLANTA, PALETA, COLOR_EXTRA, AZUL, FONT, VENTANA,
+  MESES_CORTOS, ORDEN_PLANTAS, COLOR_PLANTA, PALETA, COLOR_EXTRA, AZUL, FONT,
   fmtN, cop, copCorto, pct, num, nombrePlanta, titulo, punto, m3Lbl, vacio, emphasis, useEstiloGraficas,
 } from '../../../composables/useGraficasConcreto'
 import { use } from 'echarts/core'
@@ -158,7 +162,7 @@ const props = defineProps<{
 // ---------------------------------------------------------------- Utilidades
 const TOP = 10
 const DIAS_SEM = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
-const { isLight, chartTextColor, labelPill, labelDentro, base, leyenda, ejeX, ejeY, zoom, barrasH } = useEstiloGraficas()
+const { isLight, chartTextColor, tinta, labelPill, base, leyenda, ejeX, ejeY, zoom, barrasH, ventana, movil } = useEstiloGraficas()
 
 function isoDate(d: Date): string { return d.toISOString().slice(0, 10) }
 function sumarDias(iso: string, n: number): string {
@@ -317,7 +321,8 @@ type Vista = 'periodo' | 'dia' | 'semana' | 'mes'
 const VISTAS: { id: Vista; label: string }[] = [
   { id: 'periodo', label: 'Todo el período' }, { id: 'dia', label: 'Día' }, { id: 'semana', label: 'Semana' }, { id: 'mes', label: 'Mes' },
 ]
-const vista = ref<Vista>('periodo')
+// En la URL (?ver=mes) para que recargar conserve la agrupación
+const vista = useQueryParam<Vista>('ver', 'periodo', ['periodo', 'dia', 'semana', 'mes'])
 function lunesDe(iso: string): string { return sumarDias(iso, -((new Date(iso + 'T00:00:00Z').getUTCDay() + 6) % 7)) }
 function ultimoDiaMes(y: number, m: number): number { return new Date(Date.UTC(y, m, 0)).getUTCDate() }
 function fechaDia(iso: string): string {
@@ -457,32 +462,23 @@ const optDespacho = computed(() => {
         const x = per[params[0].dataIndex]
         return `<b>${etiquetaPeriodo(x.k)}</b><br/>` +
           ps.filter(p => x.porPlanta[p]?.m3).map(p => `${punto(color(p))} ${p}: <b>${fmtN(x.porPlanta[p].m3)} m³</b> <span style="color:#94a3b8;font-size:10px">(${pct(x.m3 ? x.porPlanta[p].m3 / x.m3 * 100 : 0)})</span>`).join('<br/>') +
-          `<br/>${punto('#1f2937')} Total: <b>${fmtN(x.m3)} m³</b> <span style="color:#94a3b8;font-size:10px">(prom. ${fmtN(promPeriodo.value)})</span>`
+          `<br/>${punto(tinta.value)} Total: <b>${fmtN(x.m3)} m³</b> <span style="color:#94a3b8;font-size:10px">(prom. ${fmtN(promPeriodo.value)})</span>`
       },
     },
     legend: leyenda(ps.map(p => ({ name: p, itemStyle: { color: color(p) } }))),
     dataZoom: z.dataZoom,
-    grid: { left: 20, right: 30, bottom: z.gridBottom, top: 50, containLabel: true },
+    grid: { left: 12, right: 20, bottom: z.gridBottom, top: 40, containLabel: true },
     xAxis: ejeX(per.map(x => etiquetaPeriodo(x.k))),
     yAxis: ejeY(),
     series: [
-      ...ps.map((p, i) => ({
-        name: p, type: 'bar' as const, stack: 'm3', barMaxWidth: 30, emphasis,
-        itemStyle: { color: color(p), borderRadius: (i === ps.length - 1 ? [4, 4, 0, 0] : 0) as any },
-        label: { ...labelDentro, formatter: (x: any) => (Math.min(per.length, VENTANA) <= 16 && x.value >= promPeriodo.value * 0.18 ? m3Lbl(x.value) : '') },
+      // Barras agrupadas por planta (sin apilar), igual que en Combustible; el total del período va en el tooltip
+      ...ps.map(p => ({
+        name: p, type: 'bar' as const, barMaxWidth: 26, barGap: '12%', emphasis,
         data: per.map(x => +(x.porPlanta[p]?.m3 ?? 0).toFixed(1)),
-        ...(i === 0 ? {
-          markLine: {
-            silent: true, symbol: 'none', label: { show: false },
-            lineStyle: { color: isLight.value ? '#172554' : '#60a5fa', type: 'dashed' as const, width: 1.5, opacity: 0.8 },
-            data: [{ yAxis: +promPeriodo.value.toFixed(1) }],
-          },
-        } : {}),
+        itemStyle: { color: color(p), borderRadius: [4, 4, 0, 0] as any },
+        label: { ...labelPill.value, position: 'top' as const, distance: 3, fontSize: 10, padding: [1, 4] as [number, number], formatter: (v: any) => (v.value ? m3Lbl(v.value) : '') },
+        labelLayout: { hideOverlap: true },
       })),
-      // Serie vacía que solo pinta el total del período encima de la barra apilada
-      { name: '__total', type: 'bar' as const, stack: 'm3', tooltip: { show: false },
-        data: per.map(x => ({ value: 0, label: { show: x.m3 > 0 } })),
-        label: { ...labelPill.value, position: 'top' as const, distance: 4, formatter: (x: any) => m3Lbl(per[x.dataIndex].m3) } },
     ],
   }, per.length > 0)
 })
@@ -494,13 +490,13 @@ const optVenta = computed(() => {
   const total = (i: number) => per[i].venta + per[i].agrVenta
   // Con muchos puntos se rotula uno de cada n para que las píldoras no se monten
   const z = zoom(per.length)
-  const rotular = (i: number) => (per.length - 1 - i) % Math.ceil(Math.min(per.length, VENTANA) / 12) === 0
+  const rotular = (i: number) => (per.length - 1 - i) % Math.ceil(Math.min(per.length, ventana.value) / 12) === 0
   // Una píldora con texto vacío igual pinta su fondo: la etiqueta se apaga punto por punto
   const serie = (name: string, c: string, data: number[], conLabel: boolean) => ({
-    name, type: 'line' as const, stack: 'venta', smooth: true, symbol: 'circle', symbolSize: 7,
+    name, type: 'line' as const, smooth: true, symbol: 'circle', symbolSize: 5,
     data: data.map((v, i) => ({ value: v, label: { show: conLabel && rotular(i) } })),
-    lineStyle: { width: 2.5, color: c }, itemStyle: { color: c }, areaStyle: { opacity: 0.25, color: c },
-    label: { ...labelPill.value, formatter: (x: any) => copCorto(total(x.dataIndex)) },
+    lineStyle: { width: 2, color: c }, itemStyle: { color: c }, areaStyle: { opacity: 0.08, color: c },
+    label: { ...labelPill.value, formatter: (x: any) => copCorto(x.value) },
   })
   return vacio({
     ...base(),
@@ -510,16 +506,16 @@ const optVenta = computed(() => {
         const i = ps[0].dataIndex
         const x = per[i]
         return `<b>${ps[0].axisValueLabel}</b><br/>${punto(AZUL)} Concreto: <b>${cop(x.venta)}</b> · ${fmtN(x.m3)} m³` +
-          (hayAgr ? `<br/>${punto(AMBAR)} Agregados: <b>${cop(x.agrVenta)}</b> · ${fmtN(x.agrM3)} m³<br/>${punto('#1f2937')} Total: <b>${cop(total(i))}</b> · ${fmtN(x.m3 + x.agrM3)} m³` : '')
+          (hayAgr ? `<br/>${punto(AMBAR)} Agregados: <b>${cop(x.agrVenta)}</b> · ${fmtN(x.agrM3)} m³<br/>${punto(tinta.value)} Total: <b>${cop(total(i))}</b> · ${fmtN(x.m3 + x.agrM3)} m³` : '')
       },
     },
     legend: hayAgr ? leyenda([{ name: 'Concreto', itemStyle: { color: AZUL } }, { name: 'Agregados', itemStyle: { color: AMBAR } }]) : undefined,
     dataZoom: z.dataZoom,
-    grid: { left: 44, right: 40, bottom: z.gridBottom, top: hayAgr ? 50 : 30, containLabel: true },
+    grid: { left: movil.value ? 12 : 44, right: movil.value ? 20 : 40, bottom: z.gridBottom, top: hayAgr ? 40 : 24, containLabel: true },
     xAxis: ejeX(per.map(x => etiquetaPeriodo(x.k)), { boundaryGap: false }),
     yAxis: ejeY(),
     series: [
-      serie('Concreto', AZUL, per.map(x => Math.round(x.venta)), !hayAgr),
+      serie('Concreto', AZUL, per.map(x => Math.round(x.venta)), true),
       ...(hayAgr ? [serie('Agregados', AMBAR, per.map(x => Math.round(x.agrVenta)), true)] : []),
     ],
   }, per.length > 0)
@@ -539,13 +535,13 @@ const optPrecio = computed(() => {
     },
     legend: leyenda(ps.map(p => ({ name: p, itemStyle: { color: color(p) } }))),
     dataZoom: zoom(per.length).dataZoom,
-    grid: { left: 20, right: 90, bottom: zoom(per.length).gridBottom, top: 50, containLabel: true },
+    grid: { left: 12, right: movil.value ? 56 : 90, bottom: zoom(per.length).gridBottom, top: 40, containLabel: true },
     xAxis: ejeX(per.map(x => etiquetaPeriodo(x.k)), { boundaryGap: false }),
     yAxis: ejeY({ scale: true, max: undefined }),
     series: ps.map(p => ({
-      name: p, type: 'line' as const, smooth: 0.35, connectNulls: true, symbol: 'circle', symbolSize: 7, emphasis: { focus: 'series' as const },
+      name: p, type: 'line' as const, smooth: 0.35, connectNulls: true, symbol: 'circle', symbolSize: 5, emphasis: { focus: 'series' as const },
       data: per.map(x => { const v = x.porPlanta[p]; return v && v.concM3 ? Math.round(v.conc / v.concM3) : null }),
-      lineStyle: { width: 2.5, color: color(p) }, itemStyle: { color: color(p) },
+      lineStyle: { width: 2, color: color(p) }, itemStyle: { color: color(p) },
       // Valor del último período al final de cada línea
       endLabel: { ...labelPill.value, formatter: (x: any) => copCorto(x.value) },
       labelLayout: { moveOverlap: 'shiftY' as const },
@@ -558,19 +554,19 @@ const optParticipacion = computed(() => {
   return vacio({
     ...base(),
     title: {
-      text: fmtN(T.value.m3, 0), subtext: 'm³ de concreto', left: '37%', top: '44%', textAlign: 'center',
+      text: fmtN(T.value.m3, 0), subtext: 'm³ de concreto', left: movil.value ? '49%' : '37%', top: movil.value ? '33%' : '44%', textAlign: 'center',
       textStyle: { fontFamily: FONT, fontSize: 18, fontWeight: 700, color: isLight.value ? '#0f172a' : '#f1f5f9' },
       subtextStyle: { fontFamily: FONT, fontSize: 11, color: chartTextColor.value },
     },
     tooltip: { trigger: 'item' as const, formatter: (p: any) => `${punto(p.color)} <b>${p.name}</b><br/>${fmtN(p.value)} m³ (${pct(p.percent)})<br/>${cop(r[p.dataIndex].venta)}` },
     legend: {
-      type: 'scroll' as const, orient: 'vertical' as const, right: 10, top: 'middle', icon: 'circle', itemWidth: 10, itemHeight: 10, itemGap: 14,
+      type: 'scroll' as const, ...(movil.value ? { type: 'scroll' as const, orient: 'horizontal' as const, left: 'center', bottom: 0 } : { orient: 'vertical' as const, right: 10, top: 'middle' }), icon: 'circle', itemWidth: 8, itemHeight: 8, itemGap: 12,
       textStyle: { fontFamily: FONT, fontWeight: 600 as const, color: chartTextColor.value, fontSize: 11 },
       formatter: (n: string) => { const x = r.find(y => y.planta === n); return x ? `${n}  ${fmtN(x.m3, 0)} m³` : n },
     },
     series: [{
-      type: 'pie' as const, radius: ['42%', '68%'], center: ['38%', '55%'], avoidLabelOverlap: true,
-      itemStyle: { borderRadius: 4, borderColor: isLight.value ? '#fff' : '#0b0f1a', borderWidth: 2 },
+      type: 'pie' as const, radius: movil.value ? ['38%', '60%'] : ['42%', '68%'], center: movil.value ? ['50%', '42%'] : ['38%', '55%'], avoidLabelOverlap: true,
+      itemStyle: { borderRadius: 2, borderColor: isLight.value ? '#fff' : '#0b0f1a', borderWidth: 2 },
       label: { show: true, formatter: (p: any) => pct(p.percent), fontSize: 11, fontWeight: 600, fontFamily: FONT, color: chartTextColor.value },
       data: r.map(x => ({ name: x.planta, value: +x.m3.toFixed(1), itemStyle: { color: color(x.planta) } })),
     }],
@@ -580,29 +576,45 @@ const optParticipacion = computed(() => {
 const optBombeo = computed(() => {
   const r = resumenPlantas.value
   const sinC = isLight.value ? '#94a3b8' : '#475569'
-  const lbl = (x: any) => { const e = r[x.dataIndex]; return e.m3 && x.value >= e.m3 * 0.12 ? pct(x.value / e.m3 * 100, 0) : '' }
+  const txt = (v: number, i: number) => `${m3Lbl(v)} m³ · ${pct(r[i].m3 ? v / r[i].m3 * 100 : 0, 0)}`
+  const serie = (name: string, c: string, data: number[]) => ({
+    name, type: 'bar', barMaxWidth: 18, barGap: '15%', data, itemStyle: { color: c, borderRadius: [0, 4, 4, 0] },
+    label: { ...labelPill.value, position: 'right', formatter: (x: any) => txt(x.value, x.dataIndex) },
+  })
+  const con = r.map(x => +x.bombM3.toFixed(1)), sin = r.map(x => +(x.m3 - x.bombM3).toFixed(1))
   return vacio({
-    ...barrasH(r.map(x => x.planta), [
-      { name: 'Con bombeo', type: 'bar', stack: 'b', barWidth: '55%', data: r.map(x => +x.bombM3.toFixed(1)),
-        itemStyle: { color: AZUL }, label: { ...labelDentro, formatter: lbl } },
-      { name: 'Sin bombeo', type: 'bar', stack: 'b', barWidth: '55%', data: r.map(x => +(x.m3 - x.bombM3).toFixed(1)),
-        itemStyle: { color: sinC, borderRadius: [0, 4, 4, 0] }, label: { ...labelDentro, formatter: lbl } },
-      { name: '__total', type: 'bar', stack: 'b', data: r.map(() => 0), tooltip: { show: false },
-        label: { ...labelPill.value, position: 'right', formatter: (x: any) => m3Lbl(r[x.dataIndex].m3) + ' m³' } },
-    ], r.map(x => m3Lbl(x.m3) + ' m³'), {
+    // Con y sin bombeo lado a lado por planta (sin apilar)
+    ...barrasH(r.map(x => x.planta), [serie('Con bombeo', AZUL, con), serie('Sin bombeo', sinC, sin)],
+      [...con, ...sin].map((v, i) => txt(v, i % r.length)), {
       trigger: 'axis', axisPointer: { type: 'shadow' },
       formatter: (params: any[]) => {
         const e = r[params[0].dataIndex]
         return `<b>${e.planta}</b><br/>` +
           `${punto(AZUL)} Con bombeo: <b>${fmtN(e.bombM3)} m³</b> (${pct(e.m3 ? e.bombM3 / e.m3 * 100 : 0)})<br/>` +
-          `${punto(sinC)} Sin bombeo: <b>${fmtN(e.m3 - e.bombM3)} m³</b><br/>${punto('#1f2937')} Total: <b>${fmtN(e.m3)} m³</b>`
+          `${punto(sinC)} Sin bombeo: <b>${fmtN(e.m3 - e.bombM3)} m³</b><br/>${punto(tinta.value)} Total: <b>${fmtN(e.m3)} m³</b>`
       },
     }, true),
     legend: leyenda([{ name: 'Con bombeo', itemStyle: { color: AZUL } }, { name: 'Sin bombeo', itemStyle: { color: sinC } }]),
   }, r.length > 0)
 })
 
-// Venta por comercial apilada por planta (orden descendente por venta total)
+// Rankings: una barra por categoría (sin apilar) con el color de la planta donde más pesa;
+// el desglose por planta va en el tooltip y la leyenda usa series vacías
+const principal = (pp: Record<string, number>) => Object.entries(pp).sort((a, b) => b[1] - a[1])[0]?.[0] ?? ''
+function rankingH(nombres: string[], valores: number[], porPlanta: Record<string, number>[], textos: string[], tooltip: Record<string, unknown>) {
+  const ps = plantas.value.filter(p => porPlanta.some(x => x[p]))
+  return {
+    ...barrasH(nombres, [
+      { name: 'Total', type: 'bar', barWidth: '65%', emphasis,
+        data: valores.map((v, i) => ({ value: v, itemStyle: { color: color(principal(porPlanta[i])), borderRadius: [0, 4, 4, 0] } })),
+        label: { ...labelPill.value, position: 'right', formatter: (x: any) => textos[x.dataIndex] } },
+      ...ps.map(p => ({ name: p, type: 'bar', data: [], itemStyle: { color: color(p) } })),
+    ], textos, tooltip, ps.length > 1),
+    ...(ps.length > 1 ? { legend: leyenda(ps.map(p => ({ name: p, itemStyle: { color: color(p) } }))) } : {}),
+  }
+}
+
+// Venta por comercial (orden descendente por venta total) (orden descendente por venta total)
 const comerciales = computed(() => {
   const map = new Map<string, { total: number; m3: number; porPlanta: Record<string, number>; m3Planta: Record<string, number> }>()
   for (const r of rs.value) {
@@ -615,28 +627,16 @@ const comerciales = computed(() => {
 })
 function opcionComercial(lista: typeof comerciales.value) {
   const ps = plantas.value
-  const max = lista[0]?.total ?? 1
-  const seg = (x: any) => { const t = copCorto(x.value); return x.value >= max * t.length * 0.011 ? t : '' }
   return vacio({
-    ...barrasH(lista.map(x => x.nombre), [
-      ...ps.map((p, i) => ({
-        name: p, type: 'bar', stack: 'v', barWidth: '60%', emphasis,
-        data: lista.map(x => Math.round(x.porPlanta[p] ?? 0)),
-        itemStyle: { color: color(p), borderRadius: i === ps.length - 1 ? [0, 4, 4, 0] : 0 },
-        label: { ...labelDentro, formatter: seg },
-      })),
-      { name: '__total', type: 'bar', stack: 'v', data: lista.map(() => 0), tooltip: { show: false },
-        label: { ...labelPill.value, position: 'right', formatter: (x: any) => copCorto(lista[x.dataIndex].total) } },
-    ], lista.map(x => copCorto(x.total)), {
+    ...rankingH(lista.map(x => x.nombre), lista.map(x => Math.round(x.total)), lista.map(x => x.porPlanta), lista.map(x => copCorto(x.total)), {
       trigger: 'axis', axisPointer: { type: 'shadow' },
       formatter: (params: any[]) => {
         const e = lista[params[0].dataIndex]
         return `<b>${e.nombre}</b><br/>` +
           ps.filter(p => e.porPlanta[p]).map(p => `${punto(color(p))} ${p}: <b>${cop(e.porPlanta[p])}</b> · ${fmtN(e.m3Planta[p] ?? 0)} m³`).join('<br/>') +
-          `<br/>${punto('#1f2937')} Total: <b>${cop(e.total)}</b> · ${fmtN(e.m3)} m³`
+          `<br/>${punto(tinta.value)} Total: <b>${cop(e.total)}</b> · ${fmtN(e.m3)} m³`
       },
-    }, true),
-    legend: leyenda(ps.map(p => ({ name: p, itemStyle: { color: color(p) } }))),
+    }),
   }, lista.length > 0)
 }
 const optComercial = computed(() => opcionComercial(comerciales.value.slice(0, 10)))
@@ -652,29 +652,19 @@ const clientes = computed(() => {
   }
   return [...map.entries()].map(([nombre, v]) => ({ nombre: titulo(nombre), ...v })).sort((a, b) => b.m3 - a.m3)
 })
-// Barras apiladas por planta, igual que los rankings de equipos
 function opcionClientes(lista: typeof clientes.value) {
   const ps = plantas.value.filter(p => lista.some(x => x.porPlanta[p]))
   return vacio({
-    ...barrasH(lista.map(x => x.nombre), [
-      ...ps.map((p, i) => ({
-        name: p, type: 'bar', stack: 'c', barWidth: '65%', emphasis,
-        data: lista.map(x => +(x.porPlanta[p] ?? 0).toFixed(1)),
-        itemStyle: { color: color(p), borderRadius: i === ps.length - 1 ? [0, 4, 4, 0] : 0 },
-      })),
-      { name: '__total', type: 'bar', stack: 'c', data: lista.map(() => 0), tooltip: { show: false },
-        label: { ...labelPill.value, position: 'right', formatter: (x: any) => m3Lbl(lista[x.dataIndex].m3) + ' m³' } },
-    ], lista.map(x => m3Lbl(x.m3) + ' m³'), {
+    ...rankingH(lista.map(x => x.nombre), lista.map(x => +x.m3.toFixed(1)), lista.map(x => x.porPlanta), lista.map(x => m3Lbl(x.m3) + ' m³'), {
       trigger: 'axis', axisPointer: { type: 'shadow' },
       formatter: (params: any[]) => {
         const e = lista[params[0].dataIndex]
         return `<b>${e.nombre}</b><br/>` +
           ps.filter(p => e.porPlanta[p]).map(p => `${punto(color(p))} ${p}: <b>${fmtN(e.porPlanta[p])} m³</b>`).join('<br/>') +
-          `<br/>${punto('#1f2937')} Total: <b>${fmtN(e.m3)} m³</b> <span style="color:#94a3b8;font-size:10px">(${pct(T.value.m3 ? e.m3 / T.value.m3 * 100 : 0)} del total)</span><br/>` +
+          `<br/>${punto(tinta.value)} Total: <b>${fmtN(e.m3)} m³</b> <span style="color:#94a3b8;font-size:10px">(${pct(T.value.m3 ? e.m3 / T.value.m3 * 100 : 0)} del total)</span><br/>` +
           `${punto('#10B981')} Venta: <b>${cop(e.venta)}</b><br/>${punto('#8B5CF6')} Remisiones: <b>${e.rem}</b>`
       },
-    }, ps.length > 1),
-    ...(ps.length > 1 ? { legend: leyenda(ps.map(p => ({ name: p, itemStyle: { color: color(p) } }))) } : {}),
+    }),
   }, lista.length > 0)
 }
 const optClientes = computed(() => opcionClientes(clientes.value.slice(0, TOP)))
@@ -698,52 +688,53 @@ function opcionDisenos(lista: typeof disenos.value) {
   const total = T.value.m3
   const txt = (x: typeof lista[number]) => `${m3Lbl(x.m3)} m³ · ${pct(total ? x.m3 / total * 100 : 0)}`
   return vacio({
-    ...barrasH(lista.map(x => x.nombre), [
-      ...ps.map((p, i) => ({
-        name: p, type: 'bar', stack: 'd', barWidth: '65%', emphasis,
-        data: lista.map(x => +(x.porPlanta[p] ?? 0).toFixed(1)),
-        itemStyle: { color: color(p), borderRadius: i === ps.length - 1 ? [0, 4, 4, 0] : 0 },
-      })),
-      { name: '__total', type: 'bar', stack: 'd', data: lista.map(() => 0), tooltip: { show: false },
-        label: { ...labelPill.value, position: 'right', formatter: (x: any) => txt(lista[x.dataIndex]) } },
-    ], lista.map(txt), {
+    ...rankingH(lista.map(x => x.nombre), lista.map(x => +x.m3.toFixed(1)), lista.map(x => x.porPlanta), lista.map(txt), {
       trigger: 'axis', axisPointer: { type: 'shadow' },
       formatter: (params: any[]) => {
         const e = lista[params[0].dataIndex]
         return `<b>${e.nombre}</b> <span style="color:#94a3b8">· ${resistencia(e.nombre)}</span><br/>` +
           ps.filter(p => e.porPlanta[p]).map(p => `${punto(color(p))} ${p}: <b>${fmtN(e.porPlanta[p])} m³</b>`).join('<br/>') +
-          `<br/>${punto('#1f2937')} Total: <b>${fmtN(e.m3)} m³</b> <span style="color:#94a3b8;font-size:10px">(${pct(total ? e.m3 / total * 100 : 0)} del concreto)</span><br/>` +
+          `<br/>${punto(tinta.value)} Total: <b>${fmtN(e.m3)} m³</b> <span style="color:#94a3b8;font-size:10px">(${pct(total ? e.m3 / total * 100 : 0)} del concreto)</span><br/>` +
           `${punto('#8B5CF6')} Remisiones: <b>${e.rem}</b><br/>${punto('#10B981')} Venta: <b>${cop(e.venta)}</b> · ${cop(e.m3 ? e.venta / e.m3 : 0)}/m³`
       },
-    }, ps.length > 1),
-    ...(ps.length > 1 ? { legend: leyenda(ps.map(p => ({ name: p, itemStyle: { color: color(p) } }))) } : {}),
+    }),
   }, lista.length > 0)
 }
 const optDisenos = computed(() => opcionDisenos(disenos.value.slice(0, TOP)))
 const optDisenosTodos = computed(() => opcionDisenos(disenos.value))
 
-const optResistencia = computed(() => {
-  const map = new Map<string, number>()
-  for (const r of rs.value) { const k = resistencia(r.mezcla); map.set(k, (map.get(k) ?? 0) + r.m3) }
-  const orden = (k: string) => (k === 'Sin dato' ? 1e6 : (k.startsWith('MR') ? 1e3 : 0) + Number(k.replace(/\D/g, '')))
-  const lista = [...map.entries()].filter(([, v]) => v > 0).sort((a, b) => orden(a[0]) - orden(b[0]))
-  const total = lista.reduce((s, [, v]) => s + v, 0)
-  return vacio({
-    ...base(),
-    tooltip: { trigger: 'item' as const, formatter: (x: any) => `<b>${x.name}</b><br/>${punto(x.color)} Volumen: <b>${fmtN(x.value)} m³</b> (${pct(total ? x.value / total * 100 : 0)})` },
-    grid: { left: 20, right: 30, bottom: 30, top: 30, containLabel: true },
-    xAxis: ejeX(lista.map(([k]) => k)),
-    yAxis: ejeY(),
-    series: [{
-      type: 'bar' as const, barMaxWidth: 40, emphasis,
-      // Con muchas resistencias solo se rotulan las que pesan al menos 3% (el resto en el tooltip)
-      data: lista.map(([, v], i) => ({ value: +v.toFixed(1), itemStyle: { color: PALETA[(i + 1) % PALETA.length], borderRadius: [4, 4, 0, 0] },
-        label: { show: lista.length <= 6 || (total ? v / total : 0) >= 0.03 } })),
-      label: { ...labelPill.value, position: 'top' as const, distance: 4,
-        formatter: (x: any) => (lista.length <= 6 ? `${m3Lbl(x.value)} · ${pct(total ? x.value / total * 100 : 0, 0)}` : pct(total ? x.value / total * 100 : 0, 0)) },
-    }],
-  }, lista.length > 0)
+// Resistencias ordenadas por m³ de concreto (mismo esquema que Diseños de mezcla)
+const resistencias = computed(() => {
+  const map = new Map<string, { nombre: string; m3: number; rem: number; venta: number; porPlanta: Record<string, number> }>()
+  for (const r of rs.value) {
+    const k = resistencia(r.mezcla)
+    const e = map.get(k) ?? { nombre: k, m3: 0, rem: 0, venta: 0, porPlanta: {} }
+    e.m3 += r.m3; e.rem++; e.venta += r.totalConc
+    e.porPlanta[r.planta] = (e.porPlanta[r.planta] ?? 0) + r.m3
+    map.set(k, e)
+  }
+  return [...map.values()].filter(x => x.m3 > 0).sort((a, b) => b.m3 - a.m3)
 })
+const resistenciaTop = computed(() => resistencias.value[0] ?? null)
+function opcionResistencias(lista: typeof resistencias.value) {
+  const ps = plantas.value.filter(p => lista.some(x => x.porPlanta[p]))
+  const total = T.value.m3
+  const txt = (x: typeof lista[number]) => `${m3Lbl(x.m3)} m³ · ${pct(total ? x.m3 / total * 100 : 0)}`
+  return vacio({
+    ...rankingH(lista.map(x => x.nombre), lista.map(x => +x.m3.toFixed(1)), lista.map(x => x.porPlanta), lista.map(txt), {
+      trigger: 'axis', axisPointer: { type: 'shadow' },
+      formatter: (params: any[]) => {
+        const e = lista[params[0].dataIndex]
+        return `<b>${e.nombre}</b><br/>` +
+          ps.filter(p => e.porPlanta[p]).map(p => `${punto(color(p))} ${p}: <b>${fmtN(e.porPlanta[p])} m³</b>`).join('<br/>') +
+          `<br/>${punto(tinta.value)} Total: <b>${fmtN(e.m3)} m³</b> <span style="color:#94a3b8;font-size:10px">(${pct(total ? e.m3 / total * 100 : 0)} del concreto)</span><br/>` +
+          `${punto('#8B5CF6')} Remisiones: <b>${e.rem}</b><br/>${punto('#10B981')} Venta: <b>${cop(e.venta)}</b> · ${cop(e.m3 ? e.venta / e.m3 : 0)}/m³`
+      },
+    }),
+  }, lista.length > 0)
+}
+const optResistencia = computed(() => opcionResistencias(resistencias.value.slice(0, TOP)))
+const optResistenciaTodos = computed(() => opcionResistencias(resistencias.value))
 
 const optSemana = computed(() => {
   const ps = plantas.value
@@ -757,31 +748,24 @@ const optSemana = computed(() => {
   const idx = DIAS_SEM.map((_, i) => i).filter(i => fechas[i].size > 0)
   const prom = (p: string, i: number) => m3[p][i] / fechas[i].size
   const totalDia = (i: number) => ps.reduce((s, p) => s + prom(p, i), 0)
+  const series = ps.map(p => ({
+    name: p, type: 'bar', barMaxWidth: 14, barGap: '15%', emphasis,
+    data: idx.map(i => +prom(p, i).toFixed(1)),
+    itemStyle: { color: color(p), borderRadius: [0, 4, 4, 0] },
+    label: { ...labelPill.value, position: 'right', formatter: (x: any) => (x.value > 0 ? m3Lbl(x.value) : '') },
+  }))
   return vacio({
-    ...base(),
-    tooltip: {
+    // Días en filas y plantas lado a lado (sin apilar)
+    ...barrasH(idx.map(i => `${DIAS_SEM[i]} (${fechas[i].size})`), series, series.flatMap(x => x.data.map(m3Lbl)), {
       trigger: 'axis' as const, axisPointer: { type: 'shadow' as const },
       formatter: (params: any[]) => {
         const i = idx[params[0].dataIndex]
         return `<b>${DIAS_SEM[i]} — ${fechas[i].size} días con despacho</b><br/>` +
           ps.map(p => `${punto(color(p))} ${p}: <b>${fmtN(prom(p, i))} m³</b>`).join('<br/>') +
-          `<br/>${punto('#1f2937')} Total: <b>${fmtN(totalDia(i))} m³</b>`
+          `<br/>${punto(tinta.value)} Total: <b>${fmtN(totalDia(i))} m³</b>`
       },
-    },
+    }, true),
     legend: leyenda(ps.map(p => ({ name: p, itemStyle: { color: color(p) } }))),
-    grid: { left: 20, right: 30, bottom: 30, top: 50, containLabel: true },
-    xAxis: ejeX(idx.map(i => `${DIAS_SEM[i]} (${fechas[i].size})`)),
-    yAxis: ejeY(),
-    series: [
-      ...ps.map((p, j) => ({
-        name: p, type: 'bar' as const, stack: 's', barMaxWidth: 40, emphasis,
-        data: idx.map(i => +prom(p, i).toFixed(1)),
-        itemStyle: { color: color(p), borderRadius: (j === ps.length - 1 ? [4, 4, 0, 0] : 0) as any },
-        label: { ...labelDentro, formatter: (x: any) => (x.value >= totalDia(idx[x.dataIndex]) * 0.14 ? m3Lbl(x.value) : '') },
-      })),
-      { name: '__total', type: 'bar' as const, stack: 's', data: idx.map(() => 0), tooltip: { show: false },
-        label: { ...labelPill.value, position: 'top' as const, distance: 4, formatter: (x: any) => m3Lbl(totalDia(idx[x.dataIndex])) } },
-    ],
   }, idx.length > 0)
 })
 
@@ -795,22 +779,20 @@ const optAgrPeriodo = computed(() => {
         const x = per[params[0].dataIndex]
         return `<b>${etiquetaPeriodo(x.k)}</b><br/>` +
           mats.filter(m => x.porMaterial[m]).map(m => `${punto(colorMaterial(m))} ${m}: <b>${fmtN(x.porMaterial[m])} m³</b>`).join('<br/>') +
-          `<br/>${punto('#1f2937')} Total: <b>${fmtN(x.agrM3)} m³</b> · ${cop(x.agrVenta)}`
+          `<br/>${punto(tinta.value)} Total: <b>${fmtN(x.agrM3)} m³</b> · ${cop(x.agrVenta)}`
       },
     },
     legend: leyenda(mats.map(m => ({ name: m, itemStyle: { color: colorMaterial(m) } }))),
     dataZoom: zoom(per.length).dataZoom,
-    grid: { left: 20, right: 30, bottom: zoom(per.length).gridBottom, top: 50, containLabel: true },
+    grid: { left: 12, right: 20, bottom: zoom(per.length).gridBottom, top: 40, containLabel: true },
     xAxis: ejeX(per.map(x => etiquetaPeriodo(x.k))),
     yAxis: ejeY(),
     series: [
-      ...mats.map((m, i) => ({
-        name: m, type: 'bar' as const, stack: 'agr', barMaxWidth: 30, emphasis,
+      ...mats.map(m => ({
+        name: m, type: 'bar' as const, barMaxWidth: 22, barGap: '10%', emphasis,
         data: per.map(x => +(x.porMaterial[m] ?? 0).toFixed(1)),
-        itemStyle: { color: colorMaterial(m), borderRadius: (i === mats.length - 1 ? [4, 4, 0, 0] : 0) as any },
+        itemStyle: { color: colorMaterial(m), borderRadius: [4, 4, 0, 0] as any },
       })),
-      { name: '__total', type: 'bar' as const, stack: 'agr', data: per.map(x => ({ value: 0, label: { show: x.agrM3 > 0 } })), tooltip: { show: false },
-        label: { ...labelPill.value, position: 'top' as const, distance: 4, formatter: (x: any) => m3Lbl(per[x.dataIndex].agrM3) } },
     ],
   }, rsAgr.value.length > 0)
 })
@@ -857,24 +839,15 @@ const rankOperarios = computed(() => ranking(r => r.operario, bombeado))
 function opcionRanking(lista: Rank[], viaje: string) {
   const ps = plantas.value.filter(p => lista.some(x => x.porPlanta[p]))
   return vacio({
-    ...barrasH(lista.map(x => x.nombre), [
-      ...ps.map((p, i) => ({
-        name: p, type: 'bar', stack: 'r', barWidth: '60%', emphasis,
-        data: lista.map(x => +(x.porPlanta[p] ?? 0).toFixed(1)),
-        itemStyle: { color: color(p), borderRadius: i === ps.length - 1 ? [0, 4, 4, 0] : 0 },
-      })),
-      { name: '__total', type: 'bar', stack: 'r', data: lista.map(() => 0), tooltip: { show: false },
-        label: { ...labelPill.value, position: 'right', formatter: (x: any) => `${m3Lbl(lista[x.dataIndex].m3)} m³ · ${lista[x.dataIndex].viajes}` } },
-    ], lista.map(x => `${m3Lbl(x.m3)} m³ · ${x.viajes}`), {
+    ...rankingH(lista.map(x => x.nombre), lista.map(x => +x.m3.toFixed(1)), lista.map(x => x.porPlanta), lista.map(x => `${m3Lbl(x.m3)} m³ · ${x.viajes}`), {
       trigger: 'axis', axisPointer: { type: 'shadow' },
       formatter: (params: any[]) => {
         const e = lista[params[0].dataIndex]
         return `<b>${e.nombre}</b><br/>` +
           ps.filter(p => e.porPlanta[p]).map(p => `${punto(color(p))} ${p}: <b>${fmtN(e.porPlanta[p])} m³</b>`).join('<br/>') +
-          `<br/>${punto('#1f2937')} Total: <b>${fmtN(e.m3)} m³</b><br/>${punto('#8B5CF6')} ${viaje}: <b>${e.viajes}</b> · ${fmtN(e.viajes ? e.m3 / e.viajes : 0)} m³ por ${viaje.toLowerCase().replace(/s$/, '')}`
+          `<br/>${punto(tinta.value)} Total: <b>${fmtN(e.m3)} m³</b><br/>${punto('#8B5CF6')} ${viaje}: <b>${e.viajes}</b> · ${fmtN(e.viajes ? e.m3 / e.viajes : 0)} m³ por ${viaje.toLowerCase().replace(/s$/, '')}`
       },
-    }, ps.length > 1),
-    ...(ps.length > 1 ? { legend: leyenda(ps.map(p => ({ name: p, itemStyle: { color: color(p) } }))) } : {}),
+    }),
   }, lista.length > 0)
 }
 const optMixers = computed(() => opcionRanking(rankMixers.value.slice(0, TOP), 'Viajes'))
@@ -938,5 +911,24 @@ const optOperariosTodos = computed(() => opcionRanking(rankOperarios.value, 'Ser
 .gt-table .strong { color: var(--text-primary); font-weight: 600; }
 .gt-table .pos { color: var(--success); font-weight: 600; }
 .gt-table .neg { color: var(--danger); font-weight: 600; }
-.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; vertical-align: -1px; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; vertical-align: 0; }
+
+@media (max-width: 768px) {
+  .gt-bar { padding: 10px 12px; margin-bottom: 14px; gap: 10px; }
+  .gt-periodo { font-size: 14px; }
+  .gt-sub { font-size: 11px; }
+  /* Botones de agrupación en una fila deslizable */
+  .gt-gran { width: 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .gt-gran::-webkit-scrollbar { display: none; }
+  .gt-gran-lbl { display: none; }
+  .gt-gran-btn { flex: 1; padding: 6px 10px; font-size: 12px; }
+  .section-title { font-size: 15px; margin-top: 22px; }
+  .charts-grid { margin-top: 12px; gap: 12px; }
+  .gt-card { padding: 14px; }
+  .gt-card-note { display: block; margin-top: 2px; }
+  .gt-table { font-size: 12px; }
+  .gt-table td, .gt-table th { padding: 8px; }
+  /* Primera columna fija al desplazar la tabla de lado */
+  .gt-table th:first-child, .gt-table td:first-child { position: sticky; left: 0; background: var(--card-bg); z-index: 1; }
+}
 </style>

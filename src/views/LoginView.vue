@@ -51,7 +51,7 @@ const isDark = computed(() => theme.value === 'dark')
 const email = ref('')
 const password = ref('')
 const storeLoading = ref(false)
-const error = ref('')
+const error = ref(route.query.motivo === 'inactividad' ? 'Su sesión se cerró por inactividad. Inicie sesión de nuevo.' : '')
 
 const inputStyle = computed(() =>
   isDark.value
@@ -72,7 +72,8 @@ async function handleSubmit() {
   try {
     await authStore.signIn(email.value, password.value)
     const redirectTo = route.query.redirect as string | undefined
-    router.replace(redirectTo && redirectTo.startsWith('/') ? redirectTo : '/')
+    // Solo rutas internas: evita redirecciones abiertas tipo //sitio-externo.com
+    router.replace(redirectTo && /^\/(?![\/\\])/.test(redirectTo) ? redirectTo : '/')
   } catch (err: any) {
     console.error('[login-view]', err)
     error.value = err.message || 'Correo o contraseña inválidos'

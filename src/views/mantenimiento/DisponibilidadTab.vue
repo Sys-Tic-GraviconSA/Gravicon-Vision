@@ -1,20 +1,24 @@
 <template>
   <div class="disponibilidad-tab">
-    <!-- Toggle de Vistas de Disponibilidad: Gráficas | Informe -->
+    <!-- Toggle de Vistas de Disponibilidad: Gráficas | Combustible (solo Concretos) | Informe -->
     <div class="almacen-view-toggle">
-      <button class="av-btn" :class="{ active: dispView === 'graficas' }" @click="dispView = 'graficas'">
+      <RouterLink class="av-btn" :to="rutaMant.enlace({ disp: 'graficas' })" replace :class="{ active: dispView === 'graficas' }">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         Gráficas
-      </button>
-      <button class="av-btn" :class="{ active: dispView === 'informe' }" @click="dispView = 'informe'">
+      </RouterLink>
+      <RouterLink v-if="isConcretosPlanta" class="av-btn" :to="rutaMant.enlace({ disp: 'combustible' })" replace :class="{ active: dispView === 'combustible' }">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 22V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v17"/><line x1="3" y1="22" x2="15" y2="22"/><line x1="6" y1="9" x2="12" y2="9"/><path d="M15 12h2a2 2 0 0 1 2 2v3a2 2 0 0 0 4 0V9l-3-3"/></svg>
+        Combustible
+      </RouterLink>
+      <RouterLink class="av-btn" :to="rutaMant.enlace({ disp: 'informe' })" replace :class="{ active: dispView === 'informe' }">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
         Informe
-      </button>
+      </RouterLink>
     </div>
 
     <!-- Filtro Área de Trabajo (Planta / Maquinaria) — solo Concretos y solo si el
          contenedor NO impone ya el área (cuando viene de las pestañas Planta/Maquinaria). -->
-    <div v-if="isConcretosPlanta && !props.areaFiltro" class="area-filtro-row">
+    <div v-if="isConcretosPlanta && !props.areaFiltro && dispView !== 'combustible'" class="area-filtro-row">
       <span class="area-filtro-label">Área de trabajo</span>
       <div class="almacen-view-toggle" style="margin-bottom: 0;">
         <button class="av-btn" :class="{ active: areaFiltroLocal === 'maquinaria' }" @click="areaFiltroLocal = 'maquinaria'">Maquinaria</button>
@@ -29,12 +33,7 @@
     <!-- ========================================== -->
     <template v-if="dispView === 'graficas'">
       <!-- Banner de carga mientras el store trae los datos de disponibilidad -->
-      <div v-if="dispStore.loading" class="disp-loading-banner">
-        <svg class="disp-spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-        </svg>
-        Cargando datos de disponibilidad — {{ plantaLabel }}...
-      </div>
+      <SkeletonLoader v-if="dispStore.loading" :kpis="4" :charts="3" :label="`Cargando datos de disponibilidad — ${plantaLabel}…`" />
       <div v-else-if="dispStore.error" class="disp-error-banner">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         Error cargando datos: {{ dispStore.error }}
@@ -405,6 +404,9 @@
     <!-- ==================================================== -->
     <!-- VISTA 2: INFORME OFICIAL DE DISPONIBILIDAD           -->
     <!-- ==================================================== -->
+    <!-- VISTA: TANQUEO DE COMBUSTIBLE (hoja «Combustible», solo Concretos) -->
+    <CombustibleTab v-else-if="dispView === 'combustible'" :fecha-inicio="props.fechaInicio" :fecha-fin="props.fechaFin" />
+
     <template v-else-if="dispView === 'informe'">
 
       <!-- Barra superior del informe: utiliza el filtro principal y botón Imprimir / PDF -->
@@ -1046,10 +1048,13 @@
 </template>
 
 <script setup lang="ts">
+import { useRutaMantenimiento } from '../../composables/useRutaMantenimiento'
+import SkeletonLoader from '../../components/ui/SkeletonLoader.vue'
 import { ref, computed, markRaw, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import KpiCard from '../../components/dashboard/KpiCard.vue'
 import ChartCard from '../../components/dashboard/ChartCard.vue'
 import DataTable from '../../components/dashboard/DataTable.vue'
+import CombustibleTab from './CombustibleTab.vue'
 import { useTheme } from '../../composables/useTheme'
 import { useDisponibilidadStore, useMantenimientoStore } from '../../stores'
 import * as echarts from 'echarts/core'
@@ -1076,7 +1081,9 @@ const props = defineProps<{
 const { theme } = useTheme()
 const dispStore = useDisponibilidadStore()
 const mantStore = useMantenimientoStore()
-const dispView = ref<'graficas' | 'informe'>('graficas')
+// Vista en la ruta: /:planta/mantenimiento/:area/disponibilidad/:vista
+const rutaMant = useRutaMantenimiento()
+const dispView = rutaMant.vistaDisp
 // Removed iframe reference – not needed after switching to v-html rendering
 
 // Filtro Área de Trabajo — solo Concretos (en agregados la disponibilidad ya es 100% maquinaria).
@@ -4294,6 +4301,8 @@ const dispEvolucionClasifOpt = computed(() => {
   opacity: 0.8;
 }
 
+a.av-btn { text-decoration: none; }
+a.av-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .av-btn {
   display: inline-flex;
   align-items: center;

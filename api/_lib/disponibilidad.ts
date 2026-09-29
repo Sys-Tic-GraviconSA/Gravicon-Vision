@@ -6,6 +6,7 @@ export async function loadDisponibilidadData(planta: string, forceRefresh = fals
   let tareas: Record<string, unknown>[] = []
   let resumen: Record<string, unknown>[] = []
   let cronologia: Record<string, unknown>[] = []
+  let combustible: Record<string, unknown>[] = []
 
   const p = planta.toLowerCase()
   const key = `ordenes_ot_${p}`
@@ -28,7 +29,12 @@ export async function loadDisponibilidadData(planta: string, forceRefresh = fals
         ? getSheetData(maestroKey, 'SOLICITANTES_OT', forceRefresh).catch(() => ({ rows: [] as Record<string, unknown>[] }))
         : Promise.resolve({ rows: [] as Record<string, unknown>[] })
 
-      const [placasSheet, tareasSheet, resumenSheet, cronologiaSheet, plantasMaq, personalSheet, proveedoresSheet, solicitantesSheet] = await Promise.all([
+      // Tanqueos (hoja «Combustible»): hoy solo existe en el libro de OT de Concretos
+      const combustiblePromise = p === 'concretos'
+        ? getSheetData(key, 'Combustible', forceRefresh).catch(() => ({ rows: [] as Record<string, unknown>[] }))
+        : Promise.resolve({ rows: [] as Record<string, unknown>[] })
+
+      const [placasSheet, tareasSheet, resumenSheet, cronologiaSheet, plantasMaq, personalSheet, proveedoresSheet, solicitantesSheet, combustibleSheet] = await Promise.all([
         getSheetData(key, 'Reporte Placa Disponibilidad', forceRefresh).catch(() => ({ rows: [] as Record<string, unknown>[] })),
         getSheetData(key, 'Tareas Seguimiento', forceRefresh).catch(() => ({ rows: [] as Record<string, unknown>[] })),
         getSheetData(key, 'Resumen Diario Disponibilidad', forceRefresh).catch(() => ({ rows: [] as Record<string, unknown>[] })),
@@ -38,6 +44,7 @@ export async function loadDisponibilidadData(planta: string, forceRefresh = fals
         personalPromise,
         proveedoresPromise,
         solicitantesPromise,
+        combustiblePromise,
       ])
 
       // Maestro de proveedores: Id_Registro → Nombre_Proveedor (misma hoja que usan las OT)
@@ -74,6 +81,14 @@ export async function loadDisponibilidadData(planta: string, forceRefresh = fals
       tareas = tareasSheet.rows
       resumen = resumenSheet.rows
       cronologia = cronologiaSheet.rows
+
+      // Tanqueos con el tipo y el área del equipo según el maestro (por placa), sin filas vacías
+      combustible = combustibleSheet.rows
+        .filter(r => String(r['Placa'] ?? '').trim() || Number(r['Cant gl']) || Number(r['Precio']))
+        .map(r => {
+          const m = maestroMap.get(String(r['Placa'] ?? '').trim())
+          return { ...r, Tipo_Vehiculo: m ? String(m['TIPO'] ?? '').trim() : '', Area_Trabajo: m ? String(m['Área de Trabajo'] ?? '').trim() : '' }
+        })
 
       // 2b. Enriquecer tareas: resolver Placa ID → nombre de placa usando maestroMap
       // (no se lee Placa_Texto de la hoja, no es confiable en todas las plantas).
@@ -163,6 +178,7 @@ export async function loadDisponibilidadData(planta: string, forceRefresh = fals
     tareas,
     resumen,
     cronologia,
+    combustible,
     totalPlacas: placas.length,
     totalTareas: tareas.length,
     planta: p,

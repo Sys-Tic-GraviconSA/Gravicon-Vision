@@ -27,7 +27,8 @@ export function getAuth() {
   const auth = new google.auth.JWT({
     email: requireEnv('GOOGLE_CLIENT_EMAIL'),
     key: requireEnv('GOOGLE_PRIVATE_KEY').replace(/\\n/g, '\n'),
-    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+    // Drive (solo lectura) para archivos Excel guardados en Drive, que la API de Sheets no abre
+    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly', 'https://www.googleapis.com/auth/drive.readonly'],
   });
 
   authClient = auth;
@@ -40,6 +41,14 @@ export function getAuth() {
  */
 export function getSheets() {
   return google.sheets({ version: 'v4' as const, auth: getAuth() });
+}
+
+/**
+ * Obtiene el cliente de la API de Google Drive (v3), solo lectura.
+ * @returns Cliente drive de Google APIs.
+ */
+export function getDrive() {
+  return google.drive({ version: 'v3' as const, auth: getAuth() });
 }
 
 /**
