@@ -35,6 +35,8 @@ import type { LineaFacturacion } from '../../../types/facturacion'
 
 const props = defineProps<{
   lineas: LineaFacturacion[]
+  /** Líneas con todos los filtros menos el de fechas (lo usa el informe) */
+  lineasSinFecha?: LineaFacturacion[]
   planta: string
   plantaId: 'cuncia' | 'acacias'
   sucursal: string

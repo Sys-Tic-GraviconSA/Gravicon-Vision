@@ -156,7 +156,9 @@ function fechaIso(v: Celda): string {
 export function normalizar(filas: Record<string, Celda>[], sucursal: string): LineaFacturacion[] {
   const propias = filas.filter(f => codigo(f['SUCURSAL']) === sucursal)
   const base = propias.map(f => {
-    const descripcion = txt(f['Descripcion'] ?? f['DESCRIPCION']).toUpperCase()
+    let descripcion = txt(f['Descripcion'] ?? f['DESCRIPCION']).toUpperCase()
+    // Descripciones vacías o solo con símbolos (p. ej. «|»): se nombran por el ítem para poder identificarlas
+    if (!/[A-Z0-9]/.test(descripcion)) descripcion = `SIN DESCRIPCIÓN (ÍTEM ${txt(f['ITEM']).toUpperCase() || '—'})`
     return { f, descripcion, und: unidadOrigen(descripcion) }
   })
   // ¿La sucursal vende en toneladas? Entonces lo que viene sin unidad ya está en t

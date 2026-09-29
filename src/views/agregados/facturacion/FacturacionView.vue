@@ -43,7 +43,7 @@
         <RouteTabs variant="toggle" :items="vistas" :activo="vistaActiva" aria-label="Vista" replace />
         <!-- /:planta/facturacion/graficas | detalle | informe -->
         <RouterView v-slot="{ Component }">
-          <component :is="Component" :lineas="filtradas" :planta="planta.nombre" :planta-id="props.planta" :sucursal="datos.sucursal" :archivo="datos.archivo" :subtipos="datos.subtipos" />
+          <component :is="Component" :lineas="filtradas" :lineas-sin-fecha="sinFecha" :planta="planta.nombre" :planta-id="props.planta" :sucursal="datos.sucursal" :archivo="datos.archivo" :subtipos="datos.subtipos" />
         </RouterView>
       </template>
     </template>
@@ -107,12 +107,13 @@ function onFechas(r: { from: string | null; to: string | null }) {
 // Conjunto vacío = sin filtro (paso intermedio al desmarcar «Todos»)
 const pasa = (sel: Set<string>, v: string) => sel.size === 0 || sel.has(v)
 const todas = (sel: Set<string>, opts: string[]) => sel.size === 0 || sel.size === opts.length
-// El filtro de cliente no aplica a traslados (no tienen cliente): se conservan salvo que se filtre por cliente
-const filtradas = computed(() => lineas.value.filter(l =>
-  (!desde.value || l.fecha >= desde.value) && (!hasta.value || l.fecha <= hasta.value)
-  && pasa(selSubtipos.value, etiquetaSubtipo(l.subtipo))
+// El filtro de cliente no aplica a traslados (no tienen cliente): se conservan salvo que se filtre por cliente.
+// sinFecha: todos los filtros menos el de fechas (el informe lo usa para comparar con el período anterior)
+const sinFecha = computed(() => lineas.value.filter(l =>
+  pasa(selSubtipos.value, etiquetaSubtipo(l.subtipo))
   && pasa(selFamilias.value, l.familia)
   && (todas(selClientes.value, opcionesCliente.value) || (l.tipo !== 'traslado' && selClientes.value.has(nombreCliente(l.cliente))))))
+const filtradas = computed(() => sinFecha.value.filter(l => (!desde.value || l.fecha >= desde.value) && (!hasta.value || l.fecha <= hasta.value)))
 
 const hayFiltros = computed(() => !!(desde.value || hasta.value)
   || !todas(selSubtipos.value, opcionesSubtipo.value) || !todas(selFamilias.value, opcionesFamilia.value) || !todas(selClientes.value, opcionesCliente.value))
