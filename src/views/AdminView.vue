@@ -1,6 +1,7 @@
 <template>
   <div class="page-layout">
     <header class="page-header">
+      <img :src="theme === 'dark' ? '/Logos/logo-blanco.webp' : '/Logos/logo-azul.webp'" alt="Gravicon" class="page-logo" />
       <h2 class="page-title">Configuración</h2>
       <span class="badge-role" :class="roleClass">{{ roleLabel }}</span>
     </header>
@@ -15,7 +16,6 @@
         <div class="config-row"><span>Nombre</span><strong>{{ userName }}</strong></div>
         <div class="config-row"><span>Correo</span><strong>{{ authStore.userEmail }}</strong></div>
         <div class="config-row"><span>Rol</span><strong>{{ roleLabel }}</strong></div>
-        <p class="admin-desc session-note">La sesión se cierra automáticamente tras {{ IDLE_TIMEOUT_MIN }} minutos de inactividad.</p>
       </div>
 
       <form class="admin-card" :class="{ 'card-highlight': authStore.mustChangePassword }" @submit.prevent="cambiarPassword" autocomplete="off">
@@ -207,9 +207,10 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import SkeletonLoader from '../components/ui/SkeletonLoader.vue'
-import { IDLE_TIMEOUT_MIN } from '../composables/useIdleLogout'
+import { useTheme } from '../composables/useTheme'
 
 const authStore = useAuthStore()
+const { theme } = useTheme()
 
 const ROLE_LABELS: Record<string, string> = { superadmin: 'Administrador del sistema', admin: 'Admin', usuario: 'Usuario' }
 const rolLabel = (r: string) => ROLE_LABELS[r] ?? r
@@ -536,6 +537,7 @@ onMounted(async () => {
 
 <style scoped>
 .page-header { display:flex; align-items:center; gap:12px; margin-bottom:20px; }
+.page-logo { height:38px; width:auto; padding-right:14px; border-right:1px solid var(--card-border); }
 .badge-role { padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700; text-transform:uppercase; }
 .badge-role.role-admin { background:#1e293b; color:#fff; }
 .badge-role.role-user { background:#e2e8f0; color:#475569; }
@@ -601,7 +603,6 @@ onMounted(async () => {
 .account-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:20px; max-width:900px; }
 .account-grid .admin-card { display:flex; flex-direction:column; gap:10px; }
 .account-grid h3 { margin-bottom:2px; }
-.session-note { margin-top:6px; }
 .card-highlight { border-color:var(--warning); box-shadow:0 0 0 3px var(--warning-light); }
 .alert-banner { margin-bottom:16px; padding:12px 14px; border-radius:var(--radius-md); background:var(--warning-light); border:1px solid var(--warning); color:var(--text-primary); font-size:13px; }
 .account-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:10px 0 14px; margin-bottom:14px; border-bottom:1px solid var(--card-border); }

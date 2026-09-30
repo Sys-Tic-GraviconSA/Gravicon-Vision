@@ -18,17 +18,14 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id: string) {
-          if (id.includes('node_modules/vue') || id.includes('node_modules/pinia') || id.includes('node_modules/vue-router') || id.includes('node_modules/vue-echarts')) {
+          // ECharts (y vue-echarts) y jspdf/html2canvas no se agrupan a mano: así solo se descargan
+          // cuando se abre una vista con gráficas o se genera un PDF, no en el login.
+          if (id.includes('node_modules/vue-echarts')) return undefined
+          if (id.includes('node_modules/vue') || id.includes('node_modules/pinia') || id.includes('node_modules/@vue')) {
             return 'vendor-vue'
-          }
-          if (id.includes('node_modules/echarts')) {
-            return 'vendor-echarts'
           }
           if (id.includes('node_modules/@supabase')) {
             return 'vendor-supabase'
-          }
-          if (id.includes('node_modules/jspdf') || id.includes('node_modules/html2canvas') || id.includes('node_modules/html2pdf')) {
-            return 'vendor-pdf'
           }
         },
       },

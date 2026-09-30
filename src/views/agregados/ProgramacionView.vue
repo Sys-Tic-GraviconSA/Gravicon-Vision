@@ -4,7 +4,7 @@
     <div class="page-state error" v-else-if="error">
       <span class="error-icon">!</span>
       <div><strong>Error al cargar datos</strong><p>{{ error }}</p></div>
-      <button class="retry-btn" @click="fetchData">Reintentar</button>
+      <button class="retry-btn" @click="fetchData(true)">Reintentar</button>
     </div>
     <div class="page-state" v-else-if="!rows.length">
       <span>No hay datos disponibles.</span>
@@ -57,7 +57,7 @@
 import SkeletonLoader from '../../components/ui/SkeletonLoader.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { useAuthStore } from '../../stores/auth'
+import { cargarConCache } from '../../stores/api'
 import KpiCard from '../../components/dashboard/KpiCard.vue'
 import DataTable from '../../components/dashboard/DataTable.vue'
 import FilterBar from '../../components/dashboard/FilterBar.vue'
@@ -84,18 +84,13 @@ const selectedMaterials = ref(new Set<string>())
 const selectedTransports = ref(new Set<string>())
 const selectedResponsables = ref(new Set<string>())
 
-async function fetchData() {
-  loading.value = true; error.value = null
-  try {
-    const token = useAuthStore().accessToken
-    const headers: Record<string, string> = {}
-    if (token) headers['Authorization'] = `Bearer ${token}`
-    const res = await fetch('/api/programacion-agregados/data', { headers })
-    if (!res.ok) throw new Error(`API: ${res.status}`)
-    const json = await res.json()
-    rows.value = json.rows ?? []
-  } catch (e: any) { console.error('[programacion-agregados]', e); error.value = e.message }
-  finally { loading.value = false }
+/** Copia local al instante y luego datos del servidor; `force` (Reintentar) salta las cachés */
+function fetchData(force = false) {
+  return cargarConCache<{ rows?: any[] }>({
+    url: `/api/programacion-agregados/data${force ? '?force=true' : ''}`, force,
+    hayDatos: () => rows.value.length > 0, aplicar: j => { rows.value = j.rows ?? [] }, limpiar: () => { rows.value = [] },
+    loading, error, etiqueta: 'programacion-agregados',
+  })
 }
 
 onMounted(() => fetchData())

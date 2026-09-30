@@ -438,7 +438,7 @@
                 loading="eager"
               />
               <img
-                src="/Logos/Logo_Gravicon_Blanco.png"
+                src="/Logos/logo-blanco.webp"
                 @error="($event.target as HTMLImageElement).style.display = 'none'"
                 alt="Gravicon"
                 class="report-logo report-logo--dark"

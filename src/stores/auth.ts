@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase } from '../lib/supabase'
+import { borrarCacheLocal } from '../utils/cacheLocal'
 import type { User, AuthChangeEvent, Session } from '@supabase/supabase-js'
 
 /**
@@ -35,7 +36,7 @@ export const useAuthStore = defineStore('auth', () => {
    * Rol y permisos de vista resueltos por el servidor (/api/me). El rol nunca se lee
    * de user_metadata en el cliente: el usuario puede editarlo y no es confiable.
    */
-  const profile = ref<{ role: string; superadmin: boolean; mustChangePassword: boolean; perms: Record<string, boolean> } | null>(null)
+  const profile = ref<{ role: string; superadmin: boolean; mustChangePassword: boolean; perms: Record<string, boolean>; tourVersion?: number } | null>(null)
   let profilePromise: Promise<void> | null = null
 
   const role = computed(() => profile.value?.role ?? 'usuario')
@@ -153,12 +154,31 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = null
       profile.value = null
       profilePromise = null
+      // Borra los datos guardados en este navegador: copia local (IndexedDB) y caché HTTP de la API
+      await borrarCacheLocal()
+      try { await fetch('/api/salir', { method: 'POST' }) } catch { /* sin red: la copia local ya se borró */ }
+    }
+  }
+
+  /** Registra en el servidor que el usuario vio la guía de inicio (terminada u omitida). */
+  async function marcarTourVisto(version: number): Promise<void> {
+    if (profile.value) profile.value.tourVersion = version
+    const token = session.value?.access_token
+    if (!token) return
+    try {
+      await fetch('/api/me/tour', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ version }),
+      })
+    } catch (e) {
+      console.error('[auth] marcarTourVisto:', e)
     }
   }
 
   return {
     user, session, loading, isAuthenticated, userEmail, accessToken,
-    profile, role, isSuperAdmin, mustChangePassword, canView, loadProfile,
+    profile, role, isSuperAdmin, mustChangePassword, canView, loadProfile, marcarTourVisto,
     initialize, signIn, signOut,
   }
 })

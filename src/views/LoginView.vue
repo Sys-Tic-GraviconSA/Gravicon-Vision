@@ -51,7 +51,7 @@ const isDark = computed(() => theme.value === 'dark')
 const email = ref('')
 const password = ref('')
 const storeLoading = ref(false)
-const error = ref(route.query.motivo === 'inactividad' ? 'Su sesión se cerró por inactividad. Inicie sesión de nuevo.' : '')
+const error = ref('')
 
 const inputStyle = computed(() =>
   isDark.value

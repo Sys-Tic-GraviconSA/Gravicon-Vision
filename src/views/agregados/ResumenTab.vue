@@ -1,60 +1,61 @@
 <template>
-  <div class="root">
-    <div class="kpi-section">
-      <h4 class="kpi-section-title">Producción Total</h4>
+  <div class="prod-graficas">
+    <div v-if="!dias.length" class="vacio">No hay registros de producción en el rango seleccionado.</div>
+
+    <template v-else>
+      <p class="periodo">
+        <strong>{{ periodoTxt }}</strong> · {{ fmtN(dias.length, 0) }} {{ dias.length === 1 ? 'día registrado' : 'días registrados' }}
+        en {{ meses.length }} {{ meses.length === 1 ? 'mes' : 'meses' }} · todo en m³
+      </p>
+
       <div class="kpi-row">
-        <KpiCard label="Total M³" accent="#3B82F6" icon="chart-bar">{{ fmt(kpis.total) }}</KpiCard>
-        <KpiCard v-for="l in config.lines" :key="l.key" :label="l.label" :accent="config.palette[config.lines.indexOf(l)]" icon="layers">{{ fmt(lineTotal(l.key)) }}</KpiCard>
+        <KpiCard v-for="k in kpis" :key="k.label" v-bind="k" />
       </div>
-    </div>
 
-    <div class="kpi-section">
-      <h4 class="kpi-section-title">Meta Mensual</h4>
-      <div class="kpi-row kpi-row-3">
-        <KpiCard label="Meta Mensual M³" accent="#8B5CF6" icon="target">{{ fmt(kpis.metaMensual) }}</KpiCard>
-        <KpiCard label="Diferencia Meta" :accent="kpis.diferenciaMeta < 0 ? '#EF4444' : '#10B981'" icon="trending-up">{{ kpis.diferenciaMeta >= 0 ? '+' : '' }}{{ fmt(kpis.diferenciaMeta) }}</KpiCard>
-        <KpiCard label="% Cumpl. Meta" accent="#06B6D4" icon="check-circle">{{ kpis.cumplimientoMeta }}</KpiCard>
+      <h3 class="section-title"><span class="title-bar"></span>Cumplimiento por mes</h3>
+      <div class="charts-grid cols-2">
+        <ChartCard title="Meta Mensual vs. Producido" description="Barra gris: meta del mes · barra azul: producido; encima, el % de cumplimiento" :option="optMeta" :height="320" />
+        <ChartCard title="Proyectado Diario vs. Producido" description="Suma del proyectado diario del mes frente a lo producido; encima, el % de cumplimiento" :option="optProyectado" :height="320" />
       </div>
-    </div>
-
-    <div class="kpi-section">
-      <h4 class="kpi-section-title">Proyectado Diario</h4>
-      <div class="kpi-row kpi-row-3">
-        <KpiCard label="M³ Proyectado Diarios" accent="#EC4899" icon="trending-up">{{ fmt(kpis.proyectado) }}</KpiCard>
-        <KpiCard label="Diferencia Proy." :accent="kpis.diferenciaProy < 0 ? '#EF4444' : '#10B981'" icon="trending-up">{{ kpis.diferenciaProy >= 0 ? '+' : '' }}{{ fmt(kpis.diferenciaProy) }}</KpiCard>
-        <KpiCard label="% Cumpl. Proy." accent="#F59E0B" icon="check-circle">{{ kpis.cumplimientoProy }}</KpiCard>
+      <div class="charts-grid cols-1">
+        <ChartCard title="% de Cumplimiento por Mes" description="Cumplimiento de la meta mensual y del proyectado diario; la línea punteada es el 100%" :option="optCumplimiento" :height="300" />
       </div>
-    </div>
 
-    <div class="charts-grid cols-2">
-      <ChartCard title="Meta Mensual vs Producido" description="Comparación mensual entre meta y producción real" :option="metaVsProducidoOpt" />
-      <ChartCard title="M³ Proyectado Diarios vs Producción" description="Comparación mensual entre producción y proyectada diaria" :option="proyectadoOpt" />
-    </div>
+      <h3 class="section-title"><span class="title-bar"></span>Producción por {{ config.lineLabel.toLowerCase() }}</h3>
+      <div class="charts-grid cols-2">
+        <ChartCard :title="`Producción Mensual por ${config.lineLabel}`" :description="`m³ de cada ${config.lineLabel.toLowerCase()} por mes, barras lado a lado`" :option="optLineasMes" :height="340" />
+        <ChartCard :title="`Participación por ${config.lineLabel}`" :description="`Aporte de cada ${config.lineLabel.toLowerCase()} al total producido del período`" :option="optParticipacion" :height="340" />
+      </div>
 
-    <div class="section-divider"></div>
-
-    <div class="charts-grid cols-2">
-      <ChartCard title="% Cumplimiento Meta" description="Porcentaje de cumplimiento mensual de la meta" :option="cumplimientoMetaOpt" />
-      <ChartCard title="% Cumplimiento Proyectado" description="Porcentaje de cumplimiento mensual del proyectado diario" :option="cumplimientoProyOpt" />
-    </div>
-
-    <div class="charts-grid cols-1">
-      <ChartCard :title="`Producción por ${config.lineLabel}`" :description="`Detalle mensual por ${config.lineLabel.toLowerCase()}`" :option="lineasOpt" :height="500" />
-    </div>
-
-    <div class="charts-grid cols-1">
-      <ChartCard :title="`Distribución por ${config.lineLabel}`" :description="`Participación total por ${config.lineLabel.toLowerCase()}`" :option="totalLineaOpt" />
-    </div>
+      <template v-if="dias.length > 1">
+        <h3 class="section-title"><span class="title-bar"></span>Tendencia diaria</h3>
+        <div class="charts-grid cols-1">
+          <ChartCard title="Producción Diaria vs. Proyectado" :description="`m³ por día: verde si alcanzó el proyectado del día, azul si quedó por debajo · línea: proyectado diario · punteada: promedio de ${m3Lbl(promedio)} m³`" :option="optDiaria" :height="360" />
+        </div>
+      </template>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, markRaw } from 'vue'
+/**
+ * ResumenTab.vue — Gráficas de producción de una planta de agregados (/:planta/produccion/graficas).
+ * Mismo estilo de Facturación, Concretos y Mantenimiento (useEstiloGraficas): KPIs con desglose,
+ * títulos de sección, barras lado a lado con los valores encima y tooltips con puntos de color.
+ * Recibe las filas diarias ya filtradas por el filtro de fechas de AgregadosProduccionView.
+ */
+import { computed } from 'vue'
+import { use } from 'echarts/core'
+import { LabelLayout } from 'echarts/features'
 import KpiCard from '../../components/dashboard/KpiCard.vue'
 import ChartCard from '../../components/dashboard/ChartCard.vue'
 import { serialToDate } from '../../utils/dates'
-import { useTheme } from '../../composables/useTheme'
-import { fmt } from '../../utils/format'
+import {
+  MESES_CORTOS, AZUL, FONT, fmtN, pct, punto, m3Lbl, vacio, emphasis, useEstiloGraficas,
+} from '../../composables/useGraficasConcreto'
+
+// LabelLayout oculta las etiquetas que se montan cuando hay muchos días
+use([LabelLayout])
 
 export interface PlantConfig {
   plantName: string
@@ -68,317 +69,260 @@ const props = defineProps<{
   data: Record<string, unknown>[]
 }>()
 
-const { theme } = useTheme()
-const chartTextColor = computed(() => theme.value === 'light' ? '#475569' : '#94a3b8')
-const labelLine = computed(() => ({
-  show: true,
-  formatter: (p: any) => typeof p.value === 'number' ? p.value.toLocaleString('es-CO') : p.value,
-  fontSize: 11,
-  fontWeight: 600 as const,
-  color: theme.value === 'light' ? '#334155' : '#e2e8f0',
-  backgroundColor: theme.value === 'light' ? 'rgba(255,255,255,.92)' : 'rgba(11,15,26,.88)',
-  padding: [2, 6] as [number, number],
-  borderRadius: 4,
-  overflow: 'breakAll' as const,
-}))
-const baseGrid = { left: 60, right: 30, bottom: 60, top: 50, containLabel: true }
+const { isLight, chartTextColor, tinta, labelPill, labelDentro, base, leyenda, ejeX, ejeY, zoom, movil } = useEstiloGraficas()
+const VERDE = '#16A34A', AMBAR = '#F59E0B', ROJO = '#DC2626'
+const C_META = '#8B5CF6', C_PROY = '#EC4899'
+const gris = computed(() => (isLight.value ? '#cbd5e1' : '#334155'))
+const colorLinea = (i: number) => props.config.palette[i % props.config.palette.length]
+const sg = (n: number) => (n > 0 ? '+' : '') + fmtN(n, 0)
+const colorCump = (c: number) => (c >= 100 ? VERDE : c >= 80 ? AMBAR : ROJO)
 
-function monthLabel(d: Date): string {
-  return d.toLocaleDateString('es-CO', { month: 'short', year: '2-digit', timeZone: 'UTC' })
-}
+// ---------------------------------------------------------------- Datos por día y por mes
+interface Dia { serial: number; fecha: Date; total: number; proy: number; lineas: number[] }
+interface Mes { key: string; label: string; total: number; proy: number; meta: number; lineas: number[]; dias: number }
 
-/** Calcula la meta mensual total: un solo valor por mes (no suma filas duplicadas) */
-function calcMetaMensualTotal(data: Record<string, unknown>[]): number {
-  const metaByMonth = new Map<string, number>()
-  for (const row of data) {
-    const fecha = Number(row['Fecha'])
-    if (!fecha) continue
-    const key = monthLabel(serialToDate(fecha))
-    const val = Number(row['Meta Mensual M³']) || 0
-    if (!metaByMonth.has(key)) metaByMonth.set(key, val)
+const claveMes = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+const etiquetaMes = (d: Date) => `${MESES_CORTOS[d.getUTCMonth()]} ${String(d.getUTCFullYear()).slice(2)}`
+const etiquetaDia = (d: Date) => `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+const fechaLarga = (d: Date) => d.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+
+const dias = computed<Dia[]>(() => props.data
+  .filter(r => Number(r['Fecha']))
+  .map(r => {
+    const serial = Number(r['Fecha'])
+    return {
+      serial, fecha: serialToDate(serial),
+      total: Number(r['Total de M³']) || 0,
+      proy: Number(r['M³ Proyectado']) || 0,
+      lineas: props.config.lines.map(l => Number(r[l.key]) || 0),
+    }
+  })
+  .sort((a, b) => a.serial - b.serial))
+
+// La meta mensual se repite en cada fila del mes: se toma una sola vez por mes (misma regla del informe)
+const meses = computed<Mes[]>(() => {
+  const map = new Map<string, Mes>()
+  for (const r of props.data) {
+    const serial = Number(r['Fecha'])
+    if (!serial) continue
+    const d = serialToDate(serial)
+    const key = claveMes(d)
+    let m = map.get(key)
+    if (!m) {
+      m = { key, label: etiquetaMes(d), total: 0, proy: 0, meta: Number(r['Meta Mensual M³']) || 0, lineas: props.config.lines.map(() => 0), dias: 0 }
+      map.set(key, m)
+    }
+    m.total += Number(r['Total de M³']) || 0
+    m.proy += Number(r['M³ Proyectado']) || 0
+    m.dias++
+    props.config.lines.forEach((l, i) => { m!.lineas[i] += Number(r[l.key]) || 0 })
   }
-  let sum = 0
-  for (const v of metaByMonth.values()) sum += v
-  return sum
-}
+  return [...map.values()].sort((a, b) => a.key.localeCompare(b.key))
+})
 
-/** Calcula el proyectado diario total (suma de todas las filas) */
-function calcProyectadoTotal(data: Record<string, unknown>[]): number {
-  return data.reduce((s, row) => s + (Number(row['M³ Proyectado']) || 0), 0)
-}
+const periodoTxt = computed(() => {
+  const d = dias.value
+  if (!d.length) return ''
+  return d.length === 1 ? fechaLarga(d[0].fecha) : `${fechaLarga(d[0].fecha)} al ${fechaLarga(d[d.length - 1].fecha)}`
+})
+
+const T = computed(() => {
+  const total = dias.value.reduce((a, d) => a + d.total, 0)
+  const proy = dias.value.reduce((a, d) => a + d.proy, 0)
+  const meta = meses.value.reduce((a, m) => a + m.meta, 0)
+  const lineas = props.config.lines.map((_, i) => dias.value.reduce((a, d) => a + d.lineas[i], 0))
+  return {
+    total, proy, meta, lineas,
+    cumpMeta: meta > 0 ? total / meta * 100 : 0,
+    cumpProy: proy > 0 ? total / proy * 100 : 0,
+    conProduccion: dias.value.filter(d => d.total > 0).length,
+  }
+})
+const promedio = computed(() => (dias.value.length ? T.value.total / dias.value.length : 0))
+const mejorDia = computed(() => dias.value.reduce<Dia | null>((m, d) => (!m || d.total > m.total ? d : m), null))
+
+// ---------------------------------------------------------------- KPIs
+const fila = (color: string, label: string, valor: string) =>
+  `<div class='kpi-detail-row'><span class='kpi-dot' style='background:${color}'></span><span class='kpi-label-int' style='color:${color}'>${label}</span> <strong>${valor}</strong></div>`
 
 const kpis = computed(() => {
-  const r = props.data
-  const total = r.reduce((s, row) => s + (Number(row['Total de M³']) || 0), 0)
-  const proyectado = calcProyectadoTotal(r)
-  const metaMensual = calcMetaMensualTotal(r)
-  const diferenciaMeta = total - metaMensual
-  const diferenciaProy = total - proyectado
-  const cumplimientoMeta = metaMensual > 0 ? (total / metaMensual) * 100 : 0
-  const cumplimientoProy = proyectado > 0 ? (total / proyectado) * 100 : 0
-  return {
-    total, proyectado, metaMensual,
-    diferenciaMeta, diferenciaProy,
-    cumplimientoMeta: cumplimientoMeta.toFixed(1) + '%',
-    cumplimientoProy: cumplimientoProy.toFixed(1) + '%',
-  }
+  const t = T.value
+  const detLineas = props.config.lines.map((l, i) =>
+    fila(colorLinea(i), l.label, `${fmtN(t.lineas[i], 0)} m³ <span style='color:var(--text-tertiary)'>(${pct(t.total ? t.lineas[i] / t.total * 100 : 0)})</span>`)).join('')
+  const md = mejorDia.value
+  return [
+    { label: 'Total Producido', value: `${fmtN(t.total, 0)} m³`, icon: 'chart-bar', accent: AZUL, detail: detLineas },
+    { label: 'Promedio Diario', value: `${fmtN(promedio.value, 0)} m³`, icon: 'activity', accent: '#0EA5E9',
+      detail: fila('#0EA5E9', 'Días registrados', fmtN(dias.value.length, 0)) + fila('#0EA5E9', 'Con producción', fmtN(t.conProduccion, 0)) +
+        (md ? fila(tinta.value, 'Mejor día', `${fmtN(md.total, 0)} m³ (${etiquetaDia(md.fecha)})`) : '') },
+    { label: 'Cumplimiento Meta', value: t.meta ? pct(t.cumpMeta) : '—', icon: 'target', accent: C_META,
+      detail: fila(C_META, 'Meta mensual', `${fmtN(t.meta, 0)} m³`) + fila(t.total - t.meta >= 0 ? VERDE : ROJO, 'Diferencia', `${sg(t.total - t.meta)} m³`) },
+    { label: 'Cumplimiento Proyectado', value: t.proy ? pct(t.cumpProy) : '—', icon: 'trending-up', accent: C_PROY,
+      detail: fila(C_PROY, 'Proyectado', `${fmtN(t.proy, 0)} m³`) + fila(t.total - t.proy >= 0 ? VERDE : ROJO, 'Diferencia', `${sg(t.total - t.proy)} m³`) },
+  ]
 })
 
-function lineTotal(key: string): number {
-  return props.data.reduce((s, row) => s + (Number(row[key]) || 0), 0)
+// ---------------------------------------------------------------- Cumplimiento por mes
+/** Barras de referencia (gris) frente a lo producido (azul) con el % de cumplimiento encima */
+function opcionVsProducido(nombreRef: string, ref: (m: Mes) => number) {
+  const ms = meses.value
+  const cump = (m: Mes) => (ref(m) > 0 ? m.total / ref(m) * 100 : 0)
+  const z = zoom(ms.length)
+  return vacio({
+    ...base(),
+    tooltip: { trigger: 'axis' as const, axisPointer: { type: 'shadow' as const },
+      formatter: (ps: any[]) => { const m = ms[ps[0].dataIndex]
+        return `<b>${m.label}</b><br/>${punto(gris.value)} ${nombreRef}: <b>${fmtN(ref(m), 0)} m³</b><br/>${punto(AZUL)} Producido: <b>${fmtN(m.total, 0)} m³</b><br/>` +
+          `${punto(m.total - ref(m) >= 0 ? VERDE : ROJO)} Diferencia: <b>${sg(m.total - ref(m))} m³</b>` +
+          (ref(m) > 0 ? `<br/>${punto(colorCump(cump(m)))} Cumplimiento: <b>${pct(cump(m))}</b>` : '') } },
+    legend: leyenda([{ name: nombreRef, itemStyle: { color: gris.value } }, { name: 'Producido', itemStyle: { color: AZUL } }]),
+    grid: { left: 12, right: 20, bottom: z.gridBottom, top: 40, containLabel: true },
+    dataZoom: z.dataZoom,
+    xAxis: ejeX(ms.map(m => m.label)),
+    yAxis: ejeY(),
+    series: [
+      { name: nombreRef, type: 'bar' as const, barMaxWidth: 28, emphasis, data: ms.map(m => Math.round(ref(m))),
+        // Sin etiqueta: la barra producida suele medir casi lo mismo y el valor chocaría con el %; va en el tooltip
+        itemStyle: { color: gris.value, borderRadius: [4, 4, 0, 0] } },
+      { name: 'Producido', type: 'bar' as const, barMaxWidth: 28, emphasis, data: ms.map(m => Math.round(m.total)),
+        itemStyle: { color: AZUL, borderRadius: [4, 4, 0, 0] },
+        label: { ...labelPill.value, position: 'top' as const, formatter: (x: any) => { const m = ms[x.dataIndex]; return ref(m) > 0 ? pct(cump(m), 0) : m3Lbl(x.value) } } },
+    ],
+  }, ms.length > 0)
 }
+const optMeta = computed(() => opcionVsProducido('Meta mensual', m => m.meta))
+const optProyectado = computed(() => opcionVsProducido('Proyectado', m => m.proy))
 
-const monthlyAgg = computed(() => {
-  const map = new Map<string, { lineData: number[]; total: number; proy: number; metaMensual: number; first: number }>()
-  for (const r of props.data) {
-    const fecha = Number(r['Fecha'])
-    if (!fecha) continue
-    const key = monthLabel(serialToDate(fecha))
-    const e = map.get(key)
-    const vals = props.config.lines.map(l => Number(r[l.key]) || 0)
-    if (e) {
-      for (let i = 0; i < vals.length; i++) e.lineData[i] += vals[i]
-      e.total += Number(r['Total de M³']) || 0
-      e.proy += Number(r['M³ Proyectado']) || 0
-      if (fecha < e.first) e.first = fecha
-    } else {
-      map.set(key, { lineData: [...vals], total: Number(r['Total de M³']) || 0, proy: Number(r['M³ Proyectado']) || 0, metaMensual: Number(r['Meta Mensual M³']) || 0, first: fecha })
-    }
-  }
-  const sorted = [...map.entries()].sort((a, b) => a[1].first - b[1].first)
-  const labels: string[] = []
-  const totalArr: number[] = []
-  const proyArr: number[] = []
-  const metaMensualArr: number[] = []
-  const diffMetaArr: number[] = []
-  const diffProyArr: number[] = []
-  const cumpleMetaArr: number[] = []
-  const cumpleProyArr: number[] = []
-  const lineData: number[][] = props.config.lines.map(() => [])
-  for (const [k, v] of sorted) {
-    labels.push(k)
-    totalArr.push(v.total)
-    proyArr.push(v.proy)
-    metaMensualArr.push(v.metaMensual)
-    diffMetaArr.push(v.total - v.metaMensual)
-    diffProyArr.push(v.total - v.proy)
-    cumpleMetaArr.push(v.metaMensual > 0 ? (v.total / v.metaMensual) * 100 : 0)
-    cumpleProyArr.push(v.proy > 0 ? (v.total / v.proy) * 100 : 0)
-    for (let i = 0; i < v.lineData.length; i++) lineData[i].push(v.lineData[i])
-  }
-  return { labels, totalArr, proyArr, metaMensualArr, diffMetaArr, diffProyArr, cumpleMetaArr, cumpleProyArr, lineData }
+const optCumplimiento = computed(() => {
+  const ms = meses.value
+  const cMeta = ms.map(m => (m.meta > 0 ? +(m.total / m.meta * 100).toFixed(1) : null))
+  const cProy = ms.map(m => (m.proy > 0 ? +(m.total / m.proy * 100).toFixed(1) : null))
+  const z = zoom(ms.length)
+  const serie = (name: string, color: string, data: (number | null)[], conLinea: boolean) => ({
+    name, type: 'bar' as const, barMaxWidth: 24, barGap: '15%', emphasis, data,
+    itemStyle: { color, borderRadius: [4, 4, 0, 0] },
+    label: { ...labelPill.value, position: 'top' as const, formatter: (x: any) => (x.value == null ? '' : pct(x.value, 0)) },
+    ...(conLinea ? { markLine: { silent: true, symbol: 'none', lineStyle: { color: VERDE, type: 'dashed' as const, width: 1.5 },
+      label: { show: true, position: 'insideEndTop' as const, formatter: '100%', color: VERDE, fontFamily: FONT, fontSize: 10, fontWeight: 600 }, data: [{ yAxis: 100 }] } } : {}),
+  })
+  return vacio({
+    ...base(),
+    tooltip: { trigger: 'axis' as const, axisPointer: { type: 'shadow' as const },
+      formatter: (ps: any[]) => { const i = ps[0].dataIndex, m = ms[i]
+        return `<b>${m.label}</b><br/>` +
+          (cMeta[i] != null ? `${punto(C_META)} Meta: <b>${pct(cMeta[i]!)}</b> <span style="color:#94a3b8;font-size:10px">${fmtN(m.total, 0)} de ${fmtN(m.meta, 0)} m³</span><br/>` : '') +
+          (cProy[i] != null ? `${punto(C_PROY)} Proyectado: <b>${pct(cProy[i]!)}</b> <span style="color:#94a3b8;font-size:10px">${fmtN(m.total, 0)} de ${fmtN(m.proy, 0)} m³</span>` : '') } },
+    legend: leyenda([{ name: 'Cumplimiento meta', itemStyle: { color: C_META } }, { name: 'Cumplimiento proyectado', itemStyle: { color: C_PROY } }]),
+    grid: { left: 12, right: 20, bottom: z.gridBottom, top: 40, containLabel: true },
+    dataZoom: z.dataZoom,
+    xAxis: ejeX(ms.map(m => m.label)),
+    yAxis: ejeY({ max: (v: { max: number }) => Math.max(120, Math.ceil(v.max * 1.15)) }),
+    series: [serie('Cumplimiento meta', C_META, cMeta, true), serie('Cumplimiento proyectado', C_PROY, cProy, false)],
+  }, ms.length > 0)
 })
 
-const metaVsProducidoOpt = computed(() => {
-  return markRaw({
-    color: ['#8B5CF6', props.config.palette[0]],
-    tooltip: {
-      trigger: 'axis' as const,
-      formatter: (params: any) => {
-        let s = `<b>${params[0].axisValue}</b><br/>`
-        let meta = 0, real = 0
-        params.forEach((p: any) => {
-          const v = typeof p.value === 'number' ? p.value.toLocaleString('es-CO') : p.value
-          s += `<span style="color:${p.color}">${p.seriesName}:</span> ${v} m³<br/>`
-          if (p.seriesName === 'Meta Mensual M³') meta += p.value
-          if (p.seriesName === 'Total M³') real += p.value
-        })
-        const diff = real - meta
-        const diffColor = diff >= 0 ? '#10B981' : '#EF4444'
-        s += `<span style="color:${diffColor}"><b>Diferencia:</b> ${diff >= 0 ? '+' : ''}${diff.toLocaleString('es-CO')} m³</span><br/>`
-        if (meta > 0) {
-          const pct = (real / meta * 100)
-          const pctColor = pct >= 100 ? '#10B981' : '#F59E0B'
-          s += `<span style="color:${pctColor}"><b>Cumplimiento:</b> ${pct.toFixed(1)}%</span>`
-        }
-        return s
-      },
+// ---------------------------------------------------------------- Producción por línea
+const optLineasMes = computed(() => {
+  const ms = meses.value
+  const ls = props.config.lines
+  const z = zoom(ms.length)
+  return vacio({
+    ...base(),
+    tooltip: { trigger: 'axis' as const, axisPointer: { type: 'shadow' as const },
+      formatter: (ps: any[]) => { const m = ms[ps[0].dataIndex]
+        return `<b>${m.label}</b><br/>` + ls.map((l, i) => `${punto(colorLinea(i))} ${l.label}: <b>${fmtN(m.lineas[i], 0)} m³</b> <span style="color:#94a3b8;font-size:10px">${pct(m.total ? m.lineas[i] / m.total * 100 : 0)}</span>`).join('<br/>') +
+          `<br/>${punto(tinta.value)} Total: <b>${fmtN(m.total, 0)} m³</b>` } },
+    legend: leyenda(ls.map((l, i) => ({ name: l.label, itemStyle: { color: colorLinea(i) } }))),
+    grid: { left: 12, right: 20, bottom: z.gridBottom, top: 40, containLabel: true },
+    dataZoom: z.dataZoom,
+    xAxis: ejeX(ms.map(m => m.label)),
+    yAxis: ejeY(),
+    series: ls.map((l, i) => ({
+      name: l.label, type: 'bar' as const, barMaxWidth: 22, barGap: '15%', emphasis,
+      data: ms.map(m => Math.round(m.lineas[i])),
+      itemStyle: { color: colorLinea(i), borderRadius: [4, 4, 0, 0] },
+      // Valor vertical dentro de la barra: encima chocaría con las barras vecinas del mismo mes
+      label: { ...labelDentro, position: 'insideBottom' as const, rotate: 90, align: 'left' as const, verticalAlign: 'middle' as const, distance: 6,
+        formatter: (x: any) => (x.value ? m3Lbl(x.value) : '') },
+      labelLayout: { hideOverlap: true },
+    })),
+  }, ms.length > 0)
+})
+
+const optParticipacion = computed(() => {
+  const t = T.value
+  const datos = props.config.lines.map((l, i) => ({ name: l.label, value: Math.round(t.lineas[i]), color: colorLinea(i) })).filter(d => d.value > 0)
+  return vacio({
+    ...base(),
+    title: {
+      text: m3Lbl(t.total), subtext: 'm³ producidos', left: movil.value ? '49%' : '37%', top: movil.value ? '33%' : '44%', textAlign: 'center',
+      textStyle: { fontFamily: FONT, fontSize: 18, fontWeight: 700, color: isLight.value ? '#0f172a' : '#f1f5f9' },
+      subtextStyle: { fontFamily: FONT, fontSize: 11, color: chartTextColor.value },
     },
-    grid: baseGrid,
-  xAxis: { type: 'category' as const, data: monthlyAgg.value.labels, axisLabel: { fontWeight: 600 as const, color: chartTextColor.value, rotate: 45, fontSize: 11 } },
-  yAxis: { type: 'value' as const, axisLabel: { show: false }, splitLine: { show: false } },
-  series: [
-    { name: 'Meta Mensual M³', type: 'line', smooth: true, data: monthlyAgg.value.metaMensualArr, areaStyle: { opacity: 0.25 }, label: labelLine.value },
-    { name: 'Total M³', type: 'line', smooth: true, data: monthlyAgg.value.totalArr, areaStyle: { opacity: 0.25 }, label: labelLine.value },
+    tooltip: { trigger: 'item' as const, formatter: (p: any) => `${punto(p.color)} <b>${p.name}</b><br/>${fmtN(p.value, 0)} m³ (${pct(p.percent)})` },
+    legend: {
+      ...(movil.value ? { type: 'scroll' as const, orient: 'horizontal' as const, left: 'center', bottom: 0 } : { orient: 'vertical' as const, right: 10, top: 'middle' }),
+      icon: 'circle', itemWidth: 8, itemHeight: 8, itemGap: 12,
+      textStyle: { fontFamily: FONT, fontWeight: 500 as const, color: chartTextColor.value, fontSize: 11 },
+      formatter: (n: string) => { const d = datos.find(x => x.name === n); return d ? `${n}  ${m3Lbl(d.value)} m³` : n },
+    },
+    series: [{
+      type: 'pie', radius: movil.value ? ['38%', '60%'] : ['42%', '68%'], center: movil.value ? ['50%', '42%'] : ['38%', '55%'],
+      itemStyle: { borderRadius: 2, borderColor: isLight.value ? '#fff' : '#0b0f1a', borderWidth: 2 },
+      label: { show: true, formatter: (p: any) => pct(p.percent, 0), fontSize: 11, fontWeight: 600, fontFamily: FONT, color: chartTextColor.value },
+      data: datos.map(d => ({ name: d.name, value: d.value, itemStyle: { color: d.color } })),
+    }],
+  }, datos.length > 0)
+})
+
+// ---------------------------------------------------------------- Tendencia diaria
+const optDiaria = computed(() => {
+  const ds = dias.value
+  const ls = props.config.lines
+  const z = zoom(ds.length)
+  return vacio({
+    ...base(),
+    tooltip: { trigger: 'axis' as const, axisPointer: { type: 'shadow' as const },
+      formatter: (ps: any[]) => { const d = ds[ps[0].dataIndex]
+        return `<b>${fechaLarga(d.fecha)}</b><br/>` +
+          ls.map((l, i) => `${punto(colorLinea(i))} ${l.label}: <b>${fmtN(d.lineas[i], 0)} m³</b>`).join('<br/>') +
+          `<br/>${punto(tinta.value)} Total: <b>${fmtN(d.total, 0)} m³</b><br/>${punto(C_PROY)} Proyectado: <b>${fmtN(d.proy, 0)} m³</b>` +
+          (d.proy > 0 ? `<br/>${punto(d.total >= d.proy ? VERDE : ROJO)} Diferencia: <b>${sg(d.total - d.proy)} m³</b> (${pct(d.total / d.proy * 100)})` : '') } },
+    legend: leyenda([{ name: 'Alcanzó el proyectado', itemStyle: { color: VERDE } }, { name: 'Por debajo', itemStyle: { color: AZUL } }, { name: 'Proyectado', itemStyle: { color: C_PROY } }]),
+    grid: { left: 12, right: movil.value ? 20 : 70, bottom: z.gridBottom, top: 40, containLabel: true },
+    dataZoom: z.dataZoom,
+    xAxis: ejeX(ds.map(d => etiquetaDia(d.fecha))),
+    yAxis: ejeY(),
+    series: [
+      { name: 'Por debajo', type: 'bar' as const, barMaxWidth: 30, emphasis,
+        data: ds.map(d => ({ value: Math.round(d.total), itemStyle: { color: d.proy > 0 ? (d.total >= d.proy ? VERDE : AZUL) : AZUL, borderRadius: [4, 4, 0, 0] } })),
+        label: { ...labelPill.value, position: 'top' as const, formatter: (x: any) => (x.value ? m3Lbl(x.value) : '') },
+        labelLayout: { hideOverlap: true },
+        markLine: { silent: true, symbol: 'none', lineStyle: { color: tinta.value, type: 'dashed' as const, width: 1.2, opacity: 0.6 },
+          label: { show: !movil.value, position: 'end' as const, formatter: `Prom. ${m3Lbl(promedio.value)}`, color: chartTextColor.value, fontFamily: FONT, fontSize: 10, fontWeight: 600 },
+          data: [{ yAxis: Math.round(promedio.value) }] } },
+      { name: 'Proyectado', type: 'line' as const, step: 'middle' as const, symbol: 'none', data: ds.map(d => Math.round(d.proy)),
+        lineStyle: { color: C_PROY, width: 1.5 }, itemStyle: { color: C_PROY }, tooltip: { show: false } },
+      // Serie vacía solo para la leyenda del color verde (las barras se colorean día a día)
+      { name: 'Alcanzó el proyectado', type: 'line' as const, data: [], itemStyle: { color: VERDE }, tooltip: { show: false } },
     ],
-    legend: { bottom: 0, textStyle: { fontWeight: 600, color: chartTextColor.value } },
-  })
-})
-
-const proyectadoOpt = computed(() => {
-  return markRaw({
-    color: [props.config.palette[0], props.config.palette[3]],
-    tooltip: {
-      trigger: 'axis' as const,
-      formatter: (params: any) => {
-        let s = `<b>${params[0].axisValue}</b><br/>`
-        let real = 0, proy = 0
-        params.forEach((p: any) => {
-          const v = typeof p.value === 'number' ? p.value.toLocaleString('es-CO') : p.value
-          s += `<span style="color:${p.color}">${p.seriesName}:</span> ${v} m³<br/>`
-          if (p.seriesName === 'Total M³') real += p.value
-          if (p.seriesName === 'M³ Proyectado Diarios') proy += p.value
-        })
-        const diff = real - proy
-        const diffColor = diff >= 0 ? '#10B981' : '#EF4444'
-        s += `<span style="color:${diffColor}"><b>Diferencia:</b> ${diff >= 0 ? '+' : ''}${diff.toLocaleString('es-CO')} m³</span><br/>`
-        if (proy > 0) {
-          const pct = (real / proy * 100)
-          const pctColor = pct >= 100 ? '#10B981' : '#F59E0B'
-          s += `<span style="color:${pctColor}"><b>Cumplimiento:</b> ${pct.toFixed(1)}%</span>`
-        }
-        return s
-      },
-    },
-    grid: baseGrid,
-  xAxis: { type: 'category' as const, data: monthlyAgg.value.labels, axisLabel: { fontWeight: 600 as const, color: chartTextColor.value, rotate: 45, fontSize: 11 } },
-  yAxis: { type: 'value' as const, axisLabel: { show: false }, splitLine: { show: false } },
-  series: [
-    { name: 'Total M³', type: 'line', smooth: true, data: monthlyAgg.value.totalArr, areaStyle: { opacity: 0.25 }, label: labelLine.value },
-    { name: 'M³ Proyectado Diarios', type: 'line', smooth: true, data: monthlyAgg.value.proyArr, areaStyle: { opacity: 0.25 }, label: labelLine.value },
-    ],
-    legend: { bottom: 0, textStyle: { fontWeight: 600, color: chartTextColor.value } },
-  })
-})
-
-const cumplimientoMetaOpt = computed(() => {
-  return markRaw({
-    color: ['#06B6D4'],
-    tooltip: {
-      trigger: 'axis' as const,
-      formatter: (params: any) => {
-        const p = params[0]
-        const v = typeof p.value === 'number' ? p.value.toFixed(1) : p.value
-        return `<b>${p.axisValue}</b><br/><span style="color:${p.color}">${p.seriesName}:</span> ${v}%`
-      },
-    },
-    grid: baseGrid,
-  xAxis: { type: 'category' as const, data: monthlyAgg.value.labels, axisLabel: { fontWeight: 600 as const, color: chartTextColor.value, rotate: 45, fontSize: 11 } },
-  yAxis: { type: 'value' as const, axisLabel: { show: false }, splitLine: { show: false } },
-    series: [{
-      name: '% Cumpl. Meta',
-      type: 'line', smooth: true, data: monthlyAgg.value.cumpleMetaArr, areaStyle: { opacity: 0.25 },
-      label: { ...labelLine.value, formatter: (p: any) => p.value.toFixed(1) + '%' },
-    }],
-    legend: { bottom: 0, textStyle: { fontWeight: 600, color: chartTextColor.value } },
-  })
-})
-
-const cumplimientoProyOpt = computed(() => {
-  return markRaw({
-    color: ['#F59E0B'],
-    tooltip: {
-      trigger: 'axis' as const,
-      formatter: (params: any) => {
-        const p = params[0]
-        const v = typeof p.value === 'number' ? p.value.toFixed(1) : p.value
-        return `<b>${p.axisValue}</b><br/><span style="color:${p.color}">${p.seriesName}:</span> ${v}%`
-      },
-    },
-    grid: baseGrid,
-  xAxis: { type: 'category' as const, data: monthlyAgg.value.labels, axisLabel: { fontWeight: 600 as const, color: chartTextColor.value, rotate: 45, fontSize: 11 } },
-  yAxis: { type: 'value' as const, axisLabel: { show: false }, splitLine: { show: false } },
-    series: [{
-      name: '% Cumpl. Proy.',
-      type: 'line', smooth: true, data: monthlyAgg.value.cumpleProyArr, areaStyle: { opacity: 0.25 },
-      label: { ...labelLine.value, formatter: (p: any) => p.value.toFixed(1) + '%' },
-    }],
-    legend: { bottom: 0, textStyle: { fontWeight: 600, color: chartTextColor.value } },
-  })
-})
-
-const lineasOpt = computed(() => {
-  const m = monthlyAgg.value
-  const series = props.config.lines.map((l, i) => ({
-    name: l.label,
-    type: 'line' as const,
-    smooth: true,
-    data: m.lineData[i],
-    areaStyle: { opacity: 0.25 },
-    label: labelLine.value,
-  }))
-  return markRaw({
-    color: props.config.palette,
-    tooltip: {
-      trigger: 'axis' as const,
-      formatter: (params: any) => {
-        let s = `<b>${params[0].axisValue}</b><br/>`
-        params.forEach((p: any) => {
-          const v = typeof p.value === 'number' ? p.value.toLocaleString('es-CO') : p.value
-          s += `<span style="color:${p.color}">${p.seriesName}:</span> ${v} m³<br/>`
-        })
-        const sum = params.reduce((a: number, p: any) => a + (typeof p.value === 'number' ? p.value : 0), 0)
-        s += `<b>Total:</b> ${sum.toLocaleString('es-CO')} m³`
-        return s
-      },
-    },
-    grid: baseGrid,
-  xAxis: { type: 'category' as const, data: m.labels, axisLabel: { fontWeight: 600 as const, color: chartTextColor.value, rotate: 45, fontSize: 11 } },
-  yAxis: { type: 'value' as const, axisLabel: { show: false }, splitLine: { show: false } },
-    series,
-    legend: { bottom: 0, textStyle: { fontWeight: 600, color: chartTextColor.value } },
-  })
-})
-
-const totalLineaOpt = computed(() => {
-  const totals = props.config.lines.map(l => lineTotal(l.key))
-  const data = props.config.lines.map((l, i) => ({ name: l.label, value: totals[i] }))
-  return markRaw({
-    color: props.config.palette,
-    tooltip: {
-      trigger: 'item' as const,
-      formatter: (p: any) => {
-        const v = typeof p.value === 'number' ? p.value.toLocaleString('es-CO') : p.value
-        return `${p.name}: ${v} m³ (${p.percent}%)`
-      },
-    },
-    legend: { type: 'scroll' as const, orient: 'vertical' as const, right: 10, top: 10, textStyle: { fontWeight: 600 as const, color: chartTextColor.value, fontSize: 11 } },
-    graphic: [],
-    series: [{
-      type: 'pie', radius: ['42%', '68%'], center: ['38%', '55%'],
-      avoidLabelOverlap: true,
-      itemStyle: { borderRadius: 4, borderColor: theme.value === 'light' ? '#fff' : '#1e293b', borderWidth: 2 },
-      label: { show: true, formatter: (p: any) => p.percent + '%', fontSize: 10 },
-      data,
-    }],
-  })
+  }, ds.length > 0)
 })
 </script>
 
 <style scoped>
-.kpi-section { margin-bottom: 16px; }
-.kpi-section-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin: 0 0 8px 2px;
-}
-.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
-.kpi-row-3 { grid-template-columns: repeat(3, 1fr); }
-.charts-grid { display: grid; gap: 22px; margin-top: 16px; min-width: 0; }
-.charts-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
-.charts-grid.cols-1 { grid-template-columns: 1fr; }
-.charts-grid > * { min-width: 0; }
-.kpi-row > * { min-width: 0; }
-.root { min-width: 0; }
-.section-divider { height: 1px; background: var(--card-border); margin: 24px 0; opacity: 0.5; }
-@media (max-width: 1200px) {
-  .kpi-row { grid-template-columns: repeat(3, 1fr); }
-  .kpi-row-3 { grid-template-columns: repeat(3, 1fr); }
-}
-@media (max-width: 1024px) {
-  .kpi-row { grid-template-columns: repeat(3, 1fr); }
-  .kpi-row-3 { grid-template-columns: repeat(3, 1fr); }
-  .charts-grid.cols-2 { grid-template-columns: 1fr; }
-}
+.prod-graficas { display: flex; flex-direction: column; min-width: 0; }
+.vacio { padding: 48px 16px; text-align: center; color: var(--text-secondary); }
+.periodo { margin: 0 0 14px; font-size: 13px; color: var(--text-secondary); }
+.periodo strong { color: var(--text-primary); }
+.kpi-row { margin-bottom: 4px; }
+.kpi-row :deep(.kpi-value) { font-size: 19px; flex-wrap: wrap; overflow-wrap: anywhere; min-width: 0; }
+.section-title { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 28px 0 0; display: flex; align-items: center; gap: 8px; letter-spacing: -0.3px; }
+.title-bar { width: 14px; height: 2px; background: var(--accent); display: inline-block; border-radius: 1px; }
+.charts-grid { margin-top: 16px; }
+.charts-grid.cols-1 { grid-template-columns: minmax(0, 1fr); }
 @media (max-width: 768px) {
-  .kpi-row { grid-template-columns: repeat(2, 1fr); }
-  .kpi-row-3 { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 480px) {
-  .kpi-row { grid-template-columns: 1fr; }
-  .kpi-row-3 { grid-template-columns: 1fr; }
+  .section-title { font-size: 15px; margin-top: 22px; }
+  .charts-grid { margin-top: 12px; gap: 12px; }
 }
 </style>

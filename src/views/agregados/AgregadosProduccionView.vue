@@ -5,7 +5,7 @@
     <div v-else-if="error && !diario.length" class="page-state error">
       <span class="error-icon">!</span>
       <div><strong>Error al cargar datos</strong><p>{{ error }}</p></div>
-      <button class="retry-btn" @click="cargar">Reintentar</button>
+      <button class="retry-btn" @click="cargar(true)">Reintentar</button>
     </div>
 
     <div v-else-if="!diario.length" class="page-state"><span>No hay datos de producción para {{ planta.nombre }}.</span></div>
@@ -17,7 +17,7 @@
           <div class="filter-group">
             <FilterBar :data="diario" date-field="Fecha" :showProvider="false" :from="desde" :to="hasta" @dateRangeFilter="onFechas" />
           </div>
-          <button class="action-btn" :disabled="cargando" @click="cargar">
+          <button class="action-btn" :disabled="cargando" @click="cargar(true)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
             {{ cargando ? 'Actualizando…' : 'Actualizar' }}
           </button>
@@ -70,8 +70,9 @@ const diario = computed(() => (props.planta === 'cuncia' ? store.cunciaData?.row
 const cargando = computed(() => store.loading)
 const error = computed(() => store.error)
 
-function cargar() {
-  return props.planta === 'cuncia' ? store.fetchCuncia() : store.fetchAcacias()
+/** `force` (Actualizar / Reintentar) pide datos frescos saltando las cachés */
+function cargar(force = false) {
+  return props.planta === 'cuncia' ? store.fetchCuncia(force) : store.fetchAcacias(force)
 }
 onMounted(() => { if (!diario.value.length) cargar() })
 watch(() => props.planta, () => { if (!diario.value.length) cargar() })

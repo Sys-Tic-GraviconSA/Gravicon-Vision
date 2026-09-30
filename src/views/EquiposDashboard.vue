@@ -406,7 +406,7 @@
                 loading="eager"
               />
               <img
-                src="/Logos/Logo_Gravicon_Blanco.png"
+                src="/Logos/logo-blanco.webp"
                 @error="($event.target as HTMLImageElement).style.display = 'none'"
                 alt="Gravicon"
                 class="report-logo report-logo--dark"
@@ -3609,11 +3609,11 @@ async function loadData(forceRefresh = false, resetFilters = true) {
 
   const plantaKey = isConcretos.value ? 'concretos' : isAcacias.value ? 'acacias' : 'cuncia'
   if (isConcretos.value) {
-    await Promise.all([mant.fetchConcretos(forceRefresh), concretoStore.fetchData(), disp.fetchDisponibilidad(plantaKey, forceRefresh)])
+    await Promise.all([mant.fetchConcretos(forceRefresh), concretoStore.fetchData(forceRefresh), disp.fetchDisponibilidad(plantaKey, forceRefresh)])
   } else if (isAcacias.value) {
-    await Promise.all([mant.fetchAcacias(forceRefresh), prod.fetchAcacias(), disp.fetchDisponibilidad(plantaKey, forceRefresh)])
+    await Promise.all([mant.fetchAcacias(forceRefresh), prod.fetchAcacias(forceRefresh), disp.fetchDisponibilidad(plantaKey, forceRefresh)])
   } else {
-    await Promise.all([mant.fetchCuncia(forceRefresh), prod.fetchCuncia(), disp.fetchDisponibilidad(plantaKey, forceRefresh)])
+    await Promise.all([mant.fetchCuncia(forceRefresh), prod.fetchCuncia(forceRefresh), disp.fetchDisponibilidad(plantaKey, forceRefresh)])
   }
 
   if (resetFilters) {

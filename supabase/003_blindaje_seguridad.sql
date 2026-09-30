@@ -60,7 +60,10 @@ declare
     'order_price', 'order_detail',
     'produccion_agregados_acacias', 'produccion_agregados_cuncia',
     'proyecciones_clientes', 'proyecciones_planta',
-    'registros_zoho_creator_programacion_agregados'
+    'registros_zoho_creator_programacion_agregados',
+    'batch_export', 'batch_material_usage',
+    'posibles_clientes_leads', 'posibles_clientes_leads_productos_agregados',
+    'posibles_clientes_leads_productos_concretos'
   ];
 begin
   foreach t in array tablas loop
@@ -84,15 +87,46 @@ alter default privileges in schema public revoke all on tables from anon, authen
 alter default privileges in schema public revoke all on sequences from anon, authenticated;
 alter default privileges in schema public revoke all on functions from anon, authenticated;
 
--- ── 3. (OPCIONAL) Sincronización Zoho → Supabase ──────────────────────
--- Si la integración que carga datos desde Zoho escribe con la ANON key, después de esta
--- migración dejará de poder insertar. Lo recomendado es cambiarla para que use la
--- service_role key. Si no es posible, descomente SOLO la tabla que alimenta
--- (permite insertar/actualizar, pero no leer ni borrar):
---
--- grant insert, update on public.produccion_agregados_cuncia to anon;
--- create policy "zoho_sync_insert" on public.produccion_agregados_cuncia for insert to anon with check (true);
--- create policy "zoho_sync_update" on public.produccion_agregados_cuncia for update to anon using (true) with check (true);
+-- Las vistas se ejecutan con los permisos de su dueño y se saltan RLS: se cierran por grants.
+-- Las lee Zoho (Deluge) con la secret key, que no se ve afectada.
+do $$
+declare v text;
+begin
+  foreach v in array array['v_resumen_dia_planta', 'v_resumen_mes'] loop
+    if to_regclass('public.' || v) is null then continue; end if;
+    execute format('alter view public.%I set (security_invoker = true)', v);
+    execute format('revoke all on public.%I from anon, authenticated', v);
+    execute format('grant select on public.%I to service_role', v);
+  end loop;
+end $$;
+
+-- Funciones de trigger con search_path fijo (advisor function_search_path_mutable).
+do $$
+declare f record;
+begin
+  for f in select p.oid::regprocedure as firma from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+           where n.nspname = 'public'
+             and p.proname in ('procesar_auditoria_registro', 'copiar_a_historial',
+                               'set_updated_at_plantas', 'update_app_settings_updated_at', 'audit_log_inmutable') loop
+    execute format('alter function %s set search_path = public, pg_catalog', f.firma);
+  end loop;
+end $$;
+
+-- ── 3. Excepción temporal: Zoho → programación de agregados ───────────
+-- Un flujo Deluge de Zoho Creator hace upsert (GET + POST) en esta tabla con la PUBLISHABLE key.
+-- Se le deja solo leer/insertar/actualizar esa tabla (nunca borrar, ni tocar otras).
+-- Cuando ese flujo use la secret key (como los demás flujos de Zoho), borrar este bloque y ejecutar:
+--   drop policy zoho_sync_select on public.registros_zoho_creator_programacion_agregados;
+--   drop policy zoho_sync_insert on public.registros_zoho_creator_programacion_agregados;
+--   drop policy zoho_sync_update on public.registros_zoho_creator_programacion_agregados;
+--   revoke all on public.registros_zoho_creator_programacion_agregados from anon;
+grant select, insert, update on public.registros_zoho_creator_programacion_agregados to anon;
+create policy zoho_sync_select on public.registros_zoho_creator_programacion_agregados
+  for select to anon using (true);
+create policy zoho_sync_insert on public.registros_zoho_creator_programacion_agregados
+  for insert to anon with check (true);
+create policy zoho_sync_update on public.registros_zoho_creator_programacion_agregados
+  for update to anon using (true) with check (true);
 
 -- ── 4. Verificación ───────────────────────────────────────────────────
 -- Debe devolver rowsecurity = true en todas y ninguna política:
