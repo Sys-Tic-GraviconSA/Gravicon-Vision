@@ -515,6 +515,36 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
     }
   })
 
+  /**
+   * DELETE /api/admin/users/:id - Elimina la cuenta de forma definitiva (solo super-admin).
+   * Borra también sus permisos de vista y sus intentos de ingreso; la auditoría se conserva.
+   * OJO: auth.users es compartido con la app Indicadores (indicadores.perfiles cae en cascada):
+   * eliminar la cuenta también le quita ese acceso. Decisión del usuario (2026-09-30).
+   * El super-admin no se puede eliminar (loadTargetUser) ni nadie puede eliminarse a sí mismo.
+   */
+  router.delete('/admin/users/:id', authenticateRequest, requireSuperAdmin, async (req, res) => {
+    try {
+      const target = await loadTargetUser(req, res)
+      if (!target) return
+      if (target.id === (req as any).user.id) return res.status(400).json({ error: 'No puede eliminar su propia cuenta.' })
+      const email = (target.email ?? '').toLowerCase()
+      const sb = getSupabaseAdmin()
+      const { error } = await sb.auth.admin.deleteUser(target.id)
+      if (error) throw error
+      // Limpieza de datos asociados (permisos_vista también cae por la FK user_id; aquí se cubren filas solo con email)
+      if (email) {
+        await sb.from('permisos_vista').delete().eq('email', email)
+        await sb.from('login_attempts').delete().eq('identifier', email)
+        invalidatePermsCache(email)
+      }
+      await audit(req, 'user.delete', email || target.id)
+      res.json({ ok: true })
+    } catch (err) {
+      console.error('[admin-delete]', err)
+      res.status(500).json({ error: 'No se pudo eliminar el usuario.' })
+    }
+  })
+
   /** POST /api/admin/users/:id/reset-password - Asigna contraseña temporal (solo super-admin). */
   router.post('/admin/users/:id/reset-password', authenticateRequest, requireSuperAdmin, async (req, res) => {
     try {

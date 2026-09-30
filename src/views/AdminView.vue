@@ -98,6 +98,7 @@
               <button class="action-btn clear" :disabled="accionando" @click="abrirReset"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></svg> Restablecer contraseña</button>
               <button v-if="!selected.banned" class="action-btn danger" :disabled="accionando" @click="bloquear(true)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Bloquear acceso</button>
               <button v-else class="action-btn success" :disabled="accionando" @click="bloquear(false)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg> Desbloquear</button>
+              <button class="action-btn danger" :disabled="accionando" @click="abrirEliminar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg> Eliminar usuario</button>
               <span v-if="accionMsg" class="saved-msg">{{ accionMsg }}</span>
               <span v-if="accionError" class="error-msg">{{ accionError }}</span>
             </div>
@@ -177,6 +178,25 @@
         <div class="admin-actions end">
           <button type="button" class="action-btn clear" @click="cerrarNuevo" :disabled="creating">Cancelar</button>
           <button type="submit" class="action-btn primary" :disabled="creating || !passwordValida(nuevo.password) || !nuevo.email"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> {{ creating ? 'Creando…' : 'Crear usuario' }}</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Modal: eliminar usuario (se confirma escribiendo el correo) -->
+    <div v-if="showEliminar && selected" class="modal-backdrop" @click.self="showEliminar = false">
+      <form class="modal" @submit.prevent="eliminar" autocomplete="off">
+        <h3>Eliminar usuario</h3>
+        <p class="admin-desc">
+          Se eliminará la cuenta de <strong>{{ selected.email }}</strong> de forma <strong>definitiva</strong>: no podrá volver a ingresar y se borran sus permisos.
+          La cuenta es compartida: también <strong>pierde el acceso a Indicadores</strong> y se borra su perfil allí.
+          Esta acción no se puede deshacer. Si solo quiere impedir el acceso por un tiempo, use «Bloquear acceso».
+        </p>
+        <label class="admin-desc" for="confirmar-eliminar">Para confirmar, escriba el correo del usuario:</label>
+        <input id="confirmar-eliminar" v-model="confirmarEmail" class="text-input mono" type="text" :placeholder="selected.email" autocomplete="off" spellcheck="false" />
+        <p v-if="accionError" class="error-msg">{{ accionError }}</p>
+        <div class="admin-actions end">
+          <button type="button" class="action-btn clear" @click="showEliminar = false" :disabled="accionando">Cancelar</button>
+          <button type="submit" class="action-btn danger" :disabled="accionando || confirmarEmail.trim().toLowerCase() !== selected.email.toLowerCase()">{{ accionando ? 'Eliminando…' : 'Eliminar definitivamente' }}</button>
         </div>
       </form>
     </div>
@@ -436,15 +456,16 @@ const accionError = ref('')
 const showReset = ref(false)
 const resetPw = ref('')
 
-async function accionCuenta(path: string, body: Record<string, unknown>, okMsg: string): Promise<boolean> {
+async function accionCuenta(path: string, body: Record<string, unknown>, okMsg: string, method: 'POST' | 'DELETE' = 'POST'): Promise<boolean> {
   if (!selected.value) return false
   accionando.value = true
   accionMsg.value = ''
   accionError.value = ''
   try {
-    const res = await fetch(`/api/admin/users/${selected.value.id}/${path}`, {
-      method: 'POST', headers: authHeaders(true), body: JSON.stringify(body),
-    })
+    const url = `/api/admin/users/${selected.value.id}${path ? `/${path}` : ''}`
+    const res = await fetch(url, method === 'DELETE'
+      ? { method, headers: authHeaders() }
+      : { method, headers: authHeaders(true), body: JSON.stringify(body) })
     if (!res.ok) { accionError.value = await apiError(res, 'No se pudo completar la acción.'); return false }
     accionMsg.value = okMsg
     setTimeout(() => (accionMsg.value = ''), 2500)
@@ -476,6 +497,29 @@ function abrirReset() {
 
 async function restablecer() {
   if (await accionCuenta('reset-password', { password: resetPw.value }, 'Contraseña restablecida')) showReset.value = false
+}
+
+// ── Eliminar usuario ────────────────────────────────────
+const showEliminar = ref(false)
+const confirmarEmail = ref('')
+
+function abrirEliminar() {
+  confirmarEmail.value = ''
+  accionError.value = ''
+  showEliminar.value = true
+}
+
+async function eliminar() {
+  const u = selected.value
+  if (!u || confirmarEmail.value.trim().toLowerCase() !== u.email.toLowerCase()) return
+  // Se deselecciona antes de recargar la lista: el usuario eliminado ya no existe
+  const ok = await accionCuenta('', {}, `Usuario ${u.email} eliminado`, 'DELETE')
+  if (!ok) return
+  showEliminar.value = false
+  // Descarta cambios de permisos pendientes del usuario eliminado (evita el aviso de «cambios sin guardar»)
+  for (const k of allKeys) draft[k] = !!original.value[k]
+  selectedUser.value = ''
+  if (usuarios.value.length) seleccionar(usuarios.value[0].email)
 }
 
 // ── Nuevo usuario ────────────────────────────────────────
@@ -615,7 +659,7 @@ onMounted(async () => {
 .error-msg { color:var(--danger); font-size:12px; font-weight:600; margin:0; }
 
 .modal-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.45); display:flex; align-items:center; justify-content:center; z-index:100; padding:16px; }
-.modal { background:var(--card-bg); border:1px solid var(--card-border); border-radius:12px; padding:20px; width:100%; max-width:440px; display:flex; flex-direction:column; gap:12px; box-shadow:0 20px 40px rgba(0,0,0,.2); }
+.modal { background:linear-gradient(var(--card-bg), var(--card-bg)), var(--bg); border:1px solid var(--card-border); border-radius:12px; padding:20px; width:100%; max-width:440px; display:flex; flex-direction:column; gap:12px; box-shadow:0 20px 40px rgba(0,0,0,.2); }
 .modal h3 { font-size:15px; margin:0 0 4px; }
 .field { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:600; color:var(--text-secondary); }
 .pw-row { display:flex; gap:6px; }
