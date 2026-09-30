@@ -8,7 +8,7 @@
       <div class="page-state error">
         <span class="error-icon">!</span>
         <div><strong>Error al cargar datos</strong><p>{{ store.error }}</p></div>
-        <button class="retry-btn" @click="store.fetchData">Reintentar</button>
+        <button class="retry-btn" @click="store.fetchData(true)">Reintentar</button>
       </div>
     </template>
     <template v-else-if="!rows.length">

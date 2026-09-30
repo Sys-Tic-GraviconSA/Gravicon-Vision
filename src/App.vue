@@ -13,7 +13,9 @@
             <line x1="3" y1="18" x2="21" y2="18"></line>
           </svg>
         </button>
-        <span class="mobile-logo">GRAVICON</span>
+        <router-link to="/" class="mobile-logo" aria-label="Gravicon — inicio">
+          <img :src="logoSrc" alt="Gravicon" />
+        </router-link>
         <div style="width: 36px;"></div>
       </header>
 
@@ -22,13 +24,17 @@
 
       <aside class="sidebar" :class="{ collapsed }">
         <div class="sidebar-header">
-          <button class="collapse-btn" @click="collapsed = !collapsed" :title="collapsed ? 'Expandir menú' : 'Colapsar menú'" :style="{ marginLeft: collapsed ? '0' : 'auto' }">
+          <router-link v-if="!collapsed" to="/" class="sidebar-brand" aria-label="Gravicon — inicio" @click="handleLinkClick">
+            <img :src="logoSrc" alt="Gravicon" />
+          </router-link>
+          <img v-else :src="theme === 'dark' ? '/Logos/icono-g-blanco.png' : '/Logos/icono-g.png'" alt="Gravicon" class="sidebar-brand-icon" />
+          <button class="collapse-btn" @click="collapsed = !collapsed" :title="collapsed ? 'Expandir menú' : 'Colapsar menú'">
             <svg v-if="!collapsed" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
             <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
         </div>
 
-        <nav class="nav">
+        <nav class="nav" data-guia="menu">
           <button class="nav-section" :class="{ active: openMenus.agr }" @click="toggle('agr')">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="2,20 12,2 22,20"/><line x1="12" y1="2" x2="12" y2="20"/></svg>
             <span v-if="!collapsed">Agregados</span>
@@ -66,6 +72,7 @@
               <span class="role-badge" :class="userRole==='admin' || userRole==='superadmin' ? 'role-admin' : ''">{{ userRole }}</span>
             </div>
             <router-link to="/admin" class="user-menu-item" @click="closeUserMenu">Configuración</router-link>
+            <button class="user-menu-item" style="width:100%; text-align:left; background:none; border:none;" @click="abrirGuia">Guía de inicio</button>
             <div class="user-menu-divider"></div>
             <button class="user-menu-item" @click="handleLogout" style="width:100%; text-align:left; background:none; border:none;">Cerrar sesión</button>
           </div>
@@ -101,21 +108,24 @@
           </transition>
         </router-view>
       </main>
+
+      <GuiaInicio />
     </div>
   </template>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { reactive, ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { useTheme } from './composables/useTheme'
-import { useIdleLogout } from './composables/useIdleLogout'
+import { useGuiaInicio, GUIA_VERSION } from './composables/useGuiaInicio'
+import GuiaInicio from './components/ui/GuiaInicio.vue'
 
 const route = useRoute()
-const router = useRouter()
 const authStore = useAuthStore()
 const { theme, toggleTheme } = useTheme()
+const logoSrc = computed(() => theme.value === 'dark' ? '/Logos/logo-blanco.webp' : '/Logos/logo-azul.webp')
 
 const collapsed = ref(false)
 
@@ -146,16 +156,50 @@ function handleLinkClick() {
   }
 }
 
+// ── Guía de inicio: se abre sola la primera vez y se repite desde el menú de usuario ──
+const guia = useGuiaInicio()
+const claveGuia = () => `guia-vista:${authStore.userEmail}`
+function guiaVista(): boolean {
+  if ((authStore.profile?.tourVersion ?? 0) >= GUIA_VERSION) return true
+  // Respaldo local por si no se pudo guardar en el servidor
+  try { return Number(localStorage.getItem(claveGuia())) >= GUIA_VERSION } catch { return false }
+}
+function iniciarGuia() {
+  guia.iniciar(() => {
+    try { localStorage.setItem(claveGuia(), String(GUIA_VERSION)) } catch { /* sin almacenamiento */ }
+    authStore.marcarTourVisto(GUIA_VERSION)
+    if (window.innerWidth <= 768) collapsed.value = true
+  })
+}
+function abrirGuia() {
+  closeUserMenu()
+  iniciarGuia()
+}
+// Espera a tener el perfil, que no deba cambiar la contraseña y que esté en un tablero (no en Configuración)
+let guiaProgramada = false
+watch(() => [authStore.profile, authStore.mustChangePassword, route.name] as const, ([perfil, cambiarClave, nombre]) => {
+  if (guiaProgramada || !perfil || cambiarClave || nombre === 'login' || nombre === 'configuracion' || guia.activa.value || guiaVista()) return
+  guiaProgramada = true
+  // Pequeña espera para que la vista termine de pintarse antes de señalar sus elementos
+  setTimeout(() => { if (!guia.activa.value && !guiaVista()) iniciarGuia() }, 900)
+}, { immediate: true })
+// Al cerrar sesión se reinicia, para que el siguiente usuario en este navegador reciba su propia guía
+watch(() => authStore.profile, perfil => {
+  if (perfil) return
+  guiaProgramada = false
+  guia.activa.value = false
+})
+// En celular el menú lateral se abre solo en los pasos que lo señalan
+watch(() => guia.paso.value, p => {
+  if (!p || window.innerWidth > 768) return
+  collapsed.value = !p.enMenu
+})
+
 async function handleLogout() {
   await authStore.signOut()
-  router.replace('/login')
+  // Recarga completa: vacía de la memoria los datos de la sesión anterior (stores) antes del siguiente ingreso
+  window.location.replace('/login')
 }
-
-// Cierre automático por inactividad (30 min)
-useIdleLogout(() => authStore.isAuthenticated, async () => {
-  await authStore.signOut()
-  router.replace({ name: 'login', query: { motivo: 'inactividad' } })
-})
 </script>
 
 <style>
@@ -178,18 +222,25 @@ useIdleLogout(() => authStore.isAuthenticated, async () => {
 .sidebar.collapsed { width: var(--sidebar-collapsed); }
 
 .sidebar-header {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 16px;
+  justify-content: center;
+  padding: 16px 48px;
   border-bottom: 1px solid var(--card-border);
   min-height: 64px;
   flex-shrink: 0;
 }
 .sidebar.collapsed .sidebar-header {
-  padding: 16px 8px;
+  padding: 12px 8px;
+  flex-direction: column;
   justify-content: center;
+  gap: 10px;
 }
+.sidebar-brand { display: flex; align-items: center; justify-content: center; min-width: 0; }
+.sidebar:not(.collapsed) .collapse-btn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); }
+.sidebar-brand img { height: 44px; width: auto; display: block; }
+.sidebar-brand-icon { width: 28px; height: 28px; display: block; }
 
 .collapse-btn {
   width: 28px; height: 28px;
@@ -475,12 +526,8 @@ useIdleLogout(() => authStore.isAuthenticated, async () => {
     background: var(--sidebar-hover);
   }
   
-  .mobile-logo {
-    font-size: 15px;
-    font-weight: 800;
-    letter-spacing: 1.5px;
-    color: var(--accent);
-  }
+  .mobile-logo { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; }
+  .mobile-logo img { height: 34px; width: auto; display: block; }
 
   .sidebar-overlay {
     position: fixed;

@@ -207,3 +207,64 @@ export function calidad(ls: LineaFacturacion[], fmtT: (n: number) => string, fmt
   if (sinCliente.length) out.push({ nivel: 'medio', titulo: `${sinCliente.length} líneas de venta sin NIT de cliente`, texto: 'No se pueden asociar a un cliente en los rankings.' })
   return out
 }
+
+export interface FilaDiaSemana {
+  /** 1 = lunes … 7 = domingo */
+  n: number; nombre: string; corto: string
+  /** Días de ese tipo con venta en el período */
+  dias: number; venta: number; t: number; remisiones: number
+  promVenta: number; promT: number; promRemisiones: number
+}
+const NOMBRES_DIA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+/**
+ * Venta promedio por día de la semana (lunes a domingo): total de ese día ÷ fechas de ese día con venta.
+ * Solo devuelve los días de la semana en que hubo venta.
+ */
+export function porDiaSemana(ls: LineaFacturacion[]): FilaDiaSemana[] {
+  const ventas = ls.filter(esVenta)
+  const g = new Map<number, LineaFacturacion[]>()
+  for (const l of ventas) {
+    const n = ((new Date(l.fecha + 'T00:00:00Z').getUTCDay() + 6) % 7) + 1
+    g.set(n, [...(g.get(n) ?? []), l])
+  }
+  return [...g.entries()].sort((a, b) => a[0] - b[0]).map(([n, x]) => {
+    const dias = new Set(x.map(l => l.fecha)).size
+    const venta = suma(x, l => l.total), t = suma(x, l => l.toneladas)
+    const remisiones = new Set(x.map(l => l.doc)).size
+    return { n, nombre: NOMBRES_DIA[n - 1], corto: DIAS[n % 7], dias, venta, t, remisiones,
+      promVenta: venta / dias, promT: t / dias, promRemisiones: remisiones / dias }
+  })
+}
+
+export interface FilaPareto extends FilaCliente { rango: number; acumPct: number }
+/** Clientes ordenados por venta con el % acumulado (Pareto) y cuántos concentran el 80 % de la venta */
+export function paretoClientes(ls: LineaFacturacion[]): { filas: FilaPareto[]; n80: number } {
+  let acum = 0
+  const filas = porCliente(ls).map((c, i) => { acum += c.part; return { ...c, rango: i + 1, acumPct: Math.min(acum, 100) } })
+  const i80 = filas.findIndex(f => f.acumPct >= 80 - 1e-9)
+  return { filas, n80: i80 >= 0 ? i80 + 1 : filas.length }
+}
+
+/**
+ * Proyección día a día hasta fin de mes con la misma regla de cierreEstimado (promedio lun–sáb por los hábiles
+ * que faltan; domingos solo si la planta vendió algún domingo). `valor` elige la cifra a proyectar (venta o toneladas).
+ * Devuelve los días que faltan con el acumulado proyectado; el último coincide con el cierre estimado.
+ */
+export function proyeccionDiaria(dias: FilaDia[], corte: string, valor: (d: FilaDia) => number = d => d.venta): { fecha: string; acumulado: number }[] {
+  if (!dias.length) return []
+  const [y, m, d] = corte.split('-').map(Number)
+  const ult = new Date(Date.UTC(y, m, 0)).getUTCDate()
+  const esDom = (iso: string) => new Date(iso + 'T00:00:00Z').getUTCDay() === 0
+  const hab = dias.filter(x => !esDom(x.fecha)), dom = dias.filter(x => esDom(x.fecha))
+  const pHab = hab.length ? suma2(hab, valor) / hab.length : 0
+  const pDom = dom.length ? suma2(dom, valor) / dom.length : 0
+  let acumulado = suma2(dias, valor)
+  const out: { fecha: string; acumulado: number }[] = []
+  for (let i = d + 1; i <= ult; i++) {
+    const fecha = `${y}-${String(m).padStart(2, '0')}-${String(i).padStart(2, '0')}`
+    acumulado += esDom(fecha) ? pDom : pHab
+    out.push({ fecha, acumulado })
+  }
+  return out
+}
+const suma2 = (xs: FilaDia[], f: (d: FilaDia) => number) => xs.reduce((a, x) => a + f(x), 0)

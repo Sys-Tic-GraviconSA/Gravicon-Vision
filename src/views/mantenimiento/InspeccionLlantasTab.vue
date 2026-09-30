@@ -102,7 +102,7 @@
             <header class="report-header">
               <div class="report-header-brand">
                 <img src="/Logos/Logo-Gravicon-Nuevo.png" @error="($event.target as HTMLImageElement).style.display='none'" alt="Gravicon" class="report-logo report-logo--light" />
-                <img src="/Logos/Logo_Gravicon_Blanco.png" @error="($event.target as HTMLImageElement).style.display='none'" alt="Gravicon" class="report-logo report-logo--dark" />
+                <img src="/Logos/logo-blanco.webp" @error="($event.target as HTMLImageElement).style.display='none'" alt="Gravicon" class="report-logo report-logo--dark" />
                 <div class="report-header-text">
                   <h2>Mantenimiento de Llantas — {{ plantaLabel }} Gravicon</h2>
                   <span>GRAVAS Y CONCRETOS S.A. · Gestión de Llantas</span>

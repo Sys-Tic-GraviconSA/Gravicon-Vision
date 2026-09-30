@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed, shallowRef } from 'vue'
-import { useAuthStore } from './auth'
+import { cargarConCache } from './api'
 import type { SheetData } from './concreto'
 import type { DatosFacturacion } from '../types/facturacion'
 
@@ -10,28 +10,9 @@ import type { DatosFacturacion } from '../types/facturacion'
  * Cada store sigue el mismo patrón:
  * - shallowRef para los datos (evita reactividad profunda innecesaria)
  * - loading/error para estados de carga
- * - fetch*() con try/catch para manejo de errores
+ * - fetch*() vía cargarConCache: muestra al instante la copia local del navegador y la
+ *   reemplaza con la respuesta del servidor; `force` (botón «Actualizar») salta las cachés
  */
-
-/**
- * Realiza una petición GET autenticada a la API propia del backend.
- * Agrega automáticamente el token JWT de Supabase en el header Authorization.
- * @typeParam T - Tipo esperado de la respuesta JSON
- * @param path - Ruta relativa del endpoint (ej. `/api/spreadsheets/...`)
- * @returns La respuesta parseada como JSON
- */
-async function fetchApi<T>(path: string): Promise<T> {
-  const token = useAuthStore().accessToken
-  const headers: Record<string, string> = {}
-  if (token) headers['Authorization'] = `Bearer ${token}`
-  const res = await fetch(path, { headers })
-  if (!res.ok) {
-    let msg = `API error: ${res.status}`
-    try { msg = (await res.json()).error || msg } catch { /* respuesta sin JSON */ }
-    throw new Error(msg)
-  }
-  return res.json()
-}
 
 /** Store: Producción (Cuncia y Acacias) — datos diarios de producción de M³ */
 export const useProduccionStore = defineStore('produccion', () => {
@@ -44,22 +25,22 @@ export const useProduccionStore = defineStore('produccion', () => {
   /** Mensaje de error si la carga falla */
   const error = ref<string | null>(null)
 
-  /** Carga datos diarios de Cuncia desde Supabase (reemplaza Google Sheets) */
-  async function fetchCuncia() {
-    loading.value = true; error.value = null
-    try {
-      cunciaData.value = await fetchApi<SheetData>('/api/produccion-agregados-cuncia/data')
-    } catch (e: any) { console.error('[produccion-cuncia]', e); error.value = e.message }
-    finally { loading.value = false }
+  /** Carga datos diarios de Cuncia desde Supabase */
+  function fetchCuncia(force = false) {
+    return cargarConCache<SheetData>({
+      url: `/api/produccion-agregados-cuncia/data${force ? '?force=true' : ''}`, force,
+      hayDatos: () => !!cunciaData.value, aplicar: d => { cunciaData.value = d }, limpiar: () => { cunciaData.value = null },
+      loading, error, etiqueta: 'produccion-cuncia',
+    })
   }
 
-  /** Carga datos diarios de Acacias desde Supabase (reemplaza Google Sheets) */
-  async function fetchAcacias() {
-    loading.value = true; error.value = null
-    try {
-      acaciasData.value = await fetchApi<SheetData>('/api/produccion-agregados-acacias/data')
-    } catch (e: any) { console.error('[produccion-acacias]', e); error.value = e.message }
-    finally { loading.value = false }
+  /** Carga datos diarios de Acacias desde Supabase */
+  function fetchAcacias(force = false) {
+    return cargarConCache<SheetData>({
+      url: `/api/produccion-agregados-acacias/data${force ? '?force=true' : ''}`, force,
+      hayDatos: () => !!acaciasData.value, aplicar: d => { acaciasData.value = d }, limpiar: () => { acaciasData.value = null },
+      loading, error, etiqueta: 'produccion-acacias',
+    })
   }
 
   return { cunciaData, acaciasData, loading, error, fetchCuncia, fetchAcacias }
@@ -79,33 +60,30 @@ export const useMantenimientoStore = defineStore('mantenimiento', () => {
   const error = ref<string | null>(null)
 
   /** Carga datos de mantenimiento de Cuncia */
-  async function fetchCuncia(forceRefresh = false) {
-    loading.value = true; error.value = null
-    try {
-      const suffix = forceRefresh ? '?force=true' : ''
-      cunciaData.value = await fetchApi<SheetData>(`/api/mantenimiento-ot-cuncia/data${suffix}`)
-    } catch (e: any) { console.error('[mantenimiento-cuncia]', e); error.value = e.message }
-    finally { loading.value = false }
+  function fetchCuncia(forceRefresh = false) {
+    return cargarConCache<SheetData>({
+      url: `/api/mantenimiento-ot-cuncia/data${forceRefresh ? '?force=true' : ''}`, force: forceRefresh,
+      hayDatos: () => !!cunciaData.value, aplicar: d => { cunciaData.value = d }, limpiar: () => { cunciaData.value = null },
+      loading, error, etiqueta: 'mantenimiento-cuncia',
+    })
   }
 
   /** Carga datos de mantenimiento de Acacias */
-  async function fetchAcacias(forceRefresh = false) {
-    loading.value = true; error.value = null
-    try {
-      const suffix = forceRefresh ? '?force=true' : ''
-      acaciasData.value = await fetchApi<SheetData>(`/api/mantenimiento-ot-acacias/data${suffix}`)
-    } catch (e: any) { console.error('[mantenimiento-acacias]', e); error.value = e.message }
-    finally { loading.value = false }
+  function fetchAcacias(forceRefresh = false) {
+    return cargarConCache<SheetData>({
+      url: `/api/mantenimiento-ot-acacias/data${forceRefresh ? '?force=true' : ''}`, force: forceRefresh,
+      hayDatos: () => !!acaciasData.value, aplicar: d => { acaciasData.value = d }, limpiar: () => { acaciasData.value = null },
+      loading, error, etiqueta: 'mantenimiento-acacias',
+    })
   }
 
   /** Carga datos de mantenimiento de Concretos */
-  async function fetchConcretos(forceRefresh = false) {
-    loading.value = true; error.value = null
-    try {
-      const url = `/api/mantenimiento-ot-concretos/data${forceRefresh ? '?force=true' : ''}`
-      concretosData.value = await fetchApi<SheetData>(url)
-    } catch (e: any) { console.error('[mantenimiento-concretos]', e); error.value = e.message }
-    finally { loading.value = false }
+  function fetchConcretos(forceRefresh = false) {
+    return cargarConCache<SheetData>({
+      url: `/api/mantenimiento-ot-concretos/data${forceRefresh ? '?force=true' : ''}`, force: forceRefresh,
+      hayDatos: () => !!concretosData.value, aplicar: d => { concretosData.value = d }, limpiar: () => { concretosData.value = null },
+      loading, error, etiqueta: 'mantenimiento-concretos',
+    })
   }
 
   return { cunciaData, acaciasData, concretosData, loading, error, fetchCuncia, fetchAcacias, fetchConcretos }
@@ -123,12 +101,12 @@ export const useLlantasStore = defineStore('llantas', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  async function fetchData(forceRefresh = false) {
-    loading.value = true; error.value = null
-    try {
-      data.value = await fetchApi(`/api/llantas/data${forceRefresh ? '?force=true' : ''}`)
-    } catch (e: any) { console.error('[llantas]', e); error.value = e.message }
-    finally { loading.value = false }
+  function fetchData(forceRefresh = false) {
+    return cargarConCache<NonNullable<typeof data.value>>({
+      url: `/api/llantas/data${forceRefresh ? '?force=true' : ''}`, force: forceRefresh,
+      hayDatos: () => !!data.value, aplicar: d => { data.value = d }, limpiar: () => { data.value = null },
+      loading, error, etiqueta: 'llantas',
+    })
   }
 
   return { data, loading, error, fetchData }
@@ -144,12 +122,12 @@ export const useClientesStore = defineStore('clientes', () => {
   const error = ref<string | null>(null)
 
   /** Obtiene los datos desde el endpoint /api/proyecciones-clientes/data */
-  async function fetchData() {
-    loading.value = true; error.value = null
-    try {
-      data.value = await fetchApi('/api/proyecciones-clientes/data')
-    } catch (e: any) { console.error('[clientes]', e); error.value = e.message }
-    finally { loading.value = false }
+  function fetchData(force = false) {
+    return cargarConCache<NonNullable<typeof data.value>>({
+      url: `/api/proyecciones-clientes/data${force ? '?force=true' : ''}`, force,
+      hayDatos: () => !!data.value, aplicar: d => { data.value = d }, limpiar: () => { data.value = null },
+      loading, error, etiqueta: 'clientes',
+    })
   }
 
   /** Todos los registros sin filtrar */
@@ -245,25 +223,23 @@ export const useDisponibilidadStore = defineStore('disponibilidad', () => {
     const p = planta.toLowerCase()
     // Deduplicación: si ya tenemos datos para esta planta y no es force, no re-fetch
     if (!forceRefresh && data.value?.planta === p && (data.value?.placas?.length ?? 0) > 0) return
-    loading.value = true
-    error.value = null
-    try {
-      const d = await fetchApi<any>(`/api/disponibilidad/data?planta=${p}${forceRefresh ? '&force=true' : ''}`)
+    return cargarConCache<any>({
+      url: `/api/disponibilidad/data?planta=${p}${forceRefresh ? '&force=true' : ''}`, force: forceRefresh,
+      hayDatos: () => data.value?.planta === p && (data.value?.placas?.length ?? 0) > 0,
       // Reasignar con nuevos arrays para garantizar reactividad profunda
-      data.value = {
-        ...d,
-        placas: d?.placas ? [...d.placas] : [],
-        tareas: d?.tareas ? [...d.tareas] : [],
-        resumen: d?.resumen ? [...d.resumen] : [],
-        cronologia: d?.cronologia ? [...d.cronologia] : [],
-        combustible: d?.combustible ? [...d.combustible] : [],
-      }
-    } catch (e: any) {
-      console.error('[disponibilidad-store]', e)
-      error.value = e.message
-    } finally {
-      loading.value = false
-    }
+      aplicar: d => {
+        data.value = {
+          ...d,
+          placas: d?.placas ? [...d.placas] : [],
+          tareas: d?.tareas ? [...d.tareas] : [],
+          resumen: d?.resumen ? [...d.resumen] : [],
+          cronologia: d?.cronologia ? [...d.cronologia] : [],
+          combustible: d?.combustible ? [...d.combustible] : [],
+        }
+      },
+      limpiar: () => { data.value = null },
+      loading, error, etiqueta: 'disponibilidad-store',
+    })
   }
 
   return { data, loading, error, fetchDisponibilidad }
@@ -277,21 +253,25 @@ export const useFacturacionStore = defineStore('facturacion', () => {
   const error = ref<string | null>(null)
 
   /** Descarga la facturación de la planta; `force` pide al servidor releer el archivo de Drive */
-  async function fetchFacturacion(planta: 'cuncia' | 'acacias', force = false) {
-    loading.value = true; error.value = null
-    try {
-      // Formato compacto del servidor: filas como listas y textos repetidos como índices a un diccionario
-      const r = await fetchApi<Omit<DatosFacturacion, 'lineas'> & { columnas: string[]; diccionarios: Record<string, string[]>; filas: unknown[][] }>(
-        `/api/facturacion-agregados/data?planta=${planta}${force ? '&force=true' : ''}`)
-      const { columnas, diccionarios, filas, ...resto } = r
-      const lineas = filas.map(f => Object.fromEntries(columnas.map((c, i) => {
-        const v = f[i]
-        if (diccionarios[c]) return [c, diccionarios[c][v as number]]
-        return [c, c === 'factorPropio' ? v === 1 : v]
-      }))) as unknown as DatosFacturacion['lineas']
-      data.value = { ...data.value, [planta]: { ...resto, lineas } }
-    } catch (e: any) { console.error('[facturacion]', e); error.value = e.message }
-    finally { loading.value = false }
+  function fetchFacturacion(planta: 'cuncia' | 'acacias', force = false) {
+    // Formato compacto del servidor: filas como listas y textos repetidos como índices a un diccionario.
+    // La copia local guarda ese formato (más liviano) y se reconstruye igual al leerla.
+    type Compacto = Omit<DatosFacturacion, 'lineas'> & { columnas: string[]; diccionarios: Record<string, string[]>; filas: unknown[][] }
+    return cargarConCache<Compacto>({
+      url: `/api/facturacion-agregados/data?planta=${planta}${force ? '&force=true' : ''}`, force,
+      hayDatos: () => !!data.value[planta],
+      aplicar: r => {
+        const { columnas, diccionarios, filas, ...resto } = r
+        const lineas = filas.map(f => Object.fromEntries(columnas.map((c, i) => {
+          const v = f[i]
+          if (diccionarios[c]) return [c, diccionarios[c][v as number]]
+          return [c, c === 'factorPropio' ? v === 1 : v]
+        }))) as unknown as DatosFacturacion['lineas']
+        data.value = { ...data.value, [planta]: { ...resto, lineas } }
+      },
+      limpiar: () => { const { [planta]: _, ...resto } = data.value; data.value = resto },
+      loading, error, etiqueta: 'facturacion',
+    })
   }
 
   return { data, loading, error, fetchFacturacion }

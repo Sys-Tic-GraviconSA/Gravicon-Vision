@@ -80,8 +80,8 @@ function toggleThemeLocal() {
   toggleTheme()
 }
 
-const logoWhite = '/Logos/Logo_Gravicon_Blanco.png'
-const logoBlue = '/Logos/Logo_Gravicon_Azul.png'
+const logoWhite = '/Logos/logo-blanco.webp'
+const logoBlue = '/Logos/logo-azul.webp'
 
 const features = [
   { title: 'Gestión de Proyectos', desc: 'Controla tus obras y proyectos en tiempo real' },

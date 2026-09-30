@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import dotenv from 'dotenv'
 import ws from 'ws'
+import { createHash } from 'node:crypto'
 
 /**
  * Singleton que mantiene la instancia del cliente admin de Supabase (service role).
@@ -213,6 +214,44 @@ export function validatePassword(password: string): string | null {
   if (password.length > 72) return 'La contraseña no puede superar 72 caracteres.'
   if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
     return 'La contraseña debe incluir mayúscula, minúscula, número y símbolo.'
+  }
+  return null
+}
+
+/**
+ * Consulta Have I Been Pwned por k-anonimato: solo sale del servidor el prefijo de 5
+ * caracteres del SHA-1, nunca la contraseña ni su hash completo. Reemplaza la
+ * "Leaked password protection" de Supabase, que no está disponible en el plan gratuito.
+ * @returns true si aparece en filtraciones; false si no, o si HIBP no responde
+ * (no se bloquea el cambio de contraseña por una caída del servicio externo).
+ */
+export async function isPasswordPwned(password: string): Promise<boolean> {
+  const sha1 = createHash('sha1').update(password).digest('hex').toUpperCase()
+  const prefix = sha1.slice(0, 5)
+  const suffix = sha1.slice(5)
+  try {
+    const res = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`, {
+      headers: { 'Add-Padding': 'true', 'User-Agent': 'Gravicon-Vision' },
+      signal: AbortSignal.timeout(4000),
+    })
+    if (!res.ok) throw new Error(`HIBP ${res.status}`)
+    const body = await res.text()
+    return body.split('\n').some(line => {
+      const [hashSuffix, count] = line.trim().split(':')
+      return hashSuffix === suffix && Number(count) > 0
+    })
+  } catch (err) {
+    console.warn('[hibp] no se pudo verificar la contraseña:', (err as Error).message)
+    return false
+  }
+}
+
+/** Política completa: reglas de validatePassword + que no esté en filtraciones conocidas. */
+export async function validateNewPassword(password: string): Promise<string | null> {
+  const error = validatePassword(password)
+  if (error) return error
+  if (await isPasswordPwned(password)) {
+    return 'Esta contraseña aparece en filtraciones de datos públicas. Elija otra.'
   }
   return null
 }

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, shallowRef } from 'vue'
-import { useAuthStore } from './auth'
+import { cargarConCache } from './api'
 import { dateToSerial } from '../utils/dates'
 
 /**
@@ -75,16 +75,6 @@ const HEADERS = [
   'Subtotal', 'Impuestos',
 ]
 
-/** Obtiene datos de concreto desde el endpoint /api/concreto/data con autenticación JWT */
-async function fetchConcretoData() {
-  const token = useAuthStore().accessToken
-  const headers: Record<string, string> = {}
-  if (token) headers['Authorization'] = `Bearer ${token}`
-  const res = await fetch('/api/concreto/data', { headers })
-  if (!res.ok) throw new Error(`Concreto API: ${res.status}`)
-  return res.json()
-}
-
 /** Store de concreto premezclado — datos combinados de order_price y order_detail */
 export const useConcretoStore = defineStore('concreto', () => {
   /** Datos combinados en formato SheetData (incluye columna Horario) */
@@ -96,42 +86,44 @@ export const useConcretoStore = defineStore('concreto', () => {
   /** Timestamp de la última generación de datos desde la API */
   const lastUpdate = ref<string | null>(null)
 
-  /** Carga datos combinados de order_price + order_detail con horario extraído */
-  async function fetchData() {
-    loading.value = true; error.value = null
-    try {
-      const result = await fetchConcretoData()
-      const allPrice = result.price || []
-      const allDetail = result.detail || []
+  /** Combina order_price + order_detail: horario, bomba y operario de cada remisión */
+  function aplicar(result: { price?: any[]; detail?: any[]; count?: number; generado?: string }) {
+    const allPrice = result.price || []
+    const allDetail = result.detail || []
+    lastUpdate.value = result.generado || null
 
-      lastUpdate.value = result.generado || null
-
-      // Extrae horario, bomba, operario de cada remisión desde la tabla de detalle
-      const hourMap = new Map<string, number>()
-      const bombaMap = new Map<string, string>()
-      const operarioMap = new Map<string, string>()
-      for (const d of allDetail) {
-        const rem = String(d.remision)
-        if (d.tiempos_hphora_programada && d.remision) {
-          const h = parseInt(String(d.tiempos_hphora_programada).slice(0, 2), 10)
-          if (!isNaN(h)) hourMap.set(rem, h)
-        }
-        if (d.bomba) bombaMap.set(rem, String(d.bomba))
-        if (d.operario) operarioMap.set(rem, String(d.operario))
+    const hourMap = new Map<string, number>()
+    const bombaMap = new Map<string, string>()
+    const operarioMap = new Map<string, string>()
+    for (const d of allDetail) {
+      const rem = String(d.remision)
+      if (d.tiempos_hphora_programada && d.remision) {
+        const h = parseInt(String(d.tiempos_hphora_programada).slice(0, 2), 10)
+        if (!isNaN(h)) hourMap.set(rem, h)
       }
+      if (d.bomba) bombaMap.set(rem, String(d.bomba))
+      if (d.operario) operarioMap.set(rem, String(d.operario))
+    }
 
-      data.value = {
-        headers: [...HEADERS, 'Horario', 'Bomba', 'Operario'],
-        rows: allPrice.map((r: any) => ({
-          ...mapRow(r),
-          Horario: hourMap.get(String(r.remision)) ?? '',
-          Bomba: bombaMap.get(String(r.remision)) ?? '',
-          Operario: operarioMap.get(String(r.remision)) ?? '',
-        })),
-        total: result.count || allPrice.length,
-      }
-    } catch (e: any) { console.error('[concreto-store]', e); error.value = e.message }
-    finally { loading.value = false }
+    data.value = {
+      headers: [...HEADERS, 'Horario', 'Bomba', 'Operario'],
+      rows: allPrice.map((r: any) => ({
+        ...mapRow(r),
+        Horario: hourMap.get(String(r.remision)) ?? '',
+        Bomba: bombaMap.get(String(r.remision)) ?? '',
+        Operario: operarioMap.get(String(r.remision)) ?? '',
+      })),
+      total: result.count || allPrice.length,
+    }
+  }
+
+  /** Carga los datos de concreto (copia local al instante + servidor); `force` salta las cachés */
+  function fetchData(force = false) {
+    return cargarConCache({
+      url: `/api/concreto/data${force ? '?force=true' : ''}`, force,
+      hayDatos: () => !!data.value, aplicar, limpiar: () => { data.value = null },
+      loading, error, etiqueta: 'concreto-store',
+    })
   }
 
   return { data, loading, error, lastUpdate, fetchData }

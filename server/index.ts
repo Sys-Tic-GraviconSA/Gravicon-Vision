@@ -20,7 +20,7 @@ app.use(helmet({
       scriptSrc: ["'self'", "https://scripts.sirv.com"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "blob:", "https://*.supabase.co", "https://cdn-icons-png.flaticon.com", "https://*.sirv.com"],
+      imgSrc: ["'self'", "data:", "blob:", "https://*.supabase.co", "https://*.sirv.com"],
       connectSrc: ["'self'", "https://*.supabase.co", "https://*.sirv.com"],
       frameAncestors: ["'none'"],
       baseUri: ["'self'"],

@@ -1,4 +1,6 @@
 import { Router, type RequestHandler } from 'express'
+import compression from 'compression'
+import { conCache, TTL_SUPABASE_MS } from '../api/_lib/cache.js'
 import { analyzeAll, analyzeSpreadsheet, getSheetData, getSpreadsheetMeta } from '../api/_lib/sheets.js'
 import { buildMantenimientoOtRows } from '../api/_lib/mantenimiento-ot.js'
 import { buildLlantasData } from '../api/_lib/llantas.js'
@@ -24,7 +26,7 @@ import {
   recordFailedAttempt,
   sanitizeEmail,
   validateEmail,
-  validatePassword,
+  validateNewPassword,
 } from '../api/_lib/auth-helpers.js'
 
 const VALID_KEYS = new Set(Object.keys(SPREADSHEETS))
@@ -56,6 +58,23 @@ const PDF_RESOLVE_HOSTS = new Set(['drive.google.com', 'docs.google.com', 'goo.g
  */
 export function createApiRouter(loginLimiter?: RequestHandler) {
   const router = Router()
+
+  // Comprime las respuestas (JSON de hasta 14 MB baja a ~1 MB) y evita el límite de 4,5 MB de Vercel
+  router.use(compression({ threshold: 1024 }))
+
+  // Caché HTTP: los datos (GET …/data) se guardan en el navegador pero siempre se revalidan con ETag
+  // (304 si no cambiaron); lo demás (perfil, administración, login) nunca se guarda.
+  router.use((req, res, next) => {
+    res.setHeader('Cache-Control', req.method === 'GET' && req.path.endsWith('/data') ? 'private, no-cache' : 'no-store')
+    if (req.method === 'GET' && req.path.endsWith('/data')) res.setHeader('Vary', 'Authorization')
+    next()
+  })
+
+  /** POST /api/salir - Al cerrar sesión, pide al navegador borrar su caché HTTP de este sitio. */
+  router.post('/salir', (_req, res) => {
+    res.setHeader('Clear-Site-Data', '"cache"')
+    res.status(204).end()
+  })
 
   /** POST /api/auth/login - Inicio de sesión con rate limiting opcional. */
   router.post('/auth/login', loginLimiter ?? ((_req, _res, next) => next()), async (req, res) => {
@@ -142,16 +161,18 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
   })
 
   /** GET /api/proyecciones-clientes/data - Proyecciones de clientes desde Supabase. */
-  router.get('/proyecciones-clientes/data', authenticateRequest, requireView(['concretos', 'clientes']), async (_req, res) => {
+  router.get('/proyecciones-clientes/data', authenticateRequest, requireView(['concretos', 'clientes']), async (req, res) => {
     try {
-      const supabase = getSupabaseAdmin()
-      const { data, error } = await supabase
-        .from('proyecciones_clientes')
-        .select('*')
-        .order('fecha', { ascending: true })
-        .limit(100000)
-      if (error) throw error
-      res.json({ rows: data ?? [], total: data?.length ?? 0 })
+      const rows = await conCache('proyecciones_clientes', TTL_SUPABASE_MS, async () => {
+        const { data, error } = await getSupabaseAdmin()
+          .from('proyecciones_clientes')
+          .select('*')
+          .order('fecha', { ascending: true })
+          .limit(100000)
+        if (error) throw error
+        return data ?? []
+      }, req.query.force === 'true')
+      res.json({ rows, total: rows.length })
     } catch (err) {
       console.error('[proyecciones-clientes]', err)
       res.status(500).json({ error: 'Error interno del servidor.' })
@@ -159,16 +180,18 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
   })
 
   /** GET /api/proyecciones-planta/data - Proyecciones diarias por planta. */
-  router.get('/proyecciones-planta/data', authenticateRequest, requireView(['concretos']), async (_req, res) => {
+  router.get('/proyecciones-planta/data', authenticateRequest, requireView(['concretos']), async (req, res) => {
     try {
-      const supabase = getSupabaseAdmin()
-      const { data, error } = await supabase
-        .from('proyecciones_planta')
-        .select('*')
-        .order('fecha', { ascending: true })
-        .limit(100000)
-      if (error) throw error
-      res.json({ rows: data ?? [], total: data?.length ?? 0 })
+      const rows = await conCache('proyecciones_planta', TTL_SUPABASE_MS, async () => {
+        const { data, error } = await getSupabaseAdmin()
+          .from('proyecciones_planta')
+          .select('*')
+          .order('fecha', { ascending: true })
+          .limit(100000)
+        if (error) throw error
+        return data ?? []
+      }, req.query.force === 'true')
+      res.json({ rows, total: rows.length })
     } catch (err) {
       console.error('[proyecciones-planta]', err)
       res.status(500).json({ error: 'Error interno del servidor.' })
@@ -237,9 +260,9 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
   })
 
   /** GET /api/produccion-agregados-acacias/data - Producción agregados Acacias (Supabase). */
-  router.get('/produccion-agregados-acacias/data', authenticateRequest, requireView(['acacias']), async (_req, res) => {
+  router.get('/produccion-agregados-acacias/data', authenticateRequest, requireView(['acacias']), async (req, res) => {
     try {
-      const result = await loadAcaciasProduccion()
+      const result = await conCache('produccion-acacias', TTL_SUPABASE_MS, loadAcaciasProduccion, req.query.force === 'true')
       res.json(result)
     } catch (err) {
       console.error('[produccion-agregados-acacias]', err)
@@ -248,9 +271,9 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
   })
 
   /** GET /api/produccion-agregados-cuncia/data - Producción agregados Cuncia (Supabase). */
-  router.get('/produccion-agregados-cuncia/data', authenticateRequest, requireView(['cuncia']), async (_req, res) => {
+  router.get('/produccion-agregados-cuncia/data', authenticateRequest, requireView(['cuncia']), async (req, res) => {
     try {
-      const result = await loadCunciaProduccion()
+      const result = await conCache('produccion-cuncia', TTL_SUPABASE_MS, loadCunciaProduccion, req.query.force === 'true')
       res.json(result)
     } catch (err) {
       console.error('[produccion-agregados-cuncia]', err)
@@ -259,16 +282,18 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
   })
 
   /** GET /api/programacion-agregados/data - Programación de agregados desde Zoho Creator. */
-  router.get('/programacion-agregados/data', authenticateRequest, requireView(['cuncia/programacion', 'acacias/programacion']), async (_req, res) => {
+  router.get('/programacion-agregados/data', authenticateRequest, requireView(['cuncia/programacion', 'acacias/programacion']), async (req, res) => {
     try {
-      const supabase = getSupabaseAdmin()
-      const { data, error } = await supabase
-        .from('registros_zoho_creator_programacion_agregados')
-        .select('*')
-        .order('fecha_de_servicio', { ascending: false })
-        .limit(100000)
-      if (error) throw error
-      res.json({ rows: data ?? [], total: data?.length ?? 0 })
+      const rows = await conCache('registros_zoho_creator_programacion_agregados', TTL_SUPABASE_MS, async () => {
+        const { data, error } = await getSupabaseAdmin()
+          .from('registros_zoho_creator_programacion_agregados')
+          .select('*')
+          .order('fecha_de_servicio', { ascending: false })
+          .limit(100000)
+        if (error) throw error
+        return data ?? []
+      }, req.query.force === 'true')
+      res.json({ rows, total: rows.length })
     } catch (err) {
       console.error('[programacion-agregados]', err)
       res.status(500).json({ error: 'Error interno del servidor.' })
@@ -276,20 +301,23 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
   })
 
   /** GET /api/concreto/data - Datos de concreto (order_price + order_detail). */
-  router.get('/concreto/data', authenticateRequest, requireView(['concretos']), async (_req, res) => {
+  router.get('/concreto/data', authenticateRequest, requireView(['concretos']), async (req, res) => {
     try {
-      const supabase = getSupabaseAdmin()
-      const limit = 100000
-      const [resPrice, resDetail] = await Promise.all([
-        supabase.from('order_price').select('*', { count: 'exact', head: false }).limit(limit),
-        supabase.from('order_detail').select('remision,tiempos_hphora_programada,bomba,operario').limit(limit),
-      ])
-      if (resPrice.error) throw resPrice.error
-      if (resDetail.error) throw resDetail.error
-      if (resPrice.count && resPrice.count > limit) {
-        console.warn(`[concreto-data] order_price truncado: ${resPrice.count} filas, devolviendo ${limit}`)
-      }
-      res.json({ price: resPrice.data, detail: resDetail.data, count: resPrice.count })
+      const datos = await conCache('concreto', TTL_SUPABASE_MS, async () => {
+        const supabase = getSupabaseAdmin()
+        const limit = 100000
+        const [resPrice, resDetail] = await Promise.all([
+          supabase.from('order_price').select('*', { count: 'exact', head: false }).limit(limit),
+          supabase.from('order_detail').select('remision,tiempos_hphora_programada,bomba,operario').limit(limit),
+        ])
+        if (resPrice.error) throw resPrice.error
+        if (resDetail.error) throw resDetail.error
+        if (resPrice.count && resPrice.count > limit) {
+          console.warn(`[concreto-data] order_price truncado: ${resPrice.count} filas, devolviendo ${limit}`)
+        }
+        return { price: resPrice.data, detail: resDetail.data, count: resPrice.count }
+      }, req.query.force === 'true')
+      res.json(datos)
     } catch (err) {
       console.error('[concreto-data]', err)
       res.status(500).json({ error: 'Error interno del servidor.' })
@@ -328,7 +356,26 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
       superadmin: isSuperAdmin(user),
       mustChangePassword: !!user.app_metadata?.must_change_password,
       perms,
+      // Versión de la guía de inicio que ya vio (0 = nunca); se guarda en el servidor para no repetirla en otro equipo
+      tourVersion: Number(user.app_metadata?.tour_version) || 0,
     })
+  })
+
+  /** POST /api/me/tour - Marca como vista (terminada u omitida) la guía de inicio. */
+  router.post('/me/tour', authenticateRequest, async (req, res) => {
+    try {
+      const user = (req as any).user
+      const version = Number(req.body?.version)
+      if (!Number.isInteger(version) || version < 1 || version > 1000) return res.status(400).json({ error: 'Versión inválida.' })
+      const { error } = await getSupabaseAdmin().auth.admin.updateUserById(user.id, {
+        app_metadata: { ...user.app_metadata, tour_version: version },
+      })
+      if (error) throw error
+      res.json({ ok: true })
+    } catch (err) {
+      console.error('[me-tour]', err)
+      res.status(500).json({ error: 'No se pudo guardar el estado de la guía.' })
+    }
   })
 
   /** POST /api/me/password - Cambia la contraseña propia verificando la actual. */
@@ -338,7 +385,7 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
       const current = typeof req.body?.currentPassword === 'string' ? req.body.currentPassword : ''
       const next = typeof req.body?.newPassword === 'string' ? req.body.newPassword : ''
       if (!current || !next) return res.status(400).json({ error: 'Complete la contraseña actual y la nueva.' })
-      const pwError = validatePassword(next)
+      const pwError = await validateNewPassword(next)
       if (pwError) return res.status(400).json({ error: pwError })
       if (next === current) return res.status(400).json({ error: 'La nueva contraseña debe ser distinta a la actual.' })
 
@@ -393,7 +440,7 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
       const perms = sanitizePerms(req.body?.perms)
 
       if (!email || !validateEmail(email)) return res.status(400).json({ error: 'Correo inválido.' })
-      const pwError = validatePassword(password)
+      const pwError = await validateNewPassword(password)
       if (pwError) return res.status(400).json({ error: pwError })
 
       const supabase = getSupabaseAdmin()
@@ -474,7 +521,7 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
       const target = await loadTargetUser(req, res)
       if (!target) return
       const password = typeof req.body?.password === 'string' ? req.body.password : ''
-      const pwError = validatePassword(password)
+      const pwError = await validateNewPassword(password)
       if (pwError) return res.status(400).json({ error: pwError })
       const { error } = await getSupabaseAdmin().auth.admin.updateUserById(target.id, {
         password,
