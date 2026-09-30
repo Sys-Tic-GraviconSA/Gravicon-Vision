@@ -120,8 +120,7 @@
             <header class="report-header">
               <div class="report-header-brand">
               <img
-                src="https://gravicon2026.sirv.com/Pagina%20Gravicon/images/Logos/gravicon_logo.png"
-                @error="($event.target as HTMLImageElement).src = '/Logos/Logo-Gravicon-Nuevo.png'"
+                src="/Logos/logo-azul-informe.png"
                 alt="Gravicon"
                 class="report-logo"
                 crossorigin="anonymous"
