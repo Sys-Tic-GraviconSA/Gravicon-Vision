@@ -122,16 +122,18 @@ const kpis = computed(() => {
   const { filas, n80 } = pareto.value
   const acum = (k: number) => filas[Math.min(k, filas.length) - 1]?.acumPct ?? 0
   const c = proyeccion.value
+  const traslados = { label: 'Traslados de Inventario', value: `${tFmt(r.traslados.t)} t`, icon: 'layers', accent: '#64748B',
+    detail: fila('#64748B', 'Documentos', fmtN(r.traslados.docs, 0)) + fila('#64748B', 'Subtipo', '003') }
+  const donaciones = { label: 'Donaciones', value: `${tFmt(r.donaciones.t)} t`, icon: 'check-circle', accent: '#10B981',
+    detail: fila('#10B981', 'Valor', cop(r.donaciones.valor)) + fila('#10B981', 'Beneficiarios', fmtN(r.donaciones.beneficiarios, 0)) + fila('#10B981', 'Subtipo', '952') }
   const vn = ventaNeta(props.lineas)
   return [
     { label: 'Venta (sin IVA)', value: cop(r.venta), icon: 'dollar', accent: '#3B82F6',
       detail: detFam(f => `${cop(f.venta)} <span style='color:var(--text-tertiary)'>(${pct(f.part)})</span>`) + (r.fletes ? fila(COLOR_FAMILIA.Fletes, 'Fletes', cop(r.fletes)) : '') },
-    // Venta sin flete de Holcim, donaciones ni traslados
+    // Venta neta: solo facturación, sin el flete de Holcim, donaciones ni traslados
     { label: 'Venta Neta', value: cop(vn.neta), icon: 'check-circle', accent: '#0F766E',
-      detail: fila(COLOR_TIPO.venta, 'Venta total', cop(vn.venta)) +
-        (vn.fleteHolcim ? fila(COLOR_FAMILIA.Fletes, '− Flete Holcim', cop(vn.fleteHolcim)) : fila('#94a3b8', 'Flete Holcim', 'no hay en el período')) +
-        fila(tinta.value, 'Toneladas vendidas', `${tFmt(vn.t)} t`) +
-        fila('#94a3b8', 'Excluye', 'donaciones y traslados') },
+      detail: fila(COLOR_TIPO.venta, 'Venta total', cop(vn.venta)) + fila(COLOR_FAMILIA.Fletes, '− Flete Holcim', vn.fleteHolcim ? cop(vn.fleteHolcim) : 'no hay') +
+        fila('#94a3b8', 'Sin', 'donaciones ni traslados') },
     { label: 'Toneladas Despachadas', value: `${tFmt(r.tDespachadas)} t`, icon: 'truck', accent: '#15223c',
       detail: fila(COLOR_TIPO.venta, 'Vendidas', `${tFmt(r.tVendidas)} t`) + fila(COLOR_TIPO.traslado, 'Traslados', `${tFmt(r.tTraslados)} t`) +
         (r.donaciones.t ? fila(COLOR_TIPO.donacion, 'Donadas', `${tFmt(r.donaciones.t)} t`) : '') +
@@ -143,20 +145,18 @@ const kpis = computed(() => {
     { label: 'Clientes Activos', value: fmtN(r.clientes, 0), icon: 'users', accent: '#10B981',
       detail: (r.clientes ? fila('#10B981', 'Venta por cliente', cop(r.venta / r.clientes)) : '') +
         (filas.length ? fila('#8B5CF6', 'Hacen el 80 %', `${n80} ${n80 === 1 ? 'cliente' : 'clientes'}`) + fila('#8B5CF6', 'Principal', pct(acum(1))) + (filas.length > 5 ? fila('#8B5CF6', 'Top 5', pct(acum(5))) : '') : '') },
-    c
-      ? { label: 'Cierre Estimado del Mes', value: cop(c.cierre.valor), icon: 'trending-up', accent: '#F59E0B',
-          detail: fila(COLOR_TIPO.venta, 'Vendido', cop(r.venta)) + fila('#F59E0B', 'Por vender', cop(c.cierre.valor - r.venta)) +
-            (n ? fila(tinta.value, 'Promedio diario', cop(r.venta / n)) : '') +
-            fila('#94a3b8', 'Faltan', `${c.cierre.faltan} ${c.cierre.faltan === 1 ? 'día' : 'días'} de venta`) }
-      : { label: 'Venta Promedio Diaria', value: n ? cop(r.venta / n) : '—', icon: 'activity', accent: '#3B82F6',
+    { label: 'Venta Promedio Diaria', value: n ? cop(r.venta / n) : '—', icon: 'activity', accent: '#3B82F6',
       detail: fila(tinta.value, 'Días con venta', fmtN(n, 0)) + (mejor ? fila(VERDE, 'Mejor día', `${fechaCorta(mejor.fecha)} · ${copCorto(mejor.venta)}`) : '') +
         (menor && n > 1 ? fila(ROJO, 'Más bajo', `${fechaCorta(menor.fecha)} · ${copCorto(menor.venta)}`) : '') +
         (fuerte && n > 6 ? fila(COLOR_TIPO.venta, 'Día más fuerte', `${fuerte.nombre.toLowerCase()} · ${copCorto(fuerte.promVenta)}`) : '') },
-    { label: 'Traslados y Donaciones', value: `${tFmt(r.traslados.t + r.donaciones.t)} t`, icon: 'layers', accent: '#64748B',
-      detail: fila('#64748B', 'Traslados (003)', `${tFmt(r.traslados.t)} t · ${fmtN(r.traslados.docs, 0)} doc.`) +
-        fila('#10B981', 'Donaciones (952)', `${tFmt(r.donaciones.t)} t · ${cop(r.donaciones.valor)}`) +
-        (r.donaciones.beneficiarios ? fila('#10B981', 'Beneficiarios', fmtN(r.donaciones.beneficiarios, 0)) : '') +
-        fila('#94a3b8', 'Venta', 'no suman') },
+    // Con proyección: cierre del mes y traslados + donaciones en una tarjeta; sin ella, traslados y donaciones por separado
+    ...(c
+      ? [{ ...traslados, detail: traslados.detail + fila('#10B981', 'Donaciones', `${tFmt(r.donaciones.t)} t · ${cop(r.donaciones.valor)}`) },
+        { label: 'Cierre Estimado del Mes', value: cop(c.cierre.valor), icon: 'trending-up', accent: '#F59E0B',
+          detail: fila(COLOR_TIPO.venta, 'Vendido', cop(r.venta)) + fila('#F59E0B', 'Por vender', cop(c.cierre.valor - r.venta)) +
+            fila(tinta.value, 'Toneladas', `≈ ${tFmt(c.t.at(-1)?.acumulado ?? 0)} t`) +
+            fila('#94a3b8', 'Faltan', `${c.cierre.faltan} ${c.cierre.faltan === 1 ? 'día' : 'días'} de venta`) }]
+      : [traslados, donaciones]),
   ]
 })
 
