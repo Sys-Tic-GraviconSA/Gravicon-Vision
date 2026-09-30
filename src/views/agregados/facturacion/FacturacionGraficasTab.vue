@@ -9,7 +9,7 @@
 
       <!-- KPIs por grupo: totales, venta, y despacho y clientes (mismas tarjetas, ordenadas) -->
       <p class="kpi-grupo">Totales del período</p>
-      <div class="kpi-row">
+      <div class="kpi-row n2 totales">
         <KpiCard v-for="k in kpisTotales" :key="k.label" v-bind="k" />
       </div>
       <p class="kpi-grupo">Venta</p>
@@ -172,16 +172,20 @@ const kpis = computed(() => {
 // Totales del período: toneladas y valor facturado, normales y sin flete Holcim, donaciones ni traslados
 const kpisTotales = computed(() => {
   const x = totalesFacturacion(props.lineas)
-  const sin = fila('#94a3b8', 'Sin', 'flete Holcim, donaciones ni traslados')
   return [
-    { label: 'Toneladas Totales', value: `${tFmt(x.tTotal)} t`, icon: 'truck', accent: '#15223c',
-      detail: fila(COLOR_TIPO.venta, 'Vendidas', `${tFmt(x.tNeta)} t`) + fila(COLOR_TIPO.traslado, 'Traslados', `${tFmt(x.tTraslados)} t`) + fila(COLOR_TIPO.donacion, 'Donadas', `${tFmt(x.tDonadas)} t`) },
-    { label: 'Toneladas Netas', value: `${tFmt(x.tNeta)} t`, icon: 'package', accent: '#0F766E',
-      detail: fila(COLOR_TIPO.venta, 'Solo vendidas', `${tFmt(x.tNeta)} t`) + sin },
-    { label: 'Valor Facturado Total', value: cop(x.valorTotal), icon: 'dollar', accent: '#3B82F6',
-      detail: fila(COLOR_TIPO.venta, 'Venta', cop(x.venta)) + (x.fleteHolcim ? fila(COLOR_FAMILIA.Fletes, 'Flete Holcim', cop(x.fleteHolcim)) : '') + fila(COLOR_TIPO.donacion, 'Donado', cop(x.valorDonado)) },
-    { label: 'Valor Facturado Neto', value: cop(x.valorNeto), icon: 'check-circle', accent: '#0F766E',
-      detail: fila(COLOR_FAMILIA.Fletes, '− Flete Holcim', x.fleteHolcim ? cop(x.fleteHolcim) : 'no hay') + sin },
+    // 1) Todo lo facturado: venta con flete + donaciones; toneladas con traslados y donaciones
+    { label: 'Facturación Total', value: cop(x.valorTotal), icon: 'dollar', accent: '#3B82F6',
+      detail: fila(tinta.value, 'Toneladas', `${tFmt(x.tTotal)} t`) +
+        fila(COLOR_TIPO.venta, 'Venta', cop(x.venta)) +
+        (x.fleteHolcim ? fila(COLOR_FAMILIA.Fletes, 'Incluye flete Holcim', cop(x.fleteHolcim)) : '') +
+        fila(COLOR_TIPO.donacion, 'Donaciones', `${cop(x.valorDonado)} · ${tFmt(x.tDonadas)} t`) +
+        fila(COLOR_TIPO.traslado, 'Traslados', `${tFmt(x.tTraslados)} t`) },
+    // 2) Sin flete de Holcim, donaciones ni traslados: solo la venta de material
+    { label: 'Facturación sin Flete', value: cop(x.valorNeto), icon: 'check-circle', accent: '#0F766E',
+      detail: fila(tinta.value, 'Toneladas', `${tFmt(x.tNeta)} t vendidas`) +
+        fila(COLOR_FAMILIA.Fletes, 'Sin flete Holcim', x.fleteHolcim ? `− ${cop(x.fleteHolcim)}` : 'no hay') +
+        fila('#94a3b8', 'Sin donaciones', `− ${cop(x.valorDonado)}`) +
+        fila('#94a3b8', 'Sin traslados', `− ${tFmt(x.tTraslados)} t`) },
   ]
 })
 
@@ -626,6 +630,9 @@ const optTicket = computed(() => opcionLineaDia('Ticket por remisión', '#8B5CF6
 .kpi-row { margin-bottom: 4px; }
 .kpi-grupo { margin: 14px 0 8px; font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--text-tertiary); }
 @media (min-width: 1201px) { .kpi-row.n5 { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+/* Totales: dos KPIs anchos lado a lado, con la cifra más grande */
+@media (min-width: 769px) { .kpi-row.n2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.kpi-row.totales :deep(.kpi-value) { font-size: 24px; }
 .kpi-row :deep(.kpi-value) { font-size: 19px; flex-wrap: wrap; overflow-wrap: anywhere; min-width: 0; }
 .section-title { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 28px 0 0; display: flex; align-items: center; gap: 8px; letter-spacing: -0.3px; }
 .title-bar { width: 14px; height: 2px; background: var(--accent); display: inline-block; border-radius: 1px; }
