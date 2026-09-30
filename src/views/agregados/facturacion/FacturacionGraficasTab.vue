@@ -7,13 +7,18 @@
         <strong>{{ periodoTxt }}</strong> · {{ fmtN(R.lineas, 0) }} líneas de venta en {{ fmtN(R.remisiones, 0) }} remisiones
       </p>
 
-      <!-- Totales: dos normales y dos sin flete Holcim, donaciones ni traslados -->
-      <div class="kpi-row totales">
+      <!-- KPIs por grupo: totales, venta, y despacho y clientes (mismas tarjetas, ordenadas) -->
+      <p class="kpi-grupo">Totales del período</p>
+      <div class="kpi-row">
         <KpiCard v-for="k in kpisTotales" :key="k.label" v-bind="k" />
       </div>
-
+      <p class="kpi-grupo">Venta</p>
+      <div class="kpi-row" :class="`n${kpis.venta.length}`">
+        <KpiCard v-for="k in kpis.venta" :key="k.label" v-bind="k" />
+      </div>
+      <p class="kpi-grupo">Despacho y clientes</p>
       <div class="kpi-row">
-        <KpiCard v-for="k in kpis" :key="k.label" v-bind="k" />
+        <KpiCard v-for="k in kpis.despacho" :key="k.label" v-bind="k" />
       </div>
 
       <h3 class="section-title"><span class="title-bar"></span>Ventas por familia y material</h3>
@@ -131,33 +136,37 @@ const kpis = computed(() => {
     detail: fila('#64748B', 'Documentos', fmtN(r.traslados.docs, 0)) + fila('#64748B', 'Subtipo', '003') }
   const donaciones = { label: 'Donaciones', value: `${tFmt(r.donaciones.t)} t`, icon: 'check-circle', accent: '#10B981',
     detail: fila('#10B981', 'Valor', cop(r.donaciones.valor)) + fila('#10B981', 'Beneficiarios', fmtN(r.donaciones.beneficiarios, 0)) + fila('#10B981', 'Subtipo', '952') }
-  return [
-    { label: 'Venta (sin IVA)', value: cop(r.venta), icon: 'dollar', accent: '#3B82F6',
+  const tarjeta = {
+    venta: { label: 'Venta (sin IVA)', value: cop(r.venta), icon: 'dollar', accent: '#3B82F6',
       detail: detFam(f => `${cop(f.venta)} <span style='color:var(--text-tertiary)'>(${pct(f.part)})</span>`) + (r.fletes ? fila(COLOR_FAMILIA.Fletes, 'Fletes', cop(r.fletes)) : '') },
-    { label: 'Toneladas Despachadas', value: `${tFmt(r.tDespachadas)} t`, icon: 'truck', accent: '#15223c',
+    toneladas: { label: 'Toneladas Despachadas', value: `${tFmt(r.tDespachadas)} t`, icon: 'truck', accent: '#15223c',
       detail: fila(COLOR_TIPO.venta, 'Vendidas', `${tFmt(r.tVendidas)} t`) + fila(COLOR_TIPO.traslado, 'Traslados', `${tFmt(r.tTraslados)} t`) +
         (r.donaciones.t ? fila(COLOR_TIPO.donacion, 'Donadas', `${tFmt(r.donaciones.t)} t`) : '') +
         (n ? fila(tinta.value, 'Vendidas por día', `${tFmt(r.tVendidas / n)} t`) : '') },
-    { label: 'Precio Promedio por t', value: r.precioT ? cop(r.precioT) : '—', icon: 'target', accent: '#F59E0B',
+    precio: { label: 'Precio Promedio por t', value: r.precioT ? cop(r.precioT) : '—', icon: 'target', accent: '#F59E0B',
       detail: detFam(f => (f.precioT ? cop(f.precioT) : '—')) },
-    { label: 'Remisiones', value: fmtN(r.remisiones, 0), icon: 'list', accent: '#8B5CF6',
+    remisiones: { label: 'Remisiones', value: fmtN(r.remisiones, 0), icon: 'list', accent: '#8B5CF6',
       detail: detFam(f => fmtN(f.remisiones, 0)) + (r.remisiones ? fila(tinta.value, 'Ticket', cop(r.venta / r.remisiones)) + fila(tinta.value, 'Por remisión', `${tFmt(r.tVendidas / r.remisiones)} t`) : '') },
-    { label: 'Clientes Activos', value: fmtN(r.clientes, 0), icon: 'users', accent: '#10B981',
+    clientes: { label: 'Clientes Activos', value: fmtN(r.clientes, 0), icon: 'users', accent: '#10B981',
       detail: (r.clientes ? fila('#10B981', 'Venta por cliente', cop(r.venta / r.clientes)) : '') +
         (filas.length ? fila('#8B5CF6', 'Hacen el 80 %', `${n80} ${n80 === 1 ? 'cliente' : 'clientes'}`) + fila('#8B5CF6', 'Principal', pct(acum(1))) + (filas.length > 5 ? fila('#8B5CF6', 'Top 5', pct(acum(5))) : '') : '') },
-    { label: 'Venta Promedio Diaria', value: n ? cop(r.venta / n) : '—', icon: 'activity', accent: '#3B82F6',
+    promedio: { label: 'Venta Promedio Diaria', value: n ? cop(r.venta / n) : '—', icon: 'activity', accent: '#3B82F6',
       detail: fila(tinta.value, 'Días con venta', fmtN(n, 0)) + (mejor ? fila(VERDE, 'Mejor día', `${fechaCorta(mejor.fecha)} · ${copCorto(mejor.venta)}`) : '') +
         (menor && n > 1 ? fila(ROJO, 'Más bajo', `${fechaCorta(menor.fecha)} · ${copCorto(menor.venta)}`) : '') +
         (fuerte && n > 6 ? fila(COLOR_TIPO.venta, 'Día más fuerte', `${fuerte.nombre.toLowerCase()} · ${copCorto(fuerte.promVenta)}`) : '') },
-    // Con proyección: cierre del mes y traslados + donaciones en una tarjeta; sin ella, traslados y donaciones por separado
-    ...(c
-      ? [{ ...traslados, detail: traslados.detail + fila('#10B981', 'Donaciones', `${tFmt(r.donaciones.t)} t · ${cop(r.donaciones.valor)}`) },
-        { label: 'Cierre Estimado del Mes', value: cop(c.cierre.valor), icon: 'trending-up', accent: '#F59E0B',
-          detail: fila(COLOR_TIPO.venta, 'Vendido', cop(r.venta)) + fila('#F59E0B', 'Por vender', cop(c.cierre.valor - r.venta)) +
-            fila(tinta.value, 'Toneladas', `≈ ${tFmt(c.t.at(-1)?.acumulado ?? 0)} t`) +
-            fila('#94a3b8', 'Faltan', `${c.cierre.faltan} ${c.cierre.faltan === 1 ? 'día' : 'días'} de venta`) }]
-      : [traslados, donaciones]),
-  ]
+  }
+  const cierre = c
+    ? [{ label: 'Cierre Estimado del Mes', value: cop(c.cierre.valor), icon: 'trending-up', accent: '#F59E0B',
+        detail: fila(COLOR_TIPO.venta, 'Vendido', cop(r.venta)) + fila('#F59E0B', 'Por vender', cop(c.cierre.valor - r.venta)) +
+          fila(tinta.value, 'Toneladas', `≈ ${tFmt(c.t.at(-1)?.acumulado ?? 0)} t`) +
+          fila('#94a3b8', 'Faltan', `${c.cierre.faltan} ${c.cierre.faltan === 1 ? 'día' : 'días'} de venta`) }]
+    : []
+  return {
+    // Venta: cuánto, a qué ritmo, a qué precio y en cuántas remisiones (+ cierre del mes cuando aplica)
+    venta: [tarjeta.venta, tarjeta.promedio, ...cierre, tarjeta.precio, tarjeta.remisiones],
+    // Despacho y clientes: toneladas que salieron, traslados, donaciones y a quién se vendió
+    despacho: [tarjeta.toneladas, traslados, donaciones, tarjeta.clientes],
+  }
 })
 
 // Totales del período: toneladas y valor facturado, normales y sin flete Holcim, donaciones ni traslados
@@ -615,7 +624,8 @@ const optTicket = computed(() => opcionLineaDia('Ticket por remisión', '#8B5CF6
 .periodo { margin: 0 0 14px; font-size: 13px; color: var(--text-secondary); }
 .periodo strong { color: var(--text-primary); }
 .kpi-row { margin-bottom: 4px; }
-.kpi-row.totales { margin-bottom: 14px; }
+.kpi-grupo { margin: 14px 0 8px; font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--text-tertiary); }
+@media (min-width: 1201px) { .kpi-row.n5 { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
 .kpi-row :deep(.kpi-value) { font-size: 19px; flex-wrap: wrap; overflow-wrap: anywhere; min-width: 0; }
 .section-title { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 28px 0 0; display: flex; align-items: center; gap: 8px; letter-spacing: -0.3px; }
 .title-bar { width: 14px; height: 2px; background: var(--accent); display: inline-block; border-radius: 1px; }
