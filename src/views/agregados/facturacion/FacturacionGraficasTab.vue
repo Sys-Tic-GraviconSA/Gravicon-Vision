@@ -8,16 +8,16 @@
       </p>
 
       <!-- KPIs por grupo: totales, venta, y despacho y clientes (mismas tarjetas, ordenadas) -->
-      <p class="kpi-grupo">Totales del período</p>
-      <div class="kpi-row n2 totales">
+      <p class="kpi-grupo">Facturación del período</p>
+      <div class="kpi-row g4 totales">
         <KpiCard v-for="k in kpisTotales" :key="k.label" v-bind="k" />
       </div>
       <p class="kpi-grupo">Venta</p>
-      <div class="kpi-row" :class="`n${kpis.venta.length}`">
+      <div class="kpi-row g4">
         <KpiCard v-for="k in kpis.venta" :key="k.label" v-bind="k" />
       </div>
       <p class="kpi-grupo">Despacho y clientes</p>
-      <div class="kpi-row">
+      <div class="kpi-row g4">
         <KpiCard v-for="k in kpis.despacho" :key="k.label" v-bind="k" />
       </div>
 
@@ -158,12 +158,12 @@ const kpis = computed(() => {
   const cierre = c
     ? [{ label: 'Cierre Estimado del Mes', value: cop(c.cierre.valor), icon: 'trending-up', accent: '#F59E0B',
         detail: fila(COLOR_TIPO.venta, 'Vendido', cop(r.venta)) + fila('#F59E0B', 'Por vender', cop(c.cierre.valor - r.venta)) +
-          fila(tinta.value, 'Toneladas', `≈ ${tFmt(c.t.at(-1)?.acumulado ?? 0)} t`) +
+          (n ? fila(tinta.value, 'Promedio diario', cop(r.venta / n)) : '') +
           fila('#94a3b8', 'Faltan', `${c.cierre.faltan} ${c.cierre.faltan === 1 ? 'día' : 'días'} de venta`) }]
     : []
   return {
-    // Venta: cuánto, a qué ritmo, a qué precio y en cuántas remisiones (+ cierre del mes cuando aplica)
-    venta: [tarjeta.venta, tarjeta.promedio, ...cierre, tarjeta.precio, tarjeta.remisiones],
+    // Venta: cuánto, a qué ritmo (o cierre estimado a mitad de mes), a qué precio y en cuántas remisiones
+    venta: [tarjeta.venta, ...(cierre.length ? cierre : [tarjeta.promedio]), tarjeta.precio, tarjeta.remisiones],
     // Despacho y clientes: toneladas que salieron, traslados, donaciones y a quién se vendió
     despacho: [tarjeta.toneladas, traslados, donaciones, tarjeta.clientes],
   }
@@ -173,19 +173,21 @@ const kpis = computed(() => {
 const kpisTotales = computed(() => {
   const x = totalesFacturacion(props.lineas)
   return [
-    // 1) Todo lo facturado: venta con flete + donaciones; toneladas con traslados y donaciones
+    // Valor: todo lo facturado y sin flete Holcim ni donaciones (los traslados no tienen valor)
     { label: 'Facturación Total', value: cop(x.valorTotal), icon: 'dollar', accent: '#3B82F6',
-      detail: fila(tinta.value, 'Toneladas', `${tFmt(x.tTotal)} t`) +
-        fila(COLOR_TIPO.venta, 'Venta', cop(x.venta)) +
+      detail: fila(COLOR_TIPO.venta, 'Venta', cop(x.venta)) +
         (x.fleteHolcim ? fila(COLOR_FAMILIA.Fletes, 'Incluye flete Holcim', cop(x.fleteHolcim)) : '') +
-        fila(COLOR_TIPO.donacion, 'Donaciones', `${cop(x.valorDonado)} · ${tFmt(x.tDonadas)} t`) +
-        fila(COLOR_TIPO.traslado, 'Traslados', `${tFmt(x.tTraslados)} t`) },
-    // 2) Sin flete de Holcim, donaciones ni traslados: solo la venta de material
+        fila(COLOR_TIPO.donacion, 'Donaciones', cop(x.valorDonado)) },
     { label: 'Facturación sin Flete', value: cop(x.valorNeto), icon: 'check-circle', accent: '#0F766E',
-      detail: fila(tinta.value, 'Toneladas', `${tFmt(x.tNeta)} t vendidas`) +
-        fila(COLOR_FAMILIA.Fletes, 'Sin flete Holcim', x.fleteHolcim ? `− ${cop(x.fleteHolcim)}` : 'no hay') +
-        fila('#94a3b8', 'Sin donaciones', `− ${cop(x.valorDonado)}`) +
-        fila('#94a3b8', 'Sin traslados', `− ${tFmt(x.tTraslados)} t`) },
+      detail: fila(COLOR_FAMILIA.Fletes, 'Sin flete Holcim', x.fleteHolcim ? `− ${cop(x.fleteHolcim)}` : 'no hay') +
+        fila('#94a3b8', 'Sin donaciones', `− ${cop(x.valorDonado)}`) },
+    // Toneladas: todo lo que salió y solo lo vendido (el flete no tiene toneladas)
+    { label: 'Toneladas Totales', value: `${tFmt(x.tTotal)} t`, icon: 'truck', accent: '#15223c',
+      detail: fila(COLOR_TIPO.venta, 'Vendidas', `${tFmt(x.tNeta)} t`) + fila(COLOR_TIPO.traslado, 'Traslados', `${tFmt(x.tTraslados)} t`) +
+        fila(COLOR_TIPO.donacion, 'Donadas', `${tFmt(x.tDonadas)} t`) },
+    { label: 'Toneladas Netas', value: `${tFmt(x.tNeta)} t`, icon: 'package', accent: '#0F766E',
+      detail: fila(COLOR_TIPO.venta, 'Solo vendidas', `${tFmt(x.tNeta)} t`) + fila('#94a3b8', 'Sin traslados', `− ${tFmt(x.tTraslados)} t`) +
+        fila('#94a3b8', 'Sin donaciones', `− ${tFmt(x.tDonadas)} t`) },
   ]
 })
 
@@ -629,10 +631,22 @@ const optTicket = computed(() => opcionLineaDia('Ticket por remisión', '#8B5CF6
 .periodo strong { color: var(--text-primary); }
 .kpi-row { margin-bottom: 4px; }
 .kpi-grupo { margin: 14px 0 8px; font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--text-tertiary); }
-@media (min-width: 1201px) { .kpi-row.n5 { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
-/* Totales: dos KPIs anchos lado a lado, con la cifra más grande */
-@media (min-width: 769px) { .kpi-row.n2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Filas de KPIs según el ancho real del contenido (no de la ventana): nunca queda una tarjeta sola.
+   g4 = grupos de 4 → 4 / 2×2 / 1 · n2 y n3 = totales → lado a lado o uno debajo del otro */
+.fact-graficas { container-type: inline-size; }
+.kpi-row.g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.kpi-row.n2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.kpi-row.n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@container (max-width: 1180px) { .kpi-row.g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container (max-width: 900px) { .kpi-row.n3 { grid-template-columns: 1fr; } }
+@container (max-width: 560px) { .kpi-row.g4, .kpi-row.n2 { grid-template-columns: 1fr; } }
 .kpi-row.totales :deep(.kpi-value) { font-size: 24px; }
+/* En KPIs anchos (2×2) el detalle no se estira de lado a lado: etiqueta y valor quedan cerca */
+.kpi-row :deep(.kpi-detail) { max-width: 380px; }
+/* Detalle alineado en dos columnas: etiqueta a la izquierda, valor a la derecha (como en el informe) */
+.kpi-row :deep(.kpi-detail-row) { flex-wrap: nowrap; }
+.kpi-row :deep(.kpi-detail-row .kpi-label-int) { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.kpi-row :deep(.kpi-detail-row strong) { margin-left: auto; text-align: right; font-variant-numeric: tabular-nums; }
 .kpi-row :deep(.kpi-value) { font-size: 19px; flex-wrap: wrap; overflow-wrap: anywhere; min-width: 0; }
 .section-title { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 28px 0 0; display: flex; align-items: center; gap: 8px; letter-spacing: -0.3px; }
 .title-bar { width: 14px; height: 2px; background: var(--accent); display: inline-block; border-radius: 1px; }
