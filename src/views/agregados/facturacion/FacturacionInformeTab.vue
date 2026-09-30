@@ -84,9 +84,15 @@
 
         <div class="report-section-block">
           <h3 class="report-block-title"><span class="title-bar"></span>{{ esMes ? `Indicadores del mes — ${MES_LBL} (1 al ${cd})` : `Indicadores del período — ${RANGO_LBL}` }}</h3>
-          <!-- Totales: dos normales y dos sin flete Holcim, donaciones ni traslados -->
+          <!-- KPIs por grupo (mismas tarjetas, ordenadas): totales, venta, despacho y clientes, donaciones y traslados -->
+          <p class="kpi-grupo">Totales del período</p>
           <div class="kpi-row compact-kpi"><KpiCard v-for="k in kpisTotales" :key="k.label" v-bind="k" /></div>
-          <div class="kpi-row compact-kpi"><KpiCard v-for="k in kpisMes" :key="k.label" v-bind="k" /></div>
+          <p class="kpi-grupo">Venta</p>
+          <div class="kpi-row compact-kpi"><KpiCard v-for="k in gruposMes.venta" :key="k.label" v-bind="k" /></div>
+          <p class="kpi-grupo">Despacho y clientes</p>
+          <div class="kpi-row compact-kpi"><KpiCard v-for="k in gruposMes.despacho" :key="k.label" v-bind="k" /></div>
+          <p class="kpi-grupo">Donaciones y traslados</p>
+          <div class="kpi-row compact-kpi"><KpiCard v-for="k in gruposMes.donTras" :key="k.label" v-bind="k" /></div>
           <div v-if="vsProm < 0" class="report-nota alerta"><strong>Día por debajo del promedio:</strong> el {{ flbl(hoy) }} se vendieron {{ cop(H.venta) }}, {{ pct(Math.abs(vsProm)) }} menos que el promedio diario {{ delPer }} ({{ cop(ritmo) }}). Si el día no ha terminado, la cifra puede aumentar.</div>
           <div v-else class="report-nota"><strong>Día por encima del promedio:</strong> el {{ flbl(hoy) }} se vendieron {{ cop(H.venta) }}, {{ pct(vsProm) }} más que el promedio diario {{ delPer }} ({{ cop(ritmo) }}).<template v-if="proyeccion"> Al ritmo actual el mes cerraría en {{ cop(proyeccion.total) }}.</template></div>
         </div>
@@ -602,6 +608,17 @@ const kpisMes = computed(() => {
   ]
 })
 
+// Orden de lectura de los KPIs del período (kpisMes tiene siempre 12, en este orden:
+// 0 venta · 1 toneladas · 2 remisiones · 3 precio · 4 clientes · 5 promedio diario · 6 cierre/días con venta · 7 ticket · 8–11 donaciones y traslados)
+const gruposMes = computed(() => {
+  const k = kpisMes.value
+  return {
+    venta: [k[0], k[5], k[6], k[3]],
+    despacho: [k[1], k[2], k[7], k[4]],
+    donTras: k.slice(8),
+  }
+})
+
 // ── Toneladas por producto: una fila por producto y unidad registrada (como la tabla de planta) ──
 function tablaToneladas(v: LineaFacturacion[], t: LineaFacturacion[]) {
   const g = new Map<string, { clave: string; prod: string; u: string; reg: number; vend: number; tr: number; factor: number; fam: Familia }>()
@@ -911,4 +928,5 @@ async function pdf() {
   .icb-presets { width: 100%; }
   .icb-preset { flex: 1; }
 }
+.kpi-grupo { margin: 10px 0 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--text-secondary); }
 </style>
