@@ -22,6 +22,8 @@ const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']
 
 export const esVenta = (l: LineaFacturacion) => l.tipo === 'venta'
 export const esMaterial = (l: LineaFacturacion) => l.familia !== 'Fletes'
+/** Flete que se le factura a Holcim («FLETE HOLCIM»): servicio de transporte sin toneladas; no cuenta en la venta neta */
+export const esFleteHolcim = (l: LineaFacturacion) => l.familia === 'Fletes' && /HOLCIM/i.test(`${l.cliente} ${l.descripcion}`)
 const clave = (l: LineaFacturacion) => l.nit || l.cliente
 const suma = (ls: LineaFacturacion[], f: (l: LineaFacturacion) => number) => ls.reduce((a, l) => a + f(l), 0)
 
@@ -131,6 +133,17 @@ export function porCliente(ls: LineaFacturacion[]): FilaCliente[] {
     return { cliente: nombreCliente(x[0].cliente), nit: x[0].nit, remisiones: new Set(x.map(l => l.doc)).size,
       t: suma(x, l => l.toneladas), venta, part: total ? venta / total * 100 : 0, familias }
   }).sort((a, b) => b.venta - a.venta)
+}
+
+/**
+ * Venta neta: facturación de venta sin el flete de Holcim. Las donaciones (952) y los traslados (003)
+ * ya no suman a la venta, así que tampoco entran aquí; las toneladas son las vendidas.
+ */
+export function ventaNeta(ls: LineaFacturacion[]): { venta: number; fleteHolcim: number; neta: number; t: number } {
+  const v = ls.filter(esVenta)
+  const venta = suma(v, l => l.total)
+  const fleteHolcim = suma(v.filter(esFleteHolcim), l => l.total)
+  return { venta, fleteHolcim, neta: venta - fleteHolcim, t: suma(v, l => l.toneladas) }
 }
 
 export interface FilaDia {
