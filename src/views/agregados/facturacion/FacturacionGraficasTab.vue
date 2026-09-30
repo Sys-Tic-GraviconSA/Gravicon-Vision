@@ -183,8 +183,9 @@ const kpisTotales = computed(() => {
         fila('#94a3b8', 'Sin donaciones', `− ${cop(x.valorDonado)}`) },
     // Toneladas: todo lo que salió y solo lo vendido (el flete no tiene toneladas)
     { label: 'Toneladas Totales', value: `${tFmt(x.tTotal)} t`, icon: 'truck', accent: '#15223c',
-      detail: fila(COLOR_TIPO.venta, 'Vendidas', `${tFmt(x.tNeta)} t`) + fila(COLOR_TIPO.traslado, 'Traslados', `${tFmt(x.tTraslados)} t`) +
-        fila(COLOR_TIPO.donacion, 'Donadas', `${tFmt(x.tDonadas)} t`) },
+      detail: fila(COLOR_TIPO.venta, 'Vendidas', `${tFmt(x.tNeta)} t`) +
+        (x.tFleteHolcim ? fila(COLOR_FAMILIA.Fletes, 'Flete', `${tFmt(x.tFleteHolcim)} t <span style='color:var(--text-tertiary);font-weight:500'>(en vendidas)</span>`) : '') +
+        fila(COLOR_TIPO.traslado, 'Traslados', `${tFmt(x.tTraslados)} t`) + fila(COLOR_TIPO.donacion, 'Donadas', `${tFmt(x.tDonadas)} t`) },
     { label: 'Toneladas Netas', value: `${tFmt(x.tNeta)} t`, icon: 'package', accent: '#0F766E',
       detail: fila(COLOR_TIPO.venta, 'Solo vendidas', `${tFmt(x.tNeta)} t`) + fila('#94a3b8', 'Sin traslados', `− ${tFmt(x.tTraslados)} t`) +
         fila('#94a3b8', 'Sin donaciones', `− ${tFmt(x.tDonadas)} t`) },

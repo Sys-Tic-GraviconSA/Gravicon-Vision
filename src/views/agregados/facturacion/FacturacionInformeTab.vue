@@ -586,7 +586,9 @@ const kpisTotales = computed(() => {
       detail: fila(COL.Fletes, 'Sin flete Holcim', x.fleteHolcim ? '− ' + cop(x.fleteHolcim) : 'no hay') + fila('#94a3b8', 'Sin donaciones', '− ' + cop(x.valorDonado)) },
     // Toneladas: todo lo que salió y solo lo vendido (el flete no tiene toneladas)
     { label: 'Toneladas Totales', value: num(x.tTotal, 0) + ' t', accent: '#172954', icon: 'truck', meta: 'con traslados y donaciones',
-      detail: fila('#2563EB', 'Vendidas', num(x.tNeta, 0) + ' t') + fila('#64748B', 'Traslados', num(x.tTraslados, 0) + ' t') + fila('#8B5CF6', 'Donadas', num(x.tDonadas, 1) + ' t') },
+      detail: fila('#2563EB', 'Vendidas', num(x.tNeta, 0) + ' t') +
+        (x.tFleteHolcim ? fila(COL.Fletes, 'Flete Holcim', num(x.tFleteHolcim, 0) + ' t <span class="kpi-det-pct">(en vendidas)</span>') : '') +
+        fila('#64748B', 'Traslados', num(x.tTraslados, 0) + ' t') + fila('#8B5CF6', 'Donadas', num(x.tDonadas, 1) + ' t') },
     { label: 'Toneladas Netas', value: num(x.tNeta, 0) + ' t', accent: '#0F766E', icon: 'package', meta: 'solo vendidas',
       detail: fila('#2563EB', 'Vendidas', num(x.tNeta, 0) + ' t') + fila('#94a3b8', 'Sin traslados', '− ' + num(x.tTraslados, 0) + ' t') + fila('#94a3b8', 'Sin donaciones', '− ' + num(x.tDonadas, 1) + ' t') },
   ]

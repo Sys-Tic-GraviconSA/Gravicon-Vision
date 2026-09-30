@@ -150,11 +150,14 @@ export function ventaNeta(ls: LineaFacturacion[]): { venta: number; fleteHolcim:
  * Totales del período, normales y netos (sin flete Holcim, donaciones ni traslados):
  * - tTotal: toneladas vendidas + trasladadas + donadas · tNeta: solo vendidas
  * - valorTotal: venta (con fletes) + valor donado · valorNeto: venta − flete Holcim
- * Los traslados no tienen valor; el flete no tiene toneladas.
+ * Los traslados no tienen valor. El flete se registra como servicio: su cantidad son las toneladas del
+ * mismo material que transporta (ya contadas en las vendidas), así que se informa (tFleteHolcim) pero no se suma.
  */
 export function totalesFacturacion(ls: LineaFacturacion[]) {
   const r = resumen(ls), vn = ventaNeta(ls)
+  const tFleteHolcim = suma(ls.filter(l => esVenta(l) && esFleteHolcim(l)), l => l.cantidad)
   return {
+    tFleteHolcim,
     tTotal: r.tVendidas + r.tTraslados + r.donaciones.t, tNeta: r.tVendidas, tTraslados: r.tTraslados, tDonadas: r.donaciones.t,
     valorTotal: r.venta + r.donaciones.valor, valorNeto: vn.neta, venta: r.venta, valorDonado: r.donaciones.valor, fleteHolcim: vn.fleteHolcim,
   }
