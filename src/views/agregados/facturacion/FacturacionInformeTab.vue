@@ -51,6 +51,12 @@
           </p>
         </div>
 
+        <!-- Primero los totales: facturación total y sin flete (Holcim), donaciones ni traslados -->
+        <div class="report-section-block">
+          <h3 class="report-block-title"><span class="title-bar"></span>{{ esMes ? `Facturación del mes — ${MES_LBL} (1 al ${cd})` : `Facturación del período — ${RANGO_LBL}` }}</h3>
+          <div class="kpi-row compact-kpi totales"><KpiCard v-for="k in kpisTotales" :key="k.label" v-bind="k" /></div>
+        </div>
+
         <div class="report-section-block">
           <div class="zoho-analysis-box">
             <div class="zoho-analysis-label">Análisis Operativo Directivo</div>
@@ -85,8 +91,6 @@
         <div class="report-section-block">
           <h3 class="report-block-title"><span class="title-bar"></span>{{ esMes ? `Indicadores del mes — ${MES_LBL} (1 al ${cd})` : `Indicadores del período — ${RANGO_LBL}` }}</h3>
           <!-- KPIs por grupo (mismas tarjetas, ordenadas): totales, venta, despacho y clientes, donaciones y traslados -->
-          <p class="kpi-grupo">Totales del período</p>
-          <div class="kpi-row compact-kpi totales"><KpiCard v-for="k in kpisTotales" :key="k.label" v-bind="k" /></div>
           <p class="kpi-grupo">Venta</p>
           <div class="kpi-row compact-kpi"><KpiCard v-for="k in gruposMes.venta" :key="k.label" v-bind="k" /></div>
           <p class="kpi-grupo">Despacho y clientes</p>
@@ -575,16 +579,16 @@ const kpisTotales = computed(() => {
   const x = totalesFacturacion(enRango.value)
   const fila = (color: string, lbl: string, valor: string) => `<div class='kpi-detail-row'><span class='kpi-dot' style='background:${color}'></span><span class='kpi-det-lbl'>${lbl}</span> <strong>${valor}</strong></div>`
   return [
-    // 1) Todo lo facturado: venta con flete + donaciones; toneladas con traslados y donaciones
-    { label: 'Facturación Total', value: cop(x.valorTotal), accent: '#2563EB', icon: 'dollar', meta: 'con flete, donaciones y traslados',
-      detail: fila('#172954', 'Toneladas', num(x.tTotal, 0) + ' t') + fila('#2563EB', 'Venta', cop(x.venta)) +
-        (x.fleteHolcim ? fila(COL.Fletes, 'Incluye flete Holcim', cop(x.fleteHolcim)) : '') +
-        fila('#8B5CF6', 'Donaciones', `${cop(x.valorDonado)} · ${num(x.tDonadas, 1)} t`) + fila('#64748B', 'Traslados', num(x.tTraslados, 0) + ' t') },
-    // 2) Sin flete de Holcim, donaciones ni traslados: solo la venta de material
-    { label: 'Facturación sin Flete', value: cop(x.valorNeto), accent: '#0F766E', icon: 'check-circle', meta: 'sin flete Holcim, donaciones ni traslados',
-      detail: fila('#172954', 'Toneladas', num(x.tNeta, 0) + ' t vendidas') +
-        fila(COL.Fletes, 'Sin flete Holcim', x.fleteHolcim ? '− ' + cop(x.fleteHolcim) : 'no hay') +
-        fila('#94a3b8', 'Sin donaciones', '− ' + cop(x.valorDonado)) + fila('#94a3b8', 'Sin traslados', '− ' + num(x.tTraslados, 0) + ' t') },
+    // Valor: todo lo facturado y sin flete Holcim ni donaciones (los traslados no tienen valor)
+    { label: 'Facturación Total', value: cop(x.valorTotal), accent: '#2563EB', icon: 'dollar', meta: 'con flete y donaciones',
+      detail: fila('#2563EB', 'Venta', cop(x.venta)) + (x.fleteHolcim ? fila(COL.Fletes, 'Incluye flete', cop(x.fleteHolcim)) : '') + fila('#8B5CF6', 'Donaciones', cop(x.valorDonado)) },
+    { label: 'Facturación sin Flete', value: cop(x.valorNeto), accent: '#0F766E', icon: 'check-circle', meta: 'sin flete ni donaciones',
+      detail: fila(COL.Fletes, 'Sin flete Holcim', x.fleteHolcim ? '− ' + cop(x.fleteHolcim) : 'no hay') + fila('#94a3b8', 'Sin donaciones', '− ' + cop(x.valorDonado)) },
+    // Toneladas: todo lo que salió y solo lo vendido (el flete no tiene toneladas)
+    { label: 'Toneladas Totales', value: num(x.tTotal, 0) + ' t', accent: '#172954', icon: 'truck', meta: 'con traslados y donaciones',
+      detail: fila('#2563EB', 'Vendidas', num(x.tNeta, 0) + ' t') + fila('#64748B', 'Traslados', num(x.tTraslados, 0) + ' t') + fila('#8B5CF6', 'Donadas', num(x.tDonadas, 1) + ' t') },
+    { label: 'Toneladas Netas', value: num(x.tNeta, 0) + ' t', accent: '#0F766E', icon: 'package', meta: 'solo vendidas',
+      detail: fila('#2563EB', 'Vendidas', num(x.tNeta, 0) + ' t') + fila('#94a3b8', 'Sin traslados', '− ' + num(x.tTraslados, 0) + ' t') + fila('#94a3b8', 'Sin donaciones', '− ' + num(x.tDonadas, 1) + ' t') },
   ]
 })
 
@@ -930,8 +934,5 @@ async function pdf() {
   .icb-presets { width: 100%; }
   .icb-preset { flex: 1; }
 }
-/* Totales: dos KPIs anchos lado a lado, con la cifra más grande */
-.compact-kpi.totales { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.compact-kpi.totales :deep(.kpi-value) { font-size: 25px; }
 .kpi-grupo { margin: 10px 0 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--text-secondary); }
 </style>
