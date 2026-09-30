@@ -7,6 +7,11 @@
         <strong>{{ periodoTxt }}</strong> · {{ fmtN(R.lineas, 0) }} líneas de venta en {{ fmtN(R.remisiones, 0) }} remisiones
       </p>
 
+      <!-- Totales: dos normales y dos sin flete Holcim, donaciones ni traslados -->
+      <div class="kpi-row totales">
+        <KpiCard v-for="k in kpisTotales" :key="k.label" v-bind="k" />
+      </div>
+
       <div class="kpi-row">
         <KpiCard v-for="k in kpis" :key="k.label" v-bind="k" />
       </div>
@@ -69,7 +74,7 @@ import KpiCard from '../../../components/dashboard/KpiCard.vue'
 import { useEstiloGraficas, fmtN, cop, copCorto, pct, punto, vacio, emphasis, FONT } from '../../../composables/useGraficasConcreto'
 import {
   resumen, porFamilia, porMaterial, porCliente, porDia, toneladasPorProducto, nombreMaterial, fechaLarga, fechaCorta,
-  porDiaSemana, paretoClientes, proyeccionDiaria, cierreEstimado, ventaNeta,
+  porDiaSemana, paretoClientes, proyeccionDiaria, cierreEstimado, totalesFacturacion,
   COLOR_FAMILIA, COLOR_TIPO, esVenta, esMaterial, FAMILIAS,
 } from '../../../composables/useFacturacion'
 import { inicioFacturacionCompleta } from '../../../composables/useBalanceProduccion'
@@ -126,14 +131,9 @@ const kpis = computed(() => {
     detail: fila('#64748B', 'Documentos', fmtN(r.traslados.docs, 0)) + fila('#64748B', 'Subtipo', '003') }
   const donaciones = { label: 'Donaciones', value: `${tFmt(r.donaciones.t)} t`, icon: 'check-circle', accent: '#10B981',
     detail: fila('#10B981', 'Valor', cop(r.donaciones.valor)) + fila('#10B981', 'Beneficiarios', fmtN(r.donaciones.beneficiarios, 0)) + fila('#10B981', 'Subtipo', '952') }
-  const vn = ventaNeta(props.lineas)
   return [
     { label: 'Venta (sin IVA)', value: cop(r.venta), icon: 'dollar', accent: '#3B82F6',
       detail: detFam(f => `${cop(f.venta)} <span style='color:var(--text-tertiary)'>(${pct(f.part)})</span>`) + (r.fletes ? fila(COLOR_FAMILIA.Fletes, 'Fletes', cop(r.fletes)) : '') },
-    // Venta neta: solo facturación, sin el flete de Holcim, donaciones ni traslados
-    { label: 'Venta Neta', value: cop(vn.neta), icon: 'check-circle', accent: '#0F766E',
-      detail: fila(COLOR_TIPO.venta, 'Venta total', cop(vn.venta)) + fila(COLOR_FAMILIA.Fletes, '− Flete Holcim', vn.fleteHolcim ? cop(vn.fleteHolcim) : 'no hay') +
-        fila('#94a3b8', 'Sin', 'donaciones ni traslados') },
     { label: 'Toneladas Despachadas', value: `${tFmt(r.tDespachadas)} t`, icon: 'truck', accent: '#15223c',
       detail: fila(COLOR_TIPO.venta, 'Vendidas', `${tFmt(r.tVendidas)} t`) + fila(COLOR_TIPO.traslado, 'Traslados', `${tFmt(r.tTraslados)} t`) +
         (r.donaciones.t ? fila(COLOR_TIPO.donacion, 'Donadas', `${tFmt(r.donaciones.t)} t`) : '') +
@@ -157,6 +157,22 @@ const kpis = computed(() => {
             fila(tinta.value, 'Toneladas', `≈ ${tFmt(c.t.at(-1)?.acumulado ?? 0)} t`) +
             fila('#94a3b8', 'Faltan', `${c.cierre.faltan} ${c.cierre.faltan === 1 ? 'día' : 'días'} de venta`) }]
       : [traslados, donaciones]),
+  ]
+})
+
+// Totales del período: toneladas y valor facturado, normales y sin flete Holcim, donaciones ni traslados
+const kpisTotales = computed(() => {
+  const x = totalesFacturacion(props.lineas)
+  const sin = fila('#94a3b8', 'Sin', 'flete Holcim, donaciones ni traslados')
+  return [
+    { label: 'Toneladas Totales', value: `${tFmt(x.tTotal)} t`, icon: 'truck', accent: '#15223c',
+      detail: fila(COLOR_TIPO.venta, 'Vendidas', `${tFmt(x.tNeta)} t`) + fila(COLOR_TIPO.traslado, 'Traslados', `${tFmt(x.tTraslados)} t`) + fila(COLOR_TIPO.donacion, 'Donadas', `${tFmt(x.tDonadas)} t`) },
+    { label: 'Toneladas Netas', value: `${tFmt(x.tNeta)} t`, icon: 'package', accent: '#0F766E',
+      detail: fila(COLOR_TIPO.venta, 'Solo vendidas', `${tFmt(x.tNeta)} t`) + sin },
+    { label: 'Valor Facturado Total', value: cop(x.valorTotal), icon: 'dollar', accent: '#3B82F6',
+      detail: fila(COLOR_TIPO.venta, 'Venta', cop(x.venta)) + (x.fleteHolcim ? fila(COLOR_FAMILIA.Fletes, 'Flete Holcim', cop(x.fleteHolcim)) : '') + fila(COLOR_TIPO.donacion, 'Donado', cop(x.valorDonado)) },
+    { label: 'Valor Facturado Neto', value: cop(x.valorNeto), icon: 'check-circle', accent: '#0F766E',
+      detail: fila(COLOR_FAMILIA.Fletes, '− Flete Holcim', x.fleteHolcim ? cop(x.fleteHolcim) : 'no hay') + sin },
   ]
 })
 
@@ -599,6 +615,7 @@ const optTicket = computed(() => opcionLineaDia('Ticket por remisión', '#8B5CF6
 .periodo { margin: 0 0 14px; font-size: 13px; color: var(--text-secondary); }
 .periodo strong { color: var(--text-primary); }
 .kpi-row { margin-bottom: 4px; }
+.kpi-row.totales { margin-bottom: 14px; }
 .kpi-row :deep(.kpi-value) { font-size: 19px; flex-wrap: wrap; overflow-wrap: anywhere; min-width: 0; }
 .section-title { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 28px 0 0; display: flex; align-items: center; gap: 8px; letter-spacing: -0.3px; }
 .title-bar { width: 14px; height: 2px; background: var(--accent); display: inline-block; border-radius: 1px; }

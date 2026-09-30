@@ -84,6 +84,8 @@
 
         <div class="report-section-block">
           <h3 class="report-block-title"><span class="title-bar"></span>{{ esMes ? `Indicadores del mes — ${MES_LBL} (1 al ${cd})` : `Indicadores del período — ${RANGO_LBL}` }}</h3>
+          <!-- Totales: dos normales y dos sin flete Holcim, donaciones ni traslados -->
+          <div class="kpi-row compact-kpi"><KpiCard v-for="k in kpisTotales" :key="k.label" v-bind="k" /></div>
           <div class="kpi-row compact-kpi"><KpiCard v-for="k in kpisMes" :key="k.label" v-bind="k" /></div>
           <div v-if="vsProm < 0" class="report-nota alerta"><strong>Día por debajo del promedio:</strong> el {{ flbl(hoy) }} se vendieron {{ cop(H.venta) }}, {{ pct(Math.abs(vsProm)) }} menos que el promedio diario {{ delPer }} ({{ cop(ritmo) }}). Si el día no ha terminado, la cifra puede aumentar.</div>
           <div v-else class="report-nota"><strong>Día por encima del promedio:</strong> el {{ flbl(hoy) }} se vendieron {{ cop(H.venta) }}, {{ pct(vsProm) }} más que el promedio diario {{ delPer }} ({{ cop(ritmo) }}).<template v-if="proyeccion"> Al ritmo actual el mes cerraría en {{ cop(proyeccion.total) }}.</template></div>
@@ -361,7 +363,7 @@ import { BarChart, LineChart, PieChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent, TitleComponent, MarkPointComponent } from 'echarts/components'
 import KpiCard from '../../../components/dashboard/KpiCard.vue'
 import { useQueryDate } from '../../../composables/useQueryState'
-import { MESES, FAMILIAS, ventaNeta } from '../../../composables/useFacturacion'
+import { MESES, FAMILIAS, totalesFacturacion } from '../../../composables/useFacturacion'
 import { descargarInformePdf } from '../../../utils/pdfInforme'
 import type { Familia, LineaFacturacion } from '../../../types/facturacion'
 
@@ -562,16 +564,27 @@ const kpisDia = computed(() => {
   ]
 })
 
+// Totales del período: toneladas y valor facturado, normales y sin flete Holcim, donaciones ni traslados
+const kpisTotales = computed(() => {
+  const x = totalesFacturacion(enRango.value)
+  const fila = (color: string, lbl: string, valor: string) => `<div class='kpi-detail-row'><span class='kpi-dot' style='background:${color}'></span><span class='kpi-det-lbl'>${lbl}</span> <strong>${valor}</strong></div>`
+  return [
+    { label: 'Toneladas Totales', value: num(x.tTotal, 0) + ' t', accent: '#172954', icon: 'truck', meta: 'con traslados y donaciones',
+      detail: fila('#2563EB', 'Vendidas', num(x.tNeta, 0) + ' t') + fila('#64748B', 'Traslados', num(x.tTraslados, 0) + ' t') + fila('#8B5CF6', 'Donadas', num(x.tDonadas, 1) + ' t') },
+    { label: 'Toneladas Netas', value: num(x.tNeta, 0) + ' t', accent: '#0F766E', icon: 'package', meta: 'sin traslados ni donaciones',
+      detail: fila('#2563EB', 'Solo vendidas', num(x.tNeta, 0) + ' t') },
+    { label: 'Valor Facturado Total', value: cop(x.valorTotal), accent: '#2563EB', icon: 'dollar', meta: 'con flete y donaciones',
+      detail: fila('#2563EB', 'Venta', cop(x.venta)) + (x.fleteHolcim ? fila(COL.Fletes, 'Incluye flete Holcim', cop(x.fleteHolcim)) : '') + fila('#8B5CF6', 'Donado', cop(x.valorDonado)) },
+    { label: 'Valor Facturado Neto', value: cop(x.valorNeto), accent: '#0F766E', icon: 'check-circle', meta: 'sin flete Holcim ni donaciones',
+      detail: fila(COL.Fletes, '− Flete Holcim', x.fleteHolcim ? cop(x.fleteHolcim) : 'no hay') },
+  ]
+})
+
 const kpisMes = computed(() => {
   const m = M.value, p = precioProm(ventas.value)
   const cierre = proyeccion.value
-  const vn = ventaNeta(ventas.value)
   return [
     { label: `Venta del ${Per.value}`, value: cop(m.venta), accent: '#2563EB', icon: 'dollar', meta: esMes.value ? `1 al ${cd.value}` : `${DIAS_OP.value} días`, detail: detalle(mapFam(f => cop(mv.value[f]))) },
-    // Venta neta: solo facturación, sin el flete de Holcim, donaciones ni traslados
-    { label: 'Venta Neta', value: cop(vn.neta), accent: '#0F766E', icon: 'check-circle', meta: 'solo facturación',
-      detail: `<div class='kpi-detail-row'><span class='kpi-dot' style='background:${COL.Fletes}'></span><span class='kpi-det-lbl'>− Flete Holcim</span> <strong>${vn.fleteHolcim ? cop(vn.fleteHolcim) : 'no hay'}</strong></div>` +
-        `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#94a3b8'></span><span class='kpi-det-lbl'>Sin</span> <strong>donaciones ni traslados</strong></div>` },
     { label: 'Toneladas Despachadas', value: num(m.t + m.tr, 0) + ' t', accent: '#172954', icon: 'package',
       meta: m.tr ? `vendidas ${num(m.t, 0)} t · traslados ${num(m.tr, 0)} t` : 'vendidas, sin traslados',
       detail: detalle(mapFam(f => num(mt.value[f] + porFam(tras.value, 't')[f], 0) + ' t'), undefined, famsT.value) },

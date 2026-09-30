@@ -146,6 +146,20 @@ export function ventaNeta(ls: LineaFacturacion[]): { venta: number; fleteHolcim:
   return { venta, fleteHolcim, neta: venta - fleteHolcim, t: suma(v, l => l.toneladas) }
 }
 
+/**
+ * Totales del período, normales y netos (sin flete Holcim, donaciones ni traslados):
+ * - tTotal: toneladas vendidas + trasladadas + donadas · tNeta: solo vendidas
+ * - valorTotal: venta (con fletes) + valor donado · valorNeto: venta − flete Holcim
+ * Los traslados no tienen valor; el flete no tiene toneladas.
+ */
+export function totalesFacturacion(ls: LineaFacturacion[]) {
+  const r = resumen(ls), vn = ventaNeta(ls)
+  return {
+    tTotal: r.tVendidas + r.tTraslados + r.donaciones.t, tNeta: r.tVendidas, tTraslados: r.tTraslados, tDonadas: r.donaciones.t,
+    valorTotal: r.venta + r.donaciones.valor, valorNeto: vn.neta, venta: r.venta, valorDonado: r.donaciones.valor, fleteHolcim: vn.fleteHolcim,
+  }
+}
+
 export interface FilaDia {
   fecha: string; venta: number; porFamilia: Partial<Record<Familia, number>>
   tVendidas: number; tTraslados: number; remisiones: number; clientes: number; acumulado: number
