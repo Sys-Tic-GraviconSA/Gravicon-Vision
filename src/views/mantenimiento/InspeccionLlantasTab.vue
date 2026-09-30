@@ -101,7 +101,7 @@
           <div class="report-page">
             <header class="report-header">
               <div class="report-header-brand">
-                <img src="/Logos/Logo-Gravicon-Nuevo.png" @error="($event.target as HTMLImageElement).style.display='none'" alt="Gravicon" class="report-logo report-logo--light" />
+                <img src="/Logos/logo-azul-informe.png" @error="($event.target as HTMLImageElement).style.display='none'" alt="Gravicon" class="report-logo report-logo--light" />
                 <img src="/Logos/logo-blanco.webp" @error="($event.target as HTMLImageElement).style.display='none'" alt="Gravicon" class="report-logo report-logo--dark" />
                 <div class="report-header-text">
                   <h2>Mantenimiento de Llantas — {{ plantaLabel }} Gravicon</h2>
@@ -284,7 +284,7 @@
       <div class="modal-panel llanta-modal-panel">
         <div class="ot-doc">
           <div class="hdr">
-            <div class="hdr-logo"><img src="/Logos/Logo-Gravicon-Nuevo.png" alt="GRAVICON" @error="($event.target as HTMLImageElement).style.display='none'" /></div>
+            <div class="hdr-logo"><img src="/Logos/logo-azul-informe.png" alt="GRAVICON" @error="($event.target as HTMLImageElement).style.display='none'" /></div>
             <div class="hdr-info">
               <div class="co">GRAVICON S.A. - CONCRETOS {{ plantaLabel }}</div>
               <div class="ref">Código: F-LL-01 - Versión: 1 - Gestión de Llantas</div>

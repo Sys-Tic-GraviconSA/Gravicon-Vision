@@ -166,7 +166,7 @@
                       <div class="ot-doc dia-doc">
                         <div class="hdr">
                           <div class="hdr-logo">
-                            <img src="/Logos/Logo-Gravicon-Nuevo.png" alt="GRAVICON" />
+                            <img src="/Logos/logo-azul-informe.png" alt="GRAVICON" />
                           </div>
                           <div class="hdr-info">
                             <div class="co">GRAVICON S.A. — {{ plantaLabel }}</div>
@@ -432,7 +432,7 @@
           <header class="report-header">
             <div class="report-header-brand">
               <img
-                src="/Logos/Logo-Gravicon-Nuevo.png"
+                src="/Logos/logo-azul-informe.png"
                 alt="Gravicon"
                 class="report-logo report-logo--light"
                 loading="eager"

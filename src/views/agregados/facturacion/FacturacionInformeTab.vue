@@ -26,7 +26,7 @@
       <div class="report-page">
         <header class="report-header">
           <div class="report-header-brand">
-            <img src="/Logos/Logo-Gravicon-Nuevo.png" alt="Gravicon" class="report-logo" loading="eager" />
+            <img src="/Logos/logo-azul-informe.png" alt="Gravicon" class="report-logo" loading="eager" />
             <div class="report-header-text">
               <h2>Comercial Agregados Gravicon</h2>
               <span>GRAVAS Y CONCRETOS S.A. · Agregados {{ PLANTA }}</span>

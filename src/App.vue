@@ -165,9 +165,11 @@ function guiaVista(): boolean {
   try { return Number(localStorage.getItem(claveGuia())) >= GUIA_VERSION } catch { return false }
 }
 function iniciarGuia() {
+  // Se marca como vista apenas se muestra (no al cerrarla): así sale una sola vez aunque el usuario
+  // cierre la pestaña o salga sin terminarla. Se puede repetir desde el menú de usuario.
+  try { localStorage.setItem(claveGuia(), String(GUIA_VERSION)) } catch { /* sin almacenamiento */ }
+  if ((authStore.profile?.tourVersion ?? 0) < GUIA_VERSION) authStore.marcarTourVisto(GUIA_VERSION)
   guia.iniciar(() => {
-    try { localStorage.setItem(claveGuia(), String(GUIA_VERSION)) } catch { /* sin almacenamiento */ }
-    authStore.marcarTourVisto(GUIA_VERSION)
     if (window.innerWidth <= 768) collapsed.value = true
   })
 }
