@@ -361,7 +361,7 @@ import { BarChart, LineChart, PieChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent, TitleComponent, MarkPointComponent } from 'echarts/components'
 import KpiCard from '../../../components/dashboard/KpiCard.vue'
 import { useQueryDate } from '../../../composables/useQueryState'
-import { MESES, FAMILIAS } from '../../../composables/useFacturacion'
+import { MESES, FAMILIAS, ventaNeta } from '../../../composables/useFacturacion'
 import { descargarInformePdf } from '../../../utils/pdfInforme'
 import type { Familia, LineaFacturacion } from '../../../types/facturacion'
 
@@ -565,21 +565,27 @@ const kpisDia = computed(() => {
 const kpisMes = computed(() => {
   const m = M.value, p = precioProm(ventas.value)
   const cierre = proyeccion.value
+  const vn = ventaNeta(ventas.value)
+  const filaNeta = (color: string, lbl: string, valor: string) => `<div class='kpi-detail-row'><span class='kpi-dot' style='background:${color}'></span><span class='kpi-det-lbl'>${lbl}</span> <strong>${valor}</strong></div>`
   return [
     { label: `Venta del ${Per.value}`, value: cop(m.venta), accent: '#2563EB', icon: 'dollar', meta: esMes.value ? `1 al ${cd.value}` : `${DIAS_OP.value} días`, detail: detalle(mapFam(f => cop(mv.value[f]))) },
+    // Venta sin flete de Holcim, donaciones ni traslados
+    { label: 'Venta Neta', value: cop(vn.neta), accent: '#0F766E', icon: 'check-circle', meta: 'sin flete Holcim, donaciones ni traslados',
+      detail: filaNeta('#2563EB', 'Venta total', cop(vn.venta)) + filaNeta(COL.Fletes, '− Flete Holcim', vn.fleteHolcim ? cop(vn.fleteHolcim) : 'no hay') +
+        filaNeta('#172954', 'Toneladas vendidas', num(vn.t, 0) + ' t') },
     { label: 'Toneladas Despachadas', value: num(m.t + m.tr, 0) + ' t', accent: '#172954', icon: 'package',
       meta: m.tr ? `vendidas ${num(m.t, 0)} t · traslados ${num(m.tr, 0)} t` : 'vendidas, sin traslados',
       detail: detalle(mapFam(f => num(mt.value[f] + porFam(tras.value, 't')[f], 0) + ' t'), undefined, famsT.value) },
-    { label: 'Remisiones', value: num(m.rem, 0), accent: '#8B5CF6', icon: 'list', meta: `${num(m.lineas, 0)} líneas`, detail: detalle(mapFam(f => num(mr.value[f], 0))) },
+    // Con cierre estimado el ticket va en el pie de Remisiones (así se mantienen 3 filas de 4 tarjetas)
+    { label: 'Remisiones', value: num(m.rem, 0), accent: '#8B5CF6', icon: 'list', meta: cierre && m.rem ? `ticket ${cop(m.venta / m.rem)}` : `${num(m.lineas, 0)} líneas`, detail: detalle(mapFam(f => num(mr.value[f], 0))) },
     { label: 'Precio Promedio por t', value: p ? cop(p) : '—', accent: '#172954', icon: 'target', meta: 'venta ÷ t', detail: detalle(mapFam(f => { const x = precioFam(f); return x ? cop(x) : '—' })) },
     { label: 'Clientes Activos', value: String(m.clientes), accent: '#10B981', icon: 'users', meta: 'sin repetir', detail: detalle(mapFam(f => String(cliFam.value[f]?.size ?? 0))) },
     { label: 'Venta Promedio Diaria', value: cop(ritmo.value), accent: '#64748B', icon: 'activity', meta: `${DIAS_OP.value} días con venta`, detail: detalle(mapFam(f => cop(promFam.value[f]))) },
     cierre
       ? { label: 'Cierre Estimado Mes', value: cop(cierre.total), accent: '#F59E0B', icon: 'trending-up',
           meta: `faltan ${cierre.faltanHab} háb.` + (cierre.faltanDom ? ` + ${cierre.faltanDom} dom.` : ''), detail: detalle(mapFam(f => cop(cierre.fam[f] ?? 0))) }
-      : { label: 'Días con Venta', value: String(DIAS_OP.value), accent: '#F59E0B', icon: 'clock', meta: `${fechaMedia(R.value.desde)} – ${fechaMedia(R.value.hasta)}` },
-    { label: 'Ticket por Remisión', value: m.rem ? cop(m.venta / m.rem) : '—', accent: '#0EA5E9', icon: 'target', meta: 'venta ÷ remisiones',
-      detail: detalle(mapFam(f => (mr.value[f] ? cop(mv.value[f] / mr.value[f]) : '—'))) },
+      : { label: 'Ticket por Remisión', value: m.rem ? cop(m.venta / m.rem) : '—', accent: '#0EA5E9', icon: 'target', meta: 'venta ÷ remisiones',
+          detail: detalle(mapFam(f => (mr.value[f] ? cop(mv.value[f] / mr.value[f]) : '—'))) },
     ...kpisDonTras(don.value, tras.value, `del ${Per.value}`),
   ]
 })
