@@ -1,19 +1,5 @@
 <template>
   <div class="graficas-tab">
-    <div class="gt-bar">
-      <div class="gt-info">
-        <span class="gt-tag">Proyección comercial · {{ mesLbl }}</span>
-        <span class="gt-periodo">Meta vs. ejecutado al día {{ dia }} de {{ ultDia }} — avance del mes {{ pct(avance, 0) }}</span>
-        <span class="gt-sub">La proyección de cada planta es el total de la proyección de sus clientes (la misma fuente del informe). El avance diario y la proyección al cierre salen de las remisiones de concreto.</span>
-      </div>
-      <label class="gt-mes">
-        Mes
-        <select v-model="mesSel">
-          <option v-for="m in mesesDisponibles" :key="m" :value="m">{{ etiquetaMes(m) }}</option>
-        </select>
-      </label>
-    </div>
-
     <SkeletonLoader v-if="clientesStore.loading && !proyecciones.length" :kpis="4" :charts="3" label="Cargando proyecciones…" />
     <div v-else-if="clientesStore.error" class="gt-vacio">No se pudieron cargar las proyecciones: {{ clientesStore.error }}</div>
     <div v-else-if="!filasMes.length" class="gt-vacio">No hay proyección de clientes para {{ mesLbl }}.</div>
@@ -60,7 +46,7 @@
  */
 <script setup lang="ts">
 import SkeletonLoader from '../../../components/ui/SkeletonLoader.vue'
-import { ref, computed, watch, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import KpiCard from '../../../components/dashboard/KpiCard.vue'
 import ChartCard from '../../../components/dashboard/ChartCard.vue'
 import { useClientesStore } from '../../../stores'
@@ -129,14 +115,11 @@ const remisiones = computed<Rem[]>(() => props.rows
 
 // ---------------------------------------------------------------- Mes y corte
 const mesesDisponibles = computed(() => [...new Set(proyecciones.value.filter(r => r.tipo === 'Proyectado').map(r => r.mes))].sort().reverse())
-const mesSel = ref('')
-watch([() => props.corte, mesesDisponibles], () => {
+// Mes = el de la fecha final del filtro de arriba; si no tiene proyección (o no hay filtro), el más reciente
+const mesSel = computed(() => {
   const deCorte = (props.corte || '').slice(0, 7)
-  if (!mesSel.value || !mesesDisponibles.value.includes(mesSel.value)) {
-    mesSel.value = mesesDisponibles.value.includes(deCorte) ? deCorte : mesesDisponibles.value[0] ?? deCorte
-  }
-}, { immediate: true })
-watch(() => props.corte, c => { const m = (c || '').slice(0, 7); if (mesesDisponibles.value.includes(m)) mesSel.value = m })
+  return mesesDisponibles.value.includes(deCorte) ? deCorte : mesesDisponibles.value[0] ?? deCorte
+})
 
 const anio = computed(() => Number(mesSel.value.slice(0, 4)))
 const mes = computed(() => Number(mesSel.value.slice(5, 7)))
@@ -504,11 +487,6 @@ const optHistoricoPlanta = computed(() => {
 .gt-tag { font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--accent); }
 .gt-periodo { font-size: 15px; font-weight: 600; color: var(--text-primary); }
 .gt-sub { font-size: 12px; color: var(--text-tertiary); }
-.gt-mes { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-tertiary); }
-.gt-mes select {
-  padding: 6px 10px; border: 1px solid var(--card-border); border-radius: var(--radius-sm);
-  background: var(--card-bg); color: var(--text-primary); font-size: 13px; text-transform: capitalize;
-}
 .gt-vacio { padding: 48px 16px; text-align: center; color: var(--text-secondary); }
 
 /* Mismo tratamiento de títulos y KPIs que el tablero de Mantenimiento */
@@ -524,9 +502,7 @@ const optHistoricoPlanta = computed(() => {
   .gt-bar { padding: 10px 12px; margin-bottom: 14px; gap: 10px; }
   .gt-periodo { font-size: 14px; }
   .gt-sub { font-size: 11px; }
-  .gt-mes { width: 100%; }
-  .gt-mes select { flex: 1; font-size: 16px; }
-  .section-title { font-size: 15px; margin-top: 22px; }
+      .section-title { font-size: 15px; margin-top: 22px; }
   .charts-grid { margin-top: 12px; gap: 12px; }
 }
 </style>

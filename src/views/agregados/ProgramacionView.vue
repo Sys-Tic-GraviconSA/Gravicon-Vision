@@ -408,5 +408,10 @@ a.tab-btn { text-decoration: none; display: inline-flex; align-items: center; }
 }
 @media (max-width: 768px) {
   .kpi-3 { grid-template-columns: 1fr; }
+  /* El título repite el módulo (ya visible arriba) y los márgenes dejaban un hueco antes de las pestañas */
+  .page-title { display: none; }
+  .page-header { margin-bottom: 12px; padding: 4px 0; }
+  .tab-bar { margin-bottom: 12px; }
+  .sub-tab-bar { margin-bottom: 14px; }
 }
 </style>

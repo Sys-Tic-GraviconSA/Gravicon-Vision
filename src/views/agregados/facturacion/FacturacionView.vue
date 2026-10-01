@@ -9,6 +9,8 @@
     </div>
 
     <template v-else-if="datos">
+      <!-- Encabezado con filtros fijo arriba al desplazarse (como en Concretos y Programación) -->
+      <div class="sticky-top">
       <header class="page-header">
         <div class="titulo-bloque">
           <h2 class="page-title">Facturación {{ planta.nombre }}</h2>
@@ -33,6 +35,7 @@
           </button>
         </div>
       </header>
+      </div>
 
       <div v-if="!datos.lineas.length" class="page-state">
         <strong>Sin facturación para {{ planta.nombre }}</strong>
@@ -167,11 +170,14 @@ const vistas = computed(() => VISTAS_FACTURACION.map(v => ({
 .retry-btn:hover { background: var(--danger); color: #fff; }
 
 @media (max-width: 768px) {
+  /* En celular el encabezado no queda fijo: ocuparía media pantalla */
+  .sticky-top { position: static; }
   .page-header { flex-direction: column; align-items: stretch; gap: 8px; }
-  .page-title { font-size: 17px; }
-  .header-actions { width: 100%; }
+  /* El título repite planta y módulo (ya visibles arriba): en celular se oculta */
+  .titulo-bloque { display: none; }
+  .header-actions { width: 100%; flex-wrap: wrap; }
   .filter-group { width: 100%; box-sizing: border-box; padding: 6px; gap: 4px; }
   .filter-group > * { flex: 1 1 auto; }
-  .action-btn { flex: 1; justify-content: center; }
+  .action-btn { margin-left: auto; }
 }
 </style>

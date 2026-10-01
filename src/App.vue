@@ -35,23 +35,23 @@
         </div>
 
         <nav class="nav" data-guia="menu">
-          <button class="nav-section" :class="{ active: openMenus.agr }" @click="toggle('agr')">
+          <button v-if="verPlanta.cuncia || verPlanta.acacias" class="nav-section" :class="{ active: openMenus.agr }" @click="toggle('agr')">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="2,20 12,2 22,20"/><line x1="12" y1="2" x2="12" y2="20"/></svg>
             <span v-if="!collapsed">Agregados</span>
             <svg v-if="!collapsed" class="chevron" :class="{ open: openMenus.agr }" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
-          <div v-if="!collapsed && openMenus.agr" class="nav-children">
-            <router-link v-if="authStore.canView('cuncia')" to="/cuncia" class="nav-child" active-class="active" @click="handleLinkClick">Cuncia</router-link>
-            <router-link v-if="authStore.canView('acacias')" to="/acacias" class="nav-child" active-class="active" @click="handleLinkClick">Acacias</router-link>
+          <div v-if="!collapsed && openMenus.agr && (verPlanta.cuncia || verPlanta.acacias)" class="nav-children">
+            <router-link v-if="verPlanta.cuncia" to="/cuncia" class="nav-child" active-class="active" @click="handleLinkClick">Cuncía</router-link>
+            <router-link v-if="verPlanta.acacias" to="/acacias" class="nav-child" active-class="active" @click="handleLinkClick">Acacías</router-link>
           </div>
 
-          <button class="nav-section" :class="{ active: openMenus.concreto }" @click="toggle('concreto')">
+          <button v-if="verPlanta.concretos" class="nav-section" :class="{ active: openMenus.concreto }" @click="toggle('concreto')">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
             <span v-if="!collapsed">Concretos</span>
             <svg v-if="!collapsed" class="chevron" :class="{ open: openMenus.concreto }" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
-          <div v-if="!collapsed && openMenus.concreto" class="nav-children">
-            <router-link v-if="authStore.canView('concretos')" to="/concretos" class="nav-child" active-class="active" @click="handleLinkClick">General</router-link>
+          <div v-if="!collapsed && openMenus.concreto && verPlanta.concretos" class="nav-children">
+            <router-link to="/concretos" class="nav-child" active-class="active" @click="handleLinkClick">General</router-link>
           </div>
         </nav>
 
@@ -118,6 +118,7 @@
 import { reactive, ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from './stores/auth'
+import { PLANTAS, type PlantaId } from './config/plantas'
 import { useTheme } from './composables/useTheme'
 import { useGuiaInicio, GUIA_VERSION } from './composables/useGuiaInicio'
 import GuiaInicio from './components/ui/GuiaInicio.vue'
@@ -128,6 +129,11 @@ const { theme, toggleTheme } = useTheme()
 const logoSrc = computed(() => theme.value === 'dark' ? '/Logos/logo-blanco.webp' : '/Logos/logo-azul.webp')
 
 const collapsed = ref(false)
+
+// Menú: una planta solo aparece si el usuario puede ver al menos uno de sus módulos;
+// una sección (Agregados / Concretos) solo si tiene alguna planta visible
+const verPlanta = computed(() => Object.fromEntries((Object.keys(PLANTAS) as PlantaId[]).map(id => [id,
+  authStore.canView(id) && PLANTAS[id].modulos.some(m => authStore.canView(`${id}/${m.id}`))])) as Record<PlantaId, boolean>)
 
 function handleDocClick(e: MouseEvent) {
   const target = e.target as HTMLElement
@@ -528,8 +534,9 @@ async function handleLogout() {
     background: var(--sidebar-hover);
   }
   
-  .mobile-logo { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; }
-  .mobile-logo img { height: 34px; width: auto; display: block; }
+  /* Solo el logo de la barra móvil (el estilo de App.vue es global: sin el prefijo afectaba al logo del login) */
+  .mobile-header .mobile-logo { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; }
+  .mobile-header .mobile-logo img { height: 34px; width: auto; display: block; }
 
   .sidebar-overlay {
     position: fixed;

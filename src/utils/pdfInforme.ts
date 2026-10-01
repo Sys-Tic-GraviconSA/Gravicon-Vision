@@ -4,8 +4,14 @@
  * si el documento supera el alto máximo de jsPDF se divide en tramos.
  * Las librerías se cargan solo al descargar.
  */
+import { nextTick } from 'vue'
+import { capturandoPdf } from '../composables/useTemaInforme'
+
 export async function descargarInformePdf(el: HTMLElement, nombreArchivo: string, antesDeCapturar?: () => void | Promise<void>) {
   el.classList.add('pdf-capturing')
+  // Las gráficas vuelven a los colores de papel (en tema oscuro se ven con colores para fondo oscuro)
+  capturandoPdf.value = true
+  await nextTick()
   try {
     await antesDeCapturar?.()
     await new Promise(r => setTimeout(r, 450))
@@ -35,5 +41,6 @@ export async function descargarInformePdf(el: HTMLElement, nombreArchivo: string
     pdf?.save(nombreArchivo)
   } finally {
     el.classList.remove('pdf-capturing')
+    capturandoPdf.value = false
   }
 }

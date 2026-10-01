@@ -204,7 +204,8 @@ const freshness = computed(() => {
   const m = { fechaFin: `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}` }
   const updateLabel = store.lastUpdate ? new Date(store.lastUpdate).toLocaleString('es-CO') : ''
   const lag = daysBetween(m.fechaFin, todayBogotaKey())
-  if (lag <= 1) return { label: `Datos al día ${m.fechaFin}`, cls: 'fresh-ok', title: `Actualizado: ${updateLabel}` }
+  // Al día no se muestra nada; solo se avisa cuando los datos vienen atrasados
+  if (lag <= 1) return null
   if (lag <= 3) return { label: `Retraso ${lag} días`, cls: 'fresh-warn', title: `Último dato: ${m.fechaFin} · Actualizado: ${updateLabel}` }
   return { label: `Desactualizado ${lag} días`, cls: 'fresh-danger', title: `Último dato: ${m.fechaFin} · Actualizado: ${updateLabel}` }
 })
@@ -334,11 +335,6 @@ const propsHija = computed(() => {
   letter-spacing: .3px;
   cursor: help;
 }
-.freshness-badge.fresh-ok {
-  background: rgba(34,197,94,.15);
-  color: #22C55E;
-  border: 1px solid rgba(34,197,94,.3);
-}
 .freshness-badge.fresh-warn {
   background: rgba(232,145,58,.15);
   color: #E8913A;
@@ -364,6 +360,8 @@ const propsHija = computed(() => {
   .sticky-top { position: static; }
   .page-header { flex-direction: column; align-items: stretch; gap: 8px; padding: 4px 0; }
   .page-title { font-size: 17px; flex-wrap: wrap; }
+  /* El título repite el módulo; solo se deja si trae el aviso de datos atrasados */
+  .page-title:not(:has(.freshness-badge)) { display: none; }
   .header-actions { width: 100%; }
   .filter-group { position: static; width: 100%; box-sizing: border-box; padding: 6px; gap: 4px; }
   .filter-group > * { flex: 1 1 auto; }

@@ -281,6 +281,7 @@ const grupos: Grupo[] = [
     { key: 'concretos/mantenimiento/inspeccion', label: 'Mant. Inspección' },
     { key: 'concretos/mantenimiento/disponibilidad', label: 'Mant. Disponibilidad' },
     { key: 'concretos/mantenimiento/tareas', label: 'Mant. Tareas' },
+    { key: 'concretos/mantenimiento/combustible', label: 'Mant. Combustible' },
   ] },
   { id: 'clientes', label: 'Clientes', vistas: [
     { key: 'clientes', label: 'Acceso general' },

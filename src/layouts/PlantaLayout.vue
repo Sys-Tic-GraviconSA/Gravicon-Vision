@@ -1,7 +1,6 @@
 <template>
   <div class="page-layout planta-layout">
     <header class="planta-header">
-      <span v-if="planta.negocio !== planta.nombre" class="planta-negocio">{{ planta.negocio }}</span>
       <h1 class="planta-nombre">{{ planta.nombre }}</h1>
     </header>
 
@@ -41,7 +40,6 @@ const moduloActivo = computed(() => route.path.split('/')[2] ?? '')
 
 <style scoped>
 .planta-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }
-.planta-negocio { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
 .planta-nombre { font-size: 24px; font-weight: 700; letter-spacing: -0.4px; color: var(--text-primary); margin: 0; }
 
 /* Los módulos traían su propio .page-layout: dentro del layout no se duplica el margen */

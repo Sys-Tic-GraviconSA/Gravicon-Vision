@@ -15,7 +15,12 @@
                 <MultiSelect v-model="selectedCentroCosto" :options="centroCostoDisponibles" label="Centro Costo" icon="filter" />
                 <MultiSelect v-model="selectedProceso" :options="procesoDisponibles" label="Proceso" icon="filter" />
               </template>
-              <template v-else>
+              <template v-if="subTab === 'combustible'">
+                <MultiSelect v-model="selectedPlantasComb" :options="plantasCombDisponibles" label="Planta" icon="filter" />
+                <MultiSelect v-model="selectedProductos" :options="productosDisponibles" label="Producto" icon="filter" />
+              </template>
+              <!-- Filtros de órdenes: solo en secciones con órdenes (no en Inspección, Tareas ni Combustible) -->
+              <template v-else-if="esAreaOT">
                 <MultiSelect v-model="selectedLineas" :options="lineasDisponibles" :label="isConcretos ? 'Planta' : 'Línea'" icon="filter" />
                 <MultiSelect v-model="selectedVehiculos" :options="vehiculosDisponibles" label="Vehículos" icon="filter" />
                 <MultiSelect v-if="isConcretos" v-model="selectedPlacas" :options="placasDisponibles" label="Placa" icon="filter" />
@@ -23,12 +28,12 @@
                 <MultiSelect v-else v-model="selectedProveedores" :options="proveedoresDisponibles" label="Proveedor" icon="user" />
                 <MultiSelect v-model="selectedEstados" :options="estadosDisponibles" label="Estado" icon="filter" />
               </template>
-              <div class="filter-quick-nav" v-if="subTab==='dashboard' && dashboardView==='resumen'">
+              <div class="filter-quick-nav" v-if="esAreaOT && subTab==='dashboard' && dashboardView==='resumen'">
                 <button class="quick-nav-btn ghost" @click="scrollToSec('sec-general')">General</button>
                 <button class="quick-nav-btn ghost" @click="scrollToSec('sec-internos')">Internos</button>
                 <button class="quick-nav-btn ghost" @click="scrollToSec('sec-externos')">Externos</button>
               </div>
-              <div class="filter-quick-nav" v-if="subTab==='gerencial'">
+              <div class="filter-quick-nav" v-if="esAreaOT && subTab==='gerencial'">
                 <button class="quick-nav-btn ghost" @click="scrollToSec('sec-ger-general')">General</button>
                 <button class="quick-nav-btn ghost" @click="scrollToSec('sec-ger-internos')">Internos</button>
                 <button class="quick-nav-btn ghost" @click="scrollToSec('sec-ger-externos')">Externos</button>
@@ -55,13 +60,8 @@
         <RouterLink v-for="t in tipoTabs" :key="t.id" :to="rutaMant.enlace({ area: t.id })" class="tab-btn" :class="{ active: tipoTab === t.id }" :aria-current="tipoTab === t.id ? 'page' : undefined">{{ t.label }}</RouterLink>
       </nav>
 
-      <!-- Inspección de Llantas: vista propia (solo Concretos) -->
-      <template v-if="tipoTab === 'inspeccion'">
-        <InspeccionLlantasTab :planta="planta" />
-      </template>
-
       <!-- Tareas: vista propia al nivel de Planta/Maquinaria -->
-      <template v-else-if="tipoTab === 'tareas'">
+      <template v-if="tipoTab === 'tareas'">
         <TareasTab
           :data="dataFilteredMain"
           :planta="planta"
@@ -74,6 +74,15 @@
       <nav class="sub-tab-bar">
         <RouterLink v-for="p in paneles" :key="p.id" :to="rutaMant.enlace({ panel: p.id })" class="sub-tab-btn" :class="{ active: subTab === p.id }" :aria-current="subTab === p.id ? 'page' : undefined">{{ p.label }}</RouterLink>
       </nav>
+
+      <!-- Concretos: Inspección de llantas (Maquinaria) y Combustible (Planta y Maquinaria, cada una con sus tanqueos) -->
+      <template v-if="subTab === 'inspeccion'">
+        <InspeccionLlantasTab :planta="planta" />
+      </template>
+      <template v-if="subTab === 'combustible'">
+        <CombustibleTab :fecha-inicio="fechaInicio" :fecha-fin="fechaFin" :productos="[...selectedProductos]" :area="tipoTab === 'planta' ? 'planta' : 'maquinaria'"
+          :plantas-filtro="selectedPlantasComb.size === plantasCombDisponibles.length ? [] : [...selectedPlantasComb]" />
+      </template>
 
       <!-- Disponibilidad: el área (Planta/Maquinaria) la impone la pestaña activa -->
       <template v-if="subTab === 'disponibilidad'">
@@ -118,7 +127,7 @@
         <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" :detail="isConcretos ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${fmt(totalProd)} m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Agregados</span> <strong>${fmt(totalProdAgg)} m³</strong></div>` : ''" />
         <KpiCard v-if="isConcretos" :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${$$(costoM3)}/m³</strong></div>` + (totalProdAgg > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Con agregados</span> <strong>${$$(costoM3ConAgg)}/m³</strong></div>` : '')" />
         <KpiCard v-else :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3)}/m³</strong></div>`" />
-        <KpiCard :value="String(totalOrdenes)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCount}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCount}</strong></div>`" />
+        <KpiCard :value="String(totalOrdenes)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCountRegistro}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCountRegistro}</strong></div>`" />
         <KpiCard :value="String(estadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.abiertas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.abiertas)}</span></div>`" />
         <KpiCard :value="String(estadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.cerradas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.cerradas)}</span></div>`" />
         <KpiCard :value="otPctCierre + '%'" label="% Cierre" accent="#3B82F6" icon="zap" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntPctCierre}%</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtPctCierre}%</strong></div>`" />
@@ -199,7 +208,7 @@
       <KpiCard :value="$$(intIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-int'>Int</span> <strong>${intTotal > 0 ? ((intIns / intTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto interno</span></div>`" />
       <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
       <KpiCard :value="$$(intCostoM3)" label="Costo por m³" :accent="intCostoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
-      <KpiCard :value="String(intCount)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${totalOrdenes > 0 ? ((intCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
+      <KpiCard :value="String(intCountRegistro)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${totalOrdenes > 0 ? ((intCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
       <KpiCard :value="otDiasRegistro > 0 ? (intCountRegistro / otDiasRegistro).toFixed(1) : '0.0'" label="Promedio OT / día" accent="#0EA5E9" icon="activity" />
       <KpiCard :value="otDiasActivos > 0 ? (otsIntEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" />
       <KpiCard :value="String(otsIntEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-int'>Costo</span> <strong>${$$(otsIntEstadoCostos.abiertas)}</strong></div>`" />
@@ -279,7 +288,7 @@
       <KpiCard :value="$$(extIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Ext</span> <strong>${extTotal > 0 ? ((extIns / extTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto externo</span></div>`" />
       <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
       <KpiCard :value="$$(extCostoM3)" label="Costo por m³" :accent="extCostoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
-      <KpiCard :value="String(extCount)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${totalOrdenes > 0 ? ((extCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
+      <KpiCard :value="String(extCountRegistro)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${totalOrdenes > 0 ? ((extCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
       <KpiCard :value="otDiasRegistro > 0 ? (extCountRegistro / otDiasRegistro).toFixed(1) : '0.0'" label="Promedio OT / día" accent="#0EA5E9" icon="activity" />
       <KpiCard :value="otDiasActivos > 0 ? (otsExtEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" />
       <KpiCard :value="String(otsExtEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Costo</span> <strong>${$$(otsExtEstadoCostos.abiertas)}</strong></div>`" />
@@ -447,7 +456,7 @@
             <KpiCard label="Total Producción" accent="#10B981" icon="trending-up" :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" :detail="isConcretos ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${fmt(totalProd)} m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Agregados</span> <strong>${fmt(totalProdAgg)} m³</strong></div>` : ''" />
             <KpiCard v-if="isConcretos" label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :value="$$(costoM3)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${$$(costoM3)}/m³</strong></div>` + (totalProdAgg > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Con agregados</span> <strong>${$$(costoM3ConAgg)}/m³</strong></div>` : '')" />
             <KpiCard v-else label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :value="$$(costoM3)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3)}/m³</strong></div>`" />
-            <KpiCard label="Total Órdenes" accent="#8B5CF6" icon="list" :value="String(totalOrdenes)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCount}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCount}</strong></div>`" />
+            <KpiCard label="Total Órdenes" accent="#8B5CF6" icon="list" :value="String(totalOrdenes)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCountRegistro}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCountRegistro}</strong></div>`" />
             <KpiCard label="OT Abiertas" accent="#DC2626" icon="activity" :value="String(repAbiertas)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.abiertas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.abiertas)}</span></div>`" />
             <KpiCard label="OT Cerradas" accent="#16A34A" icon="check-circle" :value="String(repCerradas)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.cerradas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.cerradas)}</span></div>`" />
             <KpiCard
@@ -468,9 +477,8 @@
 
           <!-- Nota de metodología del filtro por fecha -->
           <div class="report-nota">
-            <strong>Base del período:</strong> los datos filtrados por fecha se toman por la <strong>fecha de cierre</strong> de la OT (cuando se realiza y paga el gasto), no por la de creación. Las OT sin fecha de cierre registrada (abiertas, o cerradas sin ese dato en la hoja) solo aparecen cuando no hay filtro de fechas; al acotar un período no entran, porque no hay forma de ubicar su gasto en ese corte.
+            <strong>Base del período:</strong> las <strong>órdenes registradas</strong> (Total Órdenes), las <strong>abiertas</strong> y el <strong>Promedio OT / día</strong> se toman por la <strong>fecha de registro</strong> de la OT; las <strong>cerradas</strong> y los <strong>costos</strong>, por la <strong>fecha de cierre</strong> (cuando se realiza y paga el gasto).
             <template v-if="repAbiertas > 0"> En este corte hay <strong>{{ repAbiertas }} OT abiertas</strong> pendientes de cierre.</template>
-            Excepción: <strong>Promedio OT / día</strong> se calcula por fecha de recepción (o registro), de forma independiente al filtro por fecha de cierre. Los demás indicadores del informe sí se filtran por fecha de cierre.
           </div>
 
           <!-- Nota de Estado / Alertas -->
@@ -1100,7 +1108,7 @@
         <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" :detail="isConcretos ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${fmt(totalProd)} m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Agregados</span> <strong>${fmt(totalProdAgg)} m³</strong></div>` : ''" />
         <KpiCard v-if="isConcretos" :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${$$(costoM3)}/m³</strong></div>` + (totalProdAgg > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Con agregados</span> <strong>${$$(costoM3ConAgg)}/m³</strong></div>` : '')" />
         <KpiCard v-else :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3)}/m³</strong></div>`" />
-        <KpiCard :value="String(totalOrdenes)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCount}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCount}</strong></div>`" />
+        <KpiCard :value="String(totalOrdenes)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCountRegistro}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCountRegistro}</strong></div>`" />
         <KpiCard :value="promOtDia.toFixed(1)" label="Promedio OT / día" accent="#0EA5E9" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasRegistro > 0 ? (intCountRegistro / otDiasRegistro).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasRegistro > 0 ? (extCountRegistro / otDiasRegistro).toFixed(1) : '0.0'}</strong></div>`" />
         <KpiCard :value="promCierreDia.toFixed(1)" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasActivos > 0 ? (otsIntEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasActivos > 0 ? (otsExtEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div>`" />
         <KpiCard :value="String(estadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.abiertas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.abiertas)}</span></div>`" />
@@ -1173,7 +1181,7 @@
         <KpiCard :value="$$(intIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-int'>Int</span> <strong>${intTotal > 0 ? ((intIns / intTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto interno</span></div>`" />
         <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
         <KpiCard :value="$$(intCostoM3)" label="Costo por m³" :accent="intCostoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
-        <KpiCard :value="String(intCount)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${totalOrdenes > 0 ? ((intCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
+        <KpiCard :value="String(intCountRegistro)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${totalOrdenes > 0 ? ((intCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
         <KpiCard :value="otDiasRegistro > 0 ? (intCountRegistro / otDiasRegistro).toFixed(1) : '0.0'" label="Promedio OT / día" accent="#0EA5E9" icon="activity" />
       <KpiCard :value="otDiasActivos > 0 ? (otsIntEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" />
         <KpiCard :value="String(otsIntEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-int'>Costo</span> <strong>${$$(otsIntEstadoCostos.abiertas)}</strong></div>`" />
@@ -1245,7 +1253,7 @@
         <KpiCard :value="$$(extIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Ext</span> <strong>${extTotal > 0 ? ((extIns / extTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto externo</span></div>`" />
         <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
         <KpiCard :value="$$(extCostoM3)" label="Costo por m³" :accent="extCostoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
-        <KpiCard :value="String(extCount)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${totalOrdenes > 0 ? ((extCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
+        <KpiCard :value="String(extCountRegistro)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${totalOrdenes > 0 ? ((extCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
         <KpiCard :value="otDiasRegistro > 0 ? (extCountRegistro / otDiasRegistro).toFixed(1) : '0.0'" label="Promedio OT / día" accent="#0EA5E9" icon="activity" />
       <KpiCard :value="otDiasActivos > 0 ? (otsExtEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" />
         <KpiCard :value="String(otsExtEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Costo</span> <strong>${$$(otsExtEstadoCostos.abiertas)}</strong></div>`" />
@@ -1754,6 +1762,8 @@ import { useAuthStore } from '../stores/auth'
 import ChartCard from '../components/dashboard/ChartCard.vue'
 import DisponibilidadTab from './mantenimiento/DisponibilidadTab.vue'
 import TareasTab from './mantenimiento/TareasTab.vue'
+import { nombrePlanta, titulo, ordenarPlantas } from '../composables/useGraficasConcreto'
+import CombustibleTab from './mantenimiento/CombustibleTab.vue'
 import InspeccionLlantasTab from './mantenimiento/InspeccionLlantasTab.vue'
 import DataTable from '../components/dashboard/DataTable.vue'
 import FilterBar from '../components/dashboard/FilterBar.vue'
@@ -1790,20 +1800,23 @@ const almacenView = rutaMant.vistaAlmacen
 const tipoTabs = computed(() => [
   { id: 'planta' as const, label: 'Planta' },
   { id: 'maquinaria' as const, label: 'Maquinaria' },
-  ...(isConcretos.value ? [{ id: 'inspeccion' as const, label: 'Inspección' }] : []),
   { id: 'tareas' as const, label: 'Tareas' },
 // Permisos por vista (Configuración): se ocultan las áreas que el usuario no tiene permitidas
 ].filter(t => authStore.canView(`${props.planta}/mantenimiento/${t.id}`)))
 // Si el área de la ruta no existe en esta planta o no está permitida, se muestra la primera permitida
 watch(tipoTabs, ts => { if (ts.length && !ts.some(t => t.id === tipoTab.value)) rutaMant.ir({ area: ts[0].id }, true) }, { immediate: true })
+/** Secciones con órdenes de trabajo (filtros de órdenes, accesos rápidos): no Tareas, Inspección ni Combustible */
+const esAreaOT = computed(() => tipoTab.value !== 'tareas' && subTab.value !== 'inspeccion' && subTab.value !== 'combustible')
 const paneles = computed(() => [
   { id: 'dashboard' as const, label: 'Órdenes de Trabajo' },
   { id: 'almacen' as const, label: 'Almacén' },
   { id: 'gerencial' as const, label: 'Gerencial' },
   ...(puedeDisponibilidad.value ? [{ id: 'disponibilidad' as const, label: 'Disponibilidad' }] : []),
+  // Solo Concretos, cada una con su permiso: Inspección en Maquinaria; Combustible en Planta y Maquinaria
+  ...(isConcretos.value && tipoTab.value === 'maquinaria' && authStore.canView(`${props.planta}/mantenimiento/inspeccion`) ? [{ id: 'inspeccion' as const, label: 'Inspección' }] : []),
+  ...(isConcretos.value && tipoTab.value !== 'tareas' && authStore.canView(`${props.planta}/mantenimiento/combustible`) ? [{ id: 'combustible' as const, label: 'Combustible' }] : []),
 ])
 const puedeDisponibilidad = computed(() => authStore.canView(`${props.planta}/mantenimiento/disponibilidad`))
-watch([subTab, puedeDisponibilidad], ([p, ok]) => { if (p === 'disponibilidad' && !ok) rutaMant.ir({ panel: 'dashboard' }, true) }, { immediate: true })
 function scrollToSec(id: string) {
   const el = document.getElementById(id)
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -2805,6 +2818,19 @@ const mant = useMantenimientoStore()
 const prod = useProduccionStore()
 const concretoStore = useConcretoStore()
 const disp = useDisponibilidadStore()
+// (Va después de `disp` y de los permisos: los watch inmediatos los usan al montar)
+// Si la sección de la ruta no está disponible aquí (otra área, otra planta o sin permiso), se va a Órdenes de Trabajo
+watch(paneles, ps => { if (tipoTab.value !== 'tareas' && !ps.some(p => p.id === subTab.value)) rutaMant.ir({ panel: 'dashboard' }, true) }, { immediate: true })
+// Filtro de producto de Combustible (en los filtros de arriba); todos marcados = todos los productos
+const productosDisponibles = computed(() => ['ACPM', 'CORRIENTE', 'UREA'].filter(p =>
+  ((disp.data?.combustible ?? []) as Record<string, unknown>[]).some(r => String(r['Producto'] ?? '').trim().toUpperCase() === p)))
+const selectedProductos = ref<Set<string>>(new Set())
+watch(productosDisponibles, ps => { selectedProductos.value = new Set(ps) }, { immediate: true })
+// Filtro de planta de Combustible (Villavicencio, Acacías, Restrepo…), mismos nombres que la vista
+const plantasCombDisponibles = computed(() => ordenarPlantas(new Set(((disp.data?.combustible ?? []) as Record<string, unknown>[])
+  .map(r => nombrePlanta(titulo(String(r['Planta'] ?? '').trim()))).filter(p => p && p !== 'Sin planta'))))
+const selectedPlantasComb = ref<Set<string>>(new Set())
+watch(plantasCombDisponibles, ps => { selectedPlantasComb.value = new Set(ps) }, { immediate: true })
 
 const loading = computed(() => mant.loading || prod.loading || concretoStore.loading)
 const error = computed(() => mant.error || prod.error)
@@ -2850,11 +2876,12 @@ function otCloseSerial(r: Record<string, unknown>): number {
 }
 
 /**
- * Serial (solo fecha) de la RECEPCIÓN de la OT — cuándo se recibió el trabajo. Cae a la
- * fecha de registro si no hay recepción. 0 si ninguna parsea. Base de "Promedio OT / día".
+ * Serial (solo fecha) del REGISTRO de la OT (columna FECHA); si falta, la fecha de recepción.
+ * 0 si ninguna parsea. Rige «Total Órdenes», «Abiertas» y «Promedio OT / día» (pedido del usuario,
+ * 2026-10-01: registros y abiertas por fecha de registro; cerradas y costos por fecha de cierre).
  */
 function otRecepcionSerial(r: Record<string, unknown>): number {
-  return otDateOnlySerial(r['Fecha Recepción']) || otDateOnlySerial(r['FECHA'])
+  return otDateOnlySerial(r['FECHA']) || otDateOnlySerial(r['Fecha Recepción'])
 }
 
 /* ── INFORME OFICIAL DE GESTIÓN DE OT (Vista previa + PDF nítido en el cliente) ── */
@@ -4262,7 +4289,8 @@ const totalGeneral = computed(() => generalKpi.value.total)
 const servicios = computed(() => generalKpi.value.serv)
 const insumos = computed(() => generalKpi.value.ins)
 const costoM3 = computed(() => totalProd.value > 0 ? generalKpi.value.total / totalProd.value : 0)
-const totalOrdenes = computed(() => generalKpi.value.count)
+// Total de órdenes = OT REGISTRADAS en el período (fecha de registro), abiertas o cerradas
+const totalOrdenes = computed(() => dataFilteredByRegistro.value.length)
 
 /** m³ de agregados (arena/grava) que se excluyen del cálculo de concreto — solo Concretos. */
 const totalProdAgg = computed(() => {

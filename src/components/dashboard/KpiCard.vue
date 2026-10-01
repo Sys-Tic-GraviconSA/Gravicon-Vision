@@ -244,4 +244,10 @@ function navigate() {
   border-radius: 4px;
   white-space: nowrap;
 }
+
+@media (max-width: 640px) {
+  /* Sin alto mínimo: las tarjetas con solo un número no dejan espacio vacío */
+  .kpi-card { padding: 14px 16px; gap: 12px; min-height: 0; }
+  .kpi-icon { width: 34px; height: 34px; }
+}
 </style>

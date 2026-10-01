@@ -102,8 +102,9 @@ function iconoDe(t: RouteTab): string {
   .rt-tabs:has(> .rt-item:nth-child(4)) .rt-item { flex: 1 1 calc(50% - 4px); }
   .rt-sub { margin-bottom: 12px; }
   .rt-sub .rt-item { padding: 8px 10px; font-size: 12px; }
-  .rt-toggle { margin-bottom: 14px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
-  .rt-toggle::-webkit-scrollbar { display: none; }
-  .rt-toggle .rt-item { flex: 1; padding: 7px 10px; font-size: 12px; }
+  /* Vistas: se reparten a lo ancho y, si son 4 o más, en 2 columnas (antes se cortaba la última) */
+  .rt-toggle { margin-bottom: 14px; flex-wrap: wrap; }
+  .rt-toggle .rt-item { flex: 1 1 0; min-width: 0; padding: 7px 10px; font-size: 12px; white-space: normal; text-align: center; line-height: 1.25; }
+  .rt-toggle:has(> .rt-item:nth-child(4)) .rt-item { flex: 1 1 calc(50% - 3px); }
 }
 </style>

@@ -1,18 +1,5 @@
 <template>
   <div class="graficas-tab">
-    <div class="gt-bar">
-      <div class="gt-info">
-        <span class="gt-tag">{{ periodoLbl }}</span>
-        <span class="gt-periodo">{{ ventanaKpi.titulo }} · {{ tramo(ventanaKpi.desde, ventanaKpi.hasta) }}</span>
-        <span class="gt-sub">Comparado con {{ ventanaKpi.cmp }} ({{ tramo(ventanaKpi.pDesde, ventanaKpi.pHasta) }})</span>
-      </div>
-      <!-- Manda sobre los KPIs y sobre la agrupación de las gráficas de tendencia -->
-      <div class="gt-gran" role="group" aria-label="Ver">
-        <span class="gt-gran-lbl">Ver</span>
-        <button v-for="v in VISTAS" :key="v.id" class="gt-gran-btn" :class="{ active: vista === v.id }" @click="vista = v.id">{{ v.label }}</button>
-      </div>
-    </div>
-
     <div v-if="!rsTodo.length" class="gt-vacio">No hay remisiones en el rango de fechas seleccionado.</div>
 
     <template v-else>
@@ -136,7 +123,6 @@
  */
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useQueryParam } from '../../../composables/useQueryState'
 import KpiCard from '../../../components/dashboard/KpiCard.vue'
 import ChartCard from '../../../components/dashboard/ChartCard.vue'
 import { serialToDate } from '../../../utils/dates'
@@ -230,14 +216,6 @@ const rsPrevTodo = computed(() => {
 const rsPrev = computed(() => rsPrevTodo.value.filter(r => !r.agregado))
 const rsAgrPrev = computed(() => rsPrevTodo.value.filter(r => r.agregado))
 
-function fechaLarga(iso: string): string {
-  const [y, m, d] = iso.split('-').map(Number)
-  return `${d} ${MESES_CORTOS[m - 1].toLowerCase()} ${y}`
-}
-const periodoLbl = computed(() => rsTodo.value.length
-  ? `${fechaLarga(rango.value.desde)} – ${fechaLarga(rango.value.hasta)} · ${diasEntre(rango.value.desde, rango.value.hasta) + 1} días`
-  : '')
-
 // Plantas en orden fijo; el color sigue a la planta, no a su posición en el filtro
 const plantasTodas = computed(() => {
   const set = new Set(todas.value.map(r => r.planta))
@@ -318,18 +296,11 @@ function colorMaterial(m: string): string {
 
 // ---------------------------------------------------------------- Vista (KPIs)
 type Vista = 'periodo' | 'dia' | 'semana' | 'mes'
-const VISTAS: { id: Vista; label: string }[] = [
-  { id: 'periodo', label: 'Todo el período' }, { id: 'dia', label: 'Día' }, { id: 'semana', label: 'Semana' }, { id: 'mes', label: 'Mes' },
-]
-// En la URL (?ver=mes) para que recargar conserve la agrupación
-const vista = useQueryParam<Vista>('ver', 'periodo', ['periodo', 'dia', 'semana', 'mes'])
+// Sin filtro propio: los KPIs y las tendencias usan siempre el período del filtro de fechas de arriba
+// (la agrupación de las tendencias se elige sola según el largo del rango)
+const vista = computed<Vista>(() => 'periodo')
 function lunesDe(iso: string): string { return sumarDias(iso, -((new Date(iso + 'T00:00:00Z').getUTCDay() + 6) % 7)) }
 function ultimoDiaMes(y: number, m: number): number { return new Date(Date.UTC(y, m, 0)).getUTCDate() }
-function fechaDia(iso: string): string {
-  const d = new Date(iso + 'T00:00:00Z')
-  return `${['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'][d.getUTCDay()]} ${fechaLarga(iso)}`
-}
-const tramo = (a: string, b: string) => (a === b ? fechaDia(a) : `${fechaLarga(a)} – ${fechaLarga(b)}`)
 // Ventana de los KPIs y su período de comparación, según la vista elegida
 const ventanaKpi = computed(() => {
   const { desde, hasta } = rango.value

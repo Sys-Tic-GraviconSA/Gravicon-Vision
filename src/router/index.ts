@@ -67,7 +67,10 @@ function rutaMantenimiento(planta: PlantaId): RouteRecordRaw {
     meta: {
       titulo: `Mantenimiento ${PLANTAS[planta].nombre}`,
       // Disponibilidad es una sección, pero su permiso se administra aparte
-      permisosExtra: to => (String(to.params.segmentos ?? '').includes('disponibilidad') ? [`${planta}/mantenimiento/disponibilidad`] : []),
+      // Secciones con permiso propio (además de la ruta): Disponibilidad, Inspección y Combustible
+      permisosExtra: to => ['disponibilidad', 'inspeccion', 'combustible']
+        .filter(s => ([] as string[]).concat((to.params.segmentos as string[] | string | undefined) ?? []).includes(s))
+        .map(s => `${planta}/mantenimiento/${s}`),
     },
   }
 }
