@@ -95,6 +95,11 @@ export const useLlantasStore = defineStore('llantas', () => {
     inventario: Record<string, unknown>[]
     inspecciones: Record<string, unknown>[]
     subInspecciones: Record<string, unknown>[]
+    /** Rondas (consecutivo y planta), fotos, cronología y equipos del maestro; opcionales en copias locales viejas */
+    rondas?: Record<string, unknown>[]
+    evidencias?: Record<string, unknown>[]
+    cronologia?: Record<string, unknown>[]
+    equipos?: Record<string, unknown>[]
     totalInventario: number
     totalInspecciones: number
   } | null>(null)
