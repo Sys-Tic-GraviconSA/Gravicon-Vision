@@ -320,7 +320,7 @@
           <p class="section-note">{{ dq.length }} hallazgos ordenados por prioridad. Cada uno trae el detalle para corregirlo en el sistema.</p>
           <div class="dq-grid">
             <div v-for="c in dq" :key="c.titulo" class="dq" :class="`dq-${c.nivel}`">
-              <div class="dq-head"><span class="pill" :class="c.nivel === 'alto' ? 'p-rojo' : c.nivel === 'medio' ? 'p-ambar' : 'p-gris'">{{ c.nivel === 'alto' ? 'Prioridad alta' : c.nivel === 'medio' ? 'Revisar' : 'Informativo' }}</span><b>{{ c.titulo }}</b></div>
+              <div class="dq-head"><span class="pill" :class="pillNivel(c.nivel)">{{ etiquetaNivel(c.nivel) }}</span><b>{{ c.titulo }}</b></div>
               <p class="dq-txt" v-html="c.texto"></p>
               <div v-if="c.tabla" class="data-card"><div class="table-wrap">
                 <table>
@@ -374,6 +374,7 @@ import { MESES, FAMILIAS, totalesFacturacion } from '../../../composables/useFac
 import { descargarInformePdf } from '../../../utils/pdfInforme'
 import type { Familia, LineaFacturacion } from '../../../types/facturacion'
 import { useTemaInforme } from '../../../composables/useTemaInforme'
+import { type Hallazgo, etiquetaNivel, pillNivel } from '../../../utils/calidadDato'
 
 // En tema oscuro las gráficas se ven con colores para fondo oscuro; el PDF siempre sale en papel blanco
 const { tema } = useTemaInforme()
@@ -571,7 +572,7 @@ const kpisTotales = computed(() => {
         (x.otrosFletes ? fila(COL.Fletes, 'Otros fletes', cop(x.otrosFletes)) : '') +
         fila('#64748B', 'Traslados', 'sin valor') + fila('#8B5CF6', 'Donaciones', cop(x.valorDonado)) },
     // Netas: el desglose parte del total y resta, así la cuenta cuadra a la vista
-    { label: 'Facturación sin Flete', value: cop(x.valorNeto), accent: '#0F766E', icon: 'check-circle', meta: 'sin flete, traslados ni donaciones',
+    { label: 'Facturación Neta', value: cop(x.valorNeto), accent: '#0F766E', icon: 'check-circle', meta: 'sin flete, traslados ni donaciones',
       detail: fila('#172954', 'Total', cop(x.valorTotal)) + fila(COL.Fletes, 'Flete Holcim', x.fleteHolcim ? '− ' + cop(x.fleteHolcim) : 'no hay') +
         fila('#64748B', 'Traslados', '− $ 0') + fila('#8B5CF6', 'Donaciones', '− ' + cop(x.valorDonado)) },
     // Toneladas: todo lo que salió y solo lo vendido (el flete no tiene toneladas)
@@ -711,10 +712,9 @@ const beneficiarios = computed(() => {
 })
 
 // ── Control de calidad del dato: una tarjeta por hallazgo, con su tabla ──
-interface TablaDq { cols: string[]; filas: { celdas: string[]; total?: boolean; clases?: Record<number, string> }[]; mono?: number; der?: boolean }
 const nativoT = computed(() => todas.value.some(l => l.registrado === 't'))
 const dq = computed(() => {
-  const out: { nivel: 'alto' | 'medio' | 'info'; titulo: string; texto: string; tabla?: TablaDq }[] = []
+  const out: Hallazgo[] = []
   const v = ventas.value
   const dispersos = [...matMap.value.values()].flatMap(o => Object.entries(o.pu).filter(([, p]) => Math.min(...p) > 0 && Math.max(...p) / Math.min(...p) >= 2).map(([k, p]) => ({ o, k, p })))
     .sort((a, b) => Math.max(...b.p) / Math.min(...b.p) - Math.max(...a.p) / Math.min(...a.p))
@@ -900,23 +900,10 @@ async function pdf() {
 .compact-kpi :deep(.kpi-det-pct) { color: var(--text-tertiary); font-size: 10px; }
 .compact-kpi :deep(.kpi-detail-row) { flex-wrap: nowrap; white-space: nowrap; }
 .compact-kpi :deep(.kpi-detail strong) { white-space: nowrap; }
-.dq-grid { display: flex; flex-direction: column; gap: 10px; }
-.dq { border: 1px solid #e2e8f0; border-left-width: 4px; border-radius: 4px; padding: 10px 12px; background: #fff; }
-.dq-alto { border-left-color: #a90707; }
-.dq-medio { border-left-color: #b8860b; }
-.dq-info { border-left-color: #94a3b8; }
-.dq-head { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: #1a1a2e; }
-.dq-txt { font-size: 11.5px; color: #475569; margin: 4px 0 8px; }
-.dq .data-card { margin-top: 2px; }
 
 /* Tema oscuro solo en pantalla (el PDF usa .pdf-capturing y sale blanco): el azul marino de «Arena» no se ve sobre fondo oscuro */
 [data-theme="dark"] .report-paper:not(.pdf-capturing) :deep(.kpi-dot[style*="#172954"]),
 [data-theme="dark"] .report-paper:not(.pdf-capturing) .tdot[style*="23, 41, 84"] { background: #a5b4fc !important; }
-[data-theme="dark"] .report-paper:not(.pdf-capturing) .dq { background: var(--card-bg); border-color: var(--card-border); }
-[data-theme="dark"] .report-paper:not(.pdf-capturing) .dq-alto { border-left-color: #f87171; }
-[data-theme="dark"] .report-paper:not(.pdf-capturing) .dq-medio { border-left-color: #fbbf24; }
-[data-theme="dark"] .report-paper:not(.pdf-capturing) .dq-head { color: #e2e8f0; }
-[data-theme="dark"] .report-paper:not(.pdf-capturing) .dq-txt { color: #a3b1c6; }
 @media (max-width: 640px) {
     }
 .kpi-grupo { margin: 10px 0 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--text-secondary); }

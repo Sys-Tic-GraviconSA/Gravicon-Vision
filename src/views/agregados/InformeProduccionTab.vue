@@ -167,15 +167,34 @@
 
         <div class="report-section-block">
           <h3 class="report-block-title"><span class="title-bar"></span>Control de calidad del dato — {{ selectedLabel }}</h3>
-          <div v-if="avisos.length" class="avisos">
-            <div v-for="a in avisos" :key="a.titulo" class="aviso" :class="a.nivel"><span class="ico">!</span><div><b>{{ a.titulo }}</b>{{ a.texto }}</div></div>
+          <p v-if="avisos.length" class="section-note">{{ avisos.length }} {{ avisos.length === 1 ? 'hallazgo' : 'hallazgos ordenados por prioridad' }}. Cada uno trae el detalle para corregirlo en el sistema.</p>
+          <div class="dq-grid">
+            <div v-for="c in avisos" :key="c.titulo" class="dq" :class="`dq-${c.nivel}`">
+              <div class="dq-head"><span class="pill" :class="pillNivel(c.nivel)">{{ etiquetaNivel(c.nivel) }}</span><b>{{ c.titulo }}</b></div>
+              <p class="dq-txt" v-html="c.texto"></p>
+              <div v-if="c.tabla" class="data-card"><div class="table-wrap">
+                <table>
+                  <thead><tr><th v-for="(h, i) in c.tabla.cols" :key="h" :class="{ r: i > 0 && c.tabla.der !== false && !c.tabla.izq?.includes(i) }">{{ h }}</th></tr></thead>
+                  <tbody>
+                    <tr v-for="(f, j) in c.tabla.filas" :key="j" :class="{ 'table-total-row': f.total }">
+                      <td v-for="(v, i) in f.celdas" :key="i" :class="[i === 0 ? 'bold accent-text' : (c.tabla.mono === i ? 'mono' : (c.tabla.der === false || c.tabla.izq?.includes(i) ? '' : 'r')), f.clases?.[i]]">{{ v }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div></div>
+            </div>
+            <div v-if="!avisos.length" class="report-nota">Sin hallazgos: todos los días tienen producción, proyectado y meta registrados.</div>
           </div>
-          <p v-else class="section-note">Sin hallazgos: todos los días tienen producción, proyectado y meta registrados.</p>
         </div>
 
         <div class="report-section-block">
           <h3 class="report-block-title"><span class="title-bar"></span>Conclusiones y resumen ejecutivo — {{ selectedLabel }}</h3>
-          <ul class="res"><li v-for="(c, i) in conclusiones" :key="i" v-html="c"></li></ul>
+          <div class="data-card" style="padding: 10px 14px">
+            <template v-for="(g, i) in conclusiones" :key="g.titulo">
+              <div class="concl-head" :style="i ? 'margin-top: 10px' : ''">{{ g.titulo }}</div>
+              <ul class="res"><li v-for="(x, j) in g.items" :key="j" v-html="x"></li></ul>
+            </template>
+          </div>
         </div>
 
         <footer class="report-footer"><span>Informe Ejecutivo de Producción — {{ planta }}</span><span>Documento oficial<span class="fp-num"> | Página 3 de 3</span></span></footer>
@@ -187,11 +206,12 @@
 <script setup lang="ts">
 /**
  * InformeProduccionTab.vue — Informe ejecutivo de producción de una planta de agregados
- * (/:planta/produccion/informe). Mismo estilo que los informes de Facturación y Concretos
+ * (/:planta/produccion/informe). Mismo estilo que los informes de Despacho y Concretos
  * (hoja .report-paper, informe.css): encabezado oficial, análisis, KPIs compactos, comportamiento
  * diario, aporte por línea, historial, calidad del dato y conclusiones. PDF continuo de 297 mm.
  * Recibe las filas diarias ya filtradas por el filtro de fechas de la vista de Producción.
  */
+import { type Hallazgo, etiquetaNivel, pillNivel, porPrioridad } from '../../utils/calidadDato'
 import { computed, ref } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -343,34 +363,49 @@ const textoAnalisis = computed(() => {
 })
 
 const avisos = computed(() => {
-  const out: { nivel: 'alto' | 'medio'; titulo: string; texto: string }[] = []
-  const sinProd = tablaRows.value.filter(r => r.total === 0)
-  if (sinProd.length) out.push({ nivel: 'medio', titulo: `${sinProd.length} ${sinProd.length === 1 ? 'día' : 'días'} con producción en cero`,
-    texto: `${sinProd.map(r => r.corta).join(', ')}. Pueden ser días sin operación o registros aún no cargados; revisar las observaciones.` })
-  const sinProy = tablaRows.value.filter(r => r.total > 0 && r.proyectado === 0)
-  if (sinProy.length) out.push({ nivel: 'medio', titulo: `${sinProy.length} ${sinProy.length === 1 ? 'día' : 'días'} sin proyectado diario`,
-    texto: `${sinProy.map(r => r.corta).join(', ')}: el cumplimiento del día no se puede medir contra el proyectado.` })
+  const out: Hallazgo[] = []
+  const obs = (r: { observaciones: string }) => r.observaciones || '—'
+  if (!kpi.value.metaMensual) out.push({ nivel: 'alto', titulo: 'Sin meta mensual registrada',
+    texto: 'El mes no tiene meta mensual en la hoja de producción; el cumplimiento de meta queda en 0 %. <b>Acción:</b> registrar la meta del mes en la hoja.' })
   const bajos = tablaRows.value.filter(r => r.proyectado > 0 && r.total > 0 && r.cumplimiento < 75)
   if (bajos.length) out.push({ nivel: 'alto', titulo: `${bajos.length} ${bajos.length === 1 ? 'día' : 'días'} por debajo del 75 % del proyectado`,
-    texto: bajos.map(r => `${r.corta} (${pctTxt(r.cumplimiento)})`).join(', ') + '.' })
-  if (!kpi.value.metaMensual) out.push({ nivel: 'alto', titulo: 'Sin meta mensual registrada', texto: 'El mes no tiene meta mensual en la hoja de producción; el cumplimiento de meta queda en 0 %.' })
-  return out
+    texto: 'La producción del día quedó muy por debajo de lo proyectado. <b>Acción:</b> confirmar la causa (paradas, clima, mantenimiento) y dejarla en las observaciones.',
+    tabla: { cols: ['Día', 'Producido', 'Proyectado', 'Cumplimiento', 'Observación'], izq: [4],
+      filas: bajos.map(r => ({ celdas: [r.corta, `${fmt(r.total)} m³`, `${fmt(r.proyectado)} m³`, pctTxt(r.cumplimiento), obs(r)], clases: { 3: 'r bold red', 4: 'muted' } })) } })
+  const sinProd = tablaRows.value.filter(r => r.total === 0)
+  if (sinProd.length) out.push({ nivel: 'medio', titulo: `${sinProd.length} ${sinProd.length === 1 ? 'día' : 'días'} con producción en cero`,
+    texto: 'Pueden ser días sin operación o registros aún no cargados. <b>Acción:</b> si hubo producción, cargarla; si no, anotar el motivo en las observaciones.',
+    tabla: { cols: ['Día', 'Proyectado', 'Observación'], izq: [2],
+      filas: sinProd.map(r => ({ celdas: [r.corta, r.proyectado ? `${fmt(r.proyectado)} m³` : '—', obs(r)], clases: { 2: 'muted' } })) } })
+  const sinProy = tablaRows.value.filter(r => r.total > 0 && r.proyectado === 0)
+  if (sinProy.length) out.push({ nivel: 'medio', titulo: `${sinProy.length} ${sinProy.length === 1 ? 'día' : 'días'} sin proyectado diario`,
+    texto: 'El cumplimiento del día no se puede medir contra el proyectado. <b>Acción:</b> cargar el proyectado de esos días en la hoja.',
+    tabla: { cols: ['Día', 'Producido'], filas: sinProy.map(r => ({ celdas: [r.corta, `${fmt(r.total)} m³`] })) } })
+  return porPrioridad(out)
 })
 
 const conclusiones = computed(() => {
   const k = kpi.value
-  const out: string[] = []
-  out.push(`La planta produjo <strong>${fmt(k.total)} m³</strong> en ${diasTxt.value}: <strong>${k.cumplimientoMeta}</strong> de la meta mensual y <strong>${k.cumplimientoProy}</strong> del proyectado diario.`)
+  const prod: string[] = [], cumpl: string[] = [], calidad: string[] = []
+  prod.push(`La planta produjo <strong>${fmt(k.total)} m³</strong> en ${diasTxt.value}.`)
   const lider = [...resumenLineas.value].sort((a, b) => b.total - a.total)[0]
-  if (lider && lider.total) out.push(`La línea con más producción fue <strong>${lider.label}</strong> con ${fmt(lider.total)} m³ (${pctTxt(lider.part)} del total).`)
-  if (mejorDia.value && mejorDia.value.total) out.push(`El mejor día fue el <strong>${mejorDia.value.fecha}</strong> con ${fmt(mejorDia.value.total)} m³.`)
+  if (lider && lider.total) prod.push(`La línea con más producción fue <strong>${lider.label}</strong> con ${fmt(lider.total)} m³ (${pctTxt(lider.part)} del total).`)
+  if (mejorDia.value && mejorDia.value.total) prod.push(`El mejor día fue el <strong>${mejorDia.value.fecha}</strong> con ${fmt(mejorDia.value.total)} m³.`)
+  cumpl.push(`Va en <strong>${k.cumplimientoMeta}</strong> de la meta mensual y <strong>${k.cumplimientoProy}</strong> del proyectado diario.`)
   const sobre = tablaRows.value.filter(r => r.proyectado > 0 && r.cumplimiento >= 95).length
   const conProy = tablaRows.value.filter(r => r.proyectado > 0).length
-  if (conProy) out.push(`${sobre} de ${conProy} días con proyectado alcanzaron al menos el 95 % de lo proyectado.`)
+  if (conProy) cumpl.push(`${sobre} de ${conProy} días con proyectado alcanzaron al menos el 95 % de lo proyectado.`)
   const conObs = tablaRows.value.filter(r => r.observaciones).length
-  if (conObs) out.push(`${conObs} ${conObs === 1 ? 'día tiene' : 'días tienen'} observaciones registradas (ver historial).`)
-  if (avisos.value.length) out.push(`Calidad del dato: ${avisos.value.length} ${avisos.value.length === 1 ? 'hallazgo' : 'hallazgos'} para revisar (ver sección anterior).`)
-  return out
+  if (conObs) cumpl.push(`${conObs} ${conObs === 1 ? 'día tiene' : 'días tienen'} observaciones registradas (ver historial).`)
+  if (avisos.value.length) {
+    calidad.push(`${avisos.value.length} ${avisos.value.length === 1 ? 'hallazgo' : 'hallazgos'} para revisar (ver sección anterior).`)
+    calidad.push(...avisos.value.filter(a => a.nivel === 'alto').map(a => `Revisar: ${a.titulo.toLowerCase()}.`))
+  } else calidad.push('Sin hallazgos: los datos del período están completos.')
+  return [
+    { titulo: 'Producción', items: prod },
+    { titulo: 'Cumplimiento', items: cumpl },
+    { titulo: 'Calidad del dato', items: calidad },
+  ]
 })
 
 // ── Gráfica (colores para papel blanco; en tema oscuro el CSS pone un panel claro detrás de .echart) ──

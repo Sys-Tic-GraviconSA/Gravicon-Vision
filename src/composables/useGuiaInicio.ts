@@ -52,7 +52,7 @@ export const PASOS_GUIA: PasoGuia[] = [
   {
     id: 'modulos',
     titulo: 'Módulos de la planta',
-    texto: 'Producción, Facturación, Programación y Mantenimiento. Cada pestaña tiene su propia dirección: si recarga la página, sigue exactamente donde estaba.',
+    texto: 'Producción, Despacho, Programación y Mantenimiento. Cada pestaña tiene su propia dirección: si recarga la página, sigue exactamente donde estaba.',
     objetivo: ['.rt-tabs'],
     lado: 'abajo',
   },

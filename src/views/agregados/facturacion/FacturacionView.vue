@@ -1,10 +1,10 @@
 <template>
   <div class="facturacion-view">
-    <SkeletonLoader v-if="!datos && (store.loading || !intentado)" variant="dashboard" :kpis="4" :charts="4" :label="`Cargando facturación de ${planta.nombre}…`" />
+    <SkeletonLoader v-if="!datos && (store.loading || !intentado)" variant="dashboard" :kpis="4" :charts="4" :label="`Cargando despachos de ${planta.nombre}…`" />
 
     <div v-else-if="!datos && store.error" class="page-state error">
       <span class="error-icon">!</span>
-      <div><strong>No se pudo leer el archivo de facturación</strong><p>{{ store.error }}</p></div>
+      <div><strong>No se pudo leer el archivo de despachos</strong><p>{{ store.error }}</p></div>
       <button class="retry-btn" @click="cargar(true)">Reintentar</button>
     </div>
 
@@ -13,7 +13,7 @@
       <div class="sticky-top">
       <header class="page-header">
         <div class="titulo-bloque">
-          <h2 class="page-title">Facturación {{ planta.nombre }}</h2>
+          <h2 class="page-title">Despacho {{ planta.nombre }}</h2>
           <span class="fuente" :title="`Archivo de Drive: ${datos.archivo.nombre}`">
             Novasoft · sucursal {{ datos.sucursal }}<template v-if="archivoModificado"> · archivo actualizado {{ archivoModificado }}</template>
           </span>
@@ -38,7 +38,7 @@
       </div>
 
       <div v-if="!datos.lineas.length" class="page-state">
-        <strong>Sin facturación para {{ planta.nombre }}</strong>
+        <strong>Sin despachos para {{ planta.nombre }}</strong>
         <span>El archivo <em>{{ datos.archivo.nombre }}</em> no tiene líneas de la sucursal {{ datos.sucursal }}. Cuando Novasoft exporte movimientos de esta sucursal aparecerán aquí.</span>
       </div>
 
@@ -141,11 +141,12 @@ const vistas = computed(() => VISTAS_FACTURACION.map(v => ({
 .titulo-bloque { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .page-title { font-size: 20px; font-weight: 700; color: var(--text-primary); margin: 0; letter-spacing: -0.4px; }
 .fuente { font-size: 12px; color: var(--text-tertiary); }
-.header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.filter-group {
-  display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 6px 8px;
-  border: 1px solid var(--card-border); border-radius: var(--radius-lg); background: var(--bg);
-}
+.header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; min-width: 0; }
+/* Filtros planos, sin caja, como en Mantenimiento y Concretos */
+.filter-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; min-width: 0; }
+.filter-group :deep(.dropdown-toggle) { background: transparent; border: none; border-radius: 0; padding: 6px 4px; box-shadow: none; }
+.filter-group :deep(.dropdown-toggle:hover) { background: transparent; color: var(--accent); }
+.filter-group :deep(.badge) { background: transparent; padding: 0 4px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .clear-filters {
   display: inline-flex; align-items: center; gap: 5px; padding: 7px 10px; border: none; border-radius: var(--radius-md);
   background: transparent; color: var(--text-tertiary); font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer;
@@ -169,15 +170,17 @@ const vistas = computed(() => VISTAS_FACTURACION.map(v => ({
 .retry-btn { padding: 8px 20px; border: 1px solid var(--danger); border-radius: var(--radius-md); background: transparent; color: var(--danger); cursor: pointer; font-weight: 600; font-family: inherit; }
 .retry-btn:hover { background: var(--danger); color: #fff; }
 
+/* Cuando los filtros bajan debajo del título, van a la izquierda y «Actualizar» sigue en la misma fila */
+@media (max-width: 1100px) {
+  .header-actions { width: 100%; justify-content: flex-start; gap: 6px; }
+  .filter-group { display: contents; }
+}
 @media (max-width: 768px) {
   /* En celular el encabezado no queda fijo: ocuparía media pantalla */
   .sticky-top { position: static; }
   .page-header { flex-direction: column; align-items: stretch; gap: 8px; }
   /* El título repite planta y módulo (ya visibles arriba): en celular se oculta */
   .titulo-bloque { display: none; }
-  .header-actions { width: 100%; flex-wrap: wrap; }
-  .filter-group { width: 100%; box-sizing: border-box; padding: 6px; gap: 4px; }
-  .filter-group > * { flex: 1 1 auto; }
-  .action-btn { margin-left: auto; }
+  .filter-group { gap: 4px; }
 }
 </style>

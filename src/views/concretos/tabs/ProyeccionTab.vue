@@ -224,8 +224,22 @@
 
         <div class="report-section-block">
           <h3 class="report-block-title"><span class="title-bar"></span>Control de calidad del dato — {{ mesLbl }}</h3>
-          <div class="avisos">
-            <div v-for="(a, i) in avisos" :key="i" class="aviso" :class="a.nivel"><span class="ico">!</span><div><b>{{ a.titulo }}</b>{{ a.texto }}</div></div>
+          <p v-if="avisos.length" class="section-note">{{ avisos.length }} {{ avisos.length === 1 ? 'hallazgo' : 'hallazgos ordenados por prioridad' }}. Cada uno trae el detalle para corregirlo en el sistema.</p>
+          <div class="dq-grid">
+            <div v-for="c in avisos" :key="c.titulo" class="dq" :class="`dq-${c.nivel}`">
+              <div class="dq-head"><span class="pill" :class="pillNivel(c.nivel)">{{ etiquetaNivel(c.nivel) }}</span><b>{{ c.titulo }}</b></div>
+              <p class="dq-txt" v-html="c.texto"></p>
+              <div v-if="c.tabla" class="data-card"><div class="table-wrap">
+                <table>
+                  <thead><tr><th v-for="(h, i) in c.tabla.cols" :key="h" :class="{ r: i > 0 && c.tabla.der !== false && !c.tabla.izq?.includes(i) }">{{ h }}</th></tr></thead>
+                  <tbody>
+                    <tr v-for="(f, j) in c.tabla.filas" :key="j" :class="{ 'table-total-row': f.total }">
+                      <td v-for="(v, i) in f.celdas" :key="i" :class="[i === 0 ? 'bold accent-text' : (c.tabla.mono === i ? 'mono' : (c.tabla.der === false || c.tabla.izq?.includes(i) ? '' : 'r')), f.clases?.[i]]">{{ v }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div></div>
+            </div>
             <div v-if="!avisos.length" class="report-nota">No se encontraron datos a revisar.</div>
           </div>
         </div>
@@ -250,6 +264,7 @@
 </template>
 
 <script setup lang="ts">
+import { type Hallazgo, etiquetaNivel, pillNivel, porPrioridad } from '../../../utils/calidadDato'
 import SkeletonLoader from '../../../components/ui/SkeletonLoader.vue'
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import KpiCard from '../../../components/dashboard/KpiCard.vue'
@@ -511,23 +526,35 @@ const kpisVeh = computed<KpiDef[]>(() => {
 
 // ---------------------------------------------------------------- Calidad del dato y conclusiones
 const avisos = computed(() => {
-  const out: { nivel: string; titulo: string; texto: string }[] = []
-  for (const p of sinProy.value) {
-    const ult = pc.value.filter(r => r.planta === p).reduce((a, r) => (r.mes > a ? r.mes : a), '')
-    out.push({ nivel: 'alto', titulo: `${p} no tiene proyección cargada para ${mesLbl.value}`,
-      texto: `La planta lleva ${fmtN(ejecOp(p))} m³ despachados en el mes según order_price, pero no aparece en proyecciones_clientes` +
-        (ult ? ` (su última proyección es de ${MESES[Number(ult.slice(5, 7)) - 1]})` : '') + '. Sin la meta no se puede medir su cumplimiento.' })
+  const out: Hallazgo[] = []
+  if (sinProy.value.length) {
+    const ultima = (p: string) => pc.value.filter(r => r.planta === p).reduce((a, r) => (r.mes > a ? r.mes : a), '')
+    out.push({ nivel: 'alto', titulo: sinProy.value.length === 1 ? `${sinProy.value[0]} no tiene proyección cargada para ${mesLbl.value}` : `${sinProy.value.length} plantas sin proyección cargada para ${mesLbl.value}`,
+      texto: 'Tienen despachos en el mes según order_price, pero no aparecen en proyecciones_clientes; sin la meta no se puede medir su cumplimiento. <b>Acción:</b> cargar la proyección del mes.',
+      tabla: { cols: ['Planta', 'Despachado en el mes', 'Última proyección'],
+        filas: sinProy.value.map(p => { const u = ultima(p); return { celdas: [p, `${fmtN(ejecOp(p))} m³`, u ? `${MESES[Number(u.slice(5, 7)) - 1]} ${u.slice(0, 4)}` : 'Nunca'] } }) } })
   }
+  const metaSinDesp = plantas.value.filter(p => P.value[p].meta && P.value[p].real === 0)
+  if (metaSinDesp.length) out.push({ nivel: 'medio', titulo: `${metaSinDesp.length === 1 ? `${metaSinDesp[0]}: meta` : `${metaSinDesp.length} plantas con meta`} sin despachos en el mes`,
+    texto: 'No hay despachos de la planta en el mes; el cumplimiento queda en 0 %. <b>Acción:</b> confirmar si la planta operó y si sus remisiones están cargadas.',
+    tabla: { cols: ['Planta', 'Meta del mes'], filas: metaSinDesp.map(p => ({ celdas: [p, `${fmtN(P.value[p].meta, 0)} m³`] })) } })
   const cero = plantas.value.flatMap(p => P.value[p].clientes.filter(c => c.real === 0 && c.meta > 0).map(c => ({ p, c })))
+    .sort((a, b) => b.c.meta - a.c.meta)
   if (cero.length) out.push({ nivel: 'medio', titulo: `${cero.length} ${cero.length === 1 ? 'cliente proyectado sin' : 'clientes proyectados sin'} ningún despacho en el mes`,
-    texto: cero.map(({ p, c }) => `${titulo(c.cliente)} (${titulo(c.obra)}, ${p}): ${fmtN(c.meta, 0)} m³`).join('; ') +
-      `. Suman ${fmtN(cero.reduce((a, x) => a + x.c.meta, 0), 0)} m³ de meta sin avance.` })
-  for (const p of plantas.value) if (P.value[p].meta && P.value[p].real === 0)
-    out.push({ nivel: 'medio', titulo: `${p}: meta de ${fmtN(P.value[p].meta, 0)} m³ sin despachos`, texto: 'No hay despachos de la planta en el mes; el cumplimiento queda en 0%.' })
+    texto: `Suman ${fmtN(cero.reduce((a, x) => a + x.c.meta, 0), 0)} m³ de meta sin avance. <b>Acción:</b> confirmar con el comercial si la obra sigue activa o ajustar la proyección.`,
+    tabla: { cols: ['Cliente', 'Obra', 'Planta', 'Meta'], izq: [1, 2],
+      filas: [...cero.map(({ p, c }) => ({ celdas: [titulo(c.cliente), titulo(c.obra), p, `${fmtN(c.meta, 0)} m³`] })),
+        ...(cero.length > 1 ? [{ celdas: ['TOTAL', '', '', `${fmtN(cero.reduce((a, x) => a + x.c.meta, 0), 0)} m³`], total: true }] : [])] } })
   const sinMixer = remMes.value.filter(r => !r.mixer)
-  if (sinMixer.length) out.push({ nivel: 'medio', titulo: `${sinMixer.length} remisiones sin mixer`,
-    texto: `Suman ${fmtN(sinMixer.reduce((a, r) => a + r.m3, 0))} m³ que no se pueden asignar a un vehículo en la producción por vehículo.` })
-  return out
+  if (sinMixer.length) {
+    const porPlanta = ordenar(new Set(sinMixer.map(r => r.planta))).map(p => { const x = sinMixer.filter(r => r.planta === p); return { p, n: x.length, m3: x.reduce((a, r) => a + r.m3, 0) } })
+    out.push({ nivel: 'medio', titulo: `${sinMixer.length} remisiones sin mixer`,
+      texto: 'No se pueden asignar a un vehículo en la producción por vehículo. <b>Acción:</b> registrar el mixer en la remisión.',
+      tabla: { cols: ['Planta', 'Remisiones', 'm³'],
+        filas: [...porPlanta.map(x => ({ celdas: [x.p, String(x.n), fmtN(x.m3)] })),
+          ...(porPlanta.length > 1 ? [{ celdas: ['TOTAL', String(sinMixer.length), fmtN(sinMixer.reduce((a, r) => a + r.m3, 0))], total: true }] : [])] } })
+  }
+  return porPrioridad(out)
 })
 
 const conclusiones = computed(() => {
