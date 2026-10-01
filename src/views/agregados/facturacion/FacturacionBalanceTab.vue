@@ -3,8 +3,6 @@
     <!-- Opciones del cruce (en la URL) -->
     <div class="bal-bar">
       <div class="bal-info">
-        <span class="bal-tag">Producción vs Facturación · m³</span>
-        <span v-if="B" class="bal-periodo">{{ fechaLarga(B.desde) }} al {{ fechaLarga(B.hasta) }}</span>
         <span v-if="B" class="bal-sub">
           Lo facturado se pasa a m³ con el factor de cada material (t ÷ factor).
           <template v-if="B.lineasSueltas"> La facturación está completa desde el {{ fechaCorta(B.desde) }}; antes solo hay {{ B.lineasSueltas }} {{ B.lineasSueltas === 1 ? 'línea suelta' : 'líneas sueltas' }} (desde el {{ fechaCorta(B.primeraFacturada) }}) que no se cruzan.</template>
@@ -112,7 +110,7 @@ import { useProduccionStore } from '../../../stores'
 import { useQueryParam } from '../../../composables/useQueryState'
 import { useEstiloGraficas, fmtN, cop, pct, punto, vacio, emphasis } from '../../../composables/useGraficasConcreto'
 import { calcularBalance, produccionPorDia, type Agrupacion } from '../../../composables/useBalanceProduccion'
-import { COLOR_FAMILIA, COLOR_TIPO, fechaCorta, fechaLarga } from '../../../composables/useFacturacion'
+import { COLOR_FAMILIA, COLOR_TIPO, fechaCorta } from '../../../composables/useFacturacion'
 import { PLANTAS } from '../../../config/plantas'
 import type { LineaFacturacion } from '../../../types/facturacion'
 

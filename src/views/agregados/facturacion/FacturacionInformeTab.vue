@@ -1,17 +1,12 @@
 <template>
   <div class="informe-tab">
-    <!-- Barra de control: rango del informe (el mismo filtro de fechas de Facturación, en la URL) + PDF -->
+    <!-- Barra del informe: título y PDF. El rango lo pone el filtro de fechas de arriba (Facturación, en la URL) -->
     <div class="informe-control-bar">
       <div class="icb-info">
         <span class="icb-tag">Informe comercial · Novasoft</span>
         <span class="icb-title">Ventas de Agregados — {{ PLANTA }} · {{ rangoTitulo }}</span>
       </div>
       <div class="icb-actions">
-        <div class="icb-presets" role="group" aria-label="Rango rápido">
-          <button v-for="p in PRESETS" :key="p.id" type="button" class="icb-preset" :class="{ active: presetActivo === p.id }" @click="aplicarPreset(p.id)">{{ p.label }}</button>
-        </div>
-        <label class="icb-corte">Desde <input type="date" :value="R.desde" :min="primeraFecha" :max="R.hasta" @change="e => cambiarDesde((e.target as HTMLInputElement).value)" /></label>
-        <label class="icb-corte">Hasta <input type="date" :value="R.hasta" :min="R.desde" :max="ultimaFecha" @change="e => cambiarHasta((e.target as HTMLInputElement).value)" /></label>
         <button class="tb-btn primary" :disabled="!hayDatos || generando" @click="pdf">
           <svg v-if="!generando" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           {{ generando ? 'Generando PDF…' : 'Descargar PDF' }}
@@ -26,7 +21,9 @@
       <div class="report-page">
         <header class="report-header">
           <div class="report-header-brand">
-            <img src="/Logos/logo-azul-informe.png" alt="Gravicon" class="report-logo" loading="eager" />
+            <img src="/Logos/logo-azul-informe.png" alt="Gravicon" class="report-logo report-logo--claro" loading="eager" />
+            <!-- En tema oscuro (solo en pantalla) va el logo blanco oficial; el PDF siempre usa el azul -->
+            <img src="/Logos/logo-blanco.webp" alt="" aria-hidden="true" class="report-logo report-logo--oscuro" loading="eager" />
             <div class="report-header-text">
               <h2>Comercial Agregados Gravicon</h2>
               <span>GRAVAS Y CONCRETOS S.A. · Agregados {{ PLANTA }}</span>
@@ -109,7 +106,7 @@
         <div class="report-salto-superior"></div>
         <div class="report-section-block">
           <h3 class="report-block-title"><span class="title-bar"></span>Venta diaria por familia de material — {{ MES_LBL }}</h3>
-          <VChart class="echart" :option="optDiario" autoresize style="height: 340px" />
+          <VChart class="echart" :option="tema(optDiario)" autoresize style="height: 340px" />
         </div>
         <div class="report-section-block">
           <h3 class="report-block-title"><span class="title-bar"></span>Detalle de despacho por día — {{ MES_LBL }}</h3>
@@ -146,8 +143,8 @@
         <div class="report-section-block">
           <h3 class="report-block-title"><span class="title-bar"></span>Venta y remisiones por familia — {{ MES_LBL }}</h3>
           <div class="fila-charts">
-            <VChart class="echart" :option="optFam" autoresize style="flex: 1.9; height: 280px" />
-            <VChart class="echart" :option="optDona" autoresize style="flex: 0.9; height: 300px" />
+            <VChart class="echart" :option="tema(optFam)" autoresize style="flex: 1.9; height: 280px" />
+            <VChart class="echart" :option="tema(optDona)" autoresize style="flex: 0.9; height: 300px" />
           </div>
         </div>
 
@@ -190,7 +187,7 @@
               </tbody>
             </table>
           </div></div>
-          <VChart class="echart" :option="optMat" autoresize style="height: 260px" />
+          <VChart class="echart" :option="tema(optMat)" autoresize style="height: 260px" />
         </div>
 
         <div class="report-section-block">
@@ -271,7 +268,7 @@
         <div v-if="proyeccion" class="report-section-block">
           <h3 class="report-block-title"><span class="title-bar"></span>Venta acumulada del mes y proyección de cierre — {{ MES_LBL }}</h3>
           <p class="section-note">Línea continua: venta acumulada real al {{ flbl(hoy) }}. Línea punteada: proyección hasta fin de mes con el promedio de lunes a sábado{{ proyeccion.faltanDom ? ' y el de domingo.' : '.' }}</p>
-          <VChart class="echart" :option="optAcum" autoresize style="height: 320px" />
+          <VChart class="echart" :option="tema(optAcum)" autoresize style="height: 320px" />
         </div>
 
         <div class="report-section-block">
@@ -376,6 +373,10 @@ import { useQueryDate } from '../../../composables/useQueryState'
 import { MESES, FAMILIAS, totalesFacturacion } from '../../../composables/useFacturacion'
 import { descargarInformePdf } from '../../../utils/pdfInforme'
 import type { Familia, LineaFacturacion } from '../../../types/facturacion'
+import { useTemaInforme } from '../../../composables/useTemaInforme'
+
+// En tema oscuro las gráficas se ven con colores para fondo oscuro; el PDF siempre sale en papel blanco
+const { tema } = useTemaInforme()
 
 use([CanvasRenderer, BarChart, LineChart, PieChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent, MarkPointComponent])
 
@@ -425,30 +426,14 @@ const NOTA_DT = 'Donaciones y traslados de inventario no son venta: no suman a l
 // ── Rango: filtro de fechas de Facturación (URL); por defecto, mes en curso hasta el último dato ──
 const todas = computed(() => props.lineasSinFecha ?? props.lineas)
 const fechasVenta = computed(() => [...new Set(todas.value.filter(l => l.tipo === 'venta').map(l => l.fecha))].sort())
-const primeraFecha = computed(() => fechasVenta.value[0] ?? '')
 const ultimaFecha = computed(() => fechasVenta.value.at(-1) ?? '')
 const desdeQ = useQueryDate('desde')
 const hastaQ = useQueryDate('hasta')
+// Rango del informe = filtro de fechas de arriba (en la URL); sin filtro, el mes a la fecha del último dato
 const R = computed(() => {
   const hasta = hastaQ.value || ultimaFecha.value
   return { desde: desdeQ.value || (hasta ? hasta.slice(0, 8) + '01' : ''), hasta }
 })
-function cambiarDesde(v: string) { desdeQ.value = v; if (!hastaQ.value) hastaQ.value = R.value.hasta }
-function cambiarHasta(v: string) { hastaQ.value = v; if (!desdeQ.value) desdeQ.value = R.value.desde }
-type PresetId = 'mes' | 'mesAnt' | '7d' | '30d' | 'todo'
-const PRESETS: { id: PresetId; label: string }[] = [
-  { id: 'mes', label: 'Mes a la fecha' }, { id: 'mesAnt', label: 'Mes anterior' }, { id: '7d', label: '7 días' }, { id: '30d', label: '30 días' }, { id: 'todo', label: 'Todo' },
-]
-function rangoPreset(id: PresetId): [string, string] {
-  const u = ultimaFecha.value
-  if (id === 'mes') return [u.slice(0, 8) + '01', u]
-  if (id === 'mesAnt') { const fin = dia(u.slice(0, 8) + '01', -1); return [fin.slice(0, 8) + '01', fin] }
-  if (id === '7d') return [dia(u, -6), u]
-  if (id === '30d') return [dia(u, -29), u]
-  return [primeraFecha.value, u]
-}
-const presetActivo = computed(() => PRESETS.find(p => { const [a, b] = rangoPreset(p.id); return a === R.value.desde && b === R.value.hasta })?.id ?? null)
-function aplicarPreset(id: PresetId) { const [a, b] = rangoPreset(id); desdeQ.value = a; hastaQ.value = b }
 
 // ── Líneas del rango (como el generador: «mes» = ventas; traslados y donaciones aparte) ──
 const enRango = computed(() => todas.value.filter(l => l.fecha >= R.value.desde && l.fecha <= R.value.hasta))
@@ -580,17 +565,24 @@ const kpisTotales = computed(() => {
   const fila = (color: string, lbl: string, valor: string) => `<div class='kpi-detail-row'><span class='kpi-dot' style='background:${color}'></span><span class='kpi-det-lbl'>${lbl}</span> <strong>${valor}</strong></div>`
   return [
     // Valor: todo lo facturado y sin flete Holcim ni donaciones (los traslados no tienen valor)
-    { label: 'Facturación Total', value: cop(x.valorTotal), accent: '#2563EB', icon: 'dollar', meta: 'con flete y donaciones',
-      detail: fila('#2563EB', 'Venta', cop(x.venta)) + (x.fleteHolcim ? fila(COL.Fletes, 'Incluye flete', cop(x.fleteHolcim)) : '') + fila('#8B5CF6', 'Donaciones', cop(x.valorDonado)) },
-    { label: 'Facturación sin Flete', value: cop(x.valorNeto), accent: '#0F766E', icon: 'check-circle', meta: 'sin flete ni donaciones',
-      detail: fila(COL.Fletes, 'Sin flete Holcim', x.fleteHolcim ? '− ' + cop(x.fleteHolcim) : 'no hay') + fila('#94a3b8', 'Sin donaciones', '− ' + cop(x.valorDonado)) },
+    { label: 'Facturación Total', value: cop(x.valorTotal), accent: '#2563EB', icon: 'dollar', meta: 'con flete, traslados y donaciones',
+      detail: fila('#2563EB', 'Material', cop(x.ventaMaterial)) +
+        (x.fleteHolcim ? fila(COL.Fletes, 'Flete Holcim', cop(x.fleteHolcim)) : '') +
+        (x.otrosFletes ? fila(COL.Fletes, 'Otros fletes', cop(x.otrosFletes)) : '') +
+        fila('#64748B', 'Traslados', 'sin valor') + fila('#8B5CF6', 'Donaciones', cop(x.valorDonado)) },
+    // Netas: el desglose parte del total y resta, así la cuenta cuadra a la vista
+    { label: 'Facturación sin Flete', value: cop(x.valorNeto), accent: '#0F766E', icon: 'check-circle', meta: 'sin flete, traslados ni donaciones',
+      detail: fila('#172954', 'Total', cop(x.valorTotal)) + fila(COL.Fletes, 'Flete Holcim', x.fleteHolcim ? '− ' + cop(x.fleteHolcim) : 'no hay') +
+        fila('#64748B', 'Traslados', '− $ 0') + fila('#8B5CF6', 'Donaciones', '− ' + cop(x.valorDonado)) },
     // Toneladas: todo lo que salió y solo lo vendido (el flete no tiene toneladas)
     { label: 'Toneladas Totales', value: num(x.tTotal, 0) + ' t', accent: '#172954', icon: 'truck', meta: 'con traslados y donaciones',
-      detail: fila('#2563EB', 'Vendidas', num(x.tNeta, 0) + ' t') +
+      detail: fila('#2563EB', 'Vendidas', num(x.tVendidas, 0) + ' t') +
         (x.tFleteHolcim ? fila(COL.Fletes, 'Flete Holcim', num(x.tFleteHolcim, 0) + ' t <span class="kpi-det-pct">(en vendidas)</span>') : '') +
         fila('#64748B', 'Traslados', num(x.tTraslados, 0) + ' t') + fila('#8B5CF6', 'Donadas', num(x.tDonadas, 1) + ' t') },
-    { label: 'Toneladas Netas', value: num(x.tNeta, 0) + ' t', accent: '#0F766E', icon: 'package', meta: 'solo vendidas',
-      detail: fila('#2563EB', 'Vendidas', num(x.tNeta, 0) + ' t') + fila('#94a3b8', 'Sin traslados', '− ' + num(x.tTraslados, 0) + ' t') + fila('#94a3b8', 'Sin donaciones', '− ' + num(x.tDonadas, 1) + ' t') },
+    { label: 'Toneladas Netas', value: num(x.tNeta, 0) + ' t', accent: '#0F766E', icon: 'package', meta: 'sin flete, traslados ni donaciones',
+      detail: fila('#172954', 'Total', num(x.tTotal, 0) + ' t') +
+        (x.tFleteHolcim ? fila(COL.Fletes, 'Flete Holcim', '− ' + num(x.tFleteHolcim, 0) + ' t') : '') +
+        fila('#64748B', 'Traslados', '− ' + num(x.tTraslados, 0) + ' t') + fila('#8B5CF6', 'Donadas', '− ' + num(x.tDonadas, 1) + ' t') },
   ]
 })
 
@@ -900,13 +892,6 @@ async function pdf() {
 
 <style scoped src="../../concretos/tabs/informe.css"></style>
 <style scoped>
-.icb-presets { display: flex; gap: 4px; flex-wrap: wrap; }
-.icb-preset {
-  padding: 5px 10px; font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap;
-  border: 1px solid var(--card-border); border-radius: 6px; background: transparent; color: var(--text-secondary);
-}
-.icb-preset:hover { color: var(--text-primary); border-color: var(--card-border-hover); }
-.icb-preset.active { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
 
 /* Elementos del generador de agregados que no trae informe.css */
 .nowrap { white-space: nowrap; }
@@ -933,8 +918,6 @@ async function pdf() {
 [data-theme="dark"] .report-paper:not(.pdf-capturing) .dq-head { color: #e2e8f0; }
 [data-theme="dark"] .report-paper:not(.pdf-capturing) .dq-txt { color: #a3b1c6; }
 @media (max-width: 640px) {
-  .icb-presets { width: 100%; }
-  .icb-preset { flex: 1; }
-}
+    }
 .kpi-grupo { margin: 10px 0 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--text-secondary); }
 </style>

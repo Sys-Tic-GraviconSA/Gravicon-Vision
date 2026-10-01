@@ -38,6 +38,7 @@
 .report-header::after { content: ""; position: absolute; left: 0; bottom: -2.5px; width: 74px; height: 2.5px; background: #a90707; }
 .report-header-brand { display: flex; align-items: center; gap: 12px; }
 .report-logo { height: 48px; max-width: 190px; object-fit: contain; display: block; }
+.report-logo--oscuro { display: none; }
 .report-header-text h2 { font-size: 14px; font-weight: 700; color: var(--navy); margin: 0; }
 .report-header-text span { font-size: 12px; color: var(--text-secondary); }
 .report-header-meta { text-align: right; font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
@@ -136,6 +137,12 @@ ul.res li::before { content: "■"; position: absolute; left: 0; top: 4px; color
 }
 @media (max-width: 640px) {
   .compact-kpi { grid-template-columns: 1fr 1fr; gap: 6px; }
+}
+/* Celular angosto: una tarjeta por fila (en 2 columnas el detalle de cada KPI no cabe) */
+@media (max-width: 480px) {
+  .compact-kpi { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
   /* En pantalla la hoja no necesita alto A4; el PDF se arma igual al descargar */
   .report-page { padding: 14px 12px; min-height: 0; gap: 12px; }
   .report-header { flex-direction: column; gap: 8px; }
@@ -160,8 +167,9 @@ ul.res li::before { content: "■"; position: absolute; left: 0; top: 4px; color
   --accent-light: rgba(96, 165, 250, 0.12);
 }
 [data-theme="dark"] .report-paper:not(.pdf-capturing) .report-page { background: #0f1623; color: #e2e8f0; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35); }
-/* El logo es azul oscuro: va sobre una placa blanca para que se lea */
-[data-theme="dark"] .report-paper:not(.pdf-capturing) .report-logo { background: #fff; padding: 4px 8px; border-radius: 6px; box-sizing: content-box; }
+/* Logo: azul en hoja blanca y en el PDF; blanco oficial en tema oscuro (solo en pantalla) */
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .report-logo--claro { display: none; }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .report-logo--oscuro { display: block; }
 [data-theme="dark"] .report-paper:not(.pdf-capturing) .data-card { background: var(--card-bg); }
 [data-theme="dark"] .report-paper:not(.pdf-capturing) .table-wrap table,
 [data-theme="dark"] .report-paper:not(.pdf-capturing) .aviso,
@@ -192,5 +200,4 @@ ul.res li::before { content: "■"; position: absolute; left: 0; top: 4px; color
 [data-theme="dark"] .report-paper:not(.pdf-capturing) .aviso.medio .ico { color: #fcd34d; }
 [data-theme="dark"] .report-paper:not(.pdf-capturing) ul.res li { border-bottom-color: rgba(255, 255, 255, 0.06); }
 [data-theme="dark"] .report-paper:not(.pdf-capturing) .ley-sem { background: #172033; color: #cbd5e1; }
-/* Gráficas del informe: se dibujan con colores para papel blanco; en oscuro van sobre un panel claro para que se lean */
-[data-theme="dark"] .report-paper:not(.pdf-capturing) .echart { background: #f8fafc; border-radius: 6px; }
+/* Gráficas: en oscuro se dibujan con colores para fondo oscuro (useTemaInforme); sin panel claro detrás */

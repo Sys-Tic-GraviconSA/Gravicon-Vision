@@ -1,16 +1,12 @@
 <template>
   <div class="informe-tab">
-    <!-- Barra superior: fecha de corte + descarga PDF (igual que el informe de Disponibilidad) -->
+    <!-- Barra superior: título y PDF. El corte es la fecha final del filtro de arriba (o el último dato) -->
     <div class="informe-control-bar">
       <div class="icb-info">
         <span class="icb-tag">Reporte Diario Oficial</span>
         <span class="icb-title">Informe Comercial de Ventas — Concretos</span>
       </div>
       <div class="icb-actions">
-        <label class="icb-corte">
-          Corte
-          <input type="date" v-model="corteSel" :min="fechaMin" :max="fechaMax" />
-        </label>
         <button class="tb-btn primary" @click="generarInformePdf" :disabled="!hayDatos || generandoPdf" title="Generar y descargar archivo PDF oficial">
           <svg v-if="!generandoPdf" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           <span v-if="generandoPdf">Generando PDF...</span>
@@ -26,7 +22,9 @@
       <div class="report-page">
         <header class="report-header">
           <div class="report-header-brand">
-            <img src="/Logos/logo-azul-informe.png" alt="Gravicon" class="report-logo" loading="eager" />
+            <img src="/Logos/logo-azul-informe.png" alt="Gravicon" class="report-logo report-logo--claro" loading="eager" />
+            <!-- En tema oscuro (solo en pantalla) va el logo blanco oficial; el PDF siempre usa el azul -->
+            <img src="/Logos/logo-blanco.webp" alt="" aria-hidden="true" class="report-logo report-logo--oscuro" loading="eager" />
             <div class="report-header-text">
               <h2>Comercial Concretos Gravicon</h2>
               <span>GRAVAS Y CONCRETOS S.A. · Concretos</span>
@@ -335,6 +333,11 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart, LineChart, PieChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, TitleComponent, LegendComponent } from 'echarts/components'
 import { LabelLayout } from 'echarts/features'
+import { useTemaInforme, capturandoPdf } from '../../../composables/useTemaInforme'
+import { COLOR_PLANTA } from '../../../composables/useGraficasConcreto'
+
+// En tema oscuro las gráficas se ven con colores para fondo oscuro; el PDF siempre sale en papel blanco
+const { tema, oscuro } = useTemaInforme()
 
 echarts.use([CanvasRenderer, BarChart, LineChart, PieChart, GridComponent, TooltipComponent, TitleComponent, LegendComponent, LabelLayout])
 
@@ -353,7 +356,8 @@ const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', '
 const MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 const DIAS_SEM = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 const ORDEN_PLANTAS = ['Villavicencio', 'Acacías', 'Restrepo', 'Puerto Concordia']
-const COLORES: Record<string, string> = { 'Villavicencio': '#172954', 'Acacías': '#2563eb', 'Restrepo': '#93c5fd', 'Puerto Concordia': '#10b981' }
+// Mismo color por planta en todo el proyecto (gráficas, Mantenimiento, Clientes, Combustible e informes)
+const COLORES: Record<string, string> = COLOR_PLANTA
 const PALETA_EXTRA = ['#8b5cf6', '#f59e0b', '#06b6d4', '#ec4899']
 const CP = '#172954'
 const RE_AGREGADO = /^(CA |CG\d)/
@@ -409,15 +413,9 @@ const todas = computed<Rem[]>(() => props.rows
     }
   }))
 
-const fechaMin = computed(() => todas.value.reduce((a, r) => (r.iso < a ? r.iso : a), '9999-12-31'))
 const fechaMax = computed(() => todas.value.reduce((a, r) => (r.iso > a ? r.iso : a), ''))
-const corteSel = ref('')
-watch(() => [props.corte, fechaMax.value], () => {
-  const c = props.corte && props.corte <= fechaMax.value ? props.corte : fechaMax.value
-  corteSel.value = c
-}, { immediate: true })
-
-const corteIso = computed(() => corteSel.value || fechaMax.value)
+// Corte = fecha final del filtro de fechas de arriba; sin filtro (o fuera del rango), el último día con datos
+const corteIso = computed(() => (props.corte && props.corte <= fechaMax.value ? props.corte : fechaMax.value))
 const corteAnio = computed(() => Number(corteIso.value.slice(0, 4)))
 const corteMes = computed(() => Number(corteIso.value.slice(5, 7)))
 const corteDia = computed(() => Number(corteIso.value.slice(8, 10)))
@@ -769,7 +767,7 @@ function renderCharts() {
     if (d) {
       const dias = diario.value
       const promLbl = `Promedio ${fmtN(M.value.ritmo)} m³/día`
-      d.setOption({ ...base,
+      d.setOption(tema({ ...base,
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (v: number) => fmtN(v) + ' m³' },
         legend: { ...leyenda, data: [...ps, promLbl] },
         grid: { top: 32, bottom: 24, left: 44, right: 8 },
@@ -783,13 +781,13 @@ function renderCharts() {
           { name: promLbl, type: 'line', data: dias.map(() => +M.value.ritmo.toFixed(1)), symbol: 'none',
             lineStyle: { type: 'dashed', color: '#64748b', width: 1.2 }, itemStyle: { color: '#64748b' } },
         ],
-      }, true)
+      }), true)
     }
     // 2. m³ y venta por planta
     const pl = getChart('plantas', chPlantasRef.value)
     if (pl) {
       const rev = [...ps].reverse()
-      pl.setOption({ ...base,
+      pl.setOption(tema({ ...base,
         tooltip: { trigger: 'item' },
         legend: { ...leyenda, right: 'center' },
         grid: [{ top: 26, bottom: 4, left: 100, width: '30%' }, { top: 26, bottom: 4, left: '58%', width: '26%' }],
@@ -804,13 +802,13 @@ function renderCharts() {
             data: rev.map(p => Math.round(P.value[p].venta)),
             label: { show: true, position: 'right', formatter: (x: any) => cop(x.value), fontSize: 10, fontWeight: 'bold', color: '#16a34a' } },
         ],
-      }, true)
+      }), true)
     }
     // 3. Dona de participación
     const dn = getChart('dona', chDonaRef.value)
     if (dn) {
       const tot = M.value.m3
-      dn.setOption({ ...base,
+      dn.setOption(tema({ ...base,
         tooltip: { trigger: 'item', valueFormatter: (v: number) => fmtN(v) + ' m³' },
         legend: { bottom: 0, left: 'center', orient: 'vertical', itemWidth: 10, itemHeight: 8, textStyle: { fontSize: 10, fontWeight: 'bold', color: CP },
           formatter: (n: string) => `${n}  ${pct(tot ? (P.value[n]?.m3 ?? 0) / tot * 100 : 0)}` },
@@ -818,13 +816,13 @@ function renderCharts() {
           textStyle: { fontSize: 22, fontWeight: 900, color: CP }, subtextStyle: { fontSize: 8, color: '#666', fontWeight: 'bold', lineHeight: 12 } },
         series: [{ type: 'pie', radius: ['46%', '64%'], center: ['50%', '40%'], label: { show: false },
           data: ps.map(p => ({ name: p, value: +P.value[p].m3.toFixed(2), itemStyle: { color: color(p) } })) }],
-      }, true)
+      }), true)
     }
     // 4. Comerciales (m³ apilado por planta)
     const cm = getChart('comercial', chComercialRef.value)
     if (cm) {
       const cs = [...comerciales.value].reverse()
-      cm.setOption({ ...base,
+      cm.setOption(tema({ ...base,
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (v: number) => fmtN(v) + ' m³' },
         legend: { ...leyenda, data: ps },
         grid: { top: 26, bottom: 4, left: 96, right: 56 },
@@ -835,14 +833,14 @@ function renderCharts() {
           { name: 'Total', type: 'bar', stack: 't', data: cs.map(() => 0), tooltip: { show: false },
             label: { show: true, position: 'right', formatter: (x: any) => fmtN(cs[x.dataIndex].m3), color: CP, fontSize: 10, fontWeight: 'bold' } },
         ],
-      }, true)
+      }), true)
     }
     // 5. Histórico mensual + cierre estimado
     const mn = getChart('mensual', chMensualRef.value)
     if (mn) {
       const ms = mensual.value
       const n = ms.length
-      mn.setOption({ ...base,
+      mn.setOption(tema({ ...base,
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (v: number) => (v == null ? '—' : fmtN(v, 0) + ' m³') },
         legend: { ...leyenda, data: [...ps, 'Cierre estimado'] },
         grid: { top: 36, bottom: 24, left: 50, right: 8 },
@@ -851,19 +849,21 @@ function renderCharts() {
         series: [
           ...ps.map((p, i) => ({ name: p, type: 'bar', stack: 't', barMaxWidth: 40, data: ms.map(m => +(m.porPlanta[p] ?? 0).toFixed(2)),
             itemStyle: { color: color(p), borderRadius: i === ps.length - 1 ? [2, 2, 0, 0] : 0 },
-            label: { show: true, position: 'inside', formatter: (x: any) => (x.value >= 700 ? fmtN(x.value, 0) : ''), color: color(p) === '#93c5fd' ? CP : '#fff', fontSize: 8, fontWeight: 'bold' } })),
+            label: { show: true, position: 'inside', formatter: (x: any) => (x.value >= 700 ? fmtN(x.value, 0) : ''), color: '#fff', fontSize: 8, fontWeight: 'bold' } })),
           { name: 'Total', type: 'bar', stack: 't', data: ms.map(() => 0), tooltip: { show: false },
             label: { show: true, position: 'top', formatter: (x: any) => fmtN(ms[x.dataIndex].total, 0), color: CP, fontSize: 9, fontWeight: 'bold' } },
           { name: 'Cierre estimado', type: 'line', data: ms.map((_, i) => (i === n - 1 ? Math.round(M.value.cierre) : null)),
             symbol: 'rect', symbolSize: [30, 2], itemStyle: { color: '#dc2626' },
             label: { show: true, position: 'top', formatter: (x: any) => 'est. ' + fmtN(x.value, 0), color: '#dc2626', fontSize: 9, fontWeight: 'bold' } },
         ],
-      }, true)
+      }), true)
     }
   })
 }
 
 watch([delMes, plantas, corteIso], () => renderCharts())
+// Cambio de tema (o fin de la captura del PDF): se redibujan con los colores que tocan
+watch(oscuro, () => renderCharts())
 onMounted(() => { renderCharts(); window.addEventListener('resize', onResize) })
 onUnmounted(() => { window.removeEventListener('resize', onResize); charts.forEach(c => c.dispose()); charts.clear() })
 function onResize() { charts.forEach(c => c.resize()) }
@@ -875,6 +875,7 @@ async function generarInformePdf() {
   if (!el || generandoPdf.value) return
   generandoPdf.value = true
   el.classList.add('pdf-capturing')
+  capturandoPdf.value = true
   try {
     await nextTick()
     onResize()
@@ -911,6 +912,7 @@ async function generarInformePdf() {
     console.error('[informe-comercial] Error generando PDF:', e)
   } finally {
     el.classList.remove('pdf-capturing')
+    capturandoPdf.value = false
     await nextTick()
     onResize()
     generandoPdf.value = false

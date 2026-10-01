@@ -1,16 +1,12 @@
 <template>
   <div class="informe-tab">
-    <!-- Barra superior: fecha de corte + descarga PDF (igual que el Informe Comercial) -->
+    <!-- Barra superior: título y PDF. El corte es la fecha final del filtro de arriba (o el último dato) -->
     <div class="informe-control-bar">
       <div class="icb-info">
         <span class="icb-tag">Reporte Diario Oficial</span>
         <span class="icb-title">Informe de Proyección de Clientes — Concretos</span>
       </div>
       <div class="icb-actions">
-        <label class="icb-corte">
-          Corte
-          <input type="date" v-model="corteSel" :min="fechaMin" :max="fechaMax" />
-        </label>
         <button class="tb-btn primary" @click="generarInformePdf" :disabled="!hayDatos || generandoPdf" title="Generar y descargar archivo PDF oficial">
           <svg v-if="!generandoPdf" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           <span v-if="generandoPdf">Generando PDF...</span>
@@ -28,7 +24,9 @@
       <div class="report-page">
         <header class="report-header">
           <div class="report-header-brand">
-            <img src="/Logos/logo-azul-informe.png" alt="Gravicon" class="report-logo" loading="eager" />
+            <img src="/Logos/logo-azul-informe.png" alt="Gravicon" class="report-logo report-logo--claro" loading="eager" />
+            <!-- En tema oscuro (solo en pantalla) va el logo blanco oficial; el PDF siempre usa el azul -->
+            <img src="/Logos/logo-blanco.webp" alt="" aria-hidden="true" class="report-logo report-logo--oscuro" loading="eager" />
             <div class="report-header-text">
               <h2>Comercial Concretos Gravicon</h2>
               <span>GRAVAS Y CONCRETOS S.A. · Concretos</span>
@@ -264,6 +262,11 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart, LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent, MarkLineComponent } from 'echarts/components'
 import { LabelLayout } from 'echarts/features'
+import { useTemaInforme, capturandoPdf } from '../../../composables/useTemaInforme'
+import { COLOR_PLANTA } from '../../../composables/useGraficasConcreto'
+
+// En tema oscuro las gráficas se ven con colores para fondo oscuro; el PDF siempre sale en papel blanco
+const { tema, oscuro } = useTemaInforme()
 
 echarts.use([CanvasRenderer, BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent, MarkLineComponent, LabelLayout])
 
@@ -288,7 +291,8 @@ const TOPV = 15
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
 const MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 const ORDEN_PLANTAS = ['Villavicencio', 'Acacías', 'Restrepo', 'Puerto Concordia']
-const COLORES: Record<string, string> = { 'Villavicencio': '#172954', 'Acacías': '#2563eb', 'Restrepo': '#93c5fd', 'Puerto Concordia': '#10b981' }
+// Mismo color por planta en todo el proyecto (gráficas, Mantenimiento, Clientes, Combustible e informes)
+const COLORES: Record<string, string> = COLOR_PLANTA
 const PP_COL: Record<string, string> = { 'Villavicencio': 'villavicencio', 'Acacías': 'acacias', 'Restrepo': 'restrepo', 'Puerto Concordia': 'concordia' }
 const CP = '#172954'
 
@@ -359,13 +363,9 @@ const remisiones = computed<Rem[]>(() => props.rows
   })))
 
 // ---------------------------------------------------------------- Periodo
-const fechaMin = computed(() => remisiones.value.reduce((a, r) => (r.iso < a ? r.iso : a), '9999-12-31'))
 const fechaMax = computed(() => remisiones.value.reduce((a, r) => (r.iso > a ? r.iso : a), ''))
-const corteSel = ref('')
-watch(() => [props.corte, fechaMax.value], () => {
-  corteSel.value = props.corte && props.corte <= fechaMax.value ? props.corte : fechaMax.value
-}, { immediate: true })
-const corteIso = computed(() => corteSel.value || fechaMax.value)
+// Corte = fecha final del filtro de fechas de arriba; sin filtro (o fuera del rango), el último día con datos
+const corteIso = computed(() => (props.corte && props.corte <= fechaMax.value ? props.corte : fechaMax.value))
 const anio = computed(() => Number(corteIso.value.slice(0, 4)))
 const mes = computed(() => Number(corteIso.value.slice(5, 7)))
 const dia = computed(() => Number(corteIso.value.slice(8, 10)))
@@ -596,7 +596,7 @@ function renderCharts() {
     const cu = getChart('cump', chCumpRef.value)
     if (cu) {
       const rev = [...ps].reverse()
-      cu.setOption({ ...base,
+      cu.setOption(tema({ ...base,
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (v: number) => pct(v) },
         grid: { top: 24, bottom: 8, left: 110, right: 110 },
         xAxis: { type: 'value', show: false, max: Math.max(100, ...ps.map(p => pp[p].cump)) * 1.05 },
@@ -607,13 +607,13 @@ function renderCharts() {
             formatter: (x: any) => `${pct(x.value)} · ${pct(x.value / av * 100, 0)} de lo esperado` },
           markLine: { symbol: 'none', silent: true, lineStyle: { type: 'dashed', color: '#475569' }, data: [{ xAxis: +av.toFixed(1) }],
             label: { formatter: `avance ${pct(av, 0)}`, fontSize: 9, color: '#475569' } } }],
-      }, true)
+      }), true)
     }
     // 2. Meta, esperado y ejecutado por planta
     const me = getChart('meta', chMetaRef.value)
     if (me) {
       const lbl = (c: string) => ({ show: true, position: 'top' as const, fontSize: 9, color: c, formatter: (x: any) => fmtN(x.value, 0) })
-      me.setOption({ ...base,
+      me.setOption(tema({ ...base,
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (v: number) => fmtN(v) + ' m³' },
         legend: leyenda, grid: { top: 30, bottom: 22, left: 44, right: 8 },
         xAxis: ejeCat(ps), yAxis: ejeY,
@@ -623,7 +623,7 @@ function renderCharts() {
           { name: 'Ejecutado', type: 'bar', barMaxWidth: 26, itemStyle: { color: '#1D4ED8' },
             data: ps.map(p => ({ value: +pp[p].real.toFixed(1), itemStyle: { color: semCol(pp[p].cump / av * 100) } })), label: { ...lbl(CP), fontWeight: 'bold' } },
         ],
-      }, true)
+      }), true)
     }
     // 3. Avance acumulado vs. meta acumulada + proyección al cierre
     const ac = getChart('acum', chAcumRef.value)
@@ -641,7 +641,7 @@ function renderCharts() {
         if (d <= dia.value) { real += porDia.get(d) ?? 0; acReal.push(+real.toFixed(1)); acProy.push(d === dia.value ? +real.toFixed(1) : null); proy = real }
         else { acReal.push(null); if (!esDomingo(d)) proy += ritmoHab; acProy.push(+proy.toFixed(1)) }
       }
-      ac.setOption({ ...base,
+      ac.setOption(tema({ ...base,
         tooltip: { trigger: 'axis', valueFormatter: (v: number) => (v == null ? '—' : fmtN(v) + ' m³') },
         legend: { ...leyenda, data: ['Ejecutado acumulado', 'Meta acumulada', 'Proyección al cierre'] },
         grid: { top: 32, bottom: 22, left: 54, right: 90 }, xAxis: { ...ejeCat(xs), boundaryGap: false }, yAxis: ejeY,
@@ -654,13 +654,13 @@ function renderCharts() {
           { name: 'Proyección al cierre', type: 'line', data: acProy, symbol: 'none', lineStyle: { width: 2, type: 'dashed', color: '#dc2626' }, itemStyle: { color: '#dc2626' },
             endLabel: { show: true, formatter: (x: any) => 'est. ' + fmtN(x.value, 0), fontSize: 9, color: '#dc2626', fontWeight: 'bold' } },
         ],
-      }, true)
+      }), true)
     }
     // 4. Despacho diario por planta vs. meta diaria
     const di = getChart('diario', chDiarioRef.value)
     if (di) {
       const ds = diario.value.dias
-      di.setOption({ ...base,
+      di.setOption(tema({ ...base,
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (v: number) => fmtN(v) + ' m³' },
         legend: { ...leyenda, data: [...ps, 'Meta del día'] }, grid: { top: 32, bottom: 22, left: 44, right: 8 },
         xAxis: ejeCat(ds.map(d => d.iso.slice(8, 10) + '/' + d.iso.slice(5, 7))), yAxis: ejeY,
@@ -672,13 +672,13 @@ function renderCharts() {
           { name: 'Meta del día', type: 'line', data: ds.map(d => (esDomingo(Number(d.iso.slice(8, 10))) ? null : +metaDiaria.value.toFixed(1))), symbol: 'none',
             lineStyle: { type: 'dashed', color: '#dc2626', width: 1.4 }, itemStyle: { color: '#dc2626' } },
         ],
-      }, true)
+      }), true)
     }
     // 5. Histórico meta vs. ejecutado
     const hi = getChart('hist', chHistRef.value)
     if (hi) {
       const hs = historico.value
-      hi.setOption({ ...base,
+      hi.setOption(tema({ ...base,
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (v: number) => fmtN(v, 0) + ' m³' },
         legend: leyenda, grid: { top: 30, bottom: 22, left: 50, right: 8 },
         xAxis: ejeCat(hs.map(h => MESES_CORTOS[h.mes - 1])), yAxis: ejeY,
@@ -688,14 +688,14 @@ function renderCharts() {
           { name: 'Ejecutado', type: 'bar', barMaxWidth: 34, data: hs.map(h => ({ value: Math.round(h.real), itemStyle: { color: semCol(h.meta ? h.real / h.meta * 100 : 0) } })),
             label: { show: true, position: 'top', fontSize: 9, fontWeight: 'bold', color: CP, formatter: (x: any) => `${fmtN(x.value, 0)} (${pct(hs[x.dataIndex].meta ? x.value / hs[x.dataIndex].meta * 100 : 0, 0)})` } },
         ],
-      }, true)
+      }), true)
     }
     // 6. Producción por mixer (m³ apilados por planta + viajes)
     const mx = getChart('mixer', chMixerRef.value)
     if (mx) {
       const vs = [...top(vehiculos.value, TOPV)].reverse()
       const psV = ordenar(new Set(vs.flatMap(v => Object.keys(v.porPlanta))))
-      mx.setOption({ ...base,
+      mx.setOption(tema({ ...base,
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (v: number) => fmtN(v) + ' m³' },
         legend: { ...leyenda, data: psV }, grid: { top: 26, bottom: 4, left: 80, right: 130 },
         xAxis: { type: 'value', show: false },
@@ -706,24 +706,26 @@ function renderCharts() {
             label: { show: true, position: 'right', color: CP, fontSize: 10, fontWeight: 'bold',
               formatter: (x: any) => `${fmtN(vs[x.dataIndex].m3)} m³ · ${vs[x.dataIndex].viajes} viajes` } },
         ],
-      }, true)
+      }), true)
     }
     // 7. Producción por conductor
     const co = getChart('cond', chCondRef.value)
     if (co) {
       const cs = [...top(conductores.value, TOPV)].reverse()
-      co.setOption({ ...base,
+      co.setOption(tema({ ...base,
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (v: number) => fmtN(v) + ' m³' },
         grid: { top: 8, bottom: 4, left: 150, right: 110 }, xAxis: { type: 'value', show: false },
         yAxis: { type: 'category', data: cs.map(c => titulo(c.nombre)), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: CP, fontWeight: 'bold', fontSize: 10, width: 140, overflow: 'truncate' } },
         series: [{ type: 'bar', barWidth: 14, name: 'm³', data: cs.map(c => +c.m3.toFixed(1)), itemStyle: { color: '#2563eb', borderRadius: 2 },
           label: { show: true, position: 'right', color: CP, fontSize: 10, fontWeight: 'bold', formatter: (x: any) => `${fmtN(x.value)} · ${cs[x.dataIndex].viajes} v.` } }],
-      }, true)
+      }), true)
     }
   })
 }
 
 watch([hayDatos, plantas, corteIso, P, vehiculos, diario], () => renderCharts())
+// Cambio de tema (o fin de la captura del PDF): se redibujan con los colores que tocan
+watch(oscuro, () => renderCharts())
 onMounted(async () => { window.addEventListener('resize', onResize); await cargar(); renderCharts() })
 onUnmounted(() => { window.removeEventListener('resize', onResize); charts.forEach(c => c.dispose()); charts.clear() })
 function onResize() { charts.forEach(c => c.resize()) }
@@ -735,6 +737,7 @@ async function generarInformePdf() {
   if (!el || generandoPdf.value) return
   generandoPdf.value = true
   el.classList.add('pdf-capturing')
+  capturandoPdf.value = true
   try {
     await nextTick()
     onResize()
@@ -770,6 +773,7 @@ async function generarInformePdf() {
     console.error('[informe-proyeccion] Error generando PDF:', e)
   } finally {
     el.classList.remove('pdf-capturing')
+    capturandoPdf.value = false
     await nextTick()
     onResize()
     generandoPdf.value = false

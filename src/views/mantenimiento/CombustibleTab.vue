@@ -1,33 +1,19 @@
 <template>
   <div class="combustible-tab">
-    <div class="gt-bar">
-      <div class="gt-info">
-        <span class="gt-tag">Tanqueo de combustible · {{ periodoLbl }}</span>
-        <span class="gt-periodo">{{ fmtN(T.galones) }} galones · {{ cop(T.costo) }} en {{ fmtN(T.vales, 0) }} tanqueos</span>
-        <span class="gt-sub">
-          Fuente: hoja «Combustible» (vales de tanqueo). El costo por m³ se calcula con el concreto despachado (remisiones, sin agregados).
-          <template v-if="sinFechaN">{{ sinFechaN }} vales sin fecha se ubican por su mes.</template>
-          <template v-if="excluidas">{{ excluidas }} filas sin fecha ni mes quedan por fuera.</template>
-        </span>
-      </div>
-      <!-- Filtro de producto: todo el tablero se recalcula con el producto elegido -->
-      <div class="gt-gran" role="group" aria-label="Producto">
-        <span class="gt-gran-lbl">Producto</span>
-        <button v-for="o in productosOpc" :key="o" class="gt-gran-btn" :class="{ active: producto === o }" @click="producto = o">{{ o === 'TODOS' ? 'Todos' : titulo(o) }}</button>
-      </div>
-    </div>
-
     <SkeletonLoader v-if="dispStore.loading && !todas.length" :kpis="4" :charts="2" label="Cargando tanqueos…" />
     <div v-else-if="!rs.length" class="gt-vacio">No hay tanqueos registrados en el rango de fechas.</div>
 
     <template v-else>
       <div class="kpi-row">
-        <KpiCard v-for="k in kpis" :key="k.label" :label="k.label" :value="k.value" :icon="k.icon" :accent="k.accent" :detail="k.detail" />
+        <KpiCard v-for="k in kpis" :key="k.label" :label="k.label" :value="k.value" :icon="k.icon" :accent="k.accent" :detail="k.detail" :meta="(k as { meta?: string }).meta" />
       </div>
 
       <h3 class="section-title"><span class="title-bar"></span>Costo y consumo por mes</h3>
       <div class="charts-grid cols-1">
         <ChartCard title="Costo de Combustible por Planta" description="Valor de los vales de tanqueo por mes y planta; en el tooltip, el total y la variación frente al mes anterior" :option="optCostoMes" :height="380" />
+      </div>
+      <div class="charts-grid cols-1">
+        <ChartCard title="Galones por m³ Producido" :description="`Galones tanqueados ÷ m³ de concreto despachado en el mes, por planta; la línea verde es la meta de ${fmtN(META_GAL_M3, 1)} gal/m³`" :option="optGalM3" :height="320" />
       </div>
       <div class="charts-grid cols-2">
         <ChartCard title="Variación Mensual del Gasto por Planta" description="Gasto de cada planta por mes; en verde baja y en rojo sube frente al mes anterior" :option="optVariacion" :height="340" />
@@ -67,7 +53,7 @@
  */
 <script setup lang="ts">
 import SkeletonLoader from '../../components/ui/SkeletonLoader.vue'
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import KpiCard from '../../components/dashboard/KpiCard.vue'
 import ChartCard from '../../components/dashboard/ChartCard.vue'
 import { useDisponibilidadStore } from '../../stores'
@@ -80,6 +66,12 @@ import {
 } from '../../composables/useGraficasConcreto'
 
 const props = defineProps<{
+  /** Productos marcados en el filtro de arriba (vacío o todos = todos los productos) */
+  productos?: string[]
+  /** Área de Mantenimiento que se está viendo: solo sus tanqueos (sin área = todos) */
+  area?: 'planta' | 'maquinaria'
+  /** Plantas marcadas en el filtro de arriba (vacío = todas) */
+  plantasFiltro?: string[]
   /** Rango del filtro de fechas del contenedor (YYYY-MM-DD) */
   fechaInicio?: string
   fechaFin?: string
@@ -106,10 +98,19 @@ const anioRef = computed(() => {
   const serials = crudas.value.map(r => r['Fecha']).filter((x): x is number => typeof x === 'number' && x > 0)
   return serials.length ? isoDe(Math.max(...serials)).slice(0, 4) : String(new Date().getFullYear())
 })
+/**
+ * Área del tanqueo según la PLACA (ni «Area_Trabajo» ni «Planta», que solo dice a qué planta pertenece):
+ * son de Planta las placas GENERADOR y BIDÓN/BIDONES; todo lo demás es de Maquinaria.
+ */
+const PLACAS_PLANTA = /^(GENER[AE]DOR|BID[OÓ]N(ES)?)$/
+function areaTanqueo(r: Record<string, unknown>): 'planta' | 'maquinaria' {
+  return PLACAS_PLANTA.test(String(r['Placa'] ?? '').trim().toUpperCase()) ? 'planta' : 'maquinaria'
+}
 const mesValido = (r: Record<string, unknown>) => { const m = num(r['Mes']); return m >= 1 && m <= 12 ? m : 0 }
 const todas = computed<Tanqueo[]>(() => crudas.value
   // Con fecha, o sin fecha pero con «Mes» (la hoja trae algunos vales así; el Power BI los muestra como «(En blanco)»)
   .filter(r => (typeof r['Fecha'] === 'number' && r['Fecha']) || mesValido(r))
+  .filter(r => !props.area || areaTanqueo(r) === props.area)
   .map(r => ({
     sinFecha: !(typeof r['Fecha'] === 'number' && r['Fecha']),
     iso: typeof r['Fecha'] === 'number' && r['Fecha'] ? isoDe(r['Fecha'] as number) : `${anioRef.value}-${String(mesValido(r)).padStart(2, '0')}-01`,
@@ -124,8 +125,10 @@ const todas = computed<Tanqueo[]>(() => crudas.value
     horIni: r['Horometro inicial'] == null || r['Horometro inicial'] === '' ? null : num(r['Horometro inicial']),
     horFin: r['Horometro final'] == null || r['Horometro final'] === '' ? null : num(r['Horometro final']),
   })))
-const excluidas = computed(() => crudas.value.length - todas.value.length)
-const sinFechaN = computed(() => rs.value.filter(r => r.sinFecha).length)
+
+/** Plantas marcadas arriba (vacío = todas): acota tanqueos y m³ de concreto */
+const plantasSel = computed(() => new Set(props.plantasFiltro ?? []))
+const plantaOk = (p: string) => !plantasSel.value.size || plantasSel.value.has(p)
 
 const rango = computed(() => {
   let min = '9999-12-31', max = ''
@@ -133,17 +136,16 @@ const rango = computed(() => {
   return { desde: props.fechaInicio && props.fechaInicio > min ? props.fechaInicio : min, hasta: props.fechaFin && props.fechaFin < max ? props.fechaFin : max }
 })
 // Producto elegido (Todos / ACPM / Corriente / Urea): aplica a todo el tablero
-const producto = ref('TODOS')
-const productosOpc = computed(() => ['TODOS', ...['ACPM', 'CORRIENTE', 'UREA'].filter(p => todas.value.some(r => r.producto === p))])
+// Producto: lo elige el filtro de arriba. Uno solo → vista de ese producto; varios o todos → vista general
+const productosTodos = computed(() => ['ACPM', 'CORRIENTE', 'UREA'].filter(p => todas.value.some(r => r.producto === p)))
+const marcados = computed(() => new Set((props.productos ?? []).filter(p => productosTodos.value.includes(p))))
+const producto = computed(() => (marcados.value.size === 1 ? [...marcados.value][0] : 'TODOS'))
 // Los vales sin fecha entran si su mes cae dentro del rango
 const enRango = (r: Tanqueo) => r.sinFecha
   ? r.iso.slice(0, 7) >= rango.value.desde.slice(0, 7) && r.iso.slice(0, 7) <= rango.value.hasta.slice(0, 7)
   : r.iso >= rango.value.desde && r.iso <= rango.value.hasta
-const rs = computed(() => todas.value.filter(r => enRango(r) && (producto.value === 'TODOS' || r.producto === producto.value)))
-const periodoLbl = computed(() => {
-  const f = (iso: string) => `${Number(iso.slice(8, 10))} ${MESES_CORTOS[Number(iso.slice(5, 7)) - 1].toLowerCase()} ${iso.slice(0, 4)}`
-  return rs.value.length ? `${f(rango.value.desde)} – ${f(rango.value.hasta)}` : ''
-})
+const rs = computed(() => todas.value.filter(r => enRango(r) && plantaOk(r.planta) &&
+  (!marcados.value.size || marcados.value.size === productosTodos.value.length || marcados.value.has(r.producto))))
 const plantas = computed(() => ordenarPlantas(new Set(rs.value.map(r => r.planta))))
 
 // m³ de concreto despachados por mes y planta (remisiones sin agregados), para el costo por m³
@@ -153,8 +155,9 @@ const m3PorMes = computed(() => {
     if (typeof r['Fecha'] !== 'number' || esAgregado(r['Mezcla'], r['Cliente'], r['Planta'])) continue
     const iso = isoDe(r['Fecha'] as number)
     if (iso < rango.value.desde || iso > rango.value.hasta) continue
-    const e = m.get(iso.slice(0, 7)) ?? {}
     const p = nombrePlanta(r['Planta'])
+    if (!plantaOk(p)) continue
+    const e = m.get(iso.slice(0, 7)) ?? {}
     e[p] = (e[p] ?? 0) + num(r['Cant. Concreto'])
     m.set(iso.slice(0, 7), e)
   }
@@ -192,6 +195,8 @@ function detalle(valor: (p: string) => string): string {
     `<div class='kpi-detail-row'><span class='kpi-dot' style='background:${color(p)}'></span>` +
     `<span class='kpi-label-int' style='color:${color(p)}'>${p}</span> <strong>${valor(p)}</strong></div>`).join('')
 }
+/** Meta de consumo: galones de combustible por m³ de concreto producido */
+const META_GAL_M3 = 1.5
 const nota = (t: string) => `<div class='kpi-detail-row' style='color:var(--text-tertiary);font-size:10px'>${t}</div>`
 const kpis = computed(() => {
   const t = T.value, pp = P.value
@@ -199,9 +204,18 @@ const kpis = computed(() => {
   const gal = (x: ReturnType<typeof acumular>, pr: string) => x.porProducto[pr]?.galones ?? 0
   const precio = (x: ReturnType<typeof acumular>, pr: string) => { const g = gal(x, pr); return g ? (x.porProducto[pr]?.costo ?? 0) / g : 0 }
   const gris = (t: string) => ` <span style='color:var(--text-tertiary);font-size:10px'>${t}</span>`
+  // Meta de consumo: 1,5 galones por m³ de concreto; su equivalente en pesos usa el costo del galón del período
+  const galM3 = m3 ? t.galones / m3 : 0
+  const costoGal = t.galones ? t.costo / t.galones : 0
   const comunes = [
-    { label: 'Costo por m³ Producido', value: m3 ? cop(t.costo / m3) : '—', icon: 'trending-up', accent: '#0EA5E9',
-      detail: detalle(p => { const x = m3Total(p); return x ? cop(pp[p].costo / x) : '—' }) + nota(`${fmtN(m3, 0)} m³ de concreto en el período`) },
+    { label: 'Galones por m³ Producido', value: m3 ? fmtN(galM3, 2) + ' gal/m³' : '—', icon: 'activity', accent: galM3 > META_GAL_M3 ? '#DC2626' : '#16A34A',
+      meta: `Meta: ${fmtN(META_GAL_M3, 1)} gal/m³`,
+      detail: detalle(p => { const x = m3Total(p); return x ? fmtN(pp[p].galones / x, 2) + ' gal/m³' : '—' })
+        + nota(`${fmtN(t.galones)} gal ÷ ${fmtN(m3, 0)} m³ · ${m3 ? (galM3 <= META_GAL_M3 ? 'dentro de la meta' : `${pct((galM3 / META_GAL_M3 - 1) * 100)} por encima de la meta`) : ''}`) },
+    { label: 'Costo por m³ Producido', value: m3 ? cop(t.costo / m3) : '—', icon: 'trending-up', accent: m3 && t.costo / m3 > META_GAL_M3 * costoGal ? '#DC2626' : '#0EA5E9',
+      meta: costoGal ? `Meta: ${cop(META_GAL_M3 * costoGal)}/m³` : undefined,
+      detail: detalle(p => { const x = m3Total(p); return x ? cop(pp[p].costo / x) : '—' })
+        + nota(`${fmtN(m3, 0)} m³ de concreto en el período · meta = ${fmtN(META_GAL_M3, 1)} gal/m³ × ${cop(costoGal)}/gal`) },
     { label: 'Tanqueos', value: fmtN(t.vales, 0), icon: 'list', accent: '#8B5CF6',
       detail: detalle(p => `${fmtN(pp[p].vales, 0)}${gris(`${fmtN(pp[p].vales ? pp[p].galones / pp[p].vales : 0)} gal/vale`)}`) + nota(`${fmtN(t.placas, 0)} placas abastecidas`) },
     { label: 'Galones por Hora', value: t.horas ? fmtN(t.galHoras / t.horas, 2) + ' gal/h' : '—', icon: 'clock', accent: '#06B6D4',
@@ -212,6 +226,8 @@ const kpis = computed(() => {
     // Vista general: ACPM y Corriente por separado; mezclarlos (y la urea) distorsiona el precio promedio
     const urea = t.porProducto.UREA
     return [
+      { label: 'Costo por Galón', value: costoGal ? cop(costoGal) + '/gal' : '—', icon: 'target', accent: '#0F766E',
+        detail: detalle(p => (pp[p].galones ? cop(pp[p].costo / pp[p].galones) + '/gal' : '—')) + nota('Costo total ÷ galones de todos los combustibles') },
       { label: 'Costo de Combustible', value: cop(t.costo), icon: 'dollar', accent: '#2563EB',
         detail: detalle(p => `${cop(pp[p].costo)}${gris(`(${pct(t.costo ? pp[p].costo / t.costo * 100 : 0)})`)}`)
           + nota(`ACPM ${cop(t.porProducto.ACPM.costo)} · Corriente ${cop(t.porProducto.CORRIENTE.costo)}${urea.costo ? ` · Urea ${cop(urea.costo)}` : ''}`) },
@@ -314,6 +330,44 @@ const optCostoM3 = computed(() => {
       { name: 'Total', type: 'line' as const, smooth: 0.3, connectNulls: true, symbol: 'circle', symbolSize: 7,
         data: per.map(x => serie(x)), lineStyle: { width: 2, type: 'dashed' as const, color: isLight.value ? '#0f172a' : '#f1f5f9' }, itemStyle: { color: isLight.value ? '#0f172a' : '#f1f5f9' },
         label: { ...labelPill.value, formatter: (v: any) => copCorto(v.value) } },
+    ],
+  }, hay)
+})
+
+// Galones por m³ producido por mes y planta, con la meta (1,5 gal/m³) como referencia
+const optGalM3 = computed(() => {
+  const per = meses.value, ps = plantas.value
+  const serie = (x: Mes, p?: string) => {
+    const m3 = m3PorMes.value.get(x.k)
+    const q = p ? m3?.[p] ?? 0 : Object.values(m3 ?? {}).reduce((a, v) => a + v, 0)
+    const g = p ? x.porPlanta[p]?.galones ?? 0 : x.galones
+    return q ? +(g / q).toFixed(2) : null
+  }
+  const hay = per.some(x => serie(x) !== null)
+  const tintaTotal = isLight.value ? '#0f172a' : '#f1f5f9'
+  return vacio({
+    ...base(),
+    tooltip: {
+      trigger: 'axis' as const,
+      formatter: (params: any[]) => `<b>${params[0].axisValueLabel}</b><br/>` +
+        params.filter(p => p.value != null).map(p => `${p.marker} ${p.seriesName}: <b>${fmtN(p.value, 2)}</b> gal/m³` +
+          ` <span style="color:${p.value > META_GAL_M3 ? '#DC2626' : '#16A34A'}">${p.value > META_GAL_M3 ? '▲ sobre la meta' : '✓ en meta'}</span>`).join('<br/>'),
+    },
+    legend: leyenda([...ps.map(p => ({ name: p, itemStyle: { color: color(p) } })), { name: 'Total', itemStyle: { color: tintaTotal } }]),
+    grid: { left: 20, right: 90, bottom: 30, top: 50, containLabel: true },
+    xAxis: ejeX(per.map(x => etiquetaMes(x.k)), { boundaryGap: false }),
+    yAxis: ejeY({ scale: true, max: (v: { max: number }) => Math.max(v.max, META_GAL_M3) * 1.15 }),
+    series: [
+      ...ps.map(p => ({
+        name: p, type: 'line' as const, smooth: 0.3, connectNulls: true, symbol: 'circle', symbolSize: 7, emphasis: { focus: 'series' as const },
+        data: per.map(x => serie(x, p)), lineStyle: { width: 2.5, color: color(p) }, itemStyle: { color: color(p) },
+      })),
+      { name: 'Total', type: 'line' as const, smooth: 0.3, connectNulls: true, symbol: 'circle', symbolSize: 7,
+        data: per.map(x => serie(x)), lineStyle: { width: 2, type: 'dashed' as const, color: tintaTotal }, itemStyle: { color: tintaTotal },
+        label: { ...labelPill.value, formatter: (v: any) => fmtN(v.value, 2) },
+        markLine: { silent: true, symbol: 'none', lineStyle: { color: '#16A34A', type: 'dashed' as const, width: 1.5 },
+          label: { show: true, position: 'end' as const, formatter: `Meta ${fmtN(META_GAL_M3, 1)}`, color: '#16A34A', fontSize: 10, fontWeight: 600 },
+          data: [{ yAxis: META_GAL_M3 }] } },
     ],
   }, hay)
 })

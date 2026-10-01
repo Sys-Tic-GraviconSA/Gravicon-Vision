@@ -6,12 +6,14 @@ import { useRoute, useRouter } from 'vue-router'
  *
  *   /:planta/mantenimiento/:area/:seccion/:vista
  *
- *   area       planta | maquinaria | inspeccion | tareas
+ *   area       planta | maquinaria | tareas
  *   seccion    (planta/maquinaria) ordenes | almacen | gerencial | disponibilidad
+ *              (Concretos)         combustible (planta y maquinaria) · inspeccion (solo maquinaria)
  *              (tareas)            graficas | tabla | informe
  *   vista      ordenes:        graficas | detalle | informe
  *              almacen:        graficas | solicitudes
- *              disponibilidad: graficas | combustible | informe
+ *              disponibilidad: graficas | informe
+ *   Enlaces viejos: /inspeccion, /combustible y …/disponibilidad/combustible llevan a maquinaria/…
  *
  * Ejemplos: /cuncia/mantenimiento/planta/ordenes/graficas
  *           /concretos/mantenimiento/maquinaria/disponibilidad/informe
@@ -22,21 +24,23 @@ import { useRoute, useRouter } from 'vue-router'
  * sale el estado. Cada cambio es una navegación real (historial, atrás/adelante, enlace).
  */
 
-export type Area = 'planta' | 'maquinaria' | 'inspeccion' | 'tareas'
-export type Panel = 'dashboard' | 'almacen' | 'gerencial' | 'disponibilidad'
+export type Area = 'planta' | 'maquinaria' | 'tareas'
+export type Panel = 'dashboard' | 'almacen' | 'gerencial' | 'disponibilidad' | 'inspeccion' | 'combustible'
 export type VistaOT = 'resumen' | 'ordenes' | 'informe'
 export type VistaAlmacen = 'graficos' | 'solicitudes'
-export type VistaDisp = 'graficas' | 'combustible' | 'informe'
+export type VistaDisp = 'graficas' | 'informe'
 export type VistaTareas = 'graficas' | 'tabla' | 'informe'
 
 interface Estado { area: Area; panel: Panel; ot: VistaOT; almacen: VistaAlmacen; disp: VistaDisp; tareas: VistaTareas }
 
-const AREAS: Area[] = ['planta', 'maquinaria', 'inspeccion', 'tareas']
+const AREAS: Area[] = ['planta', 'maquinaria', 'tareas']
 // Nombre en la URL ↔ valor interno
-const PANEL_URL: Record<Panel, string> = { dashboard: 'ordenes', almacen: 'almacen', gerencial: 'gerencial', disponibilidad: 'disponibilidad' }
+const PANEL_URL: Record<Panel, string> = { dashboard: 'ordenes', almacen: 'almacen', gerencial: 'gerencial', disponibilidad: 'disponibilidad', inspeccion: 'inspeccion', combustible: 'combustible' }
+/** Secciones sin vistas internas */
+const SIN_VISTA: Panel[] = ['gerencial', 'inspeccion', 'combustible']
 const OT_URL: Record<VistaOT, string> = { resumen: 'graficas', ordenes: 'detalle', informe: 'informe' }
 const ALMACEN_URL: Record<VistaAlmacen, string> = { graficos: 'graficas', solicitudes: 'solicitudes' }
-const DISP: VistaDisp[] = ['graficas', 'combustible', 'informe']
+const DISP: VistaDisp[] = ['graficas', 'informe']
 const TAREAS: VistaTareas[] = ['graficas', 'tabla', 'informe']
 
 const DEFECTO: Estado = { area: 'planta', panel: 'dashboard', ot: 'resumen', almacen: 'graficos', disp: 'graficas', tareas: 'graficas' }
@@ -50,13 +54,18 @@ const ALMACEN_DE = inverso(ALMACEN_URL)
 export function leerEstado(segs: string[]): Estado {
   const e: Estado = { ...DEFECTO }
   const [a, s, v] = segs
+  // Enlaces viejos: Inspección y Combustible eran pestañas propias
+  if (a === 'inspeccion' || a === 'combustible') return { ...e, area: 'maquinaria', panel: a }
   if (AREAS.includes(a as Area)) e.area = a as Area
   if (e.area === 'tareas') {
     if (TAREAS.includes(s as VistaTareas)) e.tareas = s as VistaTareas
     return e
   }
-  if (e.area === 'inspeccion') return e
   if (PANEL_DE[s]) e.panel = PANEL_DE[s]
+  // Combustible estuvo dentro de Disponibilidad: el enlace viejo lleva a Combustible de la misma área
+  if (e.panel === 'disponibilidad' && v === 'combustible') return { ...e, panel: 'combustible' }
+  // Inspección solo existe dentro de Maquinaria
+  if (e.panel === 'inspeccion') return { ...e, area: 'maquinaria' }
   if (e.panel === 'dashboard' && OT_DE[v]) e.ot = OT_DE[v]
   if (e.panel === 'almacen' && ALMACEN_DE[v]) e.almacen = ALMACEN_DE[v]
   if (e.panel === 'disponibilidad' && DISP.includes(v as VistaDisp)) e.disp = v as VistaDisp
@@ -65,10 +74,9 @@ export function leerEstado(segs: string[]): Estado {
 
 /** Segmentos canónicos de la URL para un estado. */
 export function segmentos(e: Estado): string[] {
-  if (e.area === 'inspeccion') return ['inspeccion']
   if (e.area === 'tareas') return ['tareas', e.tareas]
   const panel = PANEL_URL[e.panel]
-  if (e.panel === 'gerencial') return [e.area, panel]
+  if (SIN_VISTA.includes(e.panel)) return [e.area, panel]
   const vista = e.panel === 'dashboard' ? OT_URL[e.ot] : e.panel === 'almacen' ? ALMACEN_URL[e.almacen] : e.disp
   return [e.area, panel, vista]
 }
@@ -107,9 +115,9 @@ export function useRutaMantenimiento(opciones: { normalizar?: boolean } = {}) {
   })
 
   return {
-    /** Planta · Maquinaria · Inspección · Tareas */
+    /** Planta · Maquinaria · Tareas */
     area: campo('area'),
-    /** Órdenes (dashboard) · Almacén · Gerencial · Disponibilidad */
+    /** Órdenes (dashboard) · Almacén · Gerencial · Disponibilidad · Combustible · Inspección (solo Maquinaria) */
     panel: campo('panel'),
     vistaOT: campo('ot'),
     vistaAlmacen: campo('almacen'),

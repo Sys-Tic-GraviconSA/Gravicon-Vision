@@ -11,6 +11,8 @@
     <div v-else-if="!diario.length" class="page-state"><span>No hay datos de producción para {{ planta.nombre }}.</span></div>
 
     <template v-else>
+      <!-- Encabezado con filtros fijo arriba al desplazarse (como en Concretos y Programación) -->
+      <div class="sticky-top">
       <header class="page-header">
         <h2 class="page-title">Producción {{ planta.nombre }}</h2>
         <div class="header-actions">
@@ -27,6 +29,7 @@
           </button>
         </div>
       </header>
+      </div>
 
       <RouteTabs variant="toggle" :items="vistas" :activo="vistaActiva" aria-label="Vista" replace />
 
@@ -146,9 +149,13 @@ const vistas = computed(() => VISTAS_PRODUCCION_AGREGADOS.map(v => ({
 .retry-btn:hover { background: var(--danger); color: #fff; }
 
 @media (max-width: 768px) {
+  /* En celular el encabezado no queda fijo: ocuparía media pantalla */
+  .sticky-top { position: static; }
   .page-header { flex-direction: column; align-items: stretch; gap: 8px; }
-  .page-title { font-size: 17px; }
-  .header-actions > * { flex: 1 1 auto; justify-content: center; }
+  /* El título repite planta y módulo (ya visibles arriba): en celular se oculta */
+  .page-title { display: none; }
+  .header-actions { flex-wrap: wrap; }
   .filter-group { width: 100%; box-sizing: border-box; }
+  .action-btn { margin-left: auto; }
 }
 </style>

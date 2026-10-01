@@ -3,11 +3,6 @@
     <div v-if="!dias.length" class="vacio">No hay registros de producción en el rango seleccionado.</div>
 
     <template v-else>
-      <p class="periodo">
-        <strong>{{ periodoTxt }}</strong> · {{ fmtN(dias.length, 0) }} {{ dias.length === 1 ? 'día registrado' : 'días registrados' }}
-        en {{ meses.length }} {{ meses.length === 1 ? 'mes' : 'meses' }} · todo en m³
-      </p>
-
       <div class="kpi-row">
         <KpiCard v-for="k in kpis" :key="k.label" v-bind="k" />
       </div>
@@ -118,12 +113,6 @@ const meses = computed<Mes[]>(() => {
     props.config.lines.forEach((l, i) => { m!.lineas[i] += Number(r[l.key]) || 0 })
   }
   return [...map.values()].sort((a, b) => a.key.localeCompare(b.key))
-})
-
-const periodoTxt = computed(() => {
-  const d = dias.value
-  if (!d.length) return ''
-  return d.length === 1 ? fechaLarga(d[0].fecha) : `${fechaLarga(d[0].fecha)} al ${fechaLarga(d[d.length - 1].fecha)}`
 })
 
 const T = computed(() => {

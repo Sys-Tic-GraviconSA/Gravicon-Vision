@@ -3,15 +3,9 @@
     <div class="informe-control-bar">
       <div class="icb-info">
         <span class="icb-tag">Reporte oficial de producción</span>
-        <span class="icb-title">Informe Ejecutivo de Producción — {{ planta }}</span>
+        <span class="icb-title">Informe Ejecutivo de Producción — {{ planta }} · {{ selectedLabel }}</span>
       </div>
       <div class="icb-actions">
-        <label class="icb-corte">
-          Mes
-          <select v-model="selectedMonthKey">
-            <option v-for="m in availableMonths" :key="m.key" :value="m.key">{{ m.label }}</option>
-          </select>
-        </label>
         <button class="tb-btn primary" :disabled="!hasData || generandoPdf" @click="pdf">
           <svg v-if="!generandoPdf" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           {{ generandoPdf ? 'Generando PDF…' : 'Descargar PDF' }}
@@ -26,7 +20,9 @@
       <div class="report-page">
         <header class="report-header">
           <div class="report-header-brand">
-            <img src="/Logos/logo-azul-informe.png" alt="Gravicon" class="report-logo" loading="eager" />
+            <img src="/Logos/logo-azul-informe.png" alt="Gravicon" class="report-logo report-logo--claro" loading="eager" />
+            <!-- En tema oscuro (solo en pantalla) va el logo blanco oficial; el PDF siempre usa el azul -->
+            <img src="/Logos/logo-blanco.webp" alt="" aria-hidden="true" class="report-logo report-logo--oscuro" loading="eager" />
             <div class="report-header-text">
               <h2>Producción Agregados Gravicon</h2>
               <span>GRAVAS Y CONCRETOS S.A. · Agregados {{ planta }}</span>
@@ -98,7 +94,7 @@
         <div class="report-section-block">
           <h3 class="report-block-title"><span class="title-bar"></span>Comportamiento operativo diario — {{ selectedLabel }}</h3>
           <p class="section-note">m³ producidos por día; la línea punteada es el promedio diario del mes ({{ fmt(kpi.promedio) }} m³).</p>
-          <VChart class="echart" :option="chartOpt" autoresize style="height: 300px" />
+          <VChart class="echart" :option="tema(chartOpt)" autoresize style="height: 300px" />
         </div>
 
         <div class="report-section-block">
@@ -196,7 +192,7 @@
  * diario, aporte por línea, historial, calidad del dato y conclusiones. PDF continuo de 297 mm.
  * Recibe las filas diarias ya filtradas por el filtro de fechas de la vista de Producción.
  */
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
@@ -207,6 +203,10 @@ import { serialToDate } from '../../utils/dates'
 import { fmt } from '../../utils/format'
 import { descargarInformePdf } from '../../utils/pdfInforme'
 import type { PlantConfig } from './ResumenTab.vue'
+import { useTemaInforme } from '../../composables/useTemaInforme'
+
+// En tema oscuro las gráficas se ven con colores para fondo oscuro; el PDF siempre sale en papel blanco
+const { tema } = useTemaInforme()
 
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent, MarkLineComponent])
 
@@ -247,10 +247,8 @@ const availableMonths = computed(() => {
   }
   return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([key, v]) => ({ key, ...v }))
 })
-const selectedMonthKey = ref('')
-watch(availableMonths, list => {
-  if (list.length && !list.some(m => m.key === selectedMonthKey.value)) selectedMonthKey.value = list[list.length - 1].key
-}, { immediate: true })
+// Mes del informe = el último mes del período del filtro de fechas de arriba (los datos ya llegan filtrados)
+const selectedMonthKey = computed(() => availableMonths.value.at(-1)?.key ?? '')
 const selectedLabel = computed(() => availableMonths.value.find(m => m.key === selectedMonthKey.value)?.label ?? '')
 const codigo = computed(() => `GRV-INF-${selectedMonthKey.value.replace('-', '')}-AGR-${planta.value.normalize('NFD').replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 3)}-PROD`)
 

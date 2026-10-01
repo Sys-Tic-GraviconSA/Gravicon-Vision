@@ -3,10 +3,6 @@
     <div v-if="!ventas.length && !lineas.length" class="vacio">No hay líneas con los filtros seleccionados.</div>
 
     <template v-else>
-      <p class="periodo">
-        <strong>{{ periodoTxt }}</strong> · {{ fmtN(R.lineas, 0) }} líneas de venta en {{ fmtN(R.remisiones, 0) }} remisiones
-      </p>
-
       <!-- KPIs por grupo: totales, venta, y despacho y clientes (mismas tarjetas, ordenadas) -->
       <p class="kpi-grupo">Facturación del período</p>
       <div class="kpi-row g4 totales">
@@ -55,7 +51,7 @@
           <ChartCard title="Venta Diaria frente al Promedio" :description="`Venta antes de IVA de cada día: verde si superó el promedio de los días con venta (${diasVenta.length ? copCorto(R.venta / diasVenta.length) : '—'}), rojo si quedó por debajo · en el detalle, la venta por familia`" :option="optDiaria" :height="340" />
         </div>
         <div class="charts-grid cols-1">
-          <ChartCard title="Toneladas Despachadas por Día" :description="R.tTraslados ? 'Toneladas vendidas y trasladadas cada día, lado a lado; juntas son las toneladas despachadas (los fletes no suman toneladas)' : 'Toneladas vendidas cada día (los fletes no suman toneladas)'" :option="optToneladasDia" :height="340" />
+          <ChartCard title="Toneladas Despachadas por Día" :description="`Toneladas vendidas${R.tTraslados ? ' y trasladadas' : ''} cada día, lado a lado${R.tTraslados ? ' (juntas son las despachadas)' : ''}${fleteDia.size ? '; Flete Holcim: toneladas que se le transportaron a Holcim, ya incluidas en las vendidas (no se suman)' : ''}`" :option="optToneladasDia" :height="340" />
         </div>
         <div class="charts-grid cols-1">
           <ChartCard title="Ticket Promedio por Remisión" :description="`Venta del día ÷ remisiones del día (incluye fletes): los picos señalan días con pedidos grandes; la línea punteada es el promedio del período: ${R.remisiones ? cop(R.venta / R.remisiones) : '—'}`" :option="optTicket" :height="300" />
@@ -80,7 +76,7 @@ import { useEstiloGraficas, fmtN, cop, copCorto, pct, punto, vacio, emphasis, FO
 import {
   resumen, porFamilia, porMaterial, porCliente, porDia, toneladasPorProducto, nombreMaterial, fechaLarga, fechaCorta,
   porDiaSemana, paretoClientes, proyeccionDiaria, cierreEstimado, totalesFacturacion,
-  COLOR_FAMILIA, COLOR_TIPO, esVenta, esMaterial, FAMILIAS,
+  COLOR_FAMILIA, COLOR_TIPO, esVenta, esMaterial, esFleteHolcim, FAMILIAS,
 } from '../../../composables/useFacturacion'
 import { inicioFacturacionCompleta } from '../../../composables/useBalanceProduccion'
 import type { LineaFacturacion } from '../../../types/facturacion'
@@ -112,11 +108,6 @@ const tFmt = (n: number) => fmtN(n, n >= 100 ? 0 : 1)
 const ventas = computed(() => props.lineas.filter(esVenta))
 const R = computed(() => resumen(props.lineas))
 const fechas = computed(() => [...new Set(props.lineas.map(l => l.fecha))].sort())
-const periodoTxt = computed(() => {
-  const f = fechas.value
-  if (!f.length) return ''
-  return f.length === 1 ? fechaLarga(f[0]) : `${fechaLarga(f[0])} al ${fechaLarga(f[f.length - 1])}`
-})
 
 const fila = (color: string, label: string, valor: string) =>
   `<div class='kpi-detail-row'><span class='kpi-dot' style='background:${color}'></span><span class='kpi-label-int' style='color:${color}'>${label}</span> <strong>${valor}</strong></div>`
@@ -175,20 +166,27 @@ const kpisTotales = computed(() => {
   return [
     // Valor: todo lo facturado y sin flete Holcim ni donaciones (los traslados no tienen valor)
     { label: 'Facturación Total', value: cop(x.valorTotal), icon: 'dollar', accent: '#3B82F6',
-      detail: fila(COLOR_TIPO.venta, 'Venta', cop(x.venta)) +
-        (x.fleteHolcim ? fila(COLOR_FAMILIA.Fletes, 'Incluye flete Holcim', cop(x.fleteHolcim)) : '') +
+      detail: fila(COLOR_TIPO.venta, 'Material', cop(x.ventaMaterial)) +
+        (x.fleteHolcim ? fila(COLOR_FAMILIA.Fletes, 'Flete Holcim', cop(x.fleteHolcim)) : '') +
+        (x.otrosFletes ? fila(COLOR_FAMILIA.Fletes, 'Otros fletes', cop(x.otrosFletes)) : '') +
+        fila(COLOR_TIPO.traslado, 'Traslados', 'sin valor') +
         fila(COLOR_TIPO.donacion, 'Donaciones', cop(x.valorDonado)) },
+    // Netas: el desglose parte del total y resta, así la cuenta cuadra a la vista
     { label: 'Facturación sin Flete', value: cop(x.valorNeto), icon: 'check-circle', accent: '#0F766E',
-      detail: fila(COLOR_FAMILIA.Fletes, 'Sin flete Holcim', x.fleteHolcim ? `− ${cop(x.fleteHolcim)}` : 'no hay') +
-        fila('#94a3b8', 'Sin donaciones', `− ${cop(x.valorDonado)}`) },
+      detail: fila(tinta.value, 'Total', cop(x.valorTotal)) +
+        fila(COLOR_FAMILIA.Fletes, 'Flete Holcim', x.fleteHolcim ? `− ${cop(x.fleteHolcim)}` : 'no hay') +
+        fila(COLOR_TIPO.traslado, 'Traslados', '− $ 0') +
+        fila(COLOR_TIPO.donacion, 'Donaciones', `− ${cop(x.valorDonado)}`) },
     // Toneladas: todo lo que salió y solo lo vendido (el flete no tiene toneladas)
     { label: 'Toneladas Totales', value: `${tFmt(x.tTotal)} t`, icon: 'truck', accent: '#15223c',
-      detail: fila(COLOR_TIPO.venta, 'Vendidas', `${tFmt(x.tNeta)} t`) +
+      detail: fila(COLOR_TIPO.venta, 'Vendidas', `${tFmt(x.tVendidas)} t`) +
         (x.tFleteHolcim ? fila(COLOR_FAMILIA.Fletes, 'Flete', `${tFmt(x.tFleteHolcim)} t <span style='color:var(--text-tertiary);font-weight:500'>(en vendidas)</span>`) : '') +
         fila(COLOR_TIPO.traslado, 'Traslados', `${tFmt(x.tTraslados)} t`) + fila(COLOR_TIPO.donacion, 'Donadas', `${tFmt(x.tDonadas)} t`) },
     { label: 'Toneladas Netas', value: `${tFmt(x.tNeta)} t`, icon: 'package', accent: '#0F766E',
-      detail: fila(COLOR_TIPO.venta, 'Solo vendidas', `${tFmt(x.tNeta)} t`) + fila('#94a3b8', 'Sin traslados', `− ${tFmt(x.tTraslados)} t`) +
-        fila('#94a3b8', 'Sin donaciones', `− ${tFmt(x.tDonadas)} t`) },
+      detail: fila(tinta.value, 'Total', `${tFmt(x.tTotal)} t`) +
+        (x.tFleteHolcim ? fila(COLOR_FAMILIA.Fletes, 'Flete Holcim', `− ${tFmt(x.tFleteHolcim)} t`) : '') +
+        fila(COLOR_TIPO.traslado, 'Traslados', `− ${tFmt(x.tTraslados)} t`) +
+        fila(COLOR_TIPO.donacion, 'Donadas', `− ${tFmt(x.tDonadas)} t`) },
   ]
 })
 
@@ -558,15 +556,23 @@ const optSemana = computed(() => {
 })
 
 // ── Toneladas despachadas por día: vendidas y traslados lado a lado ──
+// Toneladas del flete Holcim por día (cantidad del servicio = toneladas del material transportado, ya en vendidas)
+const fleteDia = computed(() => {
+  const m = new Map<string, number>()
+  for (const l of props.lineas) if (esVenta(l) && esFleteHolcim(l)) m.set(l.fecha, (m.get(l.fecha) ?? 0) + l.cantidad)
+  return m
+})
 const optToneladasDia = computed(() => {
   const d = dias.value
   const hayTras = d.some(x => x.tTraslados > 0)
+  const hayFlete = fleteDia.value.size > 0
+  const flete = (fecha: string) => fleteDia.value.get(fecha) ?? 0
   const z = zoom(d.length)
   const serie = (name: string, color: string, datos: number[]) => ({
     name, type: 'bar' as const, barMaxWidth: 18, barGap: '12%', emphasis, data: datos.map(v => +v.toFixed(1)),
     itemStyle: { color, borderRadius: [3, 3, 0, 0] },
-    // Solo se rotulan las vendidas (encima); los traslados van en el detalle para no amontonar números
-    label: name === 'Traslados' ? { show: false } : { ...labelPill.value, position: 'top' as const, formatter: (x: any) => (x.value >= 1 ? fmtN(x.value, 0) : '') },
+    // Solo se rotulan las vendidas (encima); traslados y flete van en el detalle para no amontonar números
+    label: name !== 'Vendidas' ? { show: false } : { ...labelPill.value, position: 'top' as const, formatter: (x: any) => (x.value >= 1 ? fmtN(x.value, 0) : '') },
     labelLayout: { hideOverlap: true },
   })
   return vacio({
@@ -574,14 +580,18 @@ const optToneladasDia = computed(() => {
     tooltip: { trigger: 'axis' as const, axisPointer: { type: 'shadow' as const },
       formatter: (ps: any[]) => { const x = d[ps[0].dataIndex]
         return `<b>${fechaLarga(x.fecha)}</b><br/>${punto(COLOR_TIPO.venta)} Vendidas: <b>${tFmt(x.tVendidas)} t</b>` +
+          (hayFlete ? `<br/>${punto(COLOR_FAMILIA.Fletes)} Flete Holcim: <b>${tFmt(flete(x.fecha))} t</b> <span style="color:#94a3b8;font-size:11px">(ya en vendidas)</span>` : '') +
           (hayTras ? `<br/>${punto(COLOR_TIPO.traslado)} Traslados: <b>${tFmt(x.tTraslados)} t</b><br/>${punto(tinta.value)} Despachadas: <b>${tFmt(x.tVendidas + x.tTraslados)} t</b>` : '') +
           `<br/><span style="color:#94a3b8;font-size:11px">${x.remisiones} remisiones de venta</span>` } },
-    legend: leyenda([{ name: 'Vendidas', itemStyle: { color: COLOR_TIPO.venta } }, ...(hayTras ? [{ name: 'Traslados', itemStyle: { color: COLOR_TIPO.traslado } }] : [])]),
+    legend: leyenda([{ name: 'Vendidas', itemStyle: { color: COLOR_TIPO.venta } }, ...(hayFlete ? [{ name: 'Flete Holcim', itemStyle: { color: COLOR_FAMILIA.Fletes } }] : []),
+      ...(hayTras ? [{ name: 'Traslados', itemStyle: { color: COLOR_TIPO.traslado } }] : [])]),
     grid: { left: 12, right: 20, bottom: z.gridBottom, top: 40, containLabel: true },
     dataZoom: z.dataZoom,
     xAxis: ejeX(d.map(x => ddmm(x.fecha))),
     yAxis: ejeY(),
-    series: [serie('Vendidas', COLOR_TIPO.venta, d.map(x => x.tVendidas)), ...(hayTras ? [serie('Traslados', COLOR_TIPO.traslado, d.map(x => x.tTraslados))] : [])],
+    series: [serie('Vendidas', COLOR_TIPO.venta, d.map(x => x.tVendidas)),
+      ...(hayFlete ? [serie('Flete Holcim', COLOR_FAMILIA.Fletes, d.map(x => flete(x.fecha)))] : []),
+      ...(hayTras ? [serie('Traslados', COLOR_TIPO.traslado, d.map(x => x.tTraslados))] : [])],
   }, d.length > 0)
 })
 
