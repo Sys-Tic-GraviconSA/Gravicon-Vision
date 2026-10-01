@@ -19,7 +19,14 @@
                 <MultiSelect v-model="selectedPlantasComb" :options="plantasCombDisponibles" label="Planta" icon="filter" />
                 <MultiSelect v-model="selectedProductos" :options="productosDisponibles" label="Producto" icon="filter" />
               </template>
-              <!-- Filtros de órdenes: solo en secciones con órdenes (no en Inspección, Tareas ni Combustible) -->
+              <!-- Llantas: planta, tipo de vehículo, placa y marca del inventario de llantas -->
+              <template v-else-if="subTab === 'inspeccion'">
+                <MultiSelect v-model="selectedPlantasLlantas" :options="opcLlantas.plantas" label="Planta" icon="filter" />
+                <MultiSelect v-model="selectedTiposLlantas" :options="opcLlantas.tipos" label="Vehículos" icon="filter" />
+                <MultiSelect v-model="selectedPlacasLlantas" :options="opcLlantas.placas" label="Placa" icon="filter" />
+                <MultiSelect v-model="selectedMarcasLlantas" :options="opcLlantas.marcas" label="Marca" icon="filter" />
+              </template>
+              <!-- Filtros de órdenes: solo en secciones con órdenes (no en Llantas, Tareas ni Combustible) -->
               <template v-else-if="esAreaOT">
                 <MultiSelect v-model="selectedLineas" :options="lineasDisponibles" :label="isConcretos ? 'Planta' : 'Línea'" icon="filter" />
                 <MultiSelect v-model="selectedVehiculos" :options="vehiculosDisponibles" label="Vehículos" icon="filter" />
@@ -75,9 +82,11 @@
         <RouterLink v-for="p in paneles" :key="p.id" :to="rutaMant.enlace({ panel: p.id })" class="sub-tab-btn" :class="{ active: subTab === p.id }" :aria-current="subTab === p.id ? 'page' : undefined">{{ p.label }}</RouterLink>
       </nav>
 
-      <!-- Concretos: Inspección de llantas (Maquinaria) y Combustible (Planta y Maquinaria, cada una con sus tanqueos) -->
+      <!-- Concretos: Llantas (Maquinaria) y Combustible (Planta y Maquinaria, cada una con sus tanqueos) -->
       <template v-if="subTab === 'inspeccion'">
-        <InspeccionLlantasTab :planta="planta" />
+        <InspeccionLlantasTab :fecha-inicio="fechaInicio" :fecha-fin="fechaFin" :plantas="filtroLlantas(selectedPlantasLlantas, opcLlantas.plantas)"
+          :tipos="filtroLlantas(selectedTiposLlantas, opcLlantas.tipos)" :placas="filtroLlantas(selectedPlacasLlantas, opcLlantas.placas)"
+          :marcas="filtroLlantas(selectedMarcasLlantas, opcLlantas.marcas)" />
       </template>
       <template v-if="subTab === 'combustible'">
         <CombustibleTab :fecha-inicio="fechaInicio" :fecha-fin="fechaFin" :productos="[...selectedProductos]" :area="tipoTab === 'planta' ? 'planta' : 'maquinaria'"
@@ -1755,7 +1764,8 @@
 <script setup lang="ts">
 import SkeletonLoader from '../components/ui/SkeletonLoader.vue'
 import { computed, markRaw, nextTick, onMounted, ref, watch } from 'vue'
-import { useMantenimientoStore, useProduccionStore, useDisponibilidadStore } from '../stores'
+import { useMantenimientoStore, useProduccionStore, useDisponibilidadStore, useLlantasStore } from '../stores'
+import { opcionesLlantas } from '../composables/useLlantas'
 import { useConcretoStore } from '../stores/concreto'
 import { useRutaMantenimiento } from '../composables/useRutaMantenimiento'
 import { useAuthStore } from '../stores/auth'
@@ -1805,15 +1815,15 @@ const tipoTabs = computed(() => [
 ].filter(t => authStore.canView(`${props.planta}/mantenimiento/${t.id}`)))
 // Si el área de la ruta no existe en esta planta o no está permitida, se muestra la primera permitida
 watch(tipoTabs, ts => { if (ts.length && !ts.some(t => t.id === tipoTab.value)) rutaMant.ir({ area: ts[0].id }, true) }, { immediate: true })
-/** Secciones con órdenes de trabajo (filtros de órdenes, accesos rápidos): no Tareas, Inspección ni Combustible */
+/** Secciones con órdenes de trabajo (filtros de órdenes, accesos rápidos): no Tareas, Llantas ni Combustible */
 const esAreaOT = computed(() => tipoTab.value !== 'tareas' && subTab.value !== 'inspeccion' && subTab.value !== 'combustible')
 const paneles = computed(() => [
   { id: 'dashboard' as const, label: 'Órdenes de Trabajo' },
   { id: 'almacen' as const, label: 'Almacén' },
   { id: 'gerencial' as const, label: 'Gerencial' },
   ...(puedeDisponibilidad.value ? [{ id: 'disponibilidad' as const, label: 'Disponibilidad' }] : []),
-  // Solo Concretos, cada una con su permiso: Inspección en Maquinaria; Combustible en Planta y Maquinaria
-  ...(isConcretos.value && tipoTab.value === 'maquinaria' && authStore.canView(`${props.planta}/mantenimiento/inspeccion`) ? [{ id: 'inspeccion' as const, label: 'Inspección' }] : []),
+  // Solo Concretos, cada una con su permiso: Llantas en Maquinaria; Combustible en Planta y Maquinaria
+  ...(isConcretos.value && tipoTab.value === 'maquinaria' && authStore.canView(`${props.planta}/mantenimiento/inspeccion`) ? [{ id: 'inspeccion' as const, label: 'Llantas' }] : []),
   ...(isConcretos.value && tipoTab.value !== 'tareas' && authStore.canView(`${props.planta}/mantenimiento/combustible`) ? [{ id: 'combustible' as const, label: 'Combustible' }] : []),
 ])
 const puedeDisponibilidad = computed(() => authStore.canView(`${props.planta}/mantenimiento/disponibilidad`))
@@ -2831,6 +2841,27 @@ const plantasCombDisponibles = computed(() => ordenarPlantas(new Set(((disp.data
   .map(r => nombrePlanta(titulo(String(r['Planta'] ?? '').trim()))).filter(p => p && p !== 'Sin planta'))))
 const selectedPlantasComb = ref<Set<string>>(new Set())
 watch(plantasCombDisponibles, ps => { selectedPlantasComb.value = new Set(ps) }, { immediate: true })
+// Filtros de Llantas (planta, tipo de vehículo, placa, marca); todos marcados = sin filtro
+const llantasStore = useLlantasStore()
+const opcLlantas = computed(() => opcionesLlantas(llantasStore.data as Record<string, unknown> | null))
+const selectedPlantasLlantas = ref<Set<string>>(new Set())
+const selectedTiposLlantas = ref<Set<string>>(new Set())
+const selectedPlacasLlantas = ref<Set<string>>(new Set())
+const selectedMarcasLlantas = ref<Set<string>>(new Set())
+function reiniciarFiltrosLlantas() {
+  selectedPlantasLlantas.value = new Set(opcLlantas.value.plantas)
+  selectedTiposLlantas.value = new Set(opcLlantas.value.tipos)
+  selectedPlacasLlantas.value = new Set(opcLlantas.value.placas)
+  selectedMarcasLlantas.value = new Set(opcLlantas.value.marcas)
+}
+watch(opcLlantas, reiniciarFiltrosLlantas, { immediate: true })
+/** Selección para la vista: vacío = todos (sin filtro) */
+function filtroLlantas(sel: Set<string>, opciones: string[]): string[] {
+  return sel.size === 0 || sel.size === opciones.length ? [] : [...sel]
+}
+const filtrosLlantasActivos = computed(() =>
+  filtroLlantas(selectedPlantasLlantas.value, opcLlantas.value.plantas).length + filtroLlantas(selectedTiposLlantas.value, opcLlantas.value.tipos).length +
+  filtroLlantas(selectedPlacasLlantas.value, opcLlantas.value.placas).length + filtroLlantas(selectedMarcasLlantas.value, opcLlantas.value.marcas).length > 0)
 
 const loading = computed(() => mant.loading || prod.loading || concretoStore.loading)
 const error = computed(() => mant.error || prod.error)
@@ -3636,7 +3667,9 @@ async function loadData(forceRefresh = false, resetFilters = true) {
 
   const plantaKey = isConcretos.value ? 'concretos' : isAcacias.value ? 'acacias' : 'cuncia'
   if (isConcretos.value) {
-    await Promise.all([mant.fetchConcretos(forceRefresh), concretoStore.fetchData(forceRefresh), disp.fetchDisponibilidad(plantaKey, forceRefresh)])
+    await Promise.all([mant.fetchConcretos(forceRefresh), concretoStore.fetchData(forceRefresh), disp.fetchDisponibilidad(plantaKey, forceRefresh),
+      // Llantas solo si ya se abrió esa sección (la vista las carga al montarse)
+      ...(forceRefresh && (llantasStore.data || subTab.value === 'inspeccion') ? [llantasStore.fetchData(true)] : [])])
   } else if (isAcacias.value) {
     await Promise.all([mant.fetchAcacias(forceRefresh), prod.fetchAcacias(forceRefresh), disp.fetchDisponibilidad(plantaKey, forceRefresh)])
   } else {
@@ -4073,6 +4106,7 @@ const personalInternoOptions = ['Todos', 'Interno', 'Externo']
 
 const hasActiveFilters = computed(() => {
   if (fechaInicio.value || fechaFin.value) return true
+  if (subTab.value === 'inspeccion' && filtrosLlantasActivos.value) return true
   if (selectedLineas.value.size > 0 && selectedLineas.value.size !== lineasDisponibles.value.length) return true
   if (selectedVehiculos.value.size > 0 && selectedVehiculos.value.size !== vehiculosDisponibles.value.length) return true
   if (selectedPlacas.value.size > 0 && selectedPlacas.value.size !== placasDisponibles.value.length) return true
@@ -4160,6 +4194,7 @@ function onClearFilters() {
   selectedTipoCompra.value = new Set(tipoCompraDisponibles.value)
   selectedCentroCosto.value = new Set(centroCostoDisponibles.value)
   selectedProceso.value = new Set(procesoDisponibles.value)
+  reiniciarFiltrosLlantas()
 }
 
 function isInterno(r: Record<string, unknown>): boolean {

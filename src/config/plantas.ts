@@ -26,7 +26,7 @@ export const PLANTAS: Record<PlantaId, Planta> = {
     negocio: 'Agregados',
     modulos: [
       { id: 'produccion', label: 'Producción' },
-      { id: 'facturacion', label: 'Facturación' },
+      { id: 'facturacion', label: 'Despacho' },
       { id: 'programacion', label: 'Programación' },
       { id: 'mantenimiento', label: 'Mantenimiento' },
     ],
@@ -48,7 +48,7 @@ export const PLANTAS: Record<PlantaId, Planta> = {
     negocio: 'Agregados',
     modulos: [
       { id: 'produccion', label: 'Producción' },
-      { id: 'facturacion', label: 'Facturación' },
+      { id: 'facturacion', label: 'Despacho' },
       { id: 'programacion', label: 'Programación' },
       { id: 'mantenimiento', label: 'Mantenimiento' },
     ],
@@ -99,7 +99,7 @@ export const VISTAS_FACTURACION = [
   { id: 'graficas', label: 'Gráficas' },
   { id: 'detalle', label: 'Detalle' },
   { id: 'informe', label: 'Informe' },
-  { id: 'balance', label: 'Producción vs Facturación' },
+  { id: 'balance', label: 'Producción vs Despacho' },
 ] as const
 
 /** Programación de agregados: /cuncia/programacion/:empresa */

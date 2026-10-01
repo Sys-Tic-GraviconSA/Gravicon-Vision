@@ -112,3 +112,28 @@ export function hBarTooltip(labels: string[], valueFmt?: (v: number) => string) 
     },
   }
 }
+
+/**
+ * Texto en el centro de una dona (valor grande + subtítulo), centrado exacto en el hueco.
+ * Es una serie pie invisible con la etiqueta en `position: 'center'`, así queda en el mismo
+ * `center` de la dona aunque cambie el tamaño de la gráfica (un `title` con top/left fijos se corre).
+ * La serie no tiene nombre de dato: al usarla, fijar `legend.data` con los nombres de la dona.
+ */
+export function donaCentro(o: {
+  center: (string | number)[]; radio: string | number; valor: string; sub: string
+  color: string; colorSub: string; font?: string; tamano?: number
+}) {
+  return {
+    type: 'pie' as const, center: o.center, radius: [0, o.radio], silent: true, z: 0,
+    tooltip: { show: false }, emphasis: { disabled: true }, labelLine: { show: false },
+    itemStyle: { color: 'transparent' },
+    label: {
+      show: true, position: 'center' as const, formatter: `{v|${o.valor}}\n{s|${o.sub}}`,
+      rich: {
+        v: { fontFamily: o.font, fontSize: o.tamano ?? 18, fontWeight: 700, color: o.color, lineHeight: (o.tamano ?? 18) + 6 },
+        s: { fontFamily: o.font, fontSize: 11, color: o.colorSub, lineHeight: 16 },
+      },
+    },
+    data: [{ value: 1, name: '' }],
+  }
+}

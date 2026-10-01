@@ -8,7 +8,7 @@ import { PLANTAS, PLANTAS_AGREGADOS, SECCIONES_CONCRETOS, VISTAS_CONCRETOS, VIST
  *
  *   /cuncia | /acacias
  *     /produccion/graficas | detalles | informe
- *     /facturacion/graficas | detalle | informe | balance   (Novasoft; balance = producción vs facturación)
+ *     /facturacion/graficas | detalle | informe | balance   (Novasoft; balance = producción vs despacho)
  *     /programacion/gravicon | cliente
  *     /mantenimiento/:area/:seccion/:vista          (ver composables/useRutaMantenimiento)
  *   /concretos
@@ -67,10 +67,14 @@ function rutaMantenimiento(planta: PlantaId): RouteRecordRaw {
     meta: {
       titulo: `Mantenimiento ${PLANTAS[planta].nombre}`,
       // Disponibilidad es una sección, pero su permiso se administra aparte
-      // Secciones con permiso propio (además de la ruta): Disponibilidad, Inspección y Combustible
-      permisosExtra: to => ['disponibilidad', 'inspeccion', 'combustible']
-        .filter(s => ([] as string[]).concat((to.params.segmentos as string[] | string | undefined) ?? []).includes(s))
-        .map(s => `${planta}/mantenimiento/${s}`),
+      // Secciones con permiso propio (además de la ruta): Disponibilidad, Llantas y Combustible.
+      // Llantas (segmento «llantas», antes «inspeccion») conserva la clave de permiso …/mantenimiento/inspeccion
+      permisosExtra: to => {
+        const segs = ([] as string[]).concat((to.params.segmentos as string[] | string | undefined) ?? [])
+        return ([['disponibilidad', 'disponibilidad'], ['llantas', 'inspeccion'], ['inspeccion', 'inspeccion'], ['combustible', 'combustible']] as const)
+          .filter(([seg]) => segs.includes(seg))
+          .map(([, clave]) => `${planta}/mantenimiento/${clave}`)
+      },
     },
   }
 }
@@ -113,7 +117,7 @@ function rutasAgregados(planta: 'cuncia' | 'acacias'): RouteRecordRaw {
               : v.id === 'detalle' ? () => import('../views/agregados/facturacion/FacturacionDetalleTab.vue')
               : v.id === 'balance' ? () => import('../views/agregados/facturacion/FacturacionBalanceTab.vue')
               : () => import('../views/agregados/facturacion/FacturacionInformeTab.vue'),
-            meta: { titulo: `Facturación ${nombre} · ${v.label}` },
+            meta: { titulo: `Despacho ${nombre} · ${v.label}` },
           })),
         ],
       },

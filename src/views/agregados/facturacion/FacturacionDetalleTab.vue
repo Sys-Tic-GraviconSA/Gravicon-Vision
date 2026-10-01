@@ -10,7 +10,7 @@
       <span>Despachado <strong>{{ fmtN(R.tDespachadas, 1) }} t</strong></span>
     </div>
     <DataTable
-      :title="`Facturación ${planta} — detalle por línea`"
+      :title="`Despacho ${planta} — detalle por línea`"
       :data="filas"
       :page-size="25"
       small selectColumns exportColumns
@@ -77,7 +77,7 @@ function exportar() {
   const rows = filas.value.map(r => headers.map(h => (r as Record<string, unknown>)[h] ?? ''))
   const fechas = props.lineas.map(l => l.fecha).sort()
   const periodo = fechas.length ? (fechas[0] === fechas.at(-1) ? fechas[0] : `${fechas[0]} a ${fechas.at(-1)}`) : 'sin datos'
-  downloadXlsx(buildXlsx([{ name: 'Facturación', headers, rows }]), `Facturacion ${props.planta} - ${periodo}.xlsx`)
+  downloadXlsx(buildXlsx([{ name: 'Despacho', headers, rows }]), `Despacho ${props.planta} - ${periodo}.xlsx`)
 }
 </script>
 

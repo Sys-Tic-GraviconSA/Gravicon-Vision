@@ -113,6 +113,15 @@ tr.subtotal td { background: rgba(43, 34, 86, 0.06); font-weight: 700; border-bo
 .aviso b { display: block; margin-bottom: 1px; }
 .aviso .ico { font-weight: 700; color: #a90707; }
 .aviso.medio .ico { color: #b8860b; }
+/* Control de calidad del dato: una tarjeta por hallazgo (borde por prioridad) con su tabla de detalle */
+.dq-grid { display: flex; flex-direction: column; gap: 10px; }
+.dq { border: 1px solid #e2e8f0; border-left-width: 4px; border-radius: 4px; padding: 10px 12px; background: #fff; }
+.dq-alto { border-left-color: #a90707; }
+.dq-medio { border-left-color: #b8860b; }
+.dq-info { border-left-color: #94a3b8; }
+.dq-head { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: #1a1a2e; }
+.dq-txt { font-size: 11.5px; color: #475569; margin: 4px 0 8px; }
+.dq .data-card { margin-top: 2px; }
 ul.res { margin: 6px 0 0; padding-left: 0; list-style: none; }
 ul.res li { position: relative; padding: 5px 0 5px 15px; font-size: 12px; line-height: 1.5; border-bottom: 1px solid #f0f2f5; color: #1a1a2e; }
 ul.res li::before { content: "■"; position: absolute; left: 0; top: 4px; color: var(--navy); font-size: 7pt; }
@@ -200,4 +209,9 @@ ul.res li::before { content: "■"; position: absolute; left: 0; top: 4px; color
 [data-theme="dark"] .report-paper:not(.pdf-capturing) .aviso.medio .ico { color: #fcd34d; }
 [data-theme="dark"] .report-paper:not(.pdf-capturing) ul.res li { border-bottom-color: rgba(255, 255, 255, 0.06); }
 [data-theme="dark"] .report-paper:not(.pdf-capturing) .ley-sem { background: #172033; color: #cbd5e1; }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .dq { background: var(--card-bg); border-color: var(--card-border); }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .dq-alto { border-left-color: #f87171; }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .dq-medio { border-left-color: #fbbf24; }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .dq-head { color: #e2e8f0; }
+[data-theme="dark"] .report-paper:not(.pdf-capturing) .dq-txt { color: #a3b1c6; }
 /* Gráficas: en oscuro se dibujan con colores para fondo oscuro (useTemaInforme); sin panel claro detrás */

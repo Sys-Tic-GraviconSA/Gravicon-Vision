@@ -63,7 +63,7 @@
 import { ref, shallowRef, computed, watch, onBeforeUnmount } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { BarChart, LineChart, PieChart, RadarChart } from 'echarts/charts'
+import { BarChart, LineChart, PieChart, RadarChart, GaugeChart } from 'echarts/charts'
 import {
   GridComponent, TooltipComponent, TitleComponent,
   LegendComponent, DataZoomComponent, RadarComponent,
@@ -75,7 +75,7 @@ import { useTheme } from '../../composables/useTheme'
 
 // Registro manual de los componentes ECharts necesarios (tree-shaking)
 use([
-  CanvasRenderer, BarChart, LineChart, PieChart, RadarChart,
+  CanvasRenderer, BarChart, LineChart, PieChart, RadarChart, GaugeChart,
   GridComponent, TooltipComponent, TitleComponent, LegendComponent,
   DataZoomComponent, RadarComponent,
   MarkLineComponent, MarkAreaComponent, MarkPointComponent, GraphicComponent,

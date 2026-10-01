@@ -172,7 +172,7 @@ const kpisTotales = computed(() => {
         fila(COLOR_TIPO.traslado, 'Traslados', 'sin valor') +
         fila(COLOR_TIPO.donacion, 'Donaciones', cop(x.valorDonado)) },
     // Netas: el desglose parte del total y resta, así la cuenta cuadra a la vista
-    { label: 'Facturación sin Flete', value: cop(x.valorNeto), icon: 'check-circle', accent: '#0F766E',
+    { label: 'Facturación Neta', value: cop(x.valorNeto), icon: 'check-circle', accent: '#0F766E',
       detail: fila(tinta.value, 'Total', cop(x.valorTotal)) +
         fila(COLOR_FAMILIA.Fletes, 'Flete Holcim', x.fleteHolcim ? `− ${cop(x.fleteHolcim)}` : 'no hay') +
         fila(COLOR_TIPO.traslado, 'Traslados', '− $ 0') +

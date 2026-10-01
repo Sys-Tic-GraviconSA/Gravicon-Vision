@@ -4,6 +4,7 @@ import { conCache, TTL_SUPABASE_MS } from '../api/_lib/cache.js'
 import { analyzeAll, analyzeSpreadsheet, getSheetData, getSpreadsheetMeta } from '../api/_lib/sheets.js'
 import { buildMantenimientoOtRows } from '../api/_lib/mantenimiento-ot.js'
 import { buildLlantasData } from '../api/_lib/llantas.js'
+import { leerFotoLlanta } from '../api/_lib/llantas-fotos.js'
 import { loadDisponibilidadData } from '../api/_lib/disponibilidad.js'
 import { loadCunciaProduccion, loadAcaciasProduccion } from '../api/_lib/produccion.js'
 import { SPREADSHEETS } from '../api/_lib/google.js'
@@ -234,15 +235,31 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
     }
   })
 
-  /** GET /api/llantas/data - Inventario de llantas + inspecciones + detalle (FleetControl_Llantas). */
-  router.get('/llantas/data', authenticateRequest, requireView(['cuncia/mantenimiento', 'acacias/mantenimiento', 'concretos/mantenimiento']), async (req, res) => {
+  /** GET /api/llantas/data - Inventario de llantas + inspecciones + detalle (FleetControl_Llantas). Solo Concretos → Mantenimiento → Llantas (permiso …/inspeccion). */
+  router.get('/llantas/data', authenticateRequest, requireView(['concretos/mantenimiento/inspeccion']), async (req, res) => {
     try {
       const force = req.query.force === 'true'
-      const data = await buildLlantasData(force)
+      const data = await conCache('llantas', TTL_SUPABASE_MS, () => buildLlantasData(force), force)
       res.json(data)
     } catch (err) {
       console.error('[llantas]', err)
       res.status(500).json({ error: 'Error interno del servidor.' })
+    }
+  })
+
+  /** GET /api/llantas/foto?f=… - Foto de evidencia de una inspección de llantas (URL, ID o ruta de Drive). */
+  router.get('/llantas/foto', authenticateRequest, requireView(['concretos/mantenimiento/inspeccion']), async (req, res) => {
+    try {
+      const valor = String(req.query.f ?? '').slice(0, 500)
+      const foto = valor ? await leerFotoLlanta(valor) : null
+      if (!foto) return res.status(404).json({ error: 'Foto no encontrada.' })
+      res.setHeader('Content-Type', foto.tipo)
+      // La foto no cambia: el navegador la guarda una hora (privada, por usuario)
+      res.setHeader('Cache-Control', 'private, max-age=3600')
+      res.send(foto.datos)
+    } catch (err) {
+      console.error('[llantas-foto]', err)
+      res.status(404).json({ error: 'Foto no disponible.' })
     }
   })
 

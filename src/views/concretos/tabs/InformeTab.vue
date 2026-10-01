@@ -292,11 +292,23 @@
 
         <div class="report-section-block">
           <h3 class="report-block-title"><span class="title-bar"></span>Control de calidad del dato — {{ mesLbl }}</h3>
-          <div v-if="!avisos.length" class="report-nota">No se encontraron remisiones con datos a revisar en el periodo.</div>
-          <div class="avisos">
-            <div v-for="a in avisos" :key="a.titulo" class="aviso" :class="a.nivel">
-              <span class="ico">!</span><div><b>{{ a.titulo }}</b>{{ a.texto }}</div>
+          <p v-if="avisos.length" class="section-note">{{ avisos.length }} {{ avisos.length === 1 ? 'hallazgo' : 'hallazgos ordenados por prioridad' }}. Cada uno trae el detalle para corregirlo en el sistema.</p>
+          <div class="dq-grid">
+            <div v-for="c in avisos" :key="c.titulo" class="dq" :class="`dq-${c.nivel}`">
+              <div class="dq-head"><span class="pill" :class="pillNivel(c.nivel)">{{ etiquetaNivel(c.nivel) }}</span><b>{{ c.titulo }}</b></div>
+              <p class="dq-txt" v-html="c.texto"></p>
+              <div v-if="c.tabla" class="data-card"><div class="table-wrap">
+                <table>
+                  <thead><tr><th v-for="(h, i) in c.tabla.cols" :key="h" :class="{ r: i > 0 && c.tabla.der !== false && !c.tabla.izq?.includes(i) }">{{ h }}</th></tr></thead>
+                  <tbody>
+                    <tr v-for="(f, j) in c.tabla.filas" :key="j" :class="{ 'table-total-row': f.total }">
+                      <td v-for="(v, i) in f.celdas" :key="i" :class="[i === 0 ? 'bold accent-text' : (c.tabla.mono === i ? 'mono' : (c.tabla.der === false || c.tabla.izq?.includes(i) ? '' : 'r')), f.clases?.[i]]">{{ v }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div></div>
             </div>
+            <div v-if="!avisos.length" class="report-nota">No se encontraron remisiones con datos a revisar en el periodo.</div>
           </div>
         </div>
 
@@ -325,6 +337,7 @@
  * Todo se calcula en el cliente a partir de las filas de order_price que ya carga useConcretoStore.
  */
 <script setup lang="ts">
+import { type Hallazgo, etiquetaNivel, pillNivel, porPrioridad } from '../../../utils/calidadDato'
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import KpiCard from '../../../components/dashboard/KpiCard.vue'
 import { serialToDate } from '../../../utils/dates'
@@ -660,37 +673,62 @@ const promMensualPrevio = computed(() => {
 })
 
 // ---------------------------------------------------------------- Calidad del dato y conclusiones
+// Agrupa remisiones por una clave (cliente, mezcla…) para las tablas de detalle de los hallazgos
+function agruparRem(rs: Rem[], clave: (r: Rem) => string) {
+  const g = new Map<string, Rem[]>()
+  for (const r of rs) { const k = clave(r); g.set(k, [...(g.get(k) ?? []), r]) }
+  return [...g.entries()].map(([k, x]) => ({ k, x, n: x.length, m3: sum(x, 'm3') })).sort((a, b) => b.m3 - a.m3 || b.n - a.n)
+}
+const filaTotal = (celdas: string[]) => ({ celdas, total: true })
+
 const avisos = computed(() => {
   const rs = delMes.value
-  const out: { nivel: string; titulo: string; texto: string }[] = []
+  const out: Hallazgo[] = []
   const serv100 = rs.filter(r => r.servicio && r.servPrecio > 0 && r.servPrecio <= 100)
   if (serv100.length) {
-    const clientes = [...new Set(serv100.map(r => titulo(r.cliente)))]
-    const m3 = sum(serv100, 'servM3')
+    const g = agruparRem(serv100, r => titulo(r.cliente))
     out.push({ nivel: 'alto', titulo: `${serv100.length} remisiones con bombeo facturado a $ 100`,
-      texto: `${clientes.join(', ')} · ${fmtN(m3)} m³ bombeados. Si es una condición pactada conviene dejarla registrada; si no, es servicio sin cobrar.` })
+      texto: `${fmtN(sum(serv100, 'servM3'))} m³ bombeados a precio simbólico. <b>Acción:</b> si es una condición pactada, dejarla registrada; si no, es servicio sin cobrar.`,
+      tabla: { cols: ['Cliente', 'Remisiones', 'm³ bombeados', 'Precio servicio'],
+        filas: [...g.map(e => ({ celdas: [e.k, String(e.n), fmtN(sum(e.x, 'servM3')), cop(Math.max(...e.x.map(r => r.servPrecio)))] })),
+          ...(g.length > 1 ? [filaTotal(['TOTAL', String(serv100.length), fmtN(sum(serv100, 'servM3')), ''])] : [])] } })
   }
   const sinCom = rs.filter(r => !r.comercial)
   if (sinCom.length) {
+    const g = agruparRem(sinCom, r => titulo(r.cliente))
     out.push({ nivel: 'alto', titulo: `${sinCom.length} remisiones sin comercial asignado`,
-      texto: `${fmtN(sum(sinCom, 'm3'))} m³ (${pct(sum(sinCom, 'm3') / M.value.m3 * 100)} del volumen) y ${cop(sum(sinCom, 'subtotal'))} de venta sin responsable comercial.` })
+      texto: `${fmtN(sum(sinCom, 'm3'))} m³ (${pct(sum(sinCom, 'm3') / M.value.m3 * 100)} del volumen) y ${cop(sum(sinCom, 'subtotal'))} de venta sin responsable comercial. <b>Acción:</b> asignar el comercial del cliente en el sistema.`,
+      tabla: { cols: ['Cliente', 'Remisiones', 'm³', 'Venta'],
+        filas: [...g.slice(0, 10).map(e => ({ celdas: [e.k, String(e.n), fmtN(e.m3), cop(sum(e.x, 'subtotal'))] })),
+          ...(g.length > 10 ? [{ celdas: [`${g.length - 10} clientes más`, String(g.slice(10).reduce((a, e) => a + e.n, 0)), fmtN(g.slice(10).reduce((a, e) => a + e.m3, 0)), cop(g.slice(10).reduce((a, e) => a + sum(e.x, 'subtotal'), 0))], clases: { 0: 'muted' } }] : []),
+          filaTotal(['TOTAL', String(sinCom.length), fmtN(sum(sinCom, 'm3')), cop(sum(sinCom, 'subtotal'))])] } })
   }
   const sinLista = rs.filter(r => !r.agregado && r.lista <= 0)
   if (sinLista.length) {
-    out.push({ nivel: 'medio', titulo: `${sinLista.length} remisiones sin precio de lista`, texto: 'Quedan por fuera del cálculo de descuento frente a lista.' })
+    const g = agruparRem(sinLista, r => r.mezcla || 'Sin mezcla')
+    out.push({ nivel: 'medio', titulo: `${sinLista.length} remisiones sin precio de lista`,
+      texto: 'Quedan por fuera del cálculo de descuento frente a lista. <b>Acción:</b> cargar el precio de lista de estas mezclas.',
+      tabla: { cols: ['Mezcla', 'Remisiones', 'm³', 'Precio promedio'], mono: 0,
+        filas: g.slice(0, 10).map(e => ({ celdas: [e.k, String(e.n), fmtN(e.m3), e.m3 ? cop(sum(e.x, 'totalConc') / e.m3) + '/m³' : '—'] })) } })
   }
   const agr = rs.filter(r => r.agregado)
   if (agr.length) {
     const pls = [...new Set(agr.map(r => r.planta))].join(', ')
+    const g = agruparRem(agr, r => `${r.planta}|${r.mezcla}`)
     out.push({ nivel: 'medio', titulo: `Agregados registrados como concreto (${pls})`,
-      texto: `${agr.length} remisiones de arena y grava (${fmtN(sum(agr, 'm3'), 0)} m³) aparecen en el campo de concreto; se excluyeron del precio promedio por m³.` })
+      texto: `${agr.length} remisiones de arena y grava (${fmtN(sum(agr, 'm3'), 0)} m³) aparecen en el campo de concreto; se excluyeron del precio promedio por m³. <b>Acción:</b> registrarlas como agregado.`,
+      tabla: { cols: ['Planta', 'Material', 'Remisiones', 'm³'], izq: [1],
+        filas: g.map(e => { const [pl, mz] = e.k.split('|'); return { celdas: [pl, titulo(mz), String(e.n), fmtN(e.m3)] } }) } })
   }
   const conc100 = rs.filter(r => !r.agregado && r.precio > 0 && r.precio <= 100)
   if (conc100.length) {
+    const g = agruparRem(conc100, r => titulo(r.cliente))
     out.push({ nivel: 'medio', titulo: `${conc100.length} remisiones de concreto a $ 100/m³`,
-      texto: `${[...new Set(conc100.map(r => titulo(r.cliente)))].join(', ')}. Si es consumo interno conviene marcarlo para que no afecte los promedios.` })
+      texto: 'Precio simbólico en el concreto. <b>Acción:</b> si es consumo interno, marcarlo para que no afecte los promedios.',
+      tabla: { cols: ['Cliente', 'Remisiones', 'm³', 'Precio'],
+        filas: g.map(e => ({ celdas: [e.k, String(e.n), fmtN(e.m3), cop(Math.max(...e.x.map(r => r.precio))) + '/m³'] })) } })
   }
-  return out
+  return porPrioridad(out)
 })
 
 const conclusiones = computed(() => {

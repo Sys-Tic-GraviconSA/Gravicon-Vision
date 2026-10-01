@@ -4,9 +4,9 @@
     <div class="bal-bar">
       <div class="bal-info">
         <span v-if="B" class="bal-sub">
-          Lo facturado se pasa a m³ con el factor de cada material (t ÷ factor).
-          <template v-if="B.lineasSueltas"> La facturación está completa desde el {{ fechaCorta(B.desde) }}; antes solo hay {{ B.lineasSueltas }} {{ B.lineasSueltas === 1 ? 'línea suelta' : 'líneas sueltas' }} (desde el {{ fechaCorta(B.primeraFacturada) }}) que no se cruzan.</template>
-          <template v-if="B.hasta < B.ultFacturacion"> Corte en {{ fechaCorta(B.hasta) }}: la producción está cargada hasta ese día y la facturación hasta {{ fechaCorta(B.ultFacturacion) }}.</template>
+          Lo despachado (facturado en Novasoft) se pasa a m³ con el factor de cada material (t ÷ factor).
+          <template v-if="B.lineasSueltas"> Los despachos están completos desde el {{ fechaCorta(B.desde) }}; antes solo hay {{ B.lineasSueltas }} {{ B.lineasSueltas === 1 ? 'línea suelta' : 'líneas sueltas' }} (desde el {{ fechaCorta(B.primeraFacturada) }}) que no se cruzan.</template>
+          <template v-if="B.hasta < B.ultFacturacion"> Corte en {{ fechaCorta(B.hasta) }}: la producción está cargada hasta ese día y los despachos hasta {{ fechaCorta(B.ultFacturacion) }}.</template>
         </span>
       </div>
       <div class="bal-controles">
@@ -21,7 +21,7 @@
 
     <SkeletonLoader v-if="cargandoProd && !B" :kpis="4" :charts="2" label="Cargando producción…" />
     <div v-else-if="!B" class="vacio">
-      No hay días con producción y facturación a la vez en el rango seleccionado.
+      No hay días con producción y despachos a la vez en el rango seleccionado.
       <template v-if="prodStore.error"><br />Error al cargar la producción: {{ prodStore.error }}</template>
     </div>
 
@@ -31,7 +31,7 @@
       </div>
 
       <div class="charts-grid cols-1">
-        <ChartCard :title="`Producido vs ${salidaLbl} — por ${agrupNombre}`" :description="`m³ producidos (tabla diaria de la planta) y m³ equivalentes de lo ${trasladosOn || donacionesOn ? 'que salió del patio' : 'facturado'}, barras lado a lado`" :option="optComparativo" :height="380" tall />
+        <ChartCard :title="`Producido vs ${salidaLbl} — por ${agrupNombre}`" :description="`m³ producidos (tabla diaria de la planta) y m³ equivalentes de lo ${trasladosOn || donacionesOn ? 'que salió del patio' : 'despachado'}, barras lado a lado`" :option="optComparativo" :height="380" tall />
       </div>
       <div class="charts-grid cols-2">
         <ChartCard title="Diferencia Acumulada (inventario estimado)" description="Producido − salidas, acumulado desde el inicio del cruce. Sube: se acumula en patio; baja: se consume inventario" :option="optAcumulado" :height="320" />
@@ -98,7 +98,7 @@
 
 <script setup lang="ts">
 /**
- * FacturacionBalanceTab.vue — Producción vs Facturación (/:planta/facturacion/balance).
+ * FacturacionBalanceTab.vue — Producción vs Despacho (/:planta/facturacion/balance).
  * Cruza por fecha los m³ producidos (hoja diaria de producción) con lo facturado en Novasoft
  * convertido a m³ equivalentes. Opciones en la URL: ?agrupar=semana&traslados=si&donaciones=si&procesado=no
  */
@@ -142,7 +142,7 @@ const siNo = (k: string, def: 'si' | 'no') => {
 const trasladosOn = siNo('traslados', 'no')
 const donacionesOn = siNo('donaciones', 'no')
 const soloProcesadoOn = siNo('procesado', 'si')
-const salidaLbl = computed(() => (trasladosOn.value || donacionesOn.value ? 'Salidas' : 'Facturado'))
+const salidaLbl = computed(() => (trasladosOn.value || donacionesOn.value ? 'Salidas' : 'Despachado'))
 
 // ── Producción de la planta (mismo store de la pestaña Producción) ──
 const prodStore = useProduccionStore()

@@ -45,6 +45,7 @@ import { LabelLayout } from 'echarts/features'
 import KpiCard from '../../components/dashboard/KpiCard.vue'
 import ChartCard from '../../components/dashboard/ChartCard.vue'
 import { serialToDate } from '../../utils/dates'
+import { donaCentro } from '../../utils/chartLayout'
 import {
   MESES_CORTOS, AZUL, FONT, fmtN, pct, punto, m3Lbl, vacio, emphasis, useEstiloGraficas,
 } from '../../composables/useGraficasConcreto'
@@ -241,24 +242,26 @@ const optLineasMes = computed(() => {
 const optParticipacion = computed(() => {
   const t = T.value
   const datos = props.config.lines.map((l, i) => ({ name: l.label, value: Math.round(t.lineas[i]), color: colorLinea(i) })).filter(d => d.value > 0)
+  const centro = movil.value ? ['50%', '42%'] : ['38%', '55%']
   return vacio({
     ...base(),
-    title: {
-      text: m3Lbl(t.total), subtext: 'm³ producidos', left: movil.value ? '49%' : '37%', top: movil.value ? '33%' : '44%', textAlign: 'center',
-      textStyle: { fontFamily: FONT, fontSize: 18, fontWeight: 700, color: isLight.value ? '#0f172a' : '#f1f5f9' },
-      subtextStyle: { fontFamily: FONT, fontSize: 11, color: chartTextColor.value },
-    },
     tooltip: { trigger: 'item' as const, formatter: (p: any) => `${punto(p.color)} <b>${p.name}</b><br/>${fmtN(p.value, 0)} m³ (${pct(p.percent)})` },
     legend: {
       ...(movil.value ? { type: 'scroll' as const, orient: 'horizontal' as const, left: 'center', bottom: 0 } : { orient: 'vertical' as const, right: 10, top: 'middle' }),
+      data: datos.map(d => d.name),
       icon: 'circle', itemWidth: 8, itemHeight: 8, itemGap: 12,
       textStyle: { fontFamily: FONT, fontWeight: 500 as const, color: chartTextColor.value, fontSize: 11 },
       formatter: (n: string) => { const d = datos.find(x => x.name === n); return d ? `${n}  ${m3Lbl(d.value)} m³` : n },
     },
-    series: [{
-      type: 'pie', radius: movil.value ? ['38%', '60%'] : ['42%', '68%'], center: movil.value ? ['50%', '42%'] : ['38%', '55%'],
+    series: [donaCentro({
+      center: centro, radio: movil.value ? '38%' : '42%', valor: m3Lbl(t.total), sub: 'm³ producidos', font: FONT,
+      color: isLight.value ? '#0f172a' : '#f1f5f9', colorSub: chartTextColor.value,
+    }), {
+      type: 'pie', radius: movil.value ? ['38%', '60%'] : ['42%', '68%'], center: centro,
       itemStyle: { borderRadius: 2, borderColor: isLight.value ? '#fff' : '#0b0f1a', borderWidth: 2 },
-      label: { show: true, formatter: (p: any) => pct(p.percent, 0), fontSize: 11, fontWeight: 600, fontFamily: FONT, color: chartTextColor.value },
+      // % dentro del anillo: por fuera chocaba con la leyenda cuando la tarjeta es angosta
+      label: { show: true, position: 'inside' as const, formatter: (p: any) => (p.percent >= 4 ? pct(p.percent, 0) : ''), fontSize: 11, fontWeight: 700, fontFamily: FONT, color: '#fff' },
+      labelLine: { show: false },
       data: datos.map(d => ({ name: d.name, value: d.value, itemStyle: { color: d.color } })),
     }],
   }, datos.length > 0)
