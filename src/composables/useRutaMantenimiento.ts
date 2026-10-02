@@ -1,5 +1,6 @@
 import { computed, watch, type WritableComputedRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 
 /**
  * useRutaMantenimiento.ts — Estado de navegación de Mantenimiento guardado en la ruta.
@@ -110,6 +111,25 @@ export function estadosMantenimiento(concretos: boolean): string[][] {
   return out
 }
 
+/**
+ * Claves de permiso de una ubicación de Mantenimiento (segmentos de la URL): la ruta canónica
+ * (los enlaces viejos, p. ej. …/maquinaria/inspeccion, se revisan como …/maquinaria/llantas/graficas)
+ * y la clave general de Disponibilidad, Llantas (…/mantenimiento/inspeccion, nombre anterior) y Combustible.
+ */
+export function clavesMantenimiento(planta: string, segs: string[]): string[] {
+  const canon = segmentos(leerEstado(segs))
+  const generales = ([['disponibilidad', 'disponibilidad'], ['llantas', 'inspeccion'], ['combustible', 'combustible']] as const)
+    .filter(([seg]) => canon[1] === seg)
+    .map(([, clave]) => `${planta}/mantenimiento/${clave}`)
+  return [`${planta}/mantenimiento/${canon.join('/')}`, ...generales]
+}
+
+/** ¿El usuario puede ver esa ubicación de Mantenimiento? (cada vista tiene su permiso) */
+export function mantenimientoPermitido(planta: string, segs: string[]): boolean {
+  const auth = useAuthStore()
+  return clavesMantenimiento(planta, segs).every(k => auth.canView(k))
+}
+
 export function useRutaMantenimiento(opciones: { normalizar?: boolean } = {}) {
   const route = useRoute()
   const router = useRouter()
@@ -143,7 +163,24 @@ export function useRutaMantenimiento(opciones: { normalizar?: boolean } = {}) {
     set: v => ir({ [k]: v } as Partial<Estado>),
   })
 
+  /**
+   * ¿Se muestra la pestaña que lleva a este cambio? Cada vista tiene su permiso:
+   *  - área (Planta/Maquinaria/Tareas) o sección (Órdenes, Almacén…): si alguna de sus vistas está permitida
+   *  - vista (Gráficas, Detalle, Informe…): si esa vista está permitida
+   */
+  function puede(cambio: Partial<Estado>): boolean {
+    const planta = route.path.split('/')[1] ?? ''
+    const destino = segmentos({ ...estado.value, ...cambio })
+    const nivel = 'area' in cambio ? 1 : 'panel' in cambio ? 2 : destino.length
+    const prefijo = destino.slice(0, nivel)
+    return estadosMantenimiento(planta === 'concretos')
+      .filter(c => prefijo.every((x, i) => c[i] === x))
+      .some(c => mantenimientoPermitido(planta, c))
+  }
+
   return {
+    /** ¿Se muestra la pestaña de ese cambio? (permiso de cada vista) */
+    puede,
     /** Planta · Maquinaria · Tareas */
     area: campo('area'),
     /** Órdenes (dashboard) · Almacén · Gerencial · Disponibilidad · Combustible · Llantas (solo Maquinaria) */
