@@ -15,7 +15,7 @@
       </RouterLink>
     </div>
 
-    <SkeletonLoader v-if="dispStore.loading" :variant="tareasView === 'tabla' ? 'table' : tareasView === 'informe' ? 'report' : 'charts'" :kpis="4" :charts="2" :label="`Cargando tareas — ${plantaLabel}…`" />
+    <SkeletonLoader v-if="dispStore.loading && dispStore.data?.planta !== plantaKey" :variant="tareasView === 'tabla' ? 'table' : tareasView === 'informe' ? 'report' : 'charts'" :kpis="4" :charts="2" :label="`Cargando tareas — ${plantaLabel}…`" />
     <div v-else-if="dispStore.error" class="disp-error-banner">
       {{ dispStore.error }}
       <button class="disp-retry-btn" @click="dispStore.fetchDisponibilidad(plantaKey, true)">Reintentar</button>

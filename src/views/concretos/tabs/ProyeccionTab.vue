@@ -58,6 +58,13 @@
         </div>
 
         <div class="report-section-block">
+          <h3 class="report-block-title"><span class="title-bar"></span>Despacho del día — {{ diaOp.iso ? `${diaOp.iso.slice(8, 10)}/${diaOp.iso.slice(5, 7)}/${diaOp.iso.slice(0, 4)}` : '—' }}</h3>
+          <div class="kpi-row compact-kpi">
+            <KpiCard v-for="k in kpisDia" :key="k.label" :label="k.label" :value="k.value" :accent="k.accent" :icon="k.icon" :meta="k.meta" :detail="k.detail" />
+          </div>
+        </div>
+
+        <div class="report-section-block">
           <h3 class="report-block-title"><span class="title-bar"></span>Indicadores de la proyección — {{ mesLbl }} (día {{ dia }} de {{ ultDia }})</h3>
           <div class="kpi-row compact-kpi">
             <KpiCard v-for="k in kpis" :key="k.label" :label="k.label" :value="k.value" :accent="k.accent" :icon="k.icon" :meta="k.meta" :detail="k.detail" />
@@ -264,6 +271,7 @@
 </template>
 
 <script setup lang="ts">
+import { normalizarRemisiones, despachoDelDia, kpisDelDia } from '../../../composables/useOperacionConcreto'
 import { type Hallazgo, etiquetaNivel, pillNivel, porPrioridad } from '../../../utils/calidadDato'
 import SkeletonLoader from '../../../components/ui/SkeletonLoader.vue'
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
@@ -311,7 +319,8 @@ const COLORES: Record<string, string> = COLOR_PLANTA
 const PP_COL: Record<string, string> = { 'Villavicencio': 'villavicencio', 'Acacías': 'acacias', 'Restrepo': 'restrepo', 'Puerto Concordia': 'concordia' }
 const CP = '#172954'
 
-function fmtN(n: number, d = 1): string {
+// Valores enteros por defecto (m³, galones, conteos); los porcentajes y razones piden sus decimales
+function fmtN(n: number, d = 0): string {
   return (Number.isFinite(n) ? n : 0).toLocaleString('es-CO', { minimumFractionDigits: d, maximumFractionDigits: d })
 }
 function pct(n: number, d = 1): string { return fmtN(n, d) + '%' }
@@ -433,6 +442,17 @@ function detalle(valores: (p: string) => string): string {
   return plantas.value.map(p => fila(p, valores(p))).join('') + sinProy.value.map(p => fila(p, 'sin proyección', " style='color:#a90707'")).join('')
 }
 interface KpiDef { label: string; value: string; accent: string; icon: string; meta?: string; detail?: string }
+// Producción del día al corte (último día con despacho), con los mismos filtros de planta y cliente
+const opsCli = computed(() => {
+  const fCli = props.clientesFiltro ? new Set(props.clientesFiltro.map(norm)) : null
+  return normalizarRemisiones(props.rows).filter(r => !fCli || fCli.has(norm(r.cliente)))
+})
+// Despacho del día al corte, frente al día anterior con despacho (con trend → meta para el formato del informe)
+const diaOp = computed(() => despachoDelDia(opsCli.value, corteIso.value, `${pref.value}-01`))
+const kpisDia = computed<KpiDef[]>(() => kpisDelDia(diaOp.value, color).map(k => ({
+  label: k.label, value: k.value, accent: k.accent, icon: k.icon, detail: k.detail,
+  meta: k.trend ? `${k.trend.direction === 'up' ? '+' : '−'}${fmtN(k.trend.value)}% vs. día ant.` : 'sin variación',
+})))
 const kpis = computed<KpiDef[]>(() => {
   const t = T.value, pp = P.value
   return [

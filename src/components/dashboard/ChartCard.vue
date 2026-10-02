@@ -26,6 +26,7 @@
         ref="chartRef"
         :option="optRef"
         :theme="theme"
+        :update-options="ACTUALIZAR"
         autoresize
         class="chart"
         :class="{ clickable: clickable }"
@@ -69,6 +70,7 @@ import {
   LegendComponent, DataZoomComponent, RadarComponent,
   MarkLineComponent, MarkAreaComponent, MarkPointComponent, GraphicComponent,
 } from 'echarts/components'
+import { LabelLayout } from 'echarts/features'
 import VChart from 'vue-echarts'
 import EmptyState from '../ui/EmptyState.vue'
 import { useTheme } from '../../composables/useTheme'
@@ -78,7 +80,7 @@ use([
   CanvasRenderer, BarChart, LineChart, PieChart, RadarChart, GaugeChart,
   GridComponent, TooltipComponent, TitleComponent, LegendComponent,
   DataZoomComponent, RadarComponent,
-  MarkLineComponent, MarkAreaComponent, MarkPointComponent, GraphicComponent,
+  MarkLineComponent, MarkAreaComponent, MarkPointComponent, GraphicComponent, LabelLayout,
 ])
 
 const props = withDefaults(defineProps<{
@@ -134,6 +136,9 @@ const { theme } = useTheme()
 const chartRef = ref<InstanceType<typeof VChart> | null>(null)
 const chartHeight = computed(() => (props.height ?? 350) + 'px')
 const optRef = shallowRef<Record<string, unknown> | undefined>(undefined)
+// Al cambiar filtros se actualiza sobre la gráfica existente (transición animada) en vez de redibujarla desde cero;
+// replaceMerge quita las series, ejes o leyendas que ya no vienen en la opción nueva
+const ACTUALIZAR = { replaceMerge: ['series', 'xAxis', 'yAxis', 'legend', 'dataZoom', 'grid'] }
 const hasData = ref(false)
 const pendingOption = ref(true)
 
@@ -152,6 +157,12 @@ function cleanAxes(opt: Record<string, unknown>): Record<string, unknown> {
       }))
       if (!Array.isArray(axis)) result[key] = (result[key] as unknown[])[0]
     }
+  }
+  // Los valores van completos (sin abreviar): en gráficas con muchos puntos se ocultan solo las etiquetas
+  // que se montarían sobre otra (el valor sigue en el tooltip). Las series que fijan su propio labelLayout se respetan.
+  if (Array.isArray(result.series)) {
+    result.series = (result.series as Record<string, unknown>[]).map(s =>
+      (s && s.type !== 'pie' && s.type !== 'gauge' && !('labelLayout' in s) ? { ...s, labelLayout: { hideOverlap: true } } : s))
   }
   return result
 }

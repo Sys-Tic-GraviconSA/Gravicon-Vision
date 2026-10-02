@@ -1,7 +1,7 @@
 <template>
   <!-- Va dentro de PlantaLayout (/concretos), que ya pone el margen y el ancho máximo de la página -->
   <div class="produccion-view">
-    <template v-if="store.loading">
+    <template v-if="store.loading && !rows.length">
       <SkeletonLoader variant="dashboard" :kpis="4" :charts="3" label="Cargando datos de concretos…" />
     </template>
     <template v-else-if="store.error">
@@ -27,23 +27,32 @@
               <MultiSelect v-model="selectedPlants" :options="plants" label="Plantas" icon="filter" />
               <MultiSelect v-model="selectedComerciales" :options="comerciales" label="Comercial" icon="user" />
               <MultiSelect v-model="selectedClientes" :options="clientes" label="Cliente" icon="user" searchable />
-              <button v-if="hayFiltros" class="clear-filters" title="Quitar filtros" @click="limpiarFiltros">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                <span>Limpiar</span>
-              </button>
             </div>
+            <!-- «Limpiar» en la misma fila que «Actualizar» -->
+            <button class="clear-filters" :class="{ oculto: !hayFiltros }" :tabindex="hayFiltros ? 0 : -1" :aria-hidden="!hayFiltros" title="Quitar filtros" @click="limpiarFiltros">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <span>Limpiar</span>
+            </button>
+            <!-- Vuelve a leer remisiones y proyecciones sin la copia guardada (cuando hay datos nuevos) -->
+            <button class="action-btn" :disabled="actualizando" title="Volver a leer los datos de Supabase" @click="actualizar">
+              <svg class="icono-actualizar" :class="{ girando: actualizando }" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              {{ actualizando ? 'Actualizando…' : 'Actualizar' }}
+            </button>
           </div>
         </header>
-
-        <!-- Secciones: /concretos/produccion/planta/… y /concretos/produccion/proyeccion/… -->
-        <RouteTabs variant="sub" :items="secciones" :activo="seccionActiva" aria-label="Sección" />
       </div>
+
+      <!-- Secciones: /concretos/produccion/planta/… y /concretos/produccion/proyeccion/… (fuera del encabezado fijo:
+           al bajar solo quedan arriba el título y los filtros) -->
+      <RouteTabs variant="sub" :items="secciones" :activo="seccionActiva" aria-label="Sección" />
 
       <RouteTabs variant="toggle" :items="vistas" :activo="vistaActiva" aria-label="Vista" replace />
 
       <!-- Cada combinación sección/vista es una ruta hija; recibe solo las props que usa -->
       <RouterView v-slot="{ Component }">
-        <component :is="Component" v-bind="propsHija" />
+        <Transition name="vista" mode="out-in">
+          <component :is="Component" v-bind="propsHija" />
+        </Transition>
       </RouterView>
     </template>
   </div>
@@ -61,7 +70,7 @@
 <script setup lang="ts">
 import SkeletonLoader from '../../components/ui/SkeletonLoader.vue'
 import { computed, onErrorCaptured, onMounted } from 'vue'
-import { useQueryDate, useQuerySet } from '../../composables/useQueryState'
+import { useQueryDate, useQuerySet, NINGUNA } from '../../composables/useQueryState'
 import { useConcretoStore } from '../../stores/concreto'
 import { useClientesStore } from '../../stores'
 import FilterBar from '../../components/dashboard/FilterBar.vue'
@@ -88,9 +97,38 @@ onMounted(() => {
 
 const rows = computed(() => store.data?.rows ?? [])
 
+// Botón «Actualizar»: fuerza la lectura en el servidor (salta la caché); el contenido sigue a la vista mientras carga
+const actualizando = computed(() => store.loading || clientesStore.loading)
+function actualizar() {
+  store.fetchData(true)
+  clientesStore.fetchData(true)
+}
+
+// ── Filtros en cascada ──
+// Cada lista muestra solo las opciones que existen con las fechas y los demás filtros elegidos.
+// Se calculan con lo que dice la URL (no con la selección por defecto) para no crear dependencias circulares.
+const marcadosUrl = (key: string): Set<string> | null => {
+  const raw = route.query[key]
+  if (raw === undefined || raw === null) return null
+  const v = (Array.isArray(raw) ? raw : [raw]).map(String).filter(x => x !== NINGUNA)
+  return v.length ? new Set(v) : null
+}
+const rowsEnFechas = computed(() => {
+  const d = route.query.desde ? dateToSerial(String(route.query.desde)) : -Infinity
+  const h = route.query.hasta ? dateToSerial(String(route.query.hasta)) : Infinity
+  return rows.value.filter(r => typeof r['Fecha'] === 'number' && (r['Fecha'] as number) >= d && (r['Fecha'] as number) <= h)
+})
+/** Filas en el rango de fechas que pasan los filtros de la URL, menos el indicado (`salvo`) */
+function filasPara(salvo: 'planta' | 'comercial' | 'cliente') {
+  const p = salvo === 'planta' ? null : marcadosUrl('planta')
+  const c = salvo === 'comercial' ? null : marcadosUrl('comercial')
+  const k = salvo === 'cliente' ? null : marcadosUrl('cliente')
+  return rowsEnFechas.value.filter(r => (!p || p.has(String(r['Planta'] ?? ''))) && (!c || c.has(comercialDe(r))) && (!k || k.has(clienteDe(r))))
+}
+
 const plants = computed(() => {
   const set = new Set<string>()
-  for (const r of rows.value) set.add(String(r['Planta'] ?? ''))
+  for (const r of filasPara('planta')) set.add(String(r['Planta'] ?? ''))
   return [...set].sort()
 })
 
@@ -101,7 +139,7 @@ function comercialDe(r: Record<string, unknown>): string {
 }
 const comerciales = computed(() => {
   const set = new Set<string>()
-  for (const r of rows.value) set.add(comercialDe(r))
+  for (const r of filasPara('comercial')) set.add(comercialDe(r))
   return [...set].sort((a, b) => (a === SIN_COMERCIAL ? 1 : b === SIN_COMERCIAL ? -1 : a.localeCompare(b)))
 })
 
@@ -117,8 +155,9 @@ const clienteDe = (r: Record<string, unknown>) => String(r['Cliente'] ?? '').tri
 const normCliente = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, '')
 const clientes = computed(() => {
   const porNorm = new Map<string, string>()
-  for (const r of rows.value) { const c = clienteDe(r); if (!porNorm.has(normCliente(c))) porNorm.set(normCliente(c), c) }
-  for (const r of (clientesStore.allRows ?? []) as Record<string, unknown>[]) {
+  for (const r of filasPara('cliente')) { const c = clienteDe(r); if (!porNorm.has(normCliente(c))) porNorm.set(normCliente(c), c) }
+  // Los proyectados sin despacho solo se ofrecen si no hay filtro de planta ni de comercial
+  if (!marcadosUrl('planta') && !marcadosUrl('comercial')) for (const r of (clientesStore.allRows ?? []) as Record<string, unknown>[]) {
     const c = String(r.nombre_cliente ?? '').trim()
     const k = normCliente(c)
     // «CLIENTE / CALLE» es la fila genérica de clientes de calle, no un cliente real
@@ -139,10 +178,12 @@ const fechaEfectivaInicio = computed(() => fechaInicio.value || rangoDatos.value
 const fechaEfectivaFin = computed(() => fechaFin.value || rangoDatos.value.hasta)
 
 // Sin opciones marcadas = sin filtro (paso intermedio al desmarcar «Todos» para elegir unas pocas)
-const pasa = (sel: Set<string>, v: string) => sel.size === 0 || sel.has(v)
-const filtroPlanta = (r: Record<string, unknown>) => pasa(selectedPlants.value, String(r['Planta'] ?? ''))
-const filtroComercial = (r: Record<string, unknown>) => pasa(selectedComerciales.value, comercialDe(r))
-const filtroCliente = (r: Record<string, unknown>) => pasa(selectedClientes.value, clienteDe(r))
+// Los datos se filtran con lo marcado en la URL (sin marca = todos), no con la lista en cascada:
+// así el informe conserva los meses anteriores para comparar aunque la lista se acote a las fechas
+const pasa = (sel: Set<string> | null, v: string) => !sel || sel.has(v)
+const filtroPlanta = (r: Record<string, unknown>) => pasa(marcadosUrl('planta'), String(r['Planta'] ?? ''))
+const filtroComercial = (r: Record<string, unknown>) => pasa(marcadosUrl('comercial'), comercialDe(r))
+const filtroCliente = (r: Record<string, unknown>) => pasa(marcadosUrl('cliente'), clienteDe(r))
 
 const filteredRows = computed(() => {
   const since = fechaEfectivaInicio.value ? dateToSerial(fechaEfectivaInicio.value) : -Infinity
@@ -172,6 +213,9 @@ const plantFilteredSheetData = computed(() => {
   const filtered = rows.value.filter(r => filtroPlanta(r) && filtroComercial(r) && filtroCliente(r))
   return { headers: d.headers, rows: filtered, total: filtered.length }
 })
+
+// Viajes cancelados o reubicados con los mismos filtros de planta, comercial y cliente (las tablas filtran las fechas)
+const canceladosFiltrados = computed(() => store.cancelados.filter(r => filtroPlanta(r) && filtroComercial(r) && filtroCliente(r)))
 
 // Plantas marcadas en el filtro (null = todas); las metas de proyección no vienen en order_price y se filtran aparte
 const esTodo = (sel: Set<string>, opciones: string[]) => sel.size === 0 || sel.size === opciones.length
@@ -226,9 +270,10 @@ const propsHija = computed(() => {
   const rows = plantFilteredSheetData.value?.rows ?? []
   switch (route.name) {
     case 'concretos-produccion-planta-graficas':
-      return { rows, desde: fechaEfectivaInicio.value, hasta: fechaEfectivaFin.value }
+      return { rows, cancelados: canceladosFiltrados.value, desde: fechaEfectivaInicio.value, hasta: fechaEfectivaFin.value }
     case 'concretos-produccion-planta-informe':
-      return { rows, corte: fechaEfectivaFin.value, totalCount: store.data?.total }
+      // desde: solo si el usuario eligió fecha inicial (sin ella el informe es el mes al corte)
+      return { rows, cancelados: canceladosFiltrados.value, desde: fechaInicio.value, corte: fechaEfectivaFin.value, totalCount: store.data?.total }
     default:
       return { rows, corte: fechaEfectivaFin.value, plantasFiltro: plantasFiltro.value, clientesFiltro: clientesFiltro.value }
   }
@@ -366,4 +411,10 @@ const propsHija = computed(() => {
   .filter-group { position: static; width: 100%; box-sizing: border-box; padding: 6px; gap: 4px; }
   .filter-group > * { flex: 1 1 auto; }
 }
+.action-btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: none; border-radius: var(--radius-md);
+  background: var(--accent-light); color: var(--accent); font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap;
+}
+.action-btn:hover:not(:disabled) { background: rgba(59, 130, 246, .2); }
+.action-btn:disabled { opacity: .7; cursor: default; }
 </style>

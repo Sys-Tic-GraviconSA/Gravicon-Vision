@@ -75,10 +75,15 @@ const HEADERS = [
   'Subtotal', 'Impuestos',
 ]
 
+/** Columnas que vienen de order_detail: pedido y horas del viaje del mixer */
+const DETALLE_VIAJE = ['Pedido', 'Hora Programada', 'Inicio Cargue', 'Fin Cargue', 'Salida Planta', 'Llegada Obra', 'Salida Obra', 'Llegada Planta']
+
 /** Store de concreto premezclado — datos combinados de order_price y order_detail */
 export const useConcretoStore = defineStore('concreto', () => {
   /** Datos combinados en formato SheetData (incluye columna Horario) */
   const data = shallowRef<SheetData | null>(null)
+  /** Viajes cancelados o reubicados (filas tipo hoja, como `data.rows`) */
+  const cancelados = shallowRef<Record<string, unknown>[]>([])
   /** Indicador de carga en progreso */
   const loading = ref(false)
   /** Mensaje de error si la carga falla */
@@ -87,14 +92,22 @@ export const useConcretoStore = defineStore('concreto', () => {
   const lastUpdate = ref<string | null>(null)
 
   /** Combina order_price + order_detail: horario, bomba y operario de cada remisión */
-  function aplicar(result: { price?: any[]; detail?: any[]; count?: number; generado?: string }) {
+  function aplicar(result: { price?: any[]; detail?: any[]; cancelados?: any[]; count?: number; generado?: string }) {
     const allPrice = result.price || []
+    // Viajes cancelados o reubicados (order_detail con estado «Cancelado»), con las mismas columnas que usan los filtros
+    cancelados.value = (result.cancelados || []).map((d: any) => ({
+      'Fecha': dateToSerial(d.fecha), 'Planta': d.planta, 'Remisión': Number(d.remision) || 0, 'Pedido': d.no_de_pedido ? String(d.no_de_pedido) : '',
+      'Cliente': d.cliente, 'Proyecto': d.obra, 'Comercial': d.comercial, 'Mixer': d.mixer, 'Conductor': d.conductor,
+      'Mezcla': d.concreto_mezcla, 'Cant. Concreto': Number(d.concreto_cantidad) || 0, 'Observaciones': d.observaciones ?? '',
+    }))
     const allDetail = result.detail || []
     lastUpdate.value = result.generado || null
 
     const hourMap = new Map<string, number>()
     const bombaMap = new Map<string, string>()
     const operarioMap = new Map<string, string>()
+    const detMap = new Map<string, Record<string, string>>()
+    const hhmm = (v: unknown) => (v ? String(v).slice(0, 5) : '')
     for (const d of allDetail) {
       const rem = String(d.remision)
       if (d.tiempos_hphora_programada && d.remision) {
@@ -103,15 +116,27 @@ export const useConcretoStore = defineStore('concreto', () => {
       }
       if (d.bomba) bombaMap.set(rem, String(d.bomba))
       if (d.operario) operarioMap.set(rem, String(d.operario))
+      // Pedido y horas del viaje (HH:MM) para las tablas de comerciales, conductores y bombeo
+      detMap.set(rem, {
+        'Pedido': d.no_de_pedido ? String(d.no_de_pedido) : '',
+        'Hora Programada': hhmm(d.tiempos_hphora_programada),
+        'Inicio Cargue': hhmm(d.tiempos_icinicio_de_cargue),
+        'Fin Cargue': hhmm(d.tiempos_fcfin_de_cargue),
+        'Salida Planta': hhmm(d.tiempos_spsalida_de_planta),
+        'Llegada Obra': hhmm(d.tiempos_llollegada_a_obra),
+        'Salida Obra': hhmm(d.tiempos_sosalida_de_obra),
+        'Llegada Planta': hhmm(d.tiempos_llpllegada_a_planta),
+      })
     }
 
     data.value = {
-      headers: [...HEADERS, 'Horario', 'Bomba', 'Operario'],
+      headers: [...HEADERS, 'Horario', 'Bomba', 'Operario', ...DETALLE_VIAJE],
       rows: allPrice.map((r: any) => ({
         ...mapRow(r),
         Horario: hourMap.get(String(r.remision)) ?? '',
         Bomba: bombaMap.get(String(r.remision)) ?? '',
         Operario: operarioMap.get(String(r.remision)) ?? '',
+        ...(detMap.get(String(r.remision)) ?? {}),
       })),
       total: result.count || allPrice.length,
     }
@@ -121,10 +146,10 @@ export const useConcretoStore = defineStore('concreto', () => {
   function fetchData(force = false) {
     return cargarConCache({
       url: `/api/concreto/data${force ? '?force=true' : ''}`, force,
-      hayDatos: () => !!data.value, aplicar, limpiar: () => { data.value = null },
+      hayDatos: () => !!data.value, aplicar, limpiar: () => { data.value = null; cancelados.value = [] },
       loading, error, etiqueta: 'concreto-store',
     })
   }
 
-  return { data, loading, error, lastUpdate, fetchData }
+  return { data, cancelados, loading, error, lastUpdate, fetchData }
 })

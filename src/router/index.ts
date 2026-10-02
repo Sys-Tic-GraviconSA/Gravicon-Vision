@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw, type RouteLocationNormalized } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { PLANTAS, PLANTAS_AGREGADOS, SECCIONES_CONCRETOS, VISTAS_CONCRETOS, VISTAS_FACTURACION, VISTAS_PRODUCCION_AGREGADOS, type PlantaId } from '../config/plantas'
+import { EMPRESAS_PROGRAMACION, PLANTAS, PLANTAS_AGREGADOS, SECCIONES_CONCRETOS, VISTAS_CONCRETOS, VISTAS_FACTURACION, VISTAS_PRODUCCION_AGREGADOS, type PlantaId } from '../config/plantas'
+import { estadosMantenimiento, leerEstado, segmentos } from '../composables/useRutaMantenimiento'
 
 /**
  * Mapa de rutas. Cada vista tiene su propia URL, así recargar, atrás/adelante y
@@ -9,7 +10,7 @@ import { PLANTAS, PLANTAS_AGREGADOS, SECCIONES_CONCRETOS, VISTAS_CONCRETOS, VIST
  *   /cuncia | /acacias
  *     /produccion/graficas | detalles | informe
  *     /facturacion/graficas | detalle | informe | balance   (Novasoft; balance = producción vs despacho)
- *     /programacion/gravicon | cliente
+ *     /programacion/gravicon | cliente                 (cada empresa con su permiso)
  *     /mantenimiento/:area/:seccion/:vista          (ver composables/useRutaMantenimiento)
  *   /concretos
  *     /produccion/planta | proyeccion / graficas | informe
@@ -41,7 +42,8 @@ function primeraPermitida(planta: PlantaId, modulos: string[]) {
   const auth = useAuthStore()
   // Sin perfil cargado todavía, el primero; el guard revisa el permiso después
   if (!auth.profile) return { name: `${planta}-${modulos[0]}` }
-  const m = modulos.find(x => auth.canView(`${planta}/${x}`))
+  // Mantenimiento cuenta solo si queda alguna de sus vistas permitida (evita ciclos de redirección)
+  const m = modulos.find(x => moduloVisible(planta, x))
   // Sin ningún módulo permitido se va a Configuración (evita un ciclo de redirecciones)
   return m ? { name: `${planta}-${m}` } : { name: 'configuracion' }
 }
@@ -57,6 +59,45 @@ function primeraVista(rutas: [string, string][]) {
   return r ? { name: r[1] } : { name: 'configuracion' }
 }
 
+/**
+ * Claves de permiso de una ubicación de Mantenimiento, además de las de la ruta:
+ *  - la ruta canónica (los enlaces viejos, p. ej. …/maquinaria/inspeccion, se revisan como …/maquinaria/llantas/graficas)
+ *  - la clave general de Disponibilidad, Llantas (…/mantenimiento/inspeccion, nombre anterior) y Combustible.
+ */
+function clavesMantenimiento(planta: string, segs: string[]): string[] {
+  const canon = segmentos(leerEstado(segs))
+  const generales = ([['disponibilidad', 'disponibilidad'], ['llantas', 'inspeccion'], ['combustible', 'combustible']] as const)
+    .filter(([seg]) => canon[1] === seg)
+    .map(([, clave]) => `${planta}/mantenimiento/${clave}`)
+  return [`${planta}/mantenimiento/${canon.join('/')}`, ...generales]
+}
+
+const segmentosDe = (to: RouteLocationNormalized) =>
+  ([] as string[]).concat((to.params.segmentos as string[] | string | undefined) ?? []).map(String)
+
+/**
+ * Primera ubicación de Mantenimiento que el usuario puede ver (segmentos) o null.
+ * Con `parecida`, primero las más parecidas a esa (misma área y sección); a igual parecido, el orden de las pestañas.
+ */
+function primeraMantenimiento(planta: string, parecida: string[] = []): string[] | null {
+  const auth = useAuthStore()
+  const comun = (s: string[]) => { let i = 0; while (i < s.length && s[i] === parecida[i]) i++; return i }
+  const ok = estadosMantenimiento(planta === 'concretos')
+    .map((segs, orden) => ({ segs, orden, comun: comun(segs) }))
+    .sort((a, b) => b.comun - a.comun || a.orden - b.orden)
+    .find(c => auth.canView(`${planta}/mantenimiento/${c.segs.join('/')}`) && clavesMantenimiento(planta, c.segs).every(k => auth.canView(k)))
+  return ok ? ok.segs : null
+}
+
+/**
+ * ¿Se muestra el módulo de una planta en el menú y en sus pestañas? Su permiso y, en Mantenimiento,
+ * que quede al menos una de sus vistas permitida (si no, entrar solo redirigiría a otra parte).
+ */
+export function moduloVisible(planta: string, modulo: string): boolean {
+  const auth = useAuthStore()
+  return auth.canView(`${planta}/${modulo}`) && (modulo !== 'mantenimiento' || !!primeraMantenimiento(planta))
+}
+
 /** Ruta de Mantenimiento (misma pantalla para las tres plantas). */
 function rutaMantenimiento(planta: PlantaId): RouteRecordRaw {
   return {
@@ -66,15 +107,7 @@ function rutaMantenimiento(planta: PlantaId): RouteRecordRaw {
     props: { planta },
     meta: {
       titulo: `Mantenimiento ${PLANTAS[planta].nombre}`,
-      // Disponibilidad es una sección, pero su permiso se administra aparte
-      // Secciones con permiso propio (además de la ruta): Disponibilidad, Llantas y Combustible.
-      // Llantas (segmento «llantas», antes «inspeccion») conserva la clave de permiso …/mantenimiento/inspeccion
-      permisosExtra: to => {
-        const segs = ([] as string[]).concat((to.params.segmentos as string[] | string | undefined) ?? [])
-        return ([['disponibilidad', 'disponibilidad'], ['llantas', 'inspeccion'], ['inspeccion', 'inspeccion'], ['combustible', 'combustible']] as const)
-          .filter(([seg]) => segs.includes(seg))
-          .map(([, clave]) => `${planta}/mantenimiento/${clave}`)
-      },
+      permisosExtra: to => clavesMantenimiento(planta, segmentosDe(to)),
     },
   }
 }
@@ -121,9 +154,18 @@ function rutasAgregados(planta: 'cuncia' | 'acacias'): RouteRecordRaw {
           })),
         ],
       },
+      // Sin empresa en la URL se va a la primera permitida (cada empresa tiene su permiso)
       {
-        path: 'programacion/:empresa(gravicon|cliente)?',
+        path: 'programacion',
         name: `${planta}-programacion`,
+        redirect: () => {
+          const r = primeraVista(EMPRESAS_PROGRAMACION.map(e => [`${planta}/programacion/${e}`, e] as [string, string]))
+          return r.name === 'configuracion' ? r : { name: `${planta}-programacion-empresa`, params: { empresa: r.name } }
+        },
+      },
+      {
+        path: 'programacion/:empresa(gravicon|cliente)',
+        name: `${planta}-programacion-empresa`,
         component: () => import('../views/agregados/ProgramacionView.vue'),
         meta: { titulo: `Programación ${nombre}` },
       },
@@ -205,6 +247,42 @@ const HOME_CANDIDATES = ['cuncia', 'acacias', 'concretos', 'clientes']
 /** Solo rutas internas: evita redirecciones abiertas tipo //sitio-externo.com */
 const esRutaInterna = (p: string | undefined) => !!p && /^\/(?![/\\])/.test(p)
 
+/**
+ * ¿El usuario puede ver esta ubicación? Permiso = la ruta (canView revisa también los niveles
+ * superiores) + permisos extra de la ruta. Lo usan el guard y las pestañas (RouteTabs) para ocultar
+ * lo bloqueado.
+ */
+export function rutaPermitida(to: Pick<RouteLocationNormalized, 'path' | 'matched' | 'params' | 'query'>): boolean {
+  const auth = useAuthStore()
+  const clave = to.path.replace(/^\/+|\/+$/g, '')
+  if (!clave || clave === 'configuracion') return true
+  if (!auth.canView(clave)) return false
+  return to.matched.flatMap(r => r.meta.permisosExtra?.(to as RouteLocationNormalized) ?? []).every(k => auth.canView(k))
+}
+
+/**
+ * A dónde llevar al usuario si la ruta pedida está bloqueada: primero otra vista del mismo módulo
+ * (en Mantenimiento, la más parecida que sí pueda ver); si no hay, la primera planta permitida.
+ * Nunca devuelve la misma ruta (evita ciclos de redirección).
+ */
+function alternativa(to: RouteLocationNormalized) {
+  const auth = useAuthStore()
+  const [planta, modulo] = to.path.split('/').filter(Boolean)
+  const moduloPermitido = !!planta && !!modulo && auth.canView(`${planta}/${modulo}`)
+  if (moduloPermitido) {
+    if (modulo === 'mantenimiento' && planta in PLANTAS) {
+      const ok = primeraMantenimiento(planta, segmentos(leerEstado(segmentosDe(to))))
+      if (ok) return { name: `${planta}-mantenimiento`, params: { segmentos: ok }, query: to.query }
+    } else if (to.path.replace(/\/+$/, '') !== `/${planta}/${modulo}`) {
+      // La raíz del módulo redirige a su primera vista permitida
+      return { path: `/${planta}/${modulo}`, query: to.query }
+    }
+  }
+  // La misma planta solo si lo bloqueado es el módulo entero (su raíz elige otro módulo); si no, se repetiría
+  const fallback = HOME_CANDIDATES.find(k => auth.canView(k) && (k !== planta || !moduloPermitido))
+  return fallback ? `/${fallback}` : { name: 'configuracion' }
+}
+
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
 
@@ -222,13 +300,7 @@ router.beforeEach(async (to) => {
     // Contraseña temporal: no se puede navegar hasta cambiarla
     if (auth.mustChangePassword && to.name !== 'configuracion') return { name: 'configuracion' }
 
-    // Permiso = la ruta (canView revisa también los niveles superiores) + permisos extra de la ruta
-    const clave = to.path.replace(/^\/+|\/+$/g, '')
-    const extra = to.matched.flatMap(r => r.meta.permisosExtra?.(to) ?? [])
-    if (clave && clave !== 'configuracion' && (!auth.canView(clave) || extra.some(k => !auth.canView(k)))) {
-      const fallback = HOME_CANDIDATES.find(k => auth.canView(k))
-      return fallback ? `/${fallback}` : { name: 'configuracion' }
-    }
+    if (!rutaPermitida(to)) return alternativa(to)
   }
   return true
 })

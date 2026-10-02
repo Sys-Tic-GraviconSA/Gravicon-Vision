@@ -3,7 +3,15 @@
     <div v-if="!rsTodo.length" class="gt-vacio">No hay remisiones en el rango de fechas seleccionado.</div>
 
     <template v-else>
-      <!-- Indicadores con desglose por planta (mismo formato de las tarjetas de Mantenimiento) -->
+      <!-- Lo diario primero: el último día con despacho frente al anterior -->
+      <h3 class="section-title primero"><span class="title-bar"></span>Despacho del día — {{ diaLbl }}</h3>
+      <p class="section-sub">Último día con despacho dentro del filtro de fechas, comparado con el día anterior con despacho.</p>
+      <div class="kpi-row kpi-dia">
+        <KpiCard v-for="k in kpisDia" :key="k.label" :label="k.label" :value="k.value" :icon="k.icon" :accent="k.accent" :trend="k.trend" :detail="k.detail" />
+      </div>
+
+      <!-- Indicadores del período con desglose por planta (mismo formato de las tarjetas de Mantenimiento) -->
+      <h3 class="section-title"><span class="title-bar"></span>Período seleccionado</h3>
       <div class="kpi-row">
         <KpiCard v-for="k in kpis" :key="k.label" :label="k.label" :value="k.value" :icon="k.icon" :accent="k.accent" :trend="k.trend" :detail="k.detail" />
       </div>
@@ -78,11 +86,17 @@
         </div>
       </template>
 
-      <h3 class="section-title"><span class="title-bar"></span>Comercial y clientes</h3>
-      <div class="charts-grid cols-2">
+      <h3 class="section-title"><span class="title-bar"></span>Comercial</h3>
+      <div class="charts-grid cols-1">
         <ChartCard title="Venta por Comercial" description="Venta de concreto antes de IVA (sin agregados); color de la planta donde más vende" :option="optComercial" :expand-option="optComercialTodos" :height="380" />
+      </div>
+      <TablaOperacion titulo="Resumen por Comercial" :tabla="tablaCom" :color="color" />
+
+      <h3 class="section-title"><span class="title-bar"></span>Clientes</h3>
+      <div class="charts-grid cols-1">
         <ChartCard :title="`Ranking Top ${TOP} — Clientes por Volumen`" description="Clientes con más m³ de concreto en el período (sin agregados)" :option="optClientes" :expand-option="optClientesTodos" :height="380" />
       </div>
+      <TablaOperacion titulo="Clientes por Planta" :tabla="tablaCli" :color="color" />
 
       <h3 class="section-title"><span class="title-bar"></span>Equipos y personal</h3>
       <p class="section-sub">
@@ -95,6 +109,25 @@
         <ChartCard :title="`m³ por Bomba — Top ${TOP}`" description="Volumen bombeado por cada autobomba o estacionaria" :option="optBombas" :expand-option="optBombasTodos" :height="380" />
         <ChartCard :title="`m³ por Operario de Bombeo — Top ${TOP}`" description="Volumen bombeado por cada operario de bomba" :option="optOperarios" :expand-option="optOperariosTodos" :height="380" />
       </div>
+
+      <h3 class="section-title"><span class="title-bar"></span>Conductores de Mixer</h3>
+      <TablaOperacion titulo="Viajes y Tiempo de Viaje por Conductor" nota="Placa(s), viajes, m³ y tiempo promedio de viaje" :tabla="tablaCond" :color="color" />
+
+      <h3 class="section-title"><span class="title-bar"></span>Servicios de Bombeo</h3>
+      <TablaOperacion titulo="Bombeo por Bomba y Operario" :tabla="tablaBomb" :color="color" />
+
+      <template v-if="cancel.total">
+        <h3 class="section-title"><span class="title-bar"></span>Cancelaciones y Reubicaciones</h3>
+        <p class="section-sub">Viajes que se cancelaron o se reubicaron en el período, con la causa registrada.</p>
+        <div class="kpi-row kpi-dia">
+          <KpiCard v-for="k in kpisCancel" :key="k.label" :label="k.label" :value="k.value" :icon="k.icon" :accent="k.accent" :detail="k.detail" />
+        </div>
+        <div class="charts-grid cols-2">
+          <ChartCard title="Causas de Cancelación y Reubicación" description="Viajes por causa, de la más común a la menos común; al lado, los m³ que se cancelaron o reubicaron" :option="optCancelCausas" :height="320" />
+          <ChartCard title="m³ Cancelados o Reubicados por Mes" description="m³ de los viajes cancelados o reubicados en cada mes, por planta (barras lado a lado)" :option="optCancelMes" :height="320" />
+        </div>
+        <TablaOperacion titulo="Detalle de Viajes Cancelados y Reubicados" nota="Con el motivo registrado" :tabla="tablaCanc" :color="color" />
+      </template>
 
       <h3 class="section-title"><span class="title-bar"></span>Producto y operación</h3>
       <div class="charts-grid cols-1">
@@ -122,9 +155,12 @@
  * Mismo estilo de las gráficas de Mantenimiento (colores por planta, etiquetas en píldora, KPIs con desglose).
  */
 <script setup lang="ts">
+import { donaCentro } from '../../../utils/chartLayout'
+import { normalizarRemisiones, despachoDelDia, kpisDelDia, tablaComerciales, tablaConductores, tablaBombeo, tablaClientes, normalizarCancelados, resumenCancelados, tablaCancelados } from '../../../composables/useOperacionConcreto'
 import { computed } from 'vue'
 import KpiCard from '../../../components/dashboard/KpiCard.vue'
 import ChartCard from '../../../components/dashboard/ChartCard.vue'
+import TablaOperacion from '../../../components/concretos/TablaOperacion.vue'
 import { serialToDate } from '../../../utils/dates'
 import { esAgregado } from '../../../utils/agregadosConcreto'
 import {
@@ -140,6 +176,8 @@ use([LabelLayout])
 const props = defineProps<{
   /** Filas de order_price filtradas por planta/comercial (todas las fechas) */
   rows: Record<string, unknown>[]
+  /** Viajes cancelados o reubicados (order_detail), filtrados por planta/comercial/cliente */
+  cancelados?: Record<string, unknown>[]
   /** Rango del filtro global (YYYY-MM-DD) */
   desde?: string
   hasta?: string
@@ -370,6 +408,64 @@ const kpis = computed(() => {
   ]
 })
 
+// Remisiones con pedido y tiempos de viaje (order_detail) para Producción del día y las tablas de operación
+const ops = computed(() => normalizarRemisiones(props.rows))
+const dia = computed(() => despachoDelDia(ops.value, rango.value.hasta, rango.value.desde, plantas.value))
+const kpisDia = computed(() => kpisDelDia(dia.value, color))
+const diaLbl = computed(() => (dia.value.iso ? new Date(dia.value.iso + 'T00:00:00Z').toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) : '—'))
+const opsRango = computed(() => ops.value.filter(r => r.iso >= rango.value.desde && r.iso <= rango.value.hasta))
+const tablaCom = computed(() => tablaComerciales(opsRango.value))
+// Viajes cancelados o reubicados del período (order_detail), con el tema que más se repite
+const cancelRango = computed(() => normalizarCancelados(props.cancelados ?? []).filter(c => c.iso >= rango.value.desde && c.iso <= rango.value.hasta))
+const cancel = computed(() => resumenCancelados(cancelRango.value))
+const kpisCancel = computed(() => {
+  const c = cancel.value
+  const fila = (txt: string, val: string) => `<div class='kpi-detail-row'>${txt} <strong>${val}</strong></div>`
+  return [
+    { label: 'Viajes Cancelados o Reubicados', value: fmtN(c.total), icon: 'alert-circle', accent: '#DC2626',
+      detail: fila('Cancelaciones', fmtN(c.cancelaciones)) + fila('Reubicaciones', fmtN(c.reubicaciones)) },
+    { label: 'm³ Afectados', value: fmtN(c.m3) + ' m³', icon: 'package', accent: '#F59E0B',
+      detail: plantas.value.map(p => { const x = cancelRango.value.filter(r => r.planta === p); return x.length ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:${color(p)}'></span><span class='kpi-label-int' style='color:${color(p)}'>${p}</span> <strong>${fmtN(x.reduce((a, r) => a + r.m3, 0))} m³</strong></div>` : '' }).join('') },
+  ]
+})
+// Causas: viajes por tema (de la más común a la menos), con sus m³
+const COLOR_TEMA: Record<string, string> = {
+  'Obra o cliente no listo': '#F59E0B', 'Falla de equipo': '#DC2626', 'Clima': '#0EA5E9', 'Error de programación': '#8B5CF6', 'Otro': '#94A3B8',
+}
+const optCancelCausas = computed(() => {
+  const t = cancel.value.porTema
+  const txt = (i: number) => `${fmtN(t[i].n)} ${t[i].n === 1 ? 'viaje' : 'viajes'} · ${fmtN(t[i].m3)} m³`
+  return vacio(barrasH(t.map(x => x.tema), [{
+    name: 'Viajes', type: 'bar', barMaxWidth: 22, data: t.map(x => ({ value: x.n, itemStyle: { color: COLOR_TEMA[x.tema] ?? AZUL, borderRadius: [0, 4, 4, 0] } })),
+    label: { ...labelPill.value, position: 'right', formatter: (x: any) => txt(x.dataIndex) },
+  }], t.map((_, i) => txt(i)), {
+    trigger: 'item', formatter: (x: any) => { const e = t[x.dataIndex]
+      return `${punto(COLOR_TEMA[e.tema] ?? AZUL)} <b>${e.tema}</b><br/>${e.n} viajes (${pct(cancel.value.total ? e.n / cancel.value.total * 100 : 0)})<br/>${fmtN(e.m3)} m³` },
+  }, false), t.length > 0)
+})
+// m³ cancelados o reubicados por mes y planta (barras agrupadas, nunca apiladas)
+const optCancelMes = computed(() => {
+  const meses = [...new Set(cancelRango.value.map(c => c.iso.slice(0, 7)))].sort()
+  const ps = plantasTodas.value.filter(p => cancelRango.value.some(c => c.planta === p))
+  const m3 = (mes: string, p: string) => +cancelRango.value.filter(c => c.planta === p && c.iso.startsWith(mes)).reduce((a, c) => a + c.m3, 0).toFixed(1)
+  return vacio({
+    ...base(),
+    tooltip: { trigger: 'axis' as const, axisPointer: { type: 'shadow' as const },
+      formatter: (xs: any[]) => `<b>${xs[0].axisValueLabel}</b><br/>` + xs.map(x => `${punto(x.color)} ${x.seriesName}: <b>${fmtN(x.value)} m³</b>`).join('<br/>') },
+    legend: leyenda(ps.map(p => ({ name: p, itemStyle: { color: color(p) } }))),
+    grid: { left: 12, right: 16, bottom: 8, top: 40, containLabel: true },
+    xAxis: ejeX(meses.map(m => `${MESES_CORTOS[Number(m.slice(5, 7)) - 1]} ${m.slice(2, 4)}`)),
+    yAxis: ejeY(),
+    series: ps.map(p => ({ name: p, type: 'bar' as const, barMaxWidth: 16, barGap: '15%', emphasis, itemStyle: { color: color(p), borderRadius: [3, 3, 0, 0] },
+      data: meses.map(m => m3(m, p)), label: { ...labelPill.value, position: 'top' as const, formatter: (x: any) => (x.value ? fmtN(x.value) : '') } })),
+  }, meses.length > 0)
+})
+
+const tablaCli = computed(() => tablaClientes(opsRango.value, 10))
+const tablaCond = computed(() => tablaConductores(opsRango.value))
+const tablaBomb = computed(() => tablaBombeo(opsRango.value))
+const tablaCanc = computed(() => tablaCancelados(cancelRango.value))
+
 // ---------------------------------------------------------------- Granularidad
 type Gran = 'dia' | 'semana' | 'mes'
 // «Todo el período» agrupa solo según el largo del rango; Día/Semana/Mes fijan la agrupación
@@ -461,11 +557,12 @@ const optVenta = computed(() => {
   const total = (i: number) => per[i].venta + per[i].agrVenta
   // Con muchos puntos se rotula uno de cada n para que las píldoras no se monten
   const z = zoom(per.length)
-  const rotular = (i: number) => (per.length - 1 - i) % Math.ceil(Math.min(per.length, ventana.value) / 12) === 0
+  // Pesos completos (más largos): se rotulan como máximo 8 puntos de la ventana visible
+  const rotular = (i: number) => (per.length - 1 - i) % Math.ceil(Math.min(per.length, ventana.value) / 8) === 0
   // Una píldora con texto vacío igual pinta su fondo: la etiqueta se apaga punto por punto
   const serie = (name: string, c: string, data: number[], conLabel: boolean) => ({
     name, type: 'line' as const, smooth: true, symbol: 'circle', symbolSize: 5,
-    data: data.map((v, i) => ({ value: v, label: { show: conLabel && rotular(i) } })),
+    data: data.map((v, i) => ({ value: v, label: { show: conLabel && rotular(i) && v > 0 } })),
     lineStyle: { width: 2, color: c }, itemStyle: { color: c }, areaStyle: { opacity: 0.08, color: c },
     label: { ...labelPill.value, formatter: (x: any) => copCorto(x.value) },
   })
@@ -524,21 +621,22 @@ const optParticipacion = computed(() => {
   const r = resumenPlantas.value
   return vacio({
     ...base(),
-    title: {
-      text: fmtN(T.value.m3, 0), subtext: 'm³ de concreto', left: movil.value ? '49%' : '37%', top: movil.value ? '33%' : '44%', textAlign: 'center',
-      textStyle: { fontFamily: FONT, fontSize: 18, fontWeight: 700, color: isLight.value ? '#0f172a' : '#f1f5f9' },
-      subtextStyle: { fontFamily: FONT, fontSize: 11, color: chartTextColor.value },
-    },
     tooltip: { trigger: 'item' as const, formatter: (p: any) => `${punto(p.color)} <b>${p.name}</b><br/>${fmtN(p.value)} m³ (${pct(p.percent)})<br/>${cop(r[p.dataIndex].venta)}` },
     legend: {
       type: 'scroll' as const, ...(movil.value ? { type: 'scroll' as const, orient: 'horizontal' as const, left: 'center', bottom: 0 } : { orient: 'vertical' as const, right: 10, top: 'middle' }), icon: 'circle', itemWidth: 8, itemHeight: 8, itemGap: 12,
       textStyle: { fontFamily: FONT, fontWeight: 600 as const, color: chartTextColor.value, fontSize: 11 },
+      data: r.map(x => x.planta),
       formatter: (n: string) => { const x = r.find(y => y.planta === n); return x ? `${n}  ${fmtN(x.m3, 0)} m³` : n },
     },
-    series: [{
+    series: [donaCentro({
+      center: movil.value ? ['50%', '42%'] : ['38%', '55%'], radio: movil.value ? '38%' : '42%', valor: fmtN(T.value.m3, 0), sub: 'm³ de concreto', font: FONT,
+      color: isLight.value ? '#0f172a' : '#f1f5f9', colorSub: chartTextColor.value,
+    }), {
       type: 'pie' as const, radius: movil.value ? ['38%', '60%'] : ['42%', '68%'], center: movil.value ? ['50%', '42%'] : ['38%', '55%'], avoidLabelOverlap: true,
       itemStyle: { borderRadius: 2, borderColor: isLight.value ? '#fff' : '#0b0f1a', borderWidth: 2 },
-      label: { show: true, formatter: (p: any) => pct(p.percent), fontSize: 11, fontWeight: 600, fontFamily: FONT, color: chartTextColor.value },
+      // % dentro del anillo: por fuera chocaba con la leyenda cuando la tarjeta es angosta
+      label: { show: true, position: 'inside' as const, formatter: (p: any) => (p.percent >= 4 ? pct(p.percent, 0) : ''), fontSize: 11, fontWeight: 700, fontFamily: FONT, color: '#fff' },
+      labelLine: { show: false },
       data: r.map(x => ({ name: x.planta, value: +x.m3.toFixed(1), itemStyle: { color: color(x.planta) } })),
     }],
   }, r.length > 0)
@@ -859,6 +957,8 @@ const optOperariosTodos = computed(() => opcionRanking(rankOperarios.value, 'Ser
 /* Mismo tratamiento de títulos y KPIs que el tablero de Mantenimiento */
 .kpi-row { margin-bottom: 4px; }
 .kpi-row :deep(.kpi-value) { font-size: 19px; flex-wrap: wrap; overflow-wrap: anywhere; min-width: 0; }
+.section-title.primero { margin-top: 0; }
+.kpi-dia { margin-top: 12px; }
 .section-title { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 28px 0 0; display: flex; align-items: center; gap: 8px; letter-spacing: -0.3px; }
 .title-bar { width: 14px; height: 2px; background: var(--accent); display: inline-block; border-radius: 1px; }
 .charts-grid { margin-top: 16px; }
@@ -879,6 +979,10 @@ const optOperariosTodos = computed(() => opcionRanking(rankOperarios.value, 'Ser
 .gt-table tbody tr:hover td { background: var(--card-bg-hover); }
 .gt-table tfoot td { color: var(--text-primary); font-weight: 700; border-bottom: none; }
 .gt-table .r { text-align: right; }
+.gt-table td.wrap { white-space: normal; min-width: 180px; }
+/* Tablas agrupadas por planta (mismo estilo del informe): la planta una vez y su subtotal */
+.gt-table td.grp { vertical-align: top; border-right: 1px solid var(--card-border); background: var(--card-bg-hover); }
+.gt-table tr.subtotal td { background: var(--card-bg-hover); color: var(--text-primary); font-weight: 700; border-bottom: 2px solid var(--card-border); }
 .gt-table .strong { color: var(--text-primary); font-weight: 600; }
 .gt-table .pos { color: var(--success); font-weight: 600; }
 .gt-table .neg { color: var(--danger); font-weight: 600; }

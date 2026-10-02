@@ -5,10 +5,13 @@
     </div>
     <div class="kpi-body">
       <span class="kpi-label">{{ label }}</span>
-      <span class="kpi-value" :class="{ pulse: pulse }">
-        <slot>{{ value }}</slot>
-        <span v-if="unit" class="kpi-unit">{{ unit }}</span>
-      </span>
+      <!-- Al cambiar el valor (p. ej. por un filtro) entra con un fundido corto -->
+      <Transition name="kpi-swap" mode="out-in">
+        <span :key="value" class="kpi-value" :class="{ pulse: pulse }">
+          <slot>{{ value }}</slot>
+          <span v-if="unit" class="kpi-unit">{{ unit }}</span>
+        </span>
+      </Transition>
       <div v-if="detail" class="kpi-detail" v-html="detail"></div>
       <div v-if="trend" class="kpi-trend" :class="trendClass">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -157,6 +160,14 @@ function navigate() {
   font-size: 13px;
   font-weight: 500;
   color: var(--text-tertiary);
+}
+
+.kpi-swap-enter-active { transition: opacity .28s ease, transform .28s cubic-bezier(.2, .8, .2, 1); }
+.kpi-swap-leave-active { transition: opacity .12s ease; }
+.kpi-swap-enter-from { opacity: 0; transform: translateY(5px); }
+.kpi-swap-leave-to { opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .kpi-swap-enter-active, .kpi-swap-leave-active { transition: none; }
 }
 
 .kpi-value.pulse {

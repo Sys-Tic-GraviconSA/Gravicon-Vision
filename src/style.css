@@ -220,9 +220,15 @@ a {
 
 .sticky-top {
   position: sticky;
-  top: 0;
+  /* Dentro de una planta se pega bajo el encabezado (nombre + módulos); fuera de una planta, arriba */
+  top: var(--planta-h, 0px);
   z-index: 100;
   background: var(--bg);
+  /* Cubre también el margen lateral de la página (32px) para que el contenido no se asome por los lados al bajar,
+     y cierra con una línea y una sombra suave para separar lo que pasa por debajo */
+  margin: 0 -32px 16px;
+  padding: 10px 32px 10px;
+  box-shadow: 0 1px 0 var(--card-border), 0 10px 18px -14px rgba(15, 23, 42, 0.25);
 }
 
 @media (max-width: 1200px) {
@@ -236,6 +242,10 @@ a {
 }
 
 @media (max-width: 768px) {
+  /* En celular el encabezado no queda fijo: sin franja extendida ni sombra */
+  .sticky-top { margin: 0; padding: 0; box-shadow: none; }
+  /* En celular no hace falta reservar el lugar del botón «Limpiar» */
+  .clear-filters.oculto, .clear-btn.oculto, .action-btn.clear.oculto { display: none; }
   .page-layout {
     padding: 16px;
   }
@@ -296,3 +306,122 @@ a {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
+
+/* Cambio de vista dentro de un módulo (Gráficas, Detalle, Informe…): fundido suave */
+.vista-enter-active { transition: opacity .22s ease, transform .22s cubic-bezier(.2, .8, .2, 1); }
+.vista-leave-active { transition: opacity .12s ease; }
+.vista-enter-from { opacity: 0; transform: translateY(6px); }
+.vista-leave-to { opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .vista-enter-active, .vista-leave-active { transition: none; }
+}
+
+/* Botón «Limpiar» de los filtros: siempre ocupa su lugar y solo aparece o desaparece con un fundido,
+   así los filtros no se mueven cuando se activa */
+.clear-filters, .clear-btn, .action-btn.clear { transition: opacity .2s ease, visibility .2s, background-color .15s, color .15s; }
+.clear-filters.oculto, .clear-btn.oculto, .action-btn.clear.oculto { opacity: 0; visibility: hidden; pointer-events: none; }
+
+/* Botón «Actualizar»: el ícono gira suave mientras se vuelven a leer los datos (el contenido sigue a la vista) */
+.icono-actualizar { transition: transform .3s ease; }
+.icono-actualizar.girando { animation: girar-actualizar .9s cubic-bezier(.45, .05, .55, .95) infinite; }
+@keyframes girar-actualizar { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .icono-actualizar.girando { animation: none; } }
+
+/* ── Barra de filtros fija (computador y tablet) ──
+   Orden de lectura de un tablero: dónde estoy (planta y módulo, arriba en PlantaLayout) → qué vista (pestañas)
+   → qué recorte de datos (esta barra) → indicadores → gráficas. Por eso la barra NO repite el título de la vista
+   (ya lo dicen el nombre de la planta y el módulo activo) y es una sola franja de herramientas:
+     [ Ir a: General · Internos · Externos | aviso de datos | fuente ]  │  FILTROS  [chips…]          [ Actualizar ]
+                                                                                                        [ Limpiar    ]
+   Los filtros van sueltos, alineados a la izquierda, y bajan de fila si no caben (nunca con scroll). */
+@media (min-width: 769px) {
+  /* Una sola superficie con el encabezado de la planta: planta + módulos arriba, filtros abajo, sombra al final */
+  .sticky-top { background: var(--bg-elevated); padding-top: 4px; padding-bottom: 12px; }
+  /* Selectores reforzados (.x.x) para ganarle a los estilos propios de cada módulo */
+  .sticky-top .page-header.page-header {
+    display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center;
+    column-gap: 0; row-gap: 0; margin-bottom: 0; padding: 0; min-height: 44px;
+  }
+  /* Título de la vista: oculto (redundante). En Producción Concretos queda solo el aviso de frescura de datos */
+  .sticky-top .page-header .page-title.page-title { grid-column: 1; grid-row: 1; margin: 0 20px 0 0; font-size: 0; line-height: 1; white-space: nowrap; }
+  .sticky-top .page-header .page-title.page-title .freshness-badge { font-size: 11px; line-height: 1.4; margin: 0; }
+  .sticky-top .page-header .page-title.page-title:not(:has(.freshness-badge)) { display: none; }
+  /* Despacho: sin título; queda la fuente del archivo como dato de contexto */
+  .sticky-top .page-header .titulo-bloque.titulo-bloque { grid-column: 1; grid-row: 1 / span 2; min-width: 0; margin-right: 20px; }
+  .sticky-top .page-header .titulo-bloque .page-title.page-title { display: none; }
+  .sticky-top .page-header .titulo-bloque .fuente { display: block; max-width: 220px; white-space: normal; line-height: 1.35; font-size: 11.5px; }
+  /* Accesos rápidos (Mantenimiento) con su etiqueta «Ir a» */
+  .sticky-top .page-header > .filter-quick-nav { grid-column: 1; grid-row: 1 / span 2; margin: 0 20px 0 0; }
+  .sticky-top .page-header > .filter-quick-nav::before {
+    content: 'Ir a'; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-tertiary); margin-right: 2px;
+  }
+
+  /* Filtros y acciones: col. 2. Si a la izquierda hay algo (Ir a, aviso, fuente) se separa con una línea */
+  .sticky-top .page-header .header-actions.header-actions {
+    grid-column: 2; grid-row: 1 / span 2; align-self: stretch;
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 1fr 1fr; align-items: center;
+    column-gap: 16px; row-gap: 4px; min-width: 0; width: auto;
+  }
+  .sticky-top .page-header:has(> .filter-quick-nav, > .titulo-bloque, > .page-title .freshness-badge) > .header-actions.header-actions {
+    padding-left: 20px; border-left: 1px solid var(--card-border);
+  }
+  .sticky-top .page-header .filter-group.filter-group {
+    grid-column: 1; grid-row: 1 / span 2; align-self: center; justify-self: stretch;
+    display: flex; flex-wrap: wrap; justify-content: flex-start; align-items: center; gap: 6px 6px;
+    position: static; min-width: 0; width: auto; overflow: visible; margin: 0; padding: 0;
+    border: none; border-radius: 0; background: none; box-shadow: none;
+  }
+  .sticky-top .page-header .filter-group.filter-group::before {
+    content: 'Filtros'; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-tertiary); margin-right: 4px;
+  }
+  .sticky-top .page-header .filter-group.filter-group > * { flex: 0 0 auto; }
+  /* «Actualizar» arriba y «Limpiar» debajo; sin filtros activos «Limpiar» no ocupa lugar y «Actualizar» queda centrado */
+  .sticky-top .page-header .header-actions > .action-btn { grid-column: 2; grid-row: 1; align-self: end; justify-content: center; }
+  .sticky-top .page-header .header-actions > .clear-filters { grid-column: 2; grid-row: 2; align-self: start; justify-self: stretch; justify-content: center; }
+  .sticky-top .page-header .header-actions > .oculto { display: none; }
+  .sticky-top .page-header .header-actions:not(:has(> .clear-filters:not(.oculto))) > .action-btn { grid-row: 1 / span 2; align-self: center; }
+}
+/* Pantallas medianas (tablet, portátil pequeño): arriba «Ir a» / contexto y las acciones; debajo los filtros a todo el ancho */
+@media (min-width: 769px) and (max-width: 1180px) {
+  .sticky-top .page-header.page-header { grid-template-columns: minmax(0, 1fr) auto auto; column-gap: 8px; row-gap: 8px; }
+  .sticky-top .page-header .header-actions.header-actions { display: contents; }
+  .sticky-top .page-header .page-title.page-title,
+  .sticky-top .page-header .titulo-bloque.titulo-bloque,
+  .sticky-top .page-header > .filter-quick-nav { grid-column: 1; grid-row: 1; margin-right: 0; }
+  .sticky-top .page-header .header-actions > .clear-filters,
+  .sticky-top .page-header .header-actions:not(:has(> .clear-filters:not(.oculto))) > .action-btn,
+  .sticky-top .page-header .header-actions > .action-btn { grid-row: 1; align-self: center; justify-self: end; }
+  .sticky-top .page-header .header-actions > .clear-filters { grid-column: 2; }
+  .sticky-top .page-header .header-actions > .action-btn { grid-column: 3; }
+  .sticky-top .page-header .filter-group.filter-group { grid-column: 1 / -1; grid-row: 2; }
+}
+@media (max-width: 768px) {
+  .sticky-top .page-header .header-actions { justify-content: flex-end; }
+}
+
+/* ── Celular: los filtros van en un panel lateral derecho que se abre con el botón «Filtros» de la barra
+   superior (App.vue pone la clase filtros-abiertos en <body>). Se aplican al instante; el panel solo los
+   ordena para que no ocupen media pantalla. ── */
+@media (max-width: 768px) {
+  .sticky-top .page-header .filter-group.filter-group {
+    position: fixed; top: 0; right: 0; bottom: 0; z-index: 1400;
+    width: min(340px, 88vw); box-sizing: border-box; margin: 0;
+    flex-direction: column; flex-wrap: nowrap; align-items: stretch; justify-content: flex-start; gap: 8px;
+    padding: 68px 16px 84px; overflow-y: auto; overscroll-behavior: contain;
+    background: var(--bg-elevated); border: none; border-left: 1px solid var(--card-border); border-radius: 0;
+    box-shadow: -12px 0 40px rgba(0, 0, 0, 0.25);
+    transform: translateX(100%); visibility: hidden;
+    transition: transform var(--transition-slow), visibility var(--transition-slow);
+  }
+  /* Abierto sin transform: así los menús de los filtros (position: fixed) se ubican respecto a la pantalla */
+  body.filtros-abiertos .sticky-top .page-header .filter-group.filter-group { transform: none; visibility: visible; }
+  .sticky-top .page-header .filter-group.filter-group > * { flex: 0 0 auto; width: 100%; }
+  /* Cada filtro ocupa todo el ancho del panel, con su conteo (x/y) a la derecha */
+  .sticky-top .page-header .filter-group.filter-group .filter-bar,
+  .sticky-top .page-header .filter-group.filter-group .dropdown { width: 100%; }
+  .sticky-top .page-header .filter-group.filter-group .dropdown-toggle { width: 100%; justify-content: flex-start; padding: 10px 12px; font-size: 14px; }
+  .sticky-top .page-header .filter-group.filter-group .dropdown-toggle .badge { display: inline-block; margin-left: auto; }
+  .sticky-top .page-header .filter-group.filter-group .dropdown-toggle .chevron { flex-shrink: 0; margin-left: 8px; }
+  body.filtros-abiertos { overflow: hidden; }
+}
+

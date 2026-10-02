@@ -16,8 +16,27 @@
         <router-link to="/" class="mobile-logo" aria-label="Gravicon — inicio">
           <img :src="logoSrc" alt="Gravicon" />
         </router-link>
-        <div style="width: 36px;"></div>
+        <!-- Filtros de la vista (solo celular): abre el panel lateral derecho -->
+        <button v-if="hayFiltros" class="mobile-menu-btn mobile-filtros-btn" :class="{ activos: filtrosActivos }" :aria-expanded="filtrosAbiertos" aria-label="Filtros" title="Filtros" @click="filtrosAbiertos = !filtrosAbiertos">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+        </button>
+        <div v-else style="width: 36px;"></div>
       </header>
+
+      <!-- Panel de filtros en celular: el recuadro de filtros de la vista se vuelve un panel derecho (style.css);
+           aquí van el fondo, el título con «cerrar» y el botón para ver los resultados -->
+      <template v-if="filtrosAbiertos">
+        <div class="filtros-overlay" @click="filtrosAbiertos = false"></div>
+        <div class="filtros-panel-head">
+          <strong>Filtros</strong>
+          <button class="filtros-cerrar" aria-label="Cerrar filtros" @click="filtrosAbiertos = false">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="filtros-panel-foot">
+          <button class="filtros-ver" @click="filtrosAbiertos = false">Ver resultados</button>
+        </div>
+      </template>
 
       <!-- Overlay for Mobile Sidebar -->
       <div v-if="!collapsed" class="sidebar-overlay" @click="collapsed = true"></div>
@@ -35,25 +54,66 @@
         </div>
 
         <nav class="nav" data-guia="menu">
-          <button v-if="verPlanta.cuncia || verPlanta.acacias" class="nav-section" :class="{ active: openMenus.agr }" @click="toggle('agr')">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="2,20 12,2 22,20"/><line x1="12" y1="2" x2="12" y2="20"/></svg>
-            <span v-if="!collapsed">Agregados</span>
-            <svg v-if="!collapsed" class="chevron" :class="{ open: openMenus.agr }" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div v-if="!collapsed && openMenus.agr && (verPlanta.cuncia || verPlanta.acacias)" class="nav-children">
-            <router-link v-if="verPlanta.cuncia" to="/cuncia" class="nav-child" active-class="active" @click="handleLinkClick">Cuncía</router-link>
-            <router-link v-if="verPlanta.acacias" to="/acacias" class="nav-child" active-class="active" @click="handleLinkClick">Acacías</router-link>
-          </div>
+          <template v-for="sec in navSecciones" :key="sec.id">
+            <button
+              class="nav-section"
+              :class="{ active: collapsed ? flyout === sec.id : openMenus[sec.id], actual: sec.actual }"
+              :title="collapsed ? sec.label : undefined"
+              :aria-expanded="collapsed ? flyout === sec.id : openMenus[sec.id]"
+              @click="clickSeccion(sec.id, $event)"
+            >
+              <!-- Agregados: acopio (pila de material) con su banda transportadora -->
+              <svg v-if="sec.id === 'agr'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"/><path d="M3.5 20c1.3-5.4 4.6-9.5 8.5-9.5s7.2 4.1 8.5 9.5"/><path d="M8.5 16.5h.01"/><path d="M12 15h.01"/><path d="M15.5 17h.01"/><path d="M2.5 3.5 12 7"/></svg>
+              <!-- Concretos: camión mezclador (mixer) -->
+              <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/><path d="M15 18H8"/><path d="M4 18H2v-3h13"/><path d="M15 15V9h3l3 4v5h-2"/><ellipse cx="8" cy="9.5" rx="6" ry="3.4" transform="rotate(14 8 9.5)"/><path d="M5 7l1.5 5.3"/><path d="M9 7.5l1 5"/></svg>
+              <span v-if="!collapsed">{{ sec.label }}</span>
+              <svg v-if="!collapsed" class="chevron" :class="{ open: openMenus[sec.id] }" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
 
-          <button v-if="verPlanta.concretos" class="nav-section" :class="{ active: openMenus.concreto }" @click="toggle('concreto')">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-            <span v-if="!collapsed">Concretos</span>
-            <svg v-if="!collapsed" class="chevron" :class="{ open: openMenus.concreto }" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div v-if="!collapsed && openMenus.concreto && verPlanta.concretos" class="nav-children">
-            <router-link to="/concretos" class="nav-child" active-class="active" @click="handleLinkClick">General</router-link>
-          </div>
+            <!-- Barra expandida: plantas y sus módulos, plegables con animación -->
+            <div v-if="!collapsed" class="nav-collapse" :class="{ open: openMenus[sec.id] }" :inert="!openMenus[sec.id]">
+              <div class="nav-collapse-inner">
+                <div class="nav-children">
+                  <template v-for="pl in sec.plantas" :key="pl.id">
+                    <!-- Agregados: cada planta con sus módulos debajo -->
+                    <template v-if="sec.plantas.length > 1">
+                      <div class="nav-planta" :class="{ actual: pl.actual }">
+                        <router-link :to="`/${pl.id}`" class="nav-child nav-planta-link" :class="{ active: pl.actual }" @click="abrirPlanta(pl.id); handleLinkClick()">{{ pl.nombre }}</router-link>
+                        <button class="nav-planta-toggle" :aria-expanded="!!openPlantas[pl.id]" :aria-label="`${openPlantas[pl.id] ? 'Ocultar' : 'Ver'} módulos de ${pl.nombre}`" @click="openPlantas[pl.id] = !openPlantas[pl.id]">
+                          <svg class="chevron" :class="{ open: openPlantas[pl.id] }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                      </div>
+                      <div class="nav-collapse" :class="{ open: openPlantas[pl.id] }" :inert="!openPlantas[pl.id]">
+                        <div class="nav-collapse-inner">
+                          <div class="nav-modulos">
+                            <router-link v-for="m in pl.modulos" :key="m.id" :to="m.to" class="nav-modulo" :class="{ active: m.activo }" :aria-current="m.activo ? 'page' : undefined" @click="handleLinkClick">{{ m.label }}</router-link>
+                          </div>
+                        </div>
+                      </div>
+                    </template>
+                    <!-- Concretos (una sola planta): los módulos van directo bajo la sección -->
+                    <div v-else class="nav-modulos nav-modulos-directos">
+                      <router-link v-for="m in pl.modulos" :key="m.id" :to="m.to" class="nav-modulo" :class="{ active: m.activo }" :aria-current="m.activo ? 'page' : undefined" @click="handleLinkClick">{{ m.label }}</router-link>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </template>
         </nav>
+
+        <!-- Barra colapsada: al tocar el ícono de una sección se abre un panel flotante con sus plantas y módulos -->
+        <Teleport to="body">
+          <Transition name="nav-flyout">
+            <div v-if="collapsed && flyoutSeccion" ref="flyoutEl" class="nav-flyout" :style="flyoutPos" role="menu" :aria-label="flyoutSeccion.label">
+              <div class="nav-flyout-title">{{ flyoutSeccion.label }}</div>
+              <div v-for="pl in flyoutSeccion.plantas" :key="pl.id" class="nav-flyout-grupo">
+                <router-link v-if="flyoutSeccion.plantas.length > 1" :to="`/${pl.id}`" class="nav-flyout-planta" :class="{ active: pl.actual }" role="menuitem" @click="cerrarFlyout">{{ pl.nombre }}</router-link>
+                <router-link v-for="m in pl.modulos" :key="m.id" :to="m.to" class="nav-flyout-modulo" :class="{ active: m.activo, directo: flyoutSeccion.plantas.length === 1 }" role="menuitem" :aria-current="m.activo ? 'page' : undefined" @click="cerrarFlyout">{{ m.label }}</router-link>
+              </div>
+            </div>
+          </Transition>
+        </Teleport>
 
         <!-- Sidebar Footer with Avatar and Theme / Logout controls -->
         <div class="sidebar-footer" style="position:relative">
@@ -104,10 +164,19 @@
       <main class="main" :class="{ collapsed }">
         <router-view v-slot="{ Component }">
           <transition name="slide" mode="out-in">
-            <component :is="Component" :key="route.fullPath" />
+            <!-- Clave = primer tramo de la ruta (/cuncia, /concretos, /configuracion…): cambiar filtros (?query) o
+                 pestañas internas no vuelve a montar la página; solo cambiar de planta o de módulo -->
+            <component :is="Component" :key="route.path.split('/')[1] ?? ''" />
           </transition>
         </router-view>
       </main>
+
+      <!-- Volver al inicio de la página: aparece al bajar, en todas las vistas -->
+      <Transition name="subir">
+        <button v-if="mostrarSubir" class="btn-subir" title="Volver arriba" aria-label="Volver al inicio de la página" @click="subir">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+        </button>
+      </Transition>
 
       <GuiaInicio />
     </div>
@@ -115,10 +184,11 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { reactive, ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { PLANTAS, type PlantaId } from './config/plantas'
+import { moduloVisible } from './router'
 import { useTheme } from './composables/useTheme'
 import { useGuiaInicio, GUIA_VERSION } from './composables/useGuiaInicio'
 import GuiaInicio from './components/ui/GuiaInicio.vue'
@@ -129,22 +199,116 @@ const { theme, toggleTheme } = useTheme()
 const logoSrc = computed(() => theme.value === 'dark' ? '/Logos/logo-blanco.webp' : '/Logos/logo-azul.webp')
 
 const collapsed = ref(false)
+const openMenus = reactive<Record<'agr' | 'concreto', boolean>>({ agr: true, concreto: true })
 
-// Menú: una planta solo aparece si el usuario puede ver al menos uno de sus módulos;
-// una sección (Agregados / Concretos) solo si tiene alguna planta visible
-const verPlanta = computed(() => Object.fromEntries((Object.keys(PLANTAS) as PlantaId[]).map(id => [id,
-  authStore.canView(id) && PLANTAS[id].modulos.some(m => authStore.canView(`${id}/${m.id}`))])) as Record<PlantaId, boolean>)
+// Menú: Agregados (Cuncía, Acacías) y Concretos, cada planta con sus módulos (Producción, Despacho…).
+// Solo se muestran los módulos permitidos (mismo criterio que las pestañas de PlantaLayout); una planta
+// sin módulos visibles no aparece, y una sección sin plantas tampoco.
+type SeccionId = 'agr' | 'concreto'
+const SECCIONES: { id: SeccionId; label: string; plantas: PlantaId[] }[] = [
+  { id: 'agr', label: 'Agregados', plantas: ['cuncia', 'acacias'] },
+  { id: 'concreto', label: 'Concretos', plantas: ['concretos'] },
+]
+/** Planta y módulo de la ruta actual: /cuncia/produccion/… → ['cuncia', 'produccion'] */
+const tramos = computed(() => route.path.split('/').filter(Boolean))
+const navSecciones = computed(() => SECCIONES.map(sec => {
+  const plantas = sec.plantas
+    .filter(id => authStore.canView(id))
+    .map(id => {
+      const actual = tramos.value[0] === id
+      const modulos = PLANTAS[id].modulos
+        .filter(m => moduloVisible(id, m.id))
+        .map(m => ({ id: m.id, label: m.label, to: { name: `${id}-${m.id}` }, activo: actual && tramos.value[1] === m.id }))
+      return { id, nombre: PLANTAS[id].nombre, actual, modulos }
+    })
+    .filter(p => p.modulos.length)
+  return { ...sec, plantas, actual: plantas.some(p => p.actual) }
+}).filter(sec => sec.plantas.length))
+
+// Plantas desplegadas (Agregados): la de la ruta actual se abre sola; las demás las abre el usuario
+const openPlantas = reactive<Partial<Record<PlantaId, boolean>>>({})
+function abrirPlanta(id: PlantaId) { openPlantas[id] = true }
+watch(() => tramos.value[0], id => {
+  if (!id || !(id in PLANTAS)) return
+  // Al cambiar de planta queda desplegada solo la nueva (acordeón); dentro de la misma no se toca
+  for (const k of Object.keys(openPlantas) as PlantaId[]) openPlantas[k] = false
+  abrirPlanta(id as PlantaId)
+  const sec = SECCIONES.find(s => s.plantas.includes(id as PlantaId))
+  if (sec) openMenus[sec.id] = true
+}, { immediate: true })
+
+// ── Panel flotante con la barra colapsada ──
+const flyout = ref<SeccionId | null>(null)
+const flyoutEl = ref<HTMLElement | null>(null)
+const flyoutTop = ref(0)
+const flyoutSeccion = computed(() => navSecciones.value.find(s => s.id === flyout.value) ?? null)
+const flyoutPos = computed(() => ({ top: `${flyoutTop.value}px`, left: 'calc(var(--sidebar-collapsed) + 8px)' }))
+function cerrarFlyout() { flyout.value = null }
+async function clickSeccion(id: SeccionId, e: MouseEvent) {
+  if (!collapsed.value) { toggle(id); return }
+  if (flyout.value === id) { cerrarFlyout(); return }
+  flyout.value = id
+  flyoutTop.value = (e.currentTarget as HTMLElement).getBoundingClientRect().top
+  // Que no se salga por abajo de la ventana
+  await nextTick()
+  const alto = flyoutEl.value?.offsetHeight ?? 0
+  flyoutTop.value = Math.max(8, Math.min(flyoutTop.value, window.innerHeight - alto - 8))
+}
+watch(() => route.path, cerrarFlyout)
+watch(collapsed, cerrarFlyout)
+function onKeydown(e: KeyboardEvent) { if (e.key === 'Escape') { cerrarFlyout(); filtrosAbiertos.value = false } }
 
 function handleDocClick(e: MouseEvent) {
   const target = e.target as HTMLElement
   if (!target.closest('.sidebar-footer')) closeUserMenu()
+  if (!target.closest('.nav-flyout') && !target.closest('.nav-section')) cerrarFlyout()
+}
+// ── Filtros en celular: panel lateral derecho ──
+// La vista actual tiene filtros si existe su recuadro .filter-group en el encabezado; «activos» = su botón
+// «Limpiar» está visible. Se revisa cuando cambia el contenido (MutationObserver, una vez por cuadro).
+const hayFiltros = ref(false)
+const filtrosActivos = ref(false)
+const filtrosAbiertos = ref(false)
+let observador: MutationObserver | null = null
+let revisionPendiente = false
+function revisarFiltros() {
+  if (revisionPendiente) return
+  revisionPendiente = true
+  requestAnimationFrame(() => {
+    revisionPendiente = false
+    const grupo = document.querySelector('.main .sticky-top .filter-group')
+    hayFiltros.value = !!grupo
+    // «Limpiar» está junto a «Actualizar», fuera del recuadro de filtros
+    filtrosActivos.value = !!grupo?.closest('.sticky-top')?.querySelector('.clear-filters:not(.oculto), .clear-btn:not(.oculto), .action-btn.clear:not(.oculto)')
+    if (!grupo) filtrosAbiertos.value = false
+  })
+}
+watch(filtrosAbiertos, v => document.body.classList.toggle('filtros-abiertos', v))
+watch(() => route.path, () => { filtrosAbiertos.value = false; revisarFiltros() })
+
+// Botón «Volver arriba»: visible después de bajar una pantalla aprox.
+const mostrarSubir = ref(false)
+function onScroll() { mostrarSubir.value = window.scrollY > 500 }
+function subir() {
+  const suave = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  window.scrollTo({ top: 0, behavior: suave ? 'smooth' : 'auto' })
 }
 onMounted(() => {
   collapsed.value = window.innerWidth <= 768
   document.addEventListener('click', handleDocClick)
+  document.addEventListener('keydown', onKeydown)
+  window.addEventListener('scroll', onScroll, { passive: true })
+  observador = new MutationObserver(revisarFiltros)
+  observador.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] })
+  revisarFiltros()
 })
-onUnmounted(() => document.removeEventListener('click', handleDocClick))
-const openMenus = reactive({ agr: true, concreto: true })
+onUnmounted(() => {
+  document.removeEventListener('click', handleDocClick)
+  document.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('scroll', onScroll)
+  observador?.disconnect()
+  document.body.classList.remove('filtros-abiertos')
+})
 
 const userInitial = computed(() => authStore.userEmail.charAt(0).toUpperCase())
 const userRole = computed(() => authStore.role)
@@ -315,12 +479,131 @@ async function handleLogout() {
 .chevron { margin-left: auto; transition: transform var(--transition-base); opacity: .3; }
 .chevron.open { transform: rotate(180deg); }
 
+/* Barra colapsada: la sección de la ruta actual queda marcada aunque no tenga texto */
+.sidebar.collapsed .nav-section.actual { color: var(--sidebar-text-hover); background: var(--sidebar-active); }
+.sidebar.collapsed .nav-section.actual svg { opacity: 1; }
+
+/* Plegar/desplegar con animación de altura (grid 0fr → 1fr, sin medir en JS) */
+.nav-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows var(--transition-base), opacity var(--transition-base);
+}
+.nav-collapse.open { grid-template-rows: 1fr; opacity: 1; }
+.nav-collapse-inner { min-height: 0; overflow: hidden; }
+
 .nav-children {
   display: flex;
   flex-direction: column;
   gap: 1px;
   padding-left: 30px;
-  margin-bottom: 6px;
+  padding-bottom: 6px;
+}
+
+/* Planta (Cuncía, Acacías): enlace + botón para ver sus módulos */
+.nav-planta { display: flex; align-items: center; gap: 2px; }
+.nav-planta-link { flex: 1; min-width: 0; }
+/* La planta actual se marca solo con el texto: el fondo queda para el módulo activo */
+.nav-planta .nav-planta-link.active { background: none; font-weight: 600; }
+.nav-planta .nav-planta-link.active:hover { background: var(--sidebar-hover); }
+.nav-planta-toggle {
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; background: none; border-radius: 6px;
+  color: var(--sidebar-text); cursor: pointer; flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+.nav-planta-toggle:hover { color: var(--sidebar-text-hover); background: var(--sidebar-hover); }
+.nav-planta-toggle .chevron { margin-left: 0; opacity: .8; }
+.nav-planta-toggle:focus-visible,
+.nav-modulo:focus-visible,
+.nav-child:focus-visible,
+.nav-section:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* Módulos de una planta: lista con guía vertical; el activo se marca con la barra de acento */
+.nav-modulos {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 2px 0 4px 12px;
+  padding-left: 8px;
+  border-left: 1px solid var(--card-border);
+}
+.nav-modulos-directos { margin-left: 0; }
+.nav-modulo {
+  position: relative;
+  display: block;
+  padding: 5px 10px;
+  color: var(--sidebar-text);
+  text-decoration: none;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 450;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all var(--transition-fast);
+}
+.nav-modulo:hover { color: var(--sidebar-text-hover); background: var(--sidebar-hover); }
+.nav-modulo.active { color: var(--accent); background: var(--sidebar-active); font-weight: 600; }
+.nav-modulo.active::before {
+  content: '';
+  position: absolute;
+  left: -9px; top: 6px; bottom: 6px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+/* Panel flotante (barra colapsada) */
+.nav-flyout {
+  position: fixed;
+  z-index: 300;
+  min-width: 190px;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+  padding: 6px;
+  /* Fondo sólido en ambos temas (--card-bg es translúcido en el oscuro) */
+  background: var(--bg-elevated);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+}
+.nav-flyout-title {
+  padding: 6px 10px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.nav-flyout-grupo + .nav-flyout-grupo { margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--card-border); }
+.nav-flyout-planta,
+.nav-flyout-modulo {
+  display: block;
+  padding: 6px 10px;
+  border-radius: 6px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.nav-flyout-planta { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.nav-flyout-modulo { padding-left: 20px; font-size: 13px; font-weight: 450; color: var(--text-secondary); }
+.nav-flyout-modulo.directo { padding-left: 10px; }
+.nav-flyout-planta:hover,
+.nav-flyout-modulo:hover { background: var(--card-bg-hover); color: var(--text-primary); }
+.nav-flyout-planta.active { color: var(--accent); }
+.nav-flyout-modulo.active { color: var(--accent); background: var(--accent-light); font-weight: 600; }
+.nav-flyout-enter-active,
+.nav-flyout-leave-active { transition: opacity var(--transition-fast), transform var(--transition-fast); }
+.nav-flyout-enter-from,
+.nav-flyout-leave-to { opacity: 0; transform: translateX(-4px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-collapse,
+  .nav-flyout-enter-active,
+  .nav-flyout-leave-active { transition: none; }
 }
 
 .nav-child {
@@ -485,6 +768,30 @@ async function handleLogout() {
   background: var(--danger-light);
 }
 
+/* Volver arriba (abajo a la derecha, en todas las páginas) */
+.btn-subir {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 150;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--card-border);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+}
+.btn-subir:hover { color: var(--accent); border-color: var(--accent); transform: translateY(-2px); }
+.btn-subir:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.subir-enter-active, .subir-leave-active { transition: opacity var(--transition-base), transform var(--transition-base); }
+.subir-enter-from, .subir-leave-to { opacity: 0; transform: translateY(8px); }
+
 .main {
   margin-left: var(--sidebar-width);
   flex: 1;
@@ -538,6 +845,11 @@ async function handleLogout() {
   .mobile-header .mobile-logo { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; }
   .mobile-header .mobile-logo img { height: 34px; width: auto; display: block; }
 
+  /* Celular: áreas táctiles más altas en el menú */
+  .nav-child { padding: 9px 12px; }
+  .nav-modulo { padding: 9px 10px; font-size: 13px; }
+  .nav-planta-toggle { width: 36px; height: 36px; }
+
   .sidebar-overlay {
     position: fixed;
     top: 0;
@@ -584,7 +896,34 @@ async function handleLogout() {
   }
 }
 
+@media (max-width: 768px) {
+  .btn-subir { right: 16px; bottom: 16px; width: 40px; height: 40px; }
+
+  /* Botón «Filtros» de la barra superior; el punto indica que hay filtros aplicados */
+  .mobile-filtros-btn { position: relative; }
+  .mobile-filtros-btn.activos::after {
+    content: ''; position: absolute; top: 6px; right: 6px; width: 8px; height: 8px;
+    border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--sidebar-bg);
+  }
+  .filtros-overlay { position: fixed; inset: 0; z-index: 1390; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(3px); }
+  .filtros-panel-head,
+  .filtros-panel-foot {
+    position: fixed; right: 0; z-index: 1410; width: min(340px, 88vw); box-sizing: border-box;
+    display: flex; align-items: center; background: var(--bg-elevated);
+  }
+  .filtros-panel-head { top: 0; height: 56px; padding: 0 8px 0 16px; justify-content: space-between; border-bottom: 1px solid var(--card-border); color: var(--text-primary); font-size: 15px; }
+  .filtros-panel-foot { bottom: 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--card-border); }
+  .filtros-cerrar { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: none; background: none; border-radius: 8px; color: var(--text-secondary); cursor: pointer; }
+  .filtros-cerrar:hover { background: var(--card-bg-hover); color: var(--text-primary); }
+  .filtros-ver { width: 100%; padding: 11px; border: none; border-radius: 8px; background: var(--accent); color: #fff; font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; }
+}
+/* En computador el botón y el panel de filtros no existen */
+@media (min-width: 769px) {
+  .mobile-filtros-btn, .filtros-overlay, .filtros-panel-head, .filtros-panel-foot { display: none !important; }
+}
+
 @media print {
+  .btn-subir,
   .sidebar,
   .mobile-header,
   .sidebar-overlay,

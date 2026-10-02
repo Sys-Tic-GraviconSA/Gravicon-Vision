@@ -86,6 +86,30 @@ export function segmentos(e: Estado): string[] {
   return [e.area, panel, vista]
 }
 
+/**
+ * Todas las ubicaciones canónicas de Mantenimiento de una planta, en el orden de preferencia
+ * (el mismo de las pestañas). El router las usa para llevar al usuario a la primera vista permitida.
+ */
+export function estadosMantenimiento(concretos: boolean): string[][] {
+  const out: string[][] = []
+  for (const area of ['planta', 'maquinaria'] as const) {
+    const base: Omit<Estado, 'panel'> = { ...DEFECTO, area }
+    const paneles: Panel[] = ['dashboard', 'almacen', 'gerencial', 'disponibilidad',
+      ...(concretos && area === 'maquinaria' ? ['inspeccion' as const] : []),
+      ...(concretos ? ['combustible' as const] : [])]
+    for (const panel of paneles) {
+      const vistas: Partial<Estado>[] = panel === 'dashboard' ? (Object.keys(OT_URL) as VistaOT[]).map(ot => ({ ot }))
+        : panel === 'almacen' ? (Object.keys(ALMACEN_URL) as VistaAlmacen[]).map(almacen => ({ almacen }))
+        : panel === 'disponibilidad' ? DISP.map(disp => ({ disp }))
+        : panel === 'inspeccion' ? LLANTAS.map(llantas => ({ llantas }))
+        : [{}]
+      for (const v of vistas) out.push(segmentos({ ...base, panel, ...v }))
+    }
+  }
+  for (const tareas of TAREAS) out.push(segmentos({ ...DEFECTO, area: 'tareas', tareas }))
+  return out
+}
+
 export function useRutaMantenimiento(opciones: { normalizar?: boolean } = {}) {
   const route = useRoute()
   const router = useRouter()

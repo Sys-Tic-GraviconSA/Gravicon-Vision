@@ -1,6 +1,6 @@
 <template>
   <div class="page-layout">
-    <SkeletonLoader v-if="loading" variant="dashboard" :kpis="4" :charts="2" label="Cargando programación…" />
+    <SkeletonLoader v-if="loading && !rows.length" variant="dashboard" :kpis="4" :charts="2" label="Cargando programación…" />
     <div class="page-state error" v-else-if="error">
       <span class="error-icon">!</span>
       <div><strong>Error al cargar datos</strong><p>{{ error }}</p></div>
@@ -15,18 +15,25 @@
           <h2 class="page-title">Programación Agregados</h2>
           <div class="header-actions">
             <div class="filter-group">
-              <FilterBar :data="tableSource" date-field="Fecha" :showProvider="false" @dateRangeFilter="onDateRangeFilter" />
+              <FilterBar :data="tableSource" date-field="Fecha" :showProvider="false" :from="fechaInicio" :to="fechaFin" @dateRangeFilter="onDateRangeFilter" />
               <MultiSelect v-model="selectedMaterials" :options="materialOptions" label="Material" icon="filter" />
               <MultiSelect v-model="selectedTransports" :options="transportOptions" label="Transporte" icon="filter" />
               <MultiSelect v-model="selectedResponsables" :options="responsableOptions" label="Responsable" icon="user" />
-              <button v-if="hasActiveFilters" class="clear-btn" @click="clearFilters">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                Limpiar
-              </button>
             </div>
+            <!-- «Limpiar» en la misma fila que «Actualizar» -->
+            <button class="clear-filters" :class="{ oculto: !hasActiveFilters }" :tabindex="hasActiveFilters ? 0 : -1" :aria-hidden="!hasActiveFilters" title="Quitar filtros" @click="clearFilters">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <span>Limpiar</span>
+            </button>
+            <button class="action-btn" :disabled="loading" title="Volver a leer la programación" @click="fetchData(true)">
+              <svg class="icono-actualizar" :class="{ girando: loading }" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              {{ loading ? 'Actualizando…' : 'Actualizar' }}
+            </button>
           </div>
         </header>
+      </div>
 
+      <!-- Empresa y unidad (fuera del encabezado fijo: al bajar solo quedan título y filtros) -->
         <nav class="tab-bar">
           <RouterLink v-for="t in tabs" :key="t.id" :to="{ params: { empresa: t.id } }" class="tab-btn" :class="{ active: activeTab === t.id }" :aria-current="activeTab === t.id ? 'page' : undefined">{{ t.label }}</RouterLink>
         </nav>
@@ -34,7 +41,6 @@
         <nav class="sub-tab-bar">
           <button v-for="u in unitOpts" :key="u" class="sub-tab-btn" :class="{ active: activeUnit === u }" @click="activeUnit = u">{{ u }}</button>
         </nav>
-      </div>
 
       <div class="kpi-row kpi-3">
         <KpiCard label="Registros" accent="#6366F1" icon="list">{{ unitFiltered.length }}</KpiCard>
@@ -57,6 +63,7 @@
 import SkeletonLoader from '../../components/ui/SkeletonLoader.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useQueryDate, useQuerySet, NINGUNA } from '../../composables/useQueryState'
 import { cargarConCache } from '../../stores/api'
 import KpiCard from '../../components/dashboard/KpiCard.vue'
 import DataTable from '../../components/dashboard/DataTable.vue'
@@ -78,11 +85,9 @@ const error = ref<string | null>(null)
 const route = useRoute()
 const activeTab = computed(() => (route.params.empresa === 'cliente' ? 'cliente' : 'gravicon'))
 const activeUnit = ref('')
-const fechaInicio = ref('')
-const fechaFin = ref('')
-const selectedMaterials = ref(new Set<string>())
-const selectedTransports = ref(new Set<string>())
-const selectedResponsables = ref(new Set<string>())
+// Filtros en la URL (como el resto de módulos): fechas y listas; sin marca = todos
+const fechaInicio = useQueryDate('desde')
+const fechaFin = useQueryDate('hasta')
 
 /** Copia local al instante y luego datos del servidor; `force` (Reintentar) salta las cachés */
 function fetchData(force = false) {
@@ -124,61 +129,46 @@ const tabs = [
   { id: 'cliente' as const, label: 'Transporte Cliente' },
 ]
 
-const materialOptions = computed(() => {
-  const set = new Set<string>()
-  for (const r of rows.value) {
-    const v = String(r['tipo_de_material'] ?? '').trim()
-    if (v) set.add(v)
-  }
-  return [...set].sort()
+// ── Filtros en cascada: cada lista muestra solo lo que existe con las fechas y los demás filtros marcados ──
+const CAMPOS = { material: 'tipo_de_material', transporte: 'responsable_del_transporte', responsable: 'responsable_del_registro' } as const
+type Filtro = keyof typeof CAMPOS
+const valor = (r: any, f: Filtro) => String(r[CAMPOS[f]] ?? '').trim()
+const marcadosUrl = (key: string): Set<string> | null => {
+  const raw = route.query[key]
+  if (raw === undefined || raw === null) return null
+  const v = (Array.isArray(raw) ? raw : [raw]).map(String).filter(x => x !== NINGUNA)
+  return v.length ? new Set(v) : null
+}
+const enFechas = computed(() => {
+  const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
+  const until = fechaFin.value ? dateToSerial(fechaFin.value) : Infinity
+  return tableSource.value.filter(r => { const v = Number(r['Fecha']); return !isNaN(v) && v >= since && v <= until })
 })
-const transportOptions = computed(() => {
-  const set = new Set<string>()
-  for (const r of rows.value) {
-    const v = String(r['responsable_del_transporte'] ?? '').trim()
-    if (v) set.add(v)
-  }
-  return [...set].sort()
-})
-const responsableOptions = computed(() => {
-  const set = new Set<string>()
-  for (const r of rows.value) {
-    const v = String(r['responsable_del_registro'] ?? '').trim()
-    if (v) set.add(v)
-  }
-  return [...set].sort()
-})
+/** Filas en las fechas que pasan los filtros marcados en la URL, menos el indicado (`salvo`) */
+function filasPara(salvo?: Filtro) {
+  const sel = (Object.keys(CAMPOS) as Filtro[]).filter(f => f !== salvo).map(f => [f, marcadosUrl(f)] as const)
+  return enFechas.value.filter(r => sel.every(([f, m]) => !m || m.has(valor(r, f))))
+}
+const opciones = (f: Filtro) => [...new Set(filasPara(f).map(r => valor(r, f)).filter(Boolean))].sort()
+const materialOptions = computed(() => opciones('material'))
+const transportOptions = computed(() => opciones('transporte'))
+const responsableOptions = computed(() => opciones('responsable'))
+const selectedMaterials = useQuerySet('material', () => materialOptions.value)
+const selectedTransports = useQuerySet('transporte', () => transportOptions.value)
+const selectedResponsables = useQuerySet('responsable', () => responsableOptions.value)
 
-const hasActiveFilters = computed(() =>
-  !!(fechaInicio.value && fechaFin.value) ||
-  selectedMaterials.value.size > 0 ||
-  selectedTransports.value.size > 0 ||
-  selectedResponsables.value.size > 0
-)
+const hasActiveFilters = computed(() => !!(fechaInicio.value || fechaFin.value) || (Object.keys(CAMPOS) as Filtro[]).some(f => !!marcadosUrl(f)))
 
 function clearFilters() {
   fechaInicio.value = ''
   fechaFin.value = ''
-  selectedMaterials.value = new Set()
-  selectedTransports.value = new Set()
-  selectedResponsables.value = new Set()
+  selectedMaterials.value = new Set(materialOptions.value)
+  selectedTransports.value = new Set(transportOptions.value)
+  selectedResponsables.value = new Set(responsableOptions.value)
 }
 
-const filtered = computed(() => {
-  const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
-  const until = fechaFin.value ? dateToSerial(fechaFin.value) : Infinity
-  const hasMat = selectedMaterials.value.size > 0
-  const hasTrans = selectedTransports.value.size > 0
-  const hasResp = selectedResponsables.value.size > 0
-  return tableSource.value.filter(r => {
-    const v = Number(r['Fecha'])
-    if (typeof v !== 'number' || isNaN(v) || v < since || v > until) return false
-    if (hasMat && !selectedMaterials.value.has(String(r['tipo_de_material'] ?? '').trim())) return false
-    if (hasTrans && !selectedTransports.value.has(String(r['responsable_del_transporte'] ?? '').trim())) return false
-    if (hasResp && !selectedResponsables.value.has(String(r['responsable_del_registro'] ?? '').trim())) return false
-    return true
-  })
-})
+// Datos: fechas y lo marcado en la URL (sin marca = todos)
+const filtered = computed(() => filasPara())
 
 function tabFilterFn(tabId: string): (r: Record<string, unknown>) => boolean {
   if (tabId === 'gravicon') return r => String(r['responsable_del_transporte'] ?? '').toLowerCase().includes('gravicon') || String(r['responsable_del_transporte'] ?? '').toLowerCase().includes('incondor')
@@ -414,4 +404,16 @@ a.tab-btn { text-decoration: none; display: inline-flex; align-items: center; }
   .tab-bar { margin-bottom: 12px; }
   .sub-tab-bar { margin-bottom: 14px; }
 }
+.clear-filters {
+  display: inline-flex; align-items: center; gap: 5px; padding: 7px 10px;
+  border: none; border-radius: var(--radius-md); background: transparent; color: var(--text-tertiary);
+  font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer;
+}
+.clear-filters:hover { background: var(--danger-light); color: var(--danger); }
+.action-btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: none; border-radius: var(--radius-md);
+  background: var(--accent-light); color: var(--accent); font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap;
+}
+.action-btn:hover:not(:disabled) { background: rgba(59, 130, 246, .2); }
+.action-btn:disabled { opacity: .7; cursor: default; }
 </style>

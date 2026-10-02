@@ -7,10 +7,11 @@
         <path v-if="icon === 'user'" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle v-if="icon === 'user'" cx="9" cy="7" r="4"/>
       </svg>
       <span>{{ label }}</span>
-      <span class="badge">{{ modelValue.size }}/{{ options.length }}</span>
+      <Transition name="ms-badge" mode="out-in"><span :key="`${modelValue.size}/${options.length}`" class="badge">{{ modelValue.size }}/{{ options.length }}</span></Transition>
       <svg class="chevron" :class="{ open: isOpen }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
     </button>
     <Teleport to="body">
+      <Transition name="ms-menu">
       <div
         v-if="isOpen"
         class="dropdown-menu"
@@ -39,6 +40,7 @@
           <div v-if="!visibles.length" class="dropdown-empty">Sin resultados</div>
         </div>
       </div>
+      </Transition>
     </Teleport>
   </div>
 </template>
@@ -211,8 +213,10 @@ onUnmounted(() => {
   padding: 1px 6px;
   background: var(--bg);
   border-radius: 10px;
-  min-width: 36px;
+  /* Ancho fijo con cifras de igual ancho: al cambiar el conteo (p. ej. 470/470 → 89/89) los filtros no se corren */
+  min-width: 40px;
   text-align: center;
+  font-variant-numeric: tabular-nums;
   font-variant-numeric: tabular-nums;
 }
 
@@ -225,6 +229,17 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .dropdown-toggle { padding: 5px 8px; font-size: 12px; }
   .badge { display: none; }
+}
+/* Animaciones suaves: el menú aparece con un fundido corto y el contador cambia sin saltos */
+.ms-menu-enter-active { transition: opacity .16s ease, transform .18s cubic-bezier(.2, .8, .2, 1); }
+.ms-menu-leave-active { transition: opacity .12s ease, transform .12s ease; }
+.ms-menu-enter-from, .ms-menu-leave-to { opacity: 0; transform: translateY(-4px) scale(.98); }
+.ms-badge-enter-active { transition: opacity .2s ease, transform .2s cubic-bezier(.2, .8, .2, 1); }
+.ms-badge-leave-active { transition: opacity .1s ease; }
+.ms-badge-enter-from { opacity: 0; transform: translateY(3px); }
+.ms-badge-leave-to { opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .ms-menu-enter-active, .ms-menu-leave-active, .ms-badge-enter-active, .ms-badge-leave-active { transition: none; }
 }
 </style>
 

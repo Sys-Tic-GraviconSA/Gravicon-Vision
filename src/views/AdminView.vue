@@ -246,7 +246,48 @@ interface Vista { key: string; label: string }
 interface Grupo { id: string; label: string; vistas: Vista[] }
 
 /** Vistas agrupadas por planta. La primera vista de cada grupo es la raíz (su clave = id del grupo). */
-// Las claves son las rutas de cada pantalla (el router las usa tal cual para permitir o bloquear)
+// Las claves son las rutas de cada pantalla (el router las usa tal cual para permitir o bloquear).
+// No cambiar claves existentes: se perderían los permisos ya asignados. Solo el texto se puede ajustar.
+
+/**
+ * Mantenimiento (/:planta/mantenimiento/:area/:seccion/:vista, ver useRutaMantenimiento).
+ * Disponibilidad, Llantas y Combustible tienen además una clave general (…/mantenimiento/disponibilidad,
+ * …/inspeccion, …/combustible) que aplica a todas las áreas.
+ */
+function vistasMantenimiento(p: string, concretos: boolean): Vista[] {
+  const m = `${p}/mantenimiento`
+  const area = (a: 'planta' | 'maquinaria', nombre: string): Vista[] => [
+    { key: `${m}/${a}`, label: `Mant. ${nombre}` },
+    { key: `${m}/${a}/ordenes`, label: `${nombre} · Órdenes de Trabajo` },
+    { key: `${m}/${a}/almacen`, label: `${nombre} · Almacén` },
+    { key: `${m}/${a}/gerencial`, label: `${nombre} · Gerencial` },
+    { key: `${m}/${a}/disponibilidad`, label: `${nombre} · Disponibilidad` },
+    ...(concretos ? [{ key: `${m}/${a}/combustible`, label: `${nombre} · Combustible` }] : []),
+    // Llantas solo existe en Maquinaria de Concretos (en la URL «llantas»; su clave general es …/inspeccion)
+    ...(concretos && a === 'maquinaria' ? [
+      { key: `${m}/${a}/llantas`, label: `${nombre} · Llantas` },
+      { key: `${m}/${a}/llantas/graficas`, label: 'Llantas · Gráficas' },
+      { key: `${m}/${a}/llantas/alertas`, label: 'Llantas · Alertas' },
+      { key: `${m}/${a}/llantas/inventario`, label: 'Llantas · Inventario' },
+      { key: `${m}/${a}/llantas/informe`, label: 'Llantas · Informe' },
+    ] : []),
+  ]
+  return [
+    { key: m, label: 'Mantenimiento' },
+    { key: `${m}/disponibilidad`, label: 'Mant. Disponibilidad (todas las áreas)' },
+    ...(concretos ? [
+      { key: `${m}/inspeccion`, label: 'Mant. Llantas (todas las vistas)' },
+      { key: `${m}/combustible`, label: 'Mant. Combustible (todas las áreas)' },
+    ] : []),
+    ...area('planta', 'Planta'),
+    ...area('maquinaria', 'Maquinaria'),
+    { key: `${m}/tareas`, label: 'Mant. Tareas' },
+    { key: `${m}/tareas/graficas`, label: 'Tareas · Gráficas' },
+    { key: `${m}/tareas/tabla`, label: 'Tareas · Tabla' },
+    { key: `${m}/tareas/informe`, label: 'Tareas · Informe' },
+  ]
+}
+
 function vistasAgregados(p: string): Vista[] {
   return [
     { key: p, label: 'Acceso general' },
@@ -260,11 +301,9 @@ function vistasAgregados(p: string): Vista[] {
     { key: `${p}/facturacion/informe`, label: 'Despacho · Informe' },
     { key: `${p}/facturacion/balance`, label: 'Despacho · Producción vs Despacho' },
     { key: `${p}/programacion`, label: 'Programación' },
-    { key: `${p}/mantenimiento`, label: 'Mantenimiento' },
-    { key: `${p}/mantenimiento/planta`, label: 'Mant. Planta' },
-    { key: `${p}/mantenimiento/maquinaria`, label: 'Mant. Maquinaria' },
-    { key: `${p}/mantenimiento/disponibilidad`, label: 'Mant. Disponibilidad' },
-    { key: `${p}/mantenimiento/tareas`, label: 'Mant. Tareas' },
+    { key: `${p}/programacion/gravicon`, label: 'Programación · Gravicon' },
+    { key: `${p}/programacion/cliente`, label: 'Programación · Cliente' },
+    ...vistasMantenimiento(p, false),
   ]
 }
 const grupos: Grupo[] = [
@@ -274,14 +313,12 @@ const grupos: Grupo[] = [
     { key: 'concretos', label: 'Acceso general' },
     { key: 'concretos/produccion', label: 'Producción' },
     { key: 'concretos/produccion/planta', label: 'Producción Planta' },
+    { key: 'concretos/produccion/planta/graficas', label: 'Producción Planta · Gráficas' },
+    { key: 'concretos/produccion/planta/informe', label: 'Producción Planta · Informe' },
     { key: 'concretos/produccion/proyeccion', label: 'Proyección Comercial' },
-    { key: 'concretos/mantenimiento', label: 'Mantenimiento' },
-    { key: 'concretos/mantenimiento/planta', label: 'Mant. Planta' },
-    { key: 'concretos/mantenimiento/maquinaria', label: 'Mant. Maquinaria' },
-    { key: 'concretos/mantenimiento/inspeccion', label: 'Mant. Llantas' },
-    { key: 'concretos/mantenimiento/disponibilidad', label: 'Mant. Disponibilidad' },
-    { key: 'concretos/mantenimiento/tareas', label: 'Mant. Tareas' },
-    { key: 'concretos/mantenimiento/combustible', label: 'Mant. Combustible' },
+    { key: 'concretos/produccion/proyeccion/graficas', label: 'Proyección Comercial · Gráficas' },
+    { key: 'concretos/produccion/proyeccion/informe', label: 'Proyección Comercial · Informe' },
+    ...vistasMantenimiento('concretos', true),
   ] },
   { id: 'clientes', label: 'Clientes', vistas: [
     { key: 'clientes', label: 'Acceso general' },
@@ -393,6 +430,12 @@ function bloqueadaPorPadre(key: string): boolean {
   for (let i = 1; i < partes.length; i++) {
     const padre = partes.slice(0, i).join('/')
     if (padre in draft && !draft[padre]) return true
+  }
+  // Secciones de Mantenimiento con clave general (aplica a todas las áreas): …/planta/disponibilidad depende de …/disponibilidad
+  if (partes[1] === 'mantenimiento' && partes.length >= 4) {
+    const general = ({ disponibilidad: 'disponibilidad', llantas: 'inspeccion', combustible: 'combustible' } as Record<string, string>)[partes[3]]
+    const clave = general && `${partes[0]}/mantenimiento/${general}`
+    if (clave && clave in draft && !draft[clave]) return true
   }
   return false
 }
@@ -586,7 +629,9 @@ onMounted(async () => {
 .badge-role { padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700; text-transform:uppercase; }
 .badge-role.role-admin { background:#1e293b; color:#fff; }
 .badge-role.role-user { background:#e2e8f0; color:#475569; }
-.admin-grid { display:grid; grid-template-columns: 340px 1fr; gap:20px; margin-top:20px; }
+/* Lista de usuarios más ancha: el correo completo, el rol y el último ingreso caben sin cortarse */
+.admin-grid { display:grid; grid-template-columns: minmax(380px, 460px) 1fr; gap:20px; margin-top:20px; }
+@media (max-width: 1100px) { .admin-grid { grid-template-columns: minmax(320px, 380px) 1fr; } }
 @media (max-width: 900px) { .admin-grid { grid-template-columns: 1fr; } }
 .admin-card { background:var(--card-bg); border:1px solid var(--card-border); border-radius:12px; padding:18px; min-width:0; }
 .account-card { max-width:520px; }

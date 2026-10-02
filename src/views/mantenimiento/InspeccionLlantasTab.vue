@@ -324,6 +324,7 @@
  * proveedores, rankings (críticos, desgaste, cuidado operacional) e inventario dinámico. El informe
  * (Macro Informe Analítico) está en InformeLlantasTab. Los filtros son los de arriba (EquiposDashboard).
  */
+import { donaCentro } from '../../utils/chartLayout'
 import SkeletonLoader from '../../components/ui/SkeletonLoader.vue'
 import { computed, onMounted, ref } from 'vue'
 import { useLlantasStore, useMantenimientoStore } from '../../stores'
@@ -437,17 +438,16 @@ function dona(lista: { nombre: string; valor: number; color: string }[], centro:
   const total = lista.reduce((a, x) => a + x.valor, 0)
   return vacio({
     ...base(),
-    title: {
-      text: fmtN(total, 0), subtext: centro, left: '49%', top: '36%', textAlign: 'center',
-      textStyle: { fontFamily: FONT, fontSize: 16, fontWeight: 700, color: isLight.value ? '#0f172a' : '#f1f5f9' },
-      subtextStyle: { fontFamily: FONT, fontSize: 11, color: chartTextColor.value },
-    },
     tooltip: { trigger: 'item' as const, formatter: (p: any) => `${punto(p.color)} <b>${p.name}</b><br/>${fmtN(p.value, 0)} ${unidad} (${pct(p.percent)})` },
     legend: {
       type: 'scroll' as const, orient: 'horizontal' as const, left: 'center', bottom: 0, icon: 'circle', itemWidth: 10, itemHeight: 10, itemGap: 12,
       textStyle: { fontFamily: FONT, fontWeight: 600 as const, color: chartTextColor.value, fontSize: 11 },
+      data: lista.map(x => x.nombre),
     },
-    series: [{
+    series: [donaCentro({
+      center: ['50%', '44%'], radio: '40%', valor: fmtN(total, 0), sub: centro, font: FONT, tamano: 16,
+      color: isLight.value ? '#0f172a' : '#f1f5f9', colorSub: chartTextColor.value,
+    }), {
       type: 'pie' as const, radius: ['40%', '62%'], center: ['50%', '44%'], avoidLabelOverlap: true,
       itemStyle: { borderRadius: 4, borderColor: isLight.value ? '#fff' : '#0b0f1a', borderWidth: 2 },
       data: lista.map(x => {

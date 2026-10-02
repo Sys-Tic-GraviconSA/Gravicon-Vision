@@ -19,13 +19,14 @@
           <div class="filter-group">
             <FilterBar :data="diario" date-field="Fecha" :showProvider="false" :from="desde" :to="hasta" @dateRangeFilter="onFechas" />
           </div>
-          <button class="action-btn" :disabled="cargando" @click="cargar(true)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-            {{ cargando ? 'Actualizando…' : 'Actualizar' }}
+          <!-- «Limpiar» en la misma fila que «Actualizar» -->
+          <button class="clear-filters" :class="{ oculto: !(desde || hasta) }" :tabindex="desde || hasta ? 0 : -1" :aria-hidden="!(desde || hasta)" title="Quitar filtros" @click="limpiar">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <span>Limpiar</span>
           </button>
-          <button v-if="desde || hasta" class="action-btn clear" @click="limpiar">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            Limpiar
+          <button class="action-btn" :disabled="cargando" @click="cargar(true)">
+            <svg class="icono-actualizar" :class="{ girando: cargando }" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            {{ cargando ? 'Actualizando…' : 'Actualizar' }}
           </button>
         </div>
       </header>
@@ -35,7 +36,9 @@
 
       <!-- Cada vista es una ruta hija: /:planta/produccion/graficas | detalles | informe -->
       <RouterView v-slot="{ Component }">
-        <component :is="Component" :config="config" :data="filtrado" />
+        <Transition name="vista" mode="out-in">
+          <component :is="Component" :config="config" :data="filtrado" />
+        </Transition>
       </RouterView>
     </template>
   </div>
@@ -158,4 +161,10 @@ const vistas = computed(() => VISTAS_PRODUCCION_AGREGADOS.map(v => ({
   .filter-group { width: 100%; box-sizing: border-box; }
   .action-btn { margin-left: auto; }
 }
+.clear-filters {
+  display: inline-flex; align-items: center; gap: 5px; padding: 7px 10px;
+  border: none; border-radius: var(--radius-md); background: transparent; color: var(--text-tertiary);
+  font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer;
+}
+.clear-filters:hover { background: var(--danger-light); color: var(--danger); }
 </style>

@@ -5,8 +5,14 @@
     <div v-else-if="!filasMes.length" class="gt-vacio">No hay proyección de clientes para {{ mesLbl }}.</div>
 
     <template v-else>
+      <h3 class="section-title primero"><span class="title-bar"></span>Despacho del día — {{ diaLbl }}</h3>
+      <p class="section-sub">Último día con despacho dentro del filtro de fechas, comparado con el día anterior con despacho.</p>
+      <div class="kpi-row kpi-dia">
+        <KpiCard v-for="k in kpisDia" :key="k.label" :label="k.label" :value="k.value" :icon="k.icon" :accent="k.accent" :trend="k.trend" :detail="k.detail" />
+      </div>
+      <h3 class="section-title"><span class="title-bar"></span>Proyección del mes</h3>
       <div class="kpi-row">
-        <KpiCard v-for="k in kpis" :key="k.label" :label="k.label" :value="k.value" :icon="k.icon" :accent="k.accent" :detail="k.detail" />
+        <KpiCard v-for="k in kpis" :key="k.label" :label="k.label" :value="k.value" :icon="k.icon" :accent="k.accent" :trend="(k as { trend?: { value: number; direction: 'up' | 'down' } }).trend" :detail="k.detail" />
       </div>
 
       <h3 class="section-title"><span class="title-bar"></span>Cumplimiento del mes</h3>
@@ -45,6 +51,8 @@
  * (concreto, sin agregados). Mismo estilo de Producción y Mantenimiento (useGraficasConcreto).
  */
 <script setup lang="ts">
+import { normalizarRemisiones, despachoDelDia, kpisDelDia } from '../../../composables/useOperacionConcreto'
+import { donaCentro } from '../../../utils/chartLayout'
 import SkeletonLoader from '../../../components/ui/SkeletonLoader.vue'
 import { computed, onMounted } from 'vue'
 import KpiCard from '../../../components/dashboard/KpiCard.vue'
@@ -173,6 +181,15 @@ function detalle(valor: (p: string) => string): string {
     `<span class='kpi-label-int' style='color:${color(p)}'>${p}</span> <strong>${valor(p)}</strong></div>`).join('')
 }
 const nota = (t: string) => `<div class='kpi-detail-row' style='color:var(--text-tertiary);font-size:10px'>${t}</div>`
+// Producción del día al corte (último día con despacho del mes), con los mismos filtros de planta y cliente
+const ops = computed(() => {
+  const filtroCli = props.clientesFiltro ? new Set(props.clientesFiltro.map(norm)) : null
+  return normalizarRemisiones(props.rows).filter(r => !filtroCli || filtroCli.has(norm(r.cliente)))
+})
+const corteIso = computed(() => (mesSel.value ? `${mesSel.value}-${String(dia.value).padStart(2, '0')}` : ''))
+const diaDesp = computed(() => despachoDelDia(ops.value, corteIso.value, mesSel.value ? `${mesSel.value}-01` : ''))
+const kpisDia = computed(() => kpisDelDia(diaDesp.value, color))
+const diaLbl = computed(() => (diaDesp.value.iso ? new Date(diaDesp.value.iso + 'T00:00:00Z').toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) : '—'))
 const kpis = computed(() => {
   const t = T.value, pp = P.value
   const conDesp = clientes.value.filter(c => c.real > 0).length
@@ -333,22 +350,23 @@ const optSemaforo = computed(() => {
   const n = lista.reduce((a, g) => a + g.n, 0)
   return vacio({
     ...base(),
-    title: {
-      text: String(n), subtext: 'clientes proyectados', left: '37%', top: '44%', textAlign: 'center',
-      textStyle: { fontSize: 20, fontWeight: 700, color: tinta.value }, subtextStyle: { fontSize: 11, color: chartTextColor.value },
-    },
     tooltip: { trigger: 'item' as const, formatter: (p: any) => { const g = lista[p.dataIndex]
       return `${punto(g.color)} <b>${g.nombre}</b>: ${g.n} clientes (${pct(p.percent)})<br/>Meta ${fmtN(g.meta, 0)} m³ · ejecutado ${fmtN(g.real)} m³<br/>` +
         `<span style="color:#94a3b8;font-size:10px">${g.nombres.slice(0, 6).join(', ')}${g.nombres.length > 6 ? ` y ${g.nombres.length - 6} más` : ''}</span>` } },
     legend: {
       ...(movil.value ? { type: 'scroll' as const, orient: 'horizontal' as const, left: 'center', bottom: 0 } : { orient: 'vertical' as const, right: 10, top: 'middle' }), icon: 'circle', itemWidth: 8, itemHeight: 8, itemGap: 12,
       textStyle: { fontWeight: 600 as const, color: chartTextColor.value, fontSize: 11 },
+      data: lista.map(g => g.nombre),
       formatter: (nm: string) => { const g = lista.find(x => x.nombre === nm); return g ? `${nm}  ${g.n} · ${fmtN(g.meta, 0)} m³ meta` : nm },
     },
-    series: [{
-      type: 'pie' as const, radius: movil.value ? ['38%', '60%'] : ['42%', '68%'], center: movil.value ? ['50%', '42%'] : ['38%', '55%'], avoidLabelOverlap: true,
+    series: [donaCentro({
+      center: movil.value ? ['50%', '42%'] : ['30%', '55%'], radio: movil.value ? '38%' : '42%', valor: String(n), sub: 'clientes proyectados',
+      tamano: 20, color: tinta.value, colorSub: chartTextColor.value,
+    }), {
+      type: 'pie' as const, radius: movil.value ? ['38%', '60%'] : ['42%', '68%'], center: movil.value ? ['50%', '42%'] : ['30%', '55%'], avoidLabelOverlap: true,
       itemStyle: { borderRadius: 2, borderColor: isLight.value ? '#fff' : '#0b0f1a', borderWidth: 2 },
-      label: { show: true, formatter: (p: any) => String(lista[p.dataIndex].n), fontSize: 12, fontWeight: 700, color: chartTextColor.value },
+      label: { show: true, position: 'inside' as const, formatter: (p: any) => (p.percent >= 4 ? String(lista[p.dataIndex].n) : ''), fontSize: 12, fontWeight: 700, color: '#fff' },
+      labelLine: { show: false },
       data: lista.map(g => ({ name: g.nombre, value: g.n, itemStyle: { color: g.color } })),
     }],
   }, lista.length > 0)
@@ -495,6 +513,8 @@ const optHistoricoPlanta = computed(() => {
 .section-title { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 28px 0 0; display: flex; align-items: center; gap: 8px; letter-spacing: -0.3px; }
 .title-bar { width: 14px; height: 2px; background: var(--accent); display: inline-block; border-radius: 1px; }
 .section-sub { font-size: 12px; color: var(--text-tertiary); margin: 6px 0 0; }
+.section-title.primero { margin-top: 0; }
+.kpi-dia { margin-top: 12px; }
 .charts-grid { margin-top: 16px; }
 .charts-grid.cols-1 { grid-template-columns: minmax(0, 1fr); }
 

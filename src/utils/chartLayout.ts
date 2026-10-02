@@ -121,17 +121,21 @@ export function hBarTooltip(labels: string[], valueFmt?: (v: number) => string) 
  */
 export function donaCentro(o: {
   center: (string | number)[]; radio: string | number; valor: string; sub: string
-  color: string; colorSub: string; font?: string; tamano?: number
+  color: string; colorSub: string; font?: string; tamano?: number; peso?: number
+  tamSub?: number; pesoSub?: number
 }) {
+  const tam = o.tamano ?? 18, tamSub = o.tamSub ?? 11
   return {
     type: 'pie' as const, center: o.center, radius: [0, o.radio], silent: true, z: 0,
     tooltip: { show: false }, emphasis: { disabled: true }, labelLine: { show: false },
     itemStyle: { color: 'transparent' },
     label: {
-      show: true, position: 'center' as const, formatter: `{v|${o.valor}}\n{s|${o.sub}}`,
+      show: true, position: 'center' as const,
+      // Cada línea del subtítulo con su estilo (un «\n» suelto dentro de {s|…} rompe el estilo)
+      formatter: [`{v|${o.valor}}`, ...o.sub.split('\n').map(l => `{s|${l}}`)].join('\n'),
       rich: {
-        v: { fontFamily: o.font, fontSize: o.tamano ?? 18, fontWeight: 700, color: o.color, lineHeight: (o.tamano ?? 18) + 6 },
-        s: { fontFamily: o.font, fontSize: 11, color: o.colorSub, lineHeight: 16 },
+        v: { fontFamily: o.font, fontSize: tam, fontWeight: o.peso ?? 700, color: o.color, lineHeight: tam + 6 },
+        s: { fontFamily: o.font, fontSize: tamSub, fontWeight: o.pesoSub ?? 400, color: o.colorSub, lineHeight: tamSub + 5 },
       },
     },
     data: [{ value: 1, name: '' }],

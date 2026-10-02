@@ -250,10 +250,9 @@ function opcionPrecios(lista: ReturnType<typeof porMaterial>) {
     itemStyle: { color: tinta.value, opacity: 0.85 },
     data: valores.map((v, i) => (v == null ? null : [Math.round(v), i])),
   })
-  // Miles con un decimal: con precios parecidos (p. ej. 28,6 y 29,4 mil) el rango sigue siendo legible
-  const mil = (v: number) => fmtN(v / 1000, 1)
+  // Precios en pesos completos (sin abreviar)
   const texto = (i: number) => { const x = orden[i], r = rango[i]
-    return r ? `$ ${mil(x.precioT ?? 0)} mil  ·  rango ${mil(r.p10)}–${mil(r.p90)}` : `$ ${mil(x.precioT ?? 0)} mil` }
+    return r ? `${cop(x.precioT ?? 0)}  ·  rango ${cop(r.p10)} – ${cop(r.p90)}` : cop(x.precioT ?? 0) }
   const o = barrasH(orden.map(x => nombreMaterial(x.producto)), [
     { name: 'Precio promedio', type: 'bar', barWidth: '50%', emphasis,
       data: orden.map(x => ({ value: Math.round(x.precioT ?? 0), itemStyle: { color: COLOR_FAMILIA[x.familia], borderRadius: [0, 4, 4, 0], opacity: 0.9 } })) },
@@ -305,7 +304,8 @@ const optDiaria = computed(() => {
   const n = d.filter(x => x.venta > 0).length
   const prom = n ? d.reduce((a, x) => a + x.venta, 0) / n : 0
   const fams = FAMILIAS.filter(f => d.some(x => x.porFamilia[f]))
-  const z = zoom(d.length)
+  // Pesos completos sobre cada barra: se ven 14 días a la vez (7 en celular) para que las cifras no se monten
+  const z = zoom(d.length, movil.value ? 7 : 14)
   return vacio({
     ...base(),
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
@@ -603,7 +603,7 @@ function opcionLineaDia(nombre: string, color: string, puntos: { fecha: string; 
   const vs = puntos.map(x => x.v)
   const desde = Math.max(0, puntos.length - ventana.value), visibles = vs.slice(desde)
   const iMax = desde + visibles.indexOf(Math.max(...visibles)), iMin = desde + visibles.indexOf(Math.min(...visibles))
-  const corto = (v: number) => (Math.abs(v) >= 1e6 ? copCorto(v) : `$ ${fmtN(v / 1000, 1)} mil`)
+  const corto = (v: number) => cop(v)
   return vacio({
     ...base(),
     tooltip: { trigger: 'axis' as const,

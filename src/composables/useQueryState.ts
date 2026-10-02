@@ -68,7 +68,7 @@ export function useQueryDate(key: string): WritableComputedRef<string> {
 }
 
 /** Valor en la URL que representa «ninguna opción marcada» (paso intermedio antes de elegir) */
-const NINGUNA = '-'
+export const NINGUNA = '-'
 
 /**
  * Filtro de selección múltiple guardado como ?clave=a&clave=b.

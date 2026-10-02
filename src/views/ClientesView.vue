@@ -11,6 +11,10 @@
               <MultiSelect v-model="selectedMonths" :options="months" label="Meses" icon="calendar" />
               <MultiSelect v-model="selectedPlants" :options="plants" label="Plantas" icon="filter" />
             </div>
+            <button class="action-btn" :disabled="client.loading" title="Volver a leer las proyecciones" @click="client.fetchData(true)">
+              <svg class="icono-actualizar" :class="{ girando: client.loading }" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              {{ client.loading ? 'Actualizando…' : 'Actualizar' }}
+            </button>
           </div>
         </header>
       </div>
@@ -148,6 +152,7 @@
  * y evolución mensual con filtros por mes y planta.
  */
 <script setup lang="ts">
+import { donaCentro } from '../utils/chartLayout'
 import SkeletonLoader from '../components/ui/SkeletonLoader.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useClientesStore } from '../stores'
@@ -436,21 +441,21 @@ const plantaPieOpt = computed(() => {
   const total = lista.reduce((a, p) => a + p.real, 0)
   return vacio({
     ...base(),
-    title: {
-      text: fmtN(total, 0), subtext: 'M³ reales', left: '37%', top: '44%', textAlign: 'center',
-      textStyle: { fontFamily: FONT, fontSize: 18, fontWeight: 700, color: isLight.value ? '#0f172a' : '#f1f5f9' },
-      subtextStyle: { fontFamily: FONT, fontSize: 11, color: chartTextColor.value },
-    },
     tooltip: { trigger: 'item' as const, formatter: (p: any) => `${punto(p.color)} <b>${p.name}</b><br/>${fmtN(p.value)} M³ (${pct(p.percent)})` },
     legend: {
       orient: 'vertical' as const, right: 10, top: 'middle', icon: 'circle', itemWidth: 10, itemHeight: 10, itemGap: 14,
       textStyle: { fontFamily: FONT, fontWeight: 600 as const, color: chartTextColor.value, fontSize: 11 },
+      data: lista.map(p => p.planta),
       formatter: (n: string) => { const x = lista.find(y => y.planta === n); return x ? `${n}  ${fmtN(x.real, 0)} M³` : n },
     },
-    series: [{
+    series: [donaCentro({
+      center: ['38%', '55%'], radio: '42%', valor: fmtN(total, 0), sub: 'M³ reales', font: FONT,
+      color: isLight.value ? '#0f172a' : '#f1f5f9', colorSub: chartTextColor.value,
+    }), {
       type: 'pie' as const, radius: ['42%', '68%'], center: ['38%', '55%'], avoidLabelOverlap: true,
       itemStyle: { borderRadius: 4, borderColor: isLight.value ? '#fff' : '#0b0f1a', borderWidth: 2 },
-      label: { show: true, formatter: (p: any) => pct(p.percent), fontSize: 11, fontWeight: 600, fontFamily: FONT, color: chartTextColor.value },
+      label: { show: true, position: 'inside' as const, formatter: (p: any) => (p.percent >= 4 ? pct(p.percent, 0) : ''), fontSize: 11, fontWeight: 700, fontFamily: FONT, color: '#fff' },
+      labelLine: { show: false },
       data: lista.map(p => ({ name: p.planta, value: p.real, itemStyle: { color: colorPlanta(p.planta) } })),
     }],
   }, lista.length > 0)
@@ -764,4 +769,10 @@ const totalLineOpt = computed(() => {
 @media (max-width: 480px) {
   .exec-summary { grid-template-columns: 1fr; }
 }
+.action-btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: none; border-radius: var(--radius-md);
+  background: var(--accent-light); color: var(--accent); font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap;
+}
+.action-btn:hover:not(:disabled) { background: rgba(59, 130, 246, .2); }
+.action-btn:disabled { opacity: .7; cursor: default; }
 </style>
