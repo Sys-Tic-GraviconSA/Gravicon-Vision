@@ -13,9 +13,12 @@ export const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'ju
 export const MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 export const ORDEN_PLANTAS = ['Villavicencio', 'Acacías', 'Restrepo', 'Puerto Concordia']
 
-// Mismos colores de las gráficas de Mantenimiento: planta y paleta general
+// Mismos colores de las gráficas de Mantenimiento: planta y paleta general.
+// Un color fijo por planta en TODA la app (Concretos, Mantenimiento y bodegas de destino de los traslados de Despacho).
+// Usme y Puerto Gaitán solo aparecen como bodega de destino (B15, B20).
 export const COLOR_PLANTA: Record<string, string> = {
   'Villavicencio': '#ec4899', 'Acacías': '#38a9f8', 'Restrepo': '#3b4cb8', 'Puerto Concordia': '#10B981',
+  'Usme': '#D97706', 'Puerto Gaitán': '#7C3AED',
 }
 export const PALETA = ['#15223c', '#3B82F6', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899', '#84CC16', '#F97316', '#64748B', '#A855F7']
 export const COLOR_EXTRA = ['#F59E0B', '#8B5CF6', '#06B6D4', '#84CC16']

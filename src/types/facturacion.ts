@@ -27,6 +27,8 @@ export interface LineaFacturacion {
   placa: string
   ficha: string
   tituloMinero: string
+  /** Traslados: bodega a la que va el material (B15…B20 = plantas de Concretos); vacío si no aplica */
+  bodegaDestino: string
 }
 
 export interface DatosFacturacion {

@@ -287,21 +287,6 @@
         </div>
 
         <div class="report-section-block">
-          <h3 class="report-block-title"><span class="title-bar"></span>Traslados de inventario por material — {{ MES_LBL }}</h3>
-          <p class="section-note">Subtipo 003 de Novasoft: sin valor ni cliente. No suman a la venta, pero sí a las toneladas despachadas del día y {{ esMes ? 'del mes' : 'del período' }}.</p>
-          <div v-if="tras.length" class="data-card"><div class="table-wrap">
-            <table>
-              <thead><tr><th>Material</th><th>Familia</th><th class="r">Documentos</th><th class="r">Toneladas</th><th class="r">Part.</th><th class="r">Último</th></tr></thead>
-              <tbody>
-                <tr v-for="r in porProducto(tras)" :key="r.prod"><td class="bold accent-text">{{ titulo(r.prod) }}</td><td>{{ r.fam }}</td><td class="r">{{ r.docs }}</td><td class="r bold">{{ num(r.t) }}</td><td class="r">{{ tDe(tras) ? pct(r.t / tDe(tras) * 100) : '—' }}</td><td class="r">{{ flbl(r.ult) }}</td></tr>
-                <tr class="table-total-row"><td colspan="2">TOTAL TRASLADOS</td><td class="r">{{ docsDe(tras) }}</td><td class="r">{{ num(tDe(tras)) }}</td><td class="r">100%</td><td></td></tr>
-              </tbody>
-            </table>
-          </div></div>
-          <div v-else class="report-nota">No hay traslados de inventario en {{ esMes ? 'el mes' : 'el período' }}.</div>
-        </div>
-
-        <div class="report-section-block">
           <h3 class="report-block-title"><span class="title-bar"></span>Donaciones por beneficiario — {{ MES_LBL }}</h3>
           <div v-if="don.length" class="data-card"><div class="table-wrap">
             <table>
@@ -314,6 +299,54 @@
           </div></div>
           <div v-else class="report-nota">No hay donaciones en {{ esMes ? 'el mes' : 'el período' }}.</div>
         </div>
+
+        <!-- ── Traslados de inventario (subtipo 003): a dónde fue (bodega de destino), qué material y el cruce de ambos ── -->
+        <div class="report-section-block">
+          <h3 class="report-block-title"><span class="title-bar"></span>Traslados de inventario por bodega de destino — {{ MES_LBL }}</h3>
+          <p class="section-note">Subtipo 003 de Novasoft: sin valor ni cliente. No suman a la venta, pero sí a las toneladas despachadas del día y {{ esMes ? 'del mes' : 'del período' }}. La bodega de destino es la planta de Concretos que recibe el material (cada una con su color).</p>
+          <div v-if="tras.length" class="data-card"><div class="table-wrap">
+            <table>
+              <thead><tr><th>Bodega de destino</th><th class="r">Documentos</th><th class="r">Toneladas</th><th class="r">Part.</th><th class="r">Último</th></tr></thead>
+              <tbody>
+                <tr v-for="b in porBodega(tras)" :key="b.codigo"><td class="bold"><span class="dot-bodega" :style="{ background: b.color }"></span>{{ b.nombre }}</td><td class="r">{{ b.docs }}</td><td class="r bold">{{ num(b.t) }}</td><td class="r">{{ pct(b.part) }}</td><td class="r">{{ flbl(b.ultimo) }}</td></tr>
+                <tr class="table-total-row"><td>TOTAL TRASLADOS</td><td class="r">{{ docsDe(tras) }}</td><td class="r">{{ num(tDe(tras)) }}</td><td class="r">100%</td><td></td></tr>
+              </tbody>
+            </table>
+          </div></div>
+          <div v-else class="report-nota">No hay traslados de inventario en {{ esMes ? 'el mes' : 'el período' }}.</div>
+        </div>
+
+        <template v-if="tras.length">
+          <div class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Traslados de inventario por material — {{ MES_LBL }}</h3>
+            <div class="data-card"><div class="table-wrap">
+              <table>
+                <thead><tr><th>Material</th><th>Familia</th><th class="r">Documentos</th><th class="r">Toneladas</th><th class="r">Part.</th><th class="r">Último</th></tr></thead>
+                <tbody>
+                  <tr v-for="r in porProducto(tras)" :key="r.prod"><td class="bold accent-text">{{ titulo(r.prod) }}</td><td>{{ r.fam }}</td><td class="r">{{ r.docs }}</td><td class="r bold">{{ num(r.t) }}</td><td class="r">{{ tDe(tras) ? pct(r.t / tDe(tras) * 100) : '—' }}</td><td class="r">{{ flbl(r.ult) }}</td></tr>
+                  <tr class="table-total-row"><td colspan="2">TOTAL TRASLADOS</td><td class="r">{{ docsDe(tras) }}</td><td class="r">{{ num(tDe(tras)) }}</td><td class="r">100%</td><td></td></tr>
+                </tbody>
+              </table>
+            </div></div>
+          </div>
+
+          <div v-if="porBodega(tras).length > 1" class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Material trasladado a cada bodega (t) — {{ MES_LBL }}</h3>
+            <div class="data-card"><div class="table-wrap">
+              <table>
+                <thead><tr><th>Material</th><th v-for="b in porBodega(tras)" :key="b.codigo" class="r"><span class="dot-bodega" :style="{ background: b.color }"></span>{{ b.nombre }}</th><th class="r">Total</th></tr></thead>
+                <tbody>
+                  <tr v-for="r in porProducto(tras)" :key="r.prod">
+                    <td class="bold accent-text">{{ titulo(r.prod) }}</td>
+                    <td v-for="b in porBodega(tras)" :key="b.codigo" class="r">{{ tDe(b.lineas.filter(l => l.producto === r.prod)) ? num(tDe(b.lineas.filter(l => l.producto === r.prod))) : '—' }}</td>
+                    <td class="r bold">{{ num(r.t) }}</td>
+                  </tr>
+                  <tr class="table-total-row"><td>TOTAL</td><td v-for="b in porBodega(tras)" :key="b.codigo" class="r">{{ num(b.t) }}</td><td class="r">{{ num(tDe(tras)) }}</td></tr>
+                </tbody>
+              </table>
+            </div></div>
+          </div>
+        </template>
 
         <div class="report-section-block">
           <h3 class="report-block-title"><span class="title-bar"></span>Control de calidad del dato — {{ MES_LBL }}</h3>
@@ -371,7 +404,7 @@ import { BarChart, LineChart, PieChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent, TitleComponent, MarkPointComponent } from 'echarts/components'
 import KpiCard from '../../../components/dashboard/KpiCard.vue'
 import { useQueryDate } from '../../../composables/useQueryState'
-import { MESES, FAMILIAS, totalesFacturacion } from '../../../composables/useFacturacion'
+import { MESES, FAMILIAS, totalesFacturacion, porBodega } from '../../../composables/useFacturacion'
 import { descargarInformePdf } from '../../../utils/pdfInforme'
 import type { Familia, LineaFacturacion } from '../../../types/facturacion'
 import { useTemaInforme } from '../../../composables/useTemaInforme'
@@ -533,7 +566,9 @@ function kpisDonTras(d: LineaFacturacion[], t: LineaFacturacion[], cuando: strin
     { label: `Donaciones ${cuando}`, value: num(tDe(d), 1) + ' t', accent: '#8B5CF6', icon: 'package', meta: `${docsDe(d)} documentos`, detail: fd.length ? detalle(tFam(d, fd), undefined, fd) : undefined },
     { label: `Valor Donado ${cuando}`, value: cop(sumTotal(d)), accent: '#8B5CF6', icon: 'dollar', meta: 'no suma a la venta' },
     { label: `Beneficiarios ${cuando}`, value: String(new Set(d.map(l => l.nit || l.cliente)).size), accent: '#10B981', icon: 'users', meta: 'sin repetir' },
-    { label: `Traslados ${cuando}`, value: num(tDe(t), 1) + ' t', accent: '#64748B', icon: 'truck', meta: `${docsDe(t)} documentos`, detail: ft.length ? detalle(tFam(t, ft), undefined, ft) : undefined },
+    // Detalle por bodega de destino (planta de Concretos que recibe el material)
+    { label: `Traslados ${cuando}`, value: num(tDe(t), 1) + ' t', accent: '#64748B', icon: 'truck', meta: `${docsDe(t)} documentos`,
+      detail: t.length ? porBodega(t).map(b => `<div class='kpi-detail-row'><span class='kpi-dot' style='background:${b.color}'></span><span class='kpi-det-lbl'>${b.nombre}</span> <strong>${num(b.t, 1)} t</strong></div>`).join('') : (ft.length ? detalle(tFam(t, ft), undefined, ft) : undefined) },
   ]
 }
 
@@ -894,6 +929,7 @@ async function pdf() {
 
 <style scoped src="../../concretos/tabs/informe.css"></style>
 <style scoped>
+.dot-bodega { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; vertical-align:middle; }
 
 /* Elementos del generador de agregados que no trae informe.css */
 .nowrap { white-space: nowrap; }

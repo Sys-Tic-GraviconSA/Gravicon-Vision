@@ -29,7 +29,7 @@
 import { computed } from 'vue'
 import DataTable from '../../../components/dashboard/DataTable.vue'
 import { fmtN, cop } from '../../../composables/useGraficasConcreto'
-import { resumen, nombreCliente, nombreMaterial } from '../../../composables/useFacturacion'
+import { resumen, nombreCliente, nombreMaterial, nombreBodega } from '../../../composables/useFacturacion'
 import { buildXlsx, downloadXlsx } from '../../../utils/xlsx'
 import type { LineaFacturacion } from '../../../types/facturacion'
 
@@ -56,6 +56,7 @@ const filas = computed(() => [...props.lineas]
     'Subtipo': `${l.subtipo} · ${props.subtipos[l.subtipo] ?? 'Otro'}`,
     'Tipo': TIPO[l.tipo],
     'Cliente': l.tipo === 'traslado' ? '—' : nombreCliente(l.cliente),
+    'Bodega destino': l.tipo === 'traslado' ? nombreBodega(l.bodegaDestino) : '—',
     'NIT': l.nit || '—',
     'Material': nombreMaterial(l.producto),
     'Familia': l.familia,

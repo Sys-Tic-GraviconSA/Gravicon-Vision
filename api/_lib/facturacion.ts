@@ -62,6 +62,8 @@ export interface LineaFacturacion {
   placa: string
   ficha: string
   tituloMinero: string
+  /** Traslados: bodega a la que va el material (B15…B20 = plantas de Concretos); vacío si no aplica */
+  bodegaDestino: string
 }
 
 export interface DatosFacturacion {
@@ -77,11 +79,12 @@ export interface DatosFacturacion {
 export const COLUMNAS: (keyof LineaFacturacion)[] = [
   'fecha', 'subtipo', 'tipo', 'doc', 'item', 'descripcion', 'familia', 'producto', 'registrado',
   'cantidad', 'factor', 'factorPropio', 'factorMaterial', 'toneladas', 'total', 'cliente', 'nit', 'placa', 'ficha', 'tituloMinero',
+  'bodegaDestino',
 ]
 
 /** Columnas de texto muy repetido: viajan como índice a un diccionario por columna */
 const COLUMNAS_DICCIONARIO = new Set<keyof LineaFacturacion>([
-  'fecha', 'subtipo', 'tipo', 'item', 'descripcion', 'familia', 'producto', 'registrado', 'cliente', 'nit', 'tituloMinero',
+  'fecha', 'subtipo', 'tipo', 'item', 'descripcion', 'familia', 'producto', 'registrado', 'cliente', 'nit', 'tituloMinero', 'bodegaDestino',
 ])
 
 /**
@@ -195,6 +198,8 @@ export function normalizar(filas: Record<string, Celda>[], sucursal: string): Li
       placa: txt(f['PLACA VEHICULO']).toUpperCase(),
       ficha: txt(f['FICHA']),
       tituloMinero: txt(f['TITULO MINERO']),
+      // Columna «Bodega de Destino» del exporte (B15…B20); «0» o vacío = sin bodega
+      bodegaDestino: (() => { const b = txt(f['Bodega de Destino'] ?? f['BODEGA DE DESTINO']).toUpperCase(); return b === '0' ? '' : b })(),
     } satisfies LineaFacturacion
   }).filter(l => l.fecha)
 }

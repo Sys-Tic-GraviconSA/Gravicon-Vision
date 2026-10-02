@@ -166,6 +166,22 @@ export async function audit(req: any, action: string, target: string | null, det
 }
 
 /**
+ * Registra un intento de ingreso (correcto, fallido o bloqueado) en `audit_log` con la IP y el navegador,
+ * para que el administrador vea cuándo, a qué hora y desde dónde entró cada usuario.
+ * Nunca lanza: el registro no debe impedir el ingreso.
+ */
+export async function registrarIngreso(email: string, ip: string, resultado: 'login' | 'login.fail' | 'login.blocked', userAgent: string) {
+  try {
+    const { error } = await (getSupabaseAdmin() as any).from('audit_log').insert({
+      actor: email, action: resultado, target: email, ip, details: { ua: userAgent.slice(0, 300) },
+    })
+    if (error && error.code !== 'PGRST205') console.error('[ingreso]', error.message)
+  } catch (err) {
+    console.error('[ingreso]', err)
+  }
+}
+
+/**
  * Correos con privilegio de super-administrador (crear usuarios y administrar permisos).
  * Configurable con SUPERADMIN_EMAILS (separados por coma); por defecto solo sys.tic.
  */
@@ -453,8 +469,12 @@ export async function handleLogin(req: { body?: { email?: string; password?: str
       }
     }
 
+    const uaRaw = req.headers['user-agent']
+    const userAgent = (Array.isArray(uaRaw) ? uaRaw[0] : uaRaw) ?? ''
+
     const lockout = await checkLockout(email, ip)
     if (lockout.isLocked) {
+      await registrarIngreso(email, ip, 'login.blocked', userAgent)
       const remainingMinutes = Math.ceil(lockout.remainingMs / 60_000)
       return {
         status: 429,
@@ -470,10 +490,12 @@ export async function handleLogin(req: { body?: { email?: string; password?: str
 
     if (error) {
       await recordFailedAttempt(email, ip)
+      await registrarIngreso(email, ip, 'login.fail', userAgent)
       return { status: 401, body: { error: 'Credenciales inválidas.' } }
     }
 
     await resetFailedAttempts(email, ip)
+    await registrarIngreso(email, ip, 'login', userAgent)
 
     return { status: 200, body: { session: data.session, user: data.user } }
   } catch (err) {

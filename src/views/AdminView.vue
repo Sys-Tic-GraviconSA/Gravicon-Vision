@@ -103,6 +103,32 @@
               <span v-if="accionError" class="error-msg">{{ accionError }}</span>
             </div>
 
+            <!-- Historial de ingresos: cuándo, a qué hora, desde qué IP y navegador (también intentos fallidos) -->
+            <details class="ingresos">
+              <summary>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <strong>Historial de ingresos</strong>
+                <span v-if="cargandoIngresos" class="muted-inline">Cargando…</span>
+                <span v-else-if="ultimoIngreso" class="muted-inline">Último: {{ fmtFechaHora(ultimoIngreso.fecha) }} · IP {{ ultimoIngreso.ip || '—' }}</span>
+                <span v-else class="muted-inline">Sin ingresos registrados</span>
+              </summary>
+              <div v-if="ingresos.length" class="ingresos-tabla">
+                <table>
+                  <thead><tr><th>Fecha</th><th>Hora</th><th>IP</th><th>Equipo / navegador</th><th>Resultado</th></tr></thead>
+                  <tbody>
+                    <tr v-for="(i, n) in ingresos" :key="n">
+                      <td>{{ fmtSoloFecha(i.fecha) }}</td>
+                      <td class="num">{{ fmtHora(i.fecha) }}</td>
+                      <td class="num">{{ i.ip || '—' }}</td>
+                      <td>{{ navegador(i.ua) }}</td>
+                      <td><span class="role-pill" :class="RESULTADO[i.resultado]?.cls">{{ RESULTADO[i.resultado]?.label ?? i.resultado }}</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p v-else-if="!cargandoIngresos" class="admin-desc">Los ingresos se registran desde el 2 de octubre de 2026 (antes no se guardaba la IP).</p>
+            </details>
+
             <p v-if="selected.role === 'superadmin'" class="admin-desc">El administrador del sistema tiene acceso total; sus permisos no se pueden restringir.</p>
 
             <template v-else>
@@ -500,10 +526,46 @@ function groupState(g: Grupo): 'all' | 'some' | 'none' {
 function setGroup(g: Grupo, value: boolean) { for (const v of g.vistas) draft[v.key] = value }
 function setAll(value: boolean) { for (const k of allKeys) draft[k] = value }
 
+// ── Historial de ingresos del usuario seleccionado ──
+interface Ingreso { fecha: string; resultado: string; ip: string; ua: string }
+const ingresos = ref<Ingreso[]>([])
+const cargandoIngresos = ref(false)
+const ultimoIngreso = computed(() => ingresos.value.find(i => i.resultado === 'login') ?? null)
+const RESULTADO: Record<string, { label: string; cls: string }> = {
+  login: { label: 'Ingresó', cls: 'pill-ok' },
+  'login.fail': { label: 'Falló', cls: 'pill-banned' },
+  'login.blocked': { label: 'Bloqueado', cls: 'pill-pending' },
+}
+const ZONA = { timeZone: 'America/Bogota' } as const
+const fmtSoloFecha = (iso: string) => new Date(iso).toLocaleDateString('es-CO', { ...ZONA, day: '2-digit', month: 'short', year: 'numeric' })
+const fmtHora = (iso: string) => new Date(iso).toLocaleTimeString('es-CO', { ...ZONA, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
+const fmtFechaHora = (iso: string) => `${fmtSoloFecha(iso)} ${fmtHora(iso)}`
+/** «Chrome · Windows», «Safari · iPhone»… a partir del user-agent */
+function navegador(ua: string): string {
+  if (!ua) return '—'
+  const so = /android/i.test(ua) ? 'Android' : /iphone|ipad/i.test(ua) ? 'iPhone/iPad' : /windows/i.test(ua) ? 'Windows'
+    : /mac os/i.test(ua) ? 'Mac' : /linux/i.test(ua) ? 'Linux' : 'Otro'
+  const nav = /edg\//i.test(ua) ? 'Edge' : /opr\//i.test(ua) ? 'Opera' : /chrome\//i.test(ua) ? 'Chrome' : /firefox\//i.test(ua) ? 'Firefox'
+    : /safari\//i.test(ua) ? 'Safari' : 'Navegador'
+  return `${nav} · ${so}`
+}
+async function cargarIngresos(email: string) {
+  ingresos.value = []
+  cargandoIngresos.value = true
+  try {
+    const res = await fetch(`/api/admin/ingresos?email=${encodeURIComponent(email)}`, { headers: authHeaders() })
+    const body = res.ok ? await res.json() : { ingresos: [] }
+    if (selectedUser.value === email) ingresos.value = body.ingresos ?? []
+  } catch { /* sin historial */ } finally {
+    cargandoIngresos.value = false
+  }
+}
+
 async function seleccionar(email: string) {
   if (dirty.value && !confirm('Hay cambios sin guardar. ¿Descartarlos?')) return
   selectedUser.value = email
   saveError.value = ''
+  cargarIngresos(email)
   if (selected.value?.role === 'superadmin') return
   loadingPerms.value = true
   try {
@@ -714,6 +776,19 @@ onMounted(async () => {
 .role-pill.pill-admin { background:var(--accent-light); color:var(--accent); }
 .role-pill.pill-banned { background:var(--danger-light); color:var(--danger); }
 
+.ingresos { margin: 4px 0 14px; border: 1px solid var(--card-border); border-radius: 10px; background: var(--bg); }
+.ingresos summary { display:flex; align-items:center; gap:8px; padding:9px 12px; cursor:pointer; font-size:12px; color:var(--text-primary); list-style:none; }
+.ingresos summary::-webkit-details-marker { display:none; }
+.ingresos summary::after { content:''; margin-left:auto; width:7px; height:7px; border-right:2px solid var(--text-tertiary); border-bottom:2px solid var(--text-tertiary); transform:rotate(45deg); transition:transform .2s; }
+.ingresos[open] summary::after { transform:rotate(-135deg); }
+.muted-inline { color:var(--text-tertiary); font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ingresos .admin-desc { padding:0 12px 10px; }
+.ingresos-tabla { max-height:280px; overflow:auto; border-top:1px solid var(--card-border); }
+.ingresos-tabla table { width:100%; border-collapse:collapse; font-size:12px; }
+.ingresos-tabla th { position:sticky; top:0; background:var(--bg-alt); text-align:left; font-weight:700; font-size:11px; color:var(--text-secondary); padding:7px 10px; }
+.ingresos-tabla td { padding:6px 10px; border-top:1px solid var(--card-border); color:var(--text-primary); white-space:nowrap; }
+.ingresos-tabla td.num { font-variant-numeric: tabular-nums; }
+.role-pill.pill-ok { background:var(--success-light, rgba(16,185,129,.12)); color:var(--success, #10b981); }
 .check-all { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--text-secondary); cursor:pointer; }
 .perm-groups { display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap:12px; }
 .perm-group { border:1px solid var(--card-border); border-radius:10px; padding:6px; }

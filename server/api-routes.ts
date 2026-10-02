@@ -589,6 +589,24 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
     }
   })
 
+  /** GET /api/admin/ingresos?email= - Últimos ingresos de un usuario: fecha, hora, IP, navegador y resultado (solo super-admin) */
+  router.get('/admin/ingresos', authenticateRequest, requireSuperAdmin, async (req, res) => {
+    try {
+      const email = sanitizeEmail(String(req.query.email ?? ''))
+      if (!email || !validateEmail(email)) return res.status(400).json({ error: 'email requerido' })
+      const { data, error } = await (getSupabaseAdmin() as any).from('audit_log')
+        .select('created_at,action,ip,details')
+        .eq('target', email).in('action', ['login', 'login.fail', 'login.blocked'])
+        .order('created_at', { ascending: false }).limit(50)
+      if (error?.code === 'PGRST205') return res.json({ ingresos: [] })
+      if (error) throw error
+      res.json({ ingresos: (data ?? []).map((r: any) => ({ fecha: r.created_at, resultado: r.action, ip: r.ip ?? '', ua: r.details?.ua ?? '' })) })
+    } catch (err) {
+      console.error('[admin-ingresos]', err)
+      res.status(500).json({ error: 'Error interno' })
+    }
+  })
+
   /** GET /api/admin/permisos?email= - Permisos de un usuario (solo super-admin) */
   router.get('/admin/permisos', authenticateRequest, requireSuperAdmin, async (req, res) => {
     try {
