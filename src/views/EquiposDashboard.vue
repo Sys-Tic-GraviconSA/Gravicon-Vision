@@ -2337,9 +2337,11 @@ const sopledDetailRows = computed(() => {
       const tipoCompra = String(sop?.tipoCompra ?? '').trim()
       const centroCosto = String(sop?.centroCosto ?? '').trim()
       const proceso = String(sop?.procesoTexto ?? '').trim()
-      if (selectedTipoCompra.value.size > 0 && !selectedTipoCompra.value.has(tipoCompra)) continue
-      if (selectedCentroCosto.value.size > 0 && !selectedCentroCosto.value.has(centroCosto)) continue
-      if (selectedProceso.value.size > 0 && !selectedProceso.value.has(proceso)) continue
+      // Las opciones de los filtros van en «Tipo Título» (toTitleCase): se compara igual, si no
+      // «ALMACEN CUNCIA» nunca coincide con «Almacen Cuncia» y la tabla queda vacía
+      if (selectedTipoCompra.value.size > 0 && !selectedTipoCompra.value.has(toTitleCase(tipoCompra))) continue
+      if (selectedCentroCosto.value.size > 0 && !selectedCentroCosto.value.has(toTitleCase(centroCosto))) continue
+      if (selectedProceso.value.size > 0 && !selectedProceso.value.has(toTitleCase(proceso))) continue
       rows.push({
         'No. Pedido': sop?.noPedido ?? '',
         'Tipo Compra': tipoCompra,

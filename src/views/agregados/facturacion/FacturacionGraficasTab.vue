@@ -37,6 +37,18 @@
         <ChartCard title="Clientes que Más Cambiaron frente al Período Anterior" :description="variacionTxt" :option="optVariacion" :height="380" />
       </div>
 
+      <!-- Traslados de inventario: a qué planta de Concretos (bodega de destino) fue el material; cada planta con su color -->
+      <template v-if="trasLs.length">
+        <h3 class="section-title"><span class="title-bar"></span>Traslados de inventario</h3>
+        <div class="charts-grid cols-2">
+          <ChartCard title="Toneladas Trasladadas por Bodega de Destino" :description="trasTxt" :option="optTrasBodega" :height="300" />
+          <ChartCard title="Material Trasladado a Cada Bodega" description="Toneladas de cada material por bodega de destino, barras lado a lado con el color de cada planta" :option="optTrasMaterialConLeyenda" :height="300" />
+        </div>
+        <div v-if="trasDias.length > 1" class="charts-grid cols-1">
+          <ChartCard title="Traslados por Día y Bodega de Destino" description="Toneladas trasladadas cada día a cada bodega, barras lado a lado (en el detalle, el total del día y los documentos)" :option="optTrasDia" :height="320" />
+        </div>
+      </template>
+
       <template v-if="diasVenta.length > 1">
         <h3 class="section-title"><span class="title-bar"></span>Ritmo de venta</h3>
         <div class="charts-grid cols-2">
@@ -77,6 +89,7 @@ import {
   resumen, porFamilia, porMaterial, porCliente, porDia, toneladasPorProducto, nombreMaterial, fechaLarga, fechaCorta,
   porDiaSemana, paretoClientes, proyeccionDiaria, cierreEstimado, totalesFacturacion,
   COLOR_FAMILIA, COLOR_TIPO, esVenta, esMaterial, esFleteHolcim, FAMILIAS,
+  porBodega,
 } from '../../../composables/useFacturacion'
 import { inicioFacturacionCompleta } from '../../../composables/useBalanceProduccion'
 import type { LineaFacturacion } from '../../../types/facturacion'
@@ -123,8 +136,9 @@ const kpis = computed(() => {
   const { filas, n80 } = pareto.value
   const acum = (k: number) => filas[Math.min(k, filas.length) - 1]?.acumPct ?? 0
   const c = proyeccion.value
+  // Traslados por bodega de destino (cada planta con su color), luego documentos
   const traslados = { label: 'Traslados de Inventario', value: `${tFmt(r.traslados.t)} t`, icon: 'layers', accent: '#64748B',
-    detail: fila('#64748B', 'Documentos', fmtN(r.traslados.docs, 0)) + fila('#64748B', 'Subtipo', '003') }
+    detail: trasBodegas.value.map(b => fila(b.color, b.nombre, `${tFmt(b.t)} t`)).join('') + fila('#94A3B8', 'Documentos', fmtN(r.traslados.docs, 0)) }
   const donaciones = { label: 'Donaciones', value: `${tFmt(r.donaciones.t)} t`, icon: 'check-circle', accent: '#10B981',
     detail: fila('#10B981', 'Valor', cop(r.donaciones.valor)) + fila('#10B981', 'Beneficiarios', fmtN(r.donaciones.beneficiarios, 0)) + fila('#10B981', 'Subtipo', '952') }
   const tarjeta = {
@@ -592,6 +606,67 @@ const optToneladasDia = computed(() => {
     series: [serie('Vendidas', COLOR_TIPO.venta, d.map(x => x.tVendidas)),
       ...(hayFlete ? [serie('Flete Holcim', COLOR_FAMILIA.Fletes, d.map(x => flete(x.fecha)))] : []),
       ...(hayTras ? [serie('Traslados', COLOR_TIPO.traslado, d.map(x => x.tTraslados))] : [])],
+  }, d.length > 0)
+})
+
+// ── Traslados de inventario por bodega de destino (color fijo de cada planta: colorBodega) ──
+const trasLs = computed(() => props.lineas.filter(l => l.tipo === 'traslado'))
+const trasBodegas = computed(() => porBodega(trasLs.value))
+const trasTxt = computed(() => {
+  const b = trasBodegas.value, tot = b.reduce((a, x) => a + x.t, 0)
+  return b.length ? `${tFmt(tot)} t trasladadas en ${fmtN(new Set(trasLs.value.map(l => l.doc)).size, 0)} documentos · el principal destino es ${b[0].nombre} (${pct(b[0].part)})` : ''
+})
+const optTrasBodega = computed(() => {
+  const b = trasBodegas.value
+  const txt = (x: typeof b[number]) => `${tFmt(x.t)} t · ${pct(x.part)}`
+  return vacio(barrasH(b.map(x => x.nombre), [{
+    name: 'Toneladas', type: 'bar', barWidth: '60%', emphasis,
+    data: b.map(x => ({ value: +x.t.toFixed(1), itemStyle: { color: x.color, borderRadius: [0, 4, 4, 0] } })),
+    label: { ...labelPill.value, position: 'right', formatter: (p: any) => txt(b[p.dataIndex]) },
+  }], b.map(txt), {
+    trigger: 'axis', axisPointer: { type: 'shadow' },
+    formatter: (ps: any[]) => { const x = b[ps[0].dataIndex]
+      return `${punto(x.color)} <b>${x.nombre}</b><br/>Toneladas: <b>${tFmt(x.t)} t</b> (${pct(x.part)})<br/>Documentos: <b>${x.docs}</b><br/>Último traslado: <b>${fechaLarga(x.ultimo)}</b>` },
+  }, false), b.length > 0)
+})
+const optTrasMaterial = computed(() => {
+  const b = trasBodegas.value
+  const mats = [...new Set(trasLs.value.map(l => l.producto))]
+    .map(p => ({ p, t: trasLs.value.filter(l => l.producto === p).reduce((a, l) => a + l.toneladas, 0) }))
+    .sort((x, y) => y.t - x.t).map(x => x.p)
+  const tDe = (p: string, codigo: string) => b.find(x => x.codigo === codigo)!.lineas.filter(l => l.producto === p).reduce((a, l) => a + l.toneladas, 0)
+  const textos = mats.flatMap(p => b.map(x => tFmt(tDe(p, x.codigo))))
+  return vacio(barrasH(mats.map(nombreMaterial), b.map(x => ({
+    name: x.nombre, type: 'bar', barMaxWidth: 14, barGap: '15%', emphasis,
+    data: mats.map(p => +tDe(p, x.codigo).toFixed(1)),
+    itemStyle: { color: x.color, borderRadius: [0, 3, 3, 0] },
+    label: { ...labelPill.value, position: 'right', formatter: (p: any) => (p.value > 0 ? tFmt(p.value) : '') },
+  })), textos, {
+    trigger: 'axis', axisPointer: { type: 'shadow' },
+    formatter: (ps: any[]) => `<b>${nombreMaterial(mats[ps[0].dataIndex])}</b><br/>` +
+      ps.filter(p => p.value > 0).map(p => `${punto(b[p.seriesIndex].color)} ${p.seriesName}: <b>${tFmt(p.value)} t</b>`).join('<br/>'),
+  }, true), mats.length > 0) as any
+})
+// leyenda arriba para la gráfica agrupada (barrasH no la trae)
+const optTrasMaterialConLeyenda = computed(() => ({ ...optTrasMaterial.value, legend: leyenda(trasBodegas.value.map(x => ({ name: x.nombre, itemStyle: { color: x.color } }))) }))
+const trasDias = computed(() => [...new Set(trasLs.value.map(l => l.fecha))].sort())
+const optTrasDia = computed(() => {
+  const d = trasDias.value, b = trasBodegas.value
+  const z = zoom(d.length)
+  const tDia = (f: string, codigo: string) => b.find(x => x.codigo === codigo)!.lineas.filter(l => l.fecha === f).reduce((a, l) => a + l.toneladas, 0)
+  return vacio({
+    ...base(),
+    tooltip: { trigger: 'axis' as const, axisPointer: { type: 'shadow' as const },
+      formatter: (ps: any[]) => { const f = d[ps[0].dataIndex], del = trasLs.value.filter(l => l.fecha === f)
+        return `<b>${fechaLarga(f)}</b><br/>` + ps.filter(p => p.value > 0).map(p => `${punto(b[p.seriesIndex].color)} ${p.seriesName}: <b>${tFmt(p.value)} t</b>`).join('<br/>') +
+          `<br/>${punto(tinta.value)} Total: <b>${tFmt(del.reduce((a, l) => a + l.toneladas, 0))} t</b> · ${new Set(del.map(l => l.doc)).size} documentos` } },
+    legend: leyenda(b.map(x => ({ name: x.nombre, itemStyle: { color: x.color } }))),
+    grid: { left: 12, right: 20, bottom: z.gridBottom, top: 40, containLabel: true },
+    dataZoom: z.dataZoom,
+    xAxis: ejeX(d.map(ddmm)),
+    yAxis: ejeY(),
+    series: b.map(x => ({ name: x.nombre, type: 'bar' as const, barMaxWidth: 16, barGap: '10%', emphasis,
+      data: d.map(f => +tDia(f, x.codigo).toFixed(1)), itemStyle: { color: x.color, borderRadius: [3, 3, 0, 0] } })),
   }, d.length > 0)
 })
 

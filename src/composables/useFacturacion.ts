@@ -9,6 +9,7 @@
  * - Precio promedio por t: venta de material (sin fletes) ÷ toneladas vendidas.
  * - Remisión: documento (NUMERO DOC) distinto.
  */
+import { COLOR_PLANTA } from './useGraficasConcreto'
 import type { Familia, LineaFacturacion } from '../types/facturacion'
 
 export const FAMILIAS: Familia[] = ['Arena', 'Grava', 'Base y sub-base', 'Material de río', 'Piedra y otros', 'Fletes']
@@ -30,6 +31,26 @@ const suma = (ls: LineaFacturacion[], f: (l: LineaFacturacion) => number) => ls.
 /** «ARENA LAVADA» → «Arena lavada» */
 export const nombreMaterial = (s: string) => s.charAt(0) + s.slice(1).toLowerCase()
 /** Nombre de cliente en formato título, sin el relleno «NO APLICA» */
+/** Bodegas de destino de los traslados (columna «Bodega de Destino» de Novasoft): plantas de Concretos */
+export const BODEGAS: Record<string, string> = {
+  B15: 'Usme', B16: 'Villavicencio', B17: 'Acacías', B18: 'Restrepo', B19: 'Puerto Concordia', B20: 'Puerto Gaitán',
+}
+/** «Villavicencio (B16)»; sin código → «Sin bodega» */
+export const nombreBodega = (codigo: string) => (!codigo ? 'Sin bodega' : BODEGAS[codigo] ? `${BODEGAS[codigo]} (${codigo})` : codigo)
+/** Color de la bodega = color de su planta (el mismo en toda la app); sin bodega, gris */
+export const colorBodega = (codigo: string) => COLOR_PLANTA[BODEGAS[codigo] ?? ''] ?? '#94A3B8'
+export interface FilaBodega { codigo: string; nombre: string; color: string; docs: number; t: number; part: number; ultimo: string; lineas: LineaFacturacion[] }
+/** Traslados agrupados por bodega de destino, de mayor a menor toneladas */
+export function porBodega(ls: LineaFacturacion[]): FilaBodega[] {
+  const g = new Map<string, LineaFacturacion[]>()
+  for (const l of ls) g.set(l.bodegaDestino ?? '', [...(g.get(l.bodegaDestino ?? '') ?? []), l])
+  const total = ls.reduce((a, l) => a + l.toneladas, 0)
+  return [...g.entries()].map(([codigo, x]) => {
+    const t = x.reduce((a, l) => a + l.toneladas, 0)
+    return { codigo, nombre: nombreBodega(codigo), color: colorBodega(codigo), docs: new Set(x.map(l => l.doc)).size,
+      t, part: total ? (t / total) * 100 : 0, ultimo: x.map(l => l.fecha).sort().at(-1) ?? '', lineas: x }
+  }).sort((a, b) => b.t - a.t)
+}
 export const nombreCliente = (s: string) => (/^NO APLICA/i.test(s) || !s ? 'Sin cliente' : s.toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase()))
 
 export function fechaCorta(iso: string, conAnio = false): string {
