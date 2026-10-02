@@ -119,7 +119,7 @@
                     <span class="group-count">{{ g.vistas.filter(v => draft[v.key]).length }}/{{ g.vistas.length }}</span>
                   </label>
                   <label v-for="v in g.vistas" :key="v.key" class="perm-row" :class="{ disabled: bloqueadaPorPadre(v.key) }" :style="{ paddingLeft: 12 + nivel(v.key) * 16 + 'px' }">
-                    <input type="checkbox" v-model="draft[v.key]" :disabled="bloqueadaPorPadre(v.key)" />
+                    <input type="checkbox" :checked="!!draft[v.key] && !bloqueadaPorPadre(v.key)" :title="bloqueadaPorPadre(v.key) ? 'Al marcarla se habilita también su sección, solo con esta vista' : undefined" @change="marcar(v.key, ($event.target as HTMLInputElement).checked)" />
                     <span>{{ v.label }}</span>
                   </label>
                 </section>
@@ -259,9 +259,16 @@ function vistasMantenimiento(p: string, concretos: boolean): Vista[] {
   const area = (a: 'planta' | 'maquinaria', nombre: string): Vista[] => [
     { key: `${m}/${a}`, label: `Mant. ${nombre}` },
     { key: `${m}/${a}/ordenes`, label: `${nombre} · Órdenes de Trabajo` },
+    { key: `${m}/${a}/ordenes/graficas`, label: 'Órdenes · Gráficas' },
+    { key: `${m}/${a}/ordenes/detalle`, label: 'Órdenes · Detalle' },
+    { key: `${m}/${a}/ordenes/informe`, label: 'Órdenes · Informe' },
     { key: `${m}/${a}/almacen`, label: `${nombre} · Almacén` },
+    { key: `${m}/${a}/almacen/graficas`, label: 'Almacén · Gráficas' },
+    { key: `${m}/${a}/almacen/solicitudes`, label: 'Almacén · Solicitudes' },
     { key: `${m}/${a}/gerencial`, label: `${nombre} · Gerencial` },
     { key: `${m}/${a}/disponibilidad`, label: `${nombre} · Disponibilidad` },
+    { key: `${m}/${a}/disponibilidad/graficas`, label: 'Disponibilidad · Gráficas' },
+    { key: `${m}/${a}/disponibilidad/informe`, label: 'Disponibilidad · Informe' },
     ...(concretos ? [{ key: `${m}/${a}/combustible`, label: `${nombre} · Combustible` }] : []),
     // Llantas solo existe en Maquinaria de Concretos (en la URL «llantas»; su clave general es …/inspeccion)
     ...(concretos && a === 'maquinaria' ? [
@@ -438,6 +445,52 @@ function bloqueadaPorPadre(key: string): boolean {
     if (clave && clave in draft && !draft[clave]) return true
   }
   return false
+}
+
+/** Clave general de Mantenimiento de la que depende una sección (…/maquinaria/llantas → …/inspeccion) */
+const GENERAL_DE: Record<string, string> = { disponibilidad: 'disponibilidad', llantas: 'inspeccion', combustible: 'combustible' }
+function generalDe(key: string): string | null {
+  const partes = key.split('/')
+  if (partes[1] !== 'mantenimiento' || partes.length < 4 || !GENERAL_DE[partes[3]]) return null
+  const g = `${partes[0]}/mantenimiento/${GENERAL_DE[partes[3]]}`
+  return g in draft ? g : null
+}
+/** Padres de una clave, de arriba abajo: niveles superiores de la ruta y, al final, su clave general */
+function padres(key: string): string[] {
+  const partes = key.split('/')
+  const ruta = partes.slice(1).map((_, i) => partes.slice(0, i + 1).join('/')).filter(k => k in draft)
+  const g = generalDe(key)
+  return g ? [...ruta, g] : ruta
+}
+
+/**
+ * Marcar o desmarcar una vista. Cada vista tiene su permiso; para dar SOLO una vista (p. ej. solo Llantas)
+ * basta con marcarla aunque su sección esté apagada: se encienden sus niveles superiores, pero las demás vistas
+ * de esos niveles quedan apagadas (antes no se veían) y se encienden todas las vistas de lo marcado.
+ * Marcar la clave general de una sección (Llantas, Disponibilidad, Combustible) enciende esa sección en sus áreas.
+ */
+function marcar(key: string, valor: boolean) {
+  if (!valor) { draft[key] = false; return }
+  const camino = padres(key)
+  for (const p of camino) {
+    if (draft[p]) continue
+    draft[p] = true
+    for (const k of allKeys) {
+      if (!k.startsWith(p + '/') || k === key || camino.includes(k) || key.startsWith(k + '/') || k.startsWith(key + '/')) continue
+      draft[k] = false
+    }
+  }
+  draft[key] = true
+  for (const k of allKeys) if (k.startsWith(key + '/')) draft[k] = true
+  // Clave general (…/mantenimiento/inspeccion): enciende la sección correspondiente en cada área
+  const partes = key.split('/')
+  if (partes.length === 3 && partes[1] === 'mantenimiento') {
+    const seccion = Object.entries(GENERAL_DE).find(([, g]) => g === partes[2])?.[0]
+    if (seccion) for (const k of allKeys) {
+      const q = k.split('/')
+      if (q.length === 4 && q[0] === partes[0] && q[1] === 'mantenimiento' && q[3] === seccion && !draft[k]) marcar(k, true)
+    }
+  }
 }
 
 function groupState(g: Grupo): 'all' | 'some' | 'none' {
@@ -668,7 +721,8 @@ onMounted(async () => {
 .group-count { margin-left:auto; font-size:11px; color:var(--text-tertiary); font-weight:600; }
 .perm-row { display:flex; align-items:center; gap:8px; padding:6px 8px 6px 20px; border-radius:6px; font-size:12px; cursor:pointer; }
 .perm-row:hover { background:var(--card-bg-hover); }
-.perm-row.disabled { opacity:.45; cursor:not-allowed; }
+/* Vista bajo una sección apagada: se ve atenuada, pero se puede marcar (enciende solo ese camino) */
+.perm-row.disabled { opacity:.55; }
 .perm-groups input[type=checkbox], .check-all input { accent-color: var(--accent); width:15px; height:15px; }
 
 .admin-actions { display:flex; align-items:center; gap:8px; margin-top:14px; flex-wrap:wrap; }

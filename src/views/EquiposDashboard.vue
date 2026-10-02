@@ -103,15 +103,15 @@
 
       <template v-if="subTab === 'dashboard'">
       <div class="almacen-view-toggle">
-        <RouterLink class="av-btn" :to="rutaMant.enlace({ ot: 'resumen' })" replace :class="{ active: dashboardView === 'resumen' }">
+        <RouterLink v-if="rutaMant.puede({ ot: 'resumen' })" class="av-btn" :to="rutaMant.enlace({ ot: 'resumen' })" replace :class="{ active: dashboardView === 'resumen' }">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           Gráficas
         </RouterLink>
-        <RouterLink class="av-btn" :to="rutaMant.enlace({ ot: 'ordenes' })" replace :class="{ active: dashboardView === 'ordenes' }">
+        <RouterLink v-if="rutaMant.puede({ ot: 'ordenes' })" class="av-btn" :to="rutaMant.enlace({ ot: 'ordenes' })" replace :class="{ active: dashboardView === 'ordenes' }">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           Órdenes de Trabajo
         </RouterLink>
-        <RouterLink class="av-btn" :to="rutaMant.enlace({ ot: 'informe' })" replace :class="{ active: dashboardView === 'informe' }">
+        <RouterLink v-if="rutaMant.puede({ ot: 'informe' })" class="av-btn" :to="rutaMant.enlace({ ot: 'informe' })" replace :class="{ active: dashboardView === 'informe' }">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           Informe
         </RouterLink>
@@ -1056,11 +1056,11 @@
     <template v-if="subTab === 'almacen'">
     <div class="ots-section">
       <div class="almacen-view-toggle">
-        <RouterLink class="av-btn" :to="rutaMant.enlace({ almacen: 'graficos' })" replace :class="{ active: almacenView === 'graficos' }">
+        <RouterLink v-if="rutaMant.puede({ almacen: 'graficos' })" class="av-btn" :to="rutaMant.enlace({ almacen: 'graficos' })" replace :class="{ active: almacenView === 'graficos' }">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           Gráficas
         </RouterLink>
-        <RouterLink class="av-btn" :to="rutaMant.enlace({ almacen: 'solicitudes' })" replace :class="{ active: almacenView === 'solicitudes' }">
+        <RouterLink v-if="rutaMant.puede({ almacen: 'solicitudes' })" class="av-btn" :to="rutaMant.enlace({ almacen: 'solicitudes' })" replace :class="{ active: almacenView === 'solicitudes' }">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           Solicitudes
         </RouterLink>
@@ -1808,7 +1808,7 @@ const tipoTabs = computed(() => [
   { id: 'maquinaria' as const, label: 'Maquinaria' },
   { id: 'tareas' as const, label: 'Tareas' },
 // Permisos por vista (Configuración): se ocultan las áreas que el usuario no tiene permitidas
-].filter(t => authStore.canView(`${props.planta}/mantenimiento/${t.id}`)))
+].filter(t => rutaMant.puede({ area: t.id })))
 // Si el área de la ruta no existe en esta planta o no está permitida, se muestra la primera permitida
 watch(tipoTabs, ts => { if (ts.length && !ts.some(t => t.id === tipoTab.value)) rutaMant.ir({ area: ts[0].id }, true) }, { immediate: true })
 /** Secciones con órdenes de trabajo (filtros de órdenes, accesos rápidos): no Tareas, Llantas ni Combustible */
@@ -1821,7 +1821,8 @@ const paneles = computed(() => [
   // Solo Concretos, cada una con su permiso: Llantas en Maquinaria; Combustible en Planta y Maquinaria
   ...(isConcretos.value && tipoTab.value === 'maquinaria' && authStore.canView(`${props.planta}/mantenimiento/inspeccion`) ? [{ id: 'inspeccion' as const, label: 'Llantas' }] : []),
   ...(isConcretos.value && tipoTab.value !== 'tareas' && authStore.canView(`${props.planta}/mantenimiento/combustible`) ? [{ id: 'combustible' as const, label: 'Combustible' }] : []),
-])
+// Cada sección de cada área tiene su permiso (…/mantenimiento/planta/almacen…): solo las que tengan alguna vista permitida
+].filter(p => rutaMant.puede({ panel: p.id })))
 const puedeDisponibilidad = computed(() => authStore.canView(`${props.planta}/mantenimiento/disponibilidad`))
 function scrollToSec(id: string) {
   const el = document.getElementById(id)

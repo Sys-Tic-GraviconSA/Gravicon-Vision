@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw, type RouteLocationNormalized } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { EMPRESAS_PROGRAMACION, PLANTAS, PLANTAS_AGREGADOS, SECCIONES_CONCRETOS, VISTAS_CONCRETOS, VISTAS_FACTURACION, VISTAS_PRODUCCION_AGREGADOS, type PlantaId } from '../config/plantas'
-import { estadosMantenimiento, leerEstado, segmentos } from '../composables/useRutaMantenimiento'
+import { clavesMantenimiento, estadosMantenimiento, leerEstado, segmentos } from '../composables/useRutaMantenimiento'
 
 /**
  * Mapa de rutas. Cada vista tiene su propia URL, así recargar, atrás/adelante y
@@ -57,19 +57,6 @@ function primeraVista(rutas: [string, string][]) {
   if (!auth.profile) return { name: rutas[0][1] }
   const r = rutas.find(([clave]) => auth.canView(clave))
   return r ? { name: r[1] } : { name: 'configuracion' }
-}
-
-/**
- * Claves de permiso de una ubicación de Mantenimiento, además de las de la ruta:
- *  - la ruta canónica (los enlaces viejos, p. ej. …/maquinaria/inspeccion, se revisan como …/maquinaria/llantas/graficas)
- *  - la clave general de Disponibilidad, Llantas (…/mantenimiento/inspeccion, nombre anterior) y Combustible.
- */
-function clavesMantenimiento(planta: string, segs: string[]): string[] {
-  const canon = segmentos(leerEstado(segs))
-  const generales = ([['disponibilidad', 'disponibilidad'], ['llantas', 'inspeccion'], ['combustible', 'combustible']] as const)
-    .filter(([seg]) => canon[1] === seg)
-    .map(([, clave]) => `${planta}/mantenimiento/${clave}`)
-  return [`${planta}/mantenimiento/${canon.join('/')}`, ...generales]
 }
 
 const segmentosDe = (to: RouteLocationNormalized) =>

@@ -2,19 +2,19 @@
   <div class="inspeccion-tab">
     <!-- Vistas con ruta propia: …/maquinaria/llantas/graficas | inventario | informe -->
     <div class="almacen-view-toggle">
-      <RouterLink class="av-btn" :to="rutaMant.enlace({ llantas: 'graficas' })" replace :class="{ active: vista === 'graficas' }">
+      <RouterLink v-if="rutaMant.puede({ llantas: 'graficas' })" class="av-btn" :to="rutaMant.enlace({ llantas: 'graficas' })" replace :class="{ active: vista === 'graficas' }">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         Gráficas
       </RouterLink>
-      <RouterLink class="av-btn" :to="rutaMant.enlace({ llantas: 'alertas' })" replace :class="{ active: vista === 'alertas' }">
+      <RouterLink v-if="rutaMant.puede({ llantas: 'alertas' })" class="av-btn" :to="rutaMant.enlace({ llantas: 'alertas' })" replace :class="{ active: vista === 'alertas' }">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         Alertas<span v-if="m.resumenAlertas.value.criticas" class="av-badge">{{ m.resumenAlertas.value.criticas }}</span>
       </RouterLink>
-      <RouterLink class="av-btn" :to="rutaMant.enlace({ llantas: 'inventario' })" replace :class="{ active: vista === 'inventario' }">
+      <RouterLink v-if="rutaMant.puede({ llantas: 'inventario' })" class="av-btn" :to="rutaMant.enlace({ llantas: 'inventario' })" replace :class="{ active: vista === 'inventario' }">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
         Inventario
       </RouterLink>
-      <RouterLink class="av-btn" :to="rutaMant.enlace({ llantas: 'informe' })" replace :class="{ active: vista === 'informe' }">
+      <RouterLink v-if="rutaMant.puede({ llantas: 'informe' })" class="av-btn" :to="rutaMant.enlace({ llantas: 'informe' })" replace :class="{ active: vista === 'informe' }">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
         Informe
       </RouterLink>

@@ -65,6 +65,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQueryDate, useQuerySet, NINGUNA } from '../../composables/useQueryState'
 import { cargarConCache } from '../../stores/api'
+import { useAuthStore } from '../../stores/auth'
 import KpiCard from '../../components/dashboard/KpiCard.vue'
 import DataTable from '../../components/dashboard/DataTable.vue'
 import FilterBar from '../../components/dashboard/FilterBar.vue'
@@ -124,10 +125,12 @@ function onDateRangeFilter(range: { from: string | null; to: string | null }) {
   fechaFin.value = range.to ?? ''
 }
 
-const tabs = [
+// Cada empresa es una vista con su permiso (…/programacion/gravicon | cliente): solo las permitidas
+const authStore = useAuthStore()
+const tabs = computed(() => [
   { id: 'gravicon' as const, label: 'Gravicon/Incondor' },
   { id: 'cliente' as const, label: 'Transporte Cliente' },
-]
+].filter(t => authStore.canView(`${route.path.split('/')[1]}/programacion/${t.id}`)))
 
 // ── Filtros en cascada: cada lista muestra solo lo que existe con las fechas y los demás filtros marcados ──
 const CAMPOS = { material: 'tipo_de_material', transporte: 'responsable_del_transporte', responsable: 'responsable_del_registro' } as const
