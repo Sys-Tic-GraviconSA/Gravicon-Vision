@@ -7,8 +7,10 @@
         <span class="badge">{{ badgeText }}</span>
         <svg class="chevron" :class="{ open: openDate }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
+      <!-- El menú flota sobre la página (fuera del recuadro de filtros, que puede deslizarse de lado y lo recortaría) -->
+      <Teleport to="body">
       <transition name="fade">
-        <div v-if="openDate" class="dropdown-menu" :class="{ 'align-right': dateAlignRight }">
+        <div v-if="openDate" ref="menuRef" class="dropdown-menu fb-menu" :style="menuStyle">
           <div class="date-presets">
             <button v-for="p in presets" :key="p.id" type="button" class="preset-btn" :class="{ active: presetActivo === p.id }" @click="aplicarPreset(p.id)">{{ p.label }}</button>
           </div>
@@ -18,6 +20,7 @@
           </div>
         </div>
       </transition>
+      </Teleport>
     </div>
 
     <!-- Provider filter dropdown -->
@@ -53,8 +56,19 @@ const emit = defineEmits<{
 }>();
 
 const openDate = ref(false)
-const dateAlignRight = ref(false)
 const dateRef = ref<HTMLElement | null>(null)
+const menuRef = ref<HTMLElement | null>(null)
+const menuPos = ref({ top: 0, left: 0 })
+// Posición fija bajo el botón, sin salirse de la pantalla (en celular, a lo ancho con margen)
+const menuStyle = computed<Record<string, string>>(() => {
+  const base: Record<string, string> = { position: 'fixed', top: `${menuPos.value.top}px`, zIndex: '2000' }
+  return window.innerWidth <= 768 ? { ...base, left: '12px', right: '12px' } : { ...base, left: `${menuPos.value.left}px` }
+})
+function ubicarMenu() {
+  const rect = dateRef.value?.getBoundingClientRect()
+  if (!rect) return
+  menuPos.value = { top: rect.bottom + 6, left: Math.max(12, Math.min(rect.left, window.innerWidth - 272)) }
+}
 const startDate = ref<string | null>(props.from || null)
 const endDate = ref<string | null>(props.to || null)
 
@@ -107,9 +121,7 @@ async function toggleOpenDate() {
   openDate.value = !openDate.value
   if (!openDate.value) return
   await nextTick()
-  const rect = dateRef.value?.getBoundingClientRect()
-  if (!rect) return
-  dateAlignRight.value = rect.left + 260 > window.innerWidth
+  ubicarMenu()
 }
 
 watch([startDate, endDate], () => {
@@ -147,11 +159,21 @@ function clearFilters(emitClear = true) {
 defineExpose({ clearFilters })
 
 function handleClickOutside(e: MouseEvent) {
-  if (dateRef.value && !dateRef.value.contains(e.target as Node)) openDate.value = false
+  const t = e.target as Node
+  if (dateRef.value && !dateRef.value.contains(t) && !menuRef.value?.contains(t)) openDate.value = false
 }
+const reubicar = () => { if (openDate.value) ubicarMenu() }
 
-onMounted(() => document.addEventListener('click', handleClickOutside))
-onUnmounted(() => document.removeEventListener('click', handleClickOutside))
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+  window.addEventListener('scroll', reubicar, true)
+  window.addEventListener('resize', reubicar)
+})
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+  window.removeEventListener('scroll', reubicar, true)
+  window.removeEventListener('resize', reubicar)
+})
 </script>
 
 <style scoped>
@@ -196,8 +218,10 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
   padding: 1px 6px;
   background: var(--bg);
   border-radius: 10px;
-  min-width: 20px;
+  /* Mismo ancho con «Todas» o con un rango (Sep 01 → Sep 30): el resto de filtros no se corre */
+  min-width: 84px;
   text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .chevron {
@@ -309,7 +333,7 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
   .badge { display: none; }
   .clear-btn { padding: 5px 8px; font-size: 11px; }
   /* En celular el menú se ancla a la pantalla para no salirse por los lados */
-  .dropdown-menu { position: fixed; left: 12px; right: 12px; top: auto; min-width: 0; margin-top: 6px; }
+  .dropdown-menu { position: fixed; left: 12px; right: 12px; min-width: 0; }
   .dropdown-menu.align-right { left: 12px; right: 12px; }
   .search-input { font-size: 16px; } /* evita el zoom automático de iOS al enfocar */
 }

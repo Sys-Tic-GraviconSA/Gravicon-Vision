@@ -52,6 +52,7 @@
  * placa, consumo por hora de horómetro y galones por día. «Precio» es el valor total del vale.
  */
 <script setup lang="ts">
+import { donaCentro } from '../../utils/chartLayout'
 import SkeletonLoader from '../../components/ui/SkeletonLoader.vue'
 import { computed, onMounted } from 'vue'
 import KpiCard from '../../components/dashboard/KpiCard.vue'
@@ -453,17 +454,16 @@ function dona(lista: { nombre: string; valor: number; color: string; extra?: str
   const total = lista.reduce((a, x) => a + x.valor, 0)
   return vacio({
     ...base(),
-    title: {
-      text: m3Lbl(total), subtext: centro, left: '49%', top: '36%', textAlign: 'center',
-      textStyle: { fontFamily: FONT, fontSize: 16, fontWeight: 700, color: isLight.value ? '#0f172a' : '#f1f5f9' },
-      subtextStyle: { fontFamily: FONT, fontSize: 11, color: chartTextColor.value },
-    },
     tooltip: { trigger: 'item' as const, formatter: (p: any) => { const x = lista[p.dataIndex]; return `${punto(p.color)} <b>${x.nombre}</b><br/>${unidad(x.valor)} (${pct(p.percent)})${x.extra ? `<br/>${x.extra}` : ''}` } },
     legend: {
       type: 'scroll' as const, orient: 'horizontal' as const, left: 'center', bottom: 0, icon: 'circle', itemWidth: 10, itemHeight: 10, itemGap: 12,
       textStyle: { fontFamily: FONT, fontWeight: 600 as const, color: chartTextColor.value, fontSize: 11 },
+      data: lista.map(x => x.nombre),
     },
-    series: [{
+    series: [donaCentro({
+      center: ['50%', '44%'], radio: '40%', valor: m3Lbl(total), sub: centro, font: FONT, tamano: 16,
+      color: isLight.value ? '#0f172a' : '#f1f5f9', colorSub: chartTextColor.value,
+    }), {
       type: 'pie' as const, radius: ['40%', '62%'], center: ['50%', '44%'], avoidLabelOverlap: true,
       itemStyle: { borderRadius: 4, borderColor: isLight.value ? '#fff' : '#0b0f1a', borderWidth: 2 },
       data: lista.map(x => {

@@ -29,7 +29,7 @@
     <!-- ========================================== -->
     <template v-if="dispView === 'graficas'">
       <!-- Banner de carga mientras el store trae los datos de disponibilidad -->
-      <SkeletonLoader v-if="dispStore.loading" :kpis="4" :charts="3" :label="`Cargando datos de disponibilidad — ${plantaLabel}…`" />
+      <SkeletonLoader v-if="dispStore.loading && dispStore.data?.planta !== plantaKey" :kpis="4" :charts="3" :label="`Cargando datos de disponibilidad — ${plantaLabel}…`" />
       <div v-else-if="dispStore.error" class="disp-error-banner">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         Error cargando datos: {{ dispStore.error }}
@@ -1043,6 +1043,7 @@
 </template>
 
 <script setup lang="ts">
+import { donaCentro } from '../../utils/chartLayout'
 import { useRutaMantenimiento } from '../../composables/useRutaMantenimiento'
 import SkeletonLoader from '../../components/ui/SkeletonLoader.vue'
 import { ref, computed, markRaw, watch, onMounted, onUnmounted, nextTick } from 'vue'
@@ -2884,14 +2885,9 @@ function renderAllCharts() {
       const flota = k.flotaTotal
       const dc = dp >= 80 ? '#16a34a' : dp >= 65 ? '#e8a020' : '#dc2626'
       chart.setOption({
-        title: {
-          text: dp + '%',
-          subtext: 'DISPONIBILIDAD\n' + opTot + ' de ' + flota + ' equipos',
-          x: 'center', y: 'center',
-          textStyle: { fontSize: 30, fontWeight: '900', color: dc, fontFamily: 'Arial' },
-          subtextStyle: { fontSize: 8, color: '#666', fontWeight: 'bold', fontFamily: 'Arial', lineHeight: 14 }
-        },
-        series: [{ type: 'pie', radius: ['62%', '82%'], avoidLabelOverlap: false, label: { show: false },
+        series: [donaCentro({ center: ['50%', '50%'], radio: '62%', valor: dp + '%', sub: 'DISPONIBILIDAD\n' + opTot + ' de ' + flota + ' equipos',
+          font: 'Arial', tamano: 30, peso: 900, color: dc, tamSub: 8, pesoSub: 700, colorSub: '#666' }),
+        { type: 'pie', radius: ['62%', '82%'], avoidLabelOverlap: false, label: { show: false },
           data: [{ value: dp, itemStyle: { color: dc } }, { value: 100 - dp, itemStyle: { color: '#e0d8ec' } }]
         }]
       }, true)
@@ -3140,10 +3136,9 @@ function renderAllCharts() {
       if (!chart) return
       const dc = pct >= 80 ? '#16a34a' : pct >= 50 ? '#e8a020' : '#dc2626'
       chart.setOption({
-        title: { text: pct + '%', subtext: 'CUMPLIMIENTO', x: 'center', y: 'center',
-          textStyle: { fontSize: 18, fontWeight: '900', color: dc, fontFamily: 'Arial' },
-          subtextStyle: { fontSize: 6.5, color: '#666', fontWeight: 'bold', fontFamily: 'Arial' } },
-        series: [{ type: 'pie', radius: ['68%', '84%'], avoidLabelOverlap: false, label: { show: false },
+        series: [donaCentro({ center: ['50%', '50%'], radio: '68%', valor: pct + '%', sub: 'CUMPLIMIENTO',
+          font: 'Arial', tamano: 18, peso: 900, color: dc, tamSub: 6.5, pesoSub: 700, colorSub: '#666' }),
+        { type: 'pie', radius: ['68%', '84%'], avoidLabelOverlap: false, label: { show: false },
           data: [{ value: pct, itemStyle: { color: dc } }, { value: 100 - pct, itemStyle: { color: '#e0d8ec' } }]
         }]
       }, true)

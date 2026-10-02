@@ -362,6 +362,7 @@
  * («mes a la fecha») sale igual que el del generador; con otro rango dice «período» y omite la proyección de cierre.
  * El rango es el mismo filtro de fechas de Facturación. Descarga en PDF continuo de 297 mm (hoja blanca).
  */
+import { donaCentro } from '../../../utils/chartLayout'
 import { computed, ref } from 'vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
@@ -801,7 +802,8 @@ const conclusiones = computed(() => {
 
 // ── Gráficas (mismas del generador; colores para papel blanco) ──
 const FONT = "'Lato','Segoe UI',Arial,sans-serif", CP = '#172954'
-const mill = (v: number) => '$ ' + (v / 1e6).toLocaleString('es-CO', { maximumFractionDigits: 1 }) + ' M'
+// Valores en pesos completos (sin abreviar en millones)
+const mill = (v: number) => '$ ' + Math.round(v).toLocaleString('es-CO')
 const base = { animation: false, textStyle: { fontFamily: FONT } }
 const leg = { top: 0, right: 0, textStyle: { fontSize: 10 }, itemWidth: 10, itemHeight: 8 }
 const ejeY = (f: (v: number) => string) => ({ type: 'value', axisLine: { show: false }, axisTick: { show: false }, splitLine: { lineStyle: { color: '#e0d8ec', type: 'dashed' } }, axisLabel: { fontSize: 9, formatter: f } })
@@ -835,11 +837,11 @@ const optFam = computed(() => {
 })
 // 3. Dona de participación
 const optDona = computed(() => ({ ...base,
-  legend: { bottom: 0, left: 'center', orient: 'vertical', itemWidth: 10, itemHeight: 8, textStyle: { fontSize: 10, fontWeight: 'bold', color: CP },
+  legend: { data: fams.value, bottom: 0, left: 'center', orient: 'vertical', itemWidth: 10, itemHeight: 8, textStyle: { fontSize: 10, fontWeight: 'bold', color: CP },
     formatter: (n: string) => `${n}  ${(M.value.venta ? mv.value[n as Familia] / M.value.venta * 100 : 0).toLocaleString('es-CO', { maximumFractionDigits: 1 })}%` },
-  title: { text: mill(M.value.venta), subtext: `VENTA ${esMes.value ? 'DEL MES' : 'DEL PERÍODO'}\nPARTICIPACIÓN`, left: 'center', top: '19%',
-    textStyle: { fontSize: 17, fontWeight: 900, color: CP }, subtextStyle: { fontSize: 8, color: '#666', fontWeight: 'bold', lineHeight: 12 } },
-  series: [{ type: 'pie', radius: ['34%', '50%'], center: ['50%', '30%'], label: { show: false },
+  series: [donaCentro({ center: ['50%', '30%'], radio: '34%', valor: mill(M.value.venta), sub: `VENTA ${esMes.value ? 'DEL MES' : 'DEL PERÍODO'}\nPARTICIPACIÓN`,
+    tamano: 13, peso: 900, color: CP, tamSub: 8, pesoSub: 700, colorSub: '#666' }),
+  { type: 'pie', radius: ['34%', '50%'], center: ['50%', '30%'], label: { show: false },
     data: fams.value.map(f => ({ name: f, value: Math.round(mv.value[f]), itemStyle: { color: COL[f] } })) }] }))
 // 4. Top materiales por venta
 const optMat = computed(() => {

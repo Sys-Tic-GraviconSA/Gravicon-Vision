@@ -24,13 +24,14 @@
             <MultiSelect v-model="selSubtipos" :options="opcionesSubtipo" label="Subtipo" icon="filter" />
             <MultiSelect v-model="selFamilias" :options="opcionesFamilia" label="Familia" icon="filter" />
             <MultiSelect v-model="selClientes" :options="opcionesCliente" label="Cliente" icon="user" searchable />
-            <button v-if="hayFiltros" class="clear-filters" title="Quitar filtros" @click="limpiar">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              <span>Limpiar</span>
-            </button>
           </div>
+          <!-- «Limpiar» en la misma fila que «Actualizar» -->
+          <button class="clear-filters" :class="{ oculto: !hayFiltros }" :tabindex="hayFiltros ? 0 : -1" :aria-hidden="!hayFiltros" title="Quitar filtros" @click="limpiar">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <span>Limpiar</span>
+          </button>
           <button class="action-btn" :disabled="store.loading" title="Vuelve a leer el archivo de Drive" @click="cargar(true)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            <svg class="icono-actualizar" :class="{ girando: store.loading }" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
             {{ store.loading ? 'Actualizando…' : 'Actualizar' }}
           </button>
         </div>
@@ -46,7 +47,9 @@
         <RouteTabs variant="toggle" :items="vistas" :activo="vistaActiva" aria-label="Vista" replace />
         <!-- /:planta/facturacion/graficas | detalle | informe -->
         <RouterView v-slot="{ Component }">
-          <component :is="Component" :lineas="filtradas" :lineas-sin-fecha="sinFecha" :planta="planta.nombre" :planta-id="props.planta" :sucursal="datos.sucursal" :archivo="datos.archivo" :subtipos="datos.subtipos" />
+          <Transition name="vista" mode="out-in">
+            <component :is="Component" :lineas="filtradas" :lineas-sin-fecha="sinFecha" :planta="planta.nombre" :planta-id="props.planta" :sucursal="datos.sucursal" :archivo="datos.archivo" :subtipos="datos.subtipos" />
+          </Transition>
         </RouterView>
       </template>
     </template>
@@ -63,7 +66,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useFacturacionStore } from '../../../stores'
-import { useQueryDate, useQuerySet } from '../../../composables/useQueryState'
+import { useQueryDate, useQuerySet, NINGUNA } from '../../../composables/useQueryState'
 import { FAMILIAS, nombreCliente } from '../../../composables/useFacturacion'
 import { PLANTAS, VISTAS_FACTURACION } from '../../../config/plantas'
 import FilterBar from '../../../components/dashboard/FilterBar.vue'
@@ -93,9 +96,27 @@ const archivoModificado = computed(() => {
 // ── Filtros (URL) ──
 const lineas = computed(() => datos.value?.lineas ?? [])
 const etiquetaSubtipo = (s: string) => `${s} · ${datos.value?.subtipos[s] ?? 'Otro'}`
-const opcionesSubtipo = computed(() => [...new Set(lineas.value.map(l => l.subtipo))].sort().map(etiquetaSubtipo))
-const opcionesFamilia = computed(() => FAMILIAS.filter(f => lineas.value.some(l => l.familia === f)))
-const opcionesCliente = computed(() => [...new Set(lineas.value.filter(l => l.tipo !== 'traslado').map(l => nombreCliente(l.cliente)))].sort((a, b) => a.localeCompare(b)))
+
+// ── Filtros en cascada ──
+// Cada lista muestra solo lo que existe con las fechas y los demás filtros marcados (según la URL, sin ciclos)
+const marcadosUrl = (key: string): Set<string> | null => {
+  const raw = route.query[key]
+  if (raw === undefined || raw === null) return null
+  const v = (Array.isArray(raw) ? raw : [raw]).map(String).filter(x => x !== NINGUNA)
+  return v.length ? new Set(v) : null
+}
+function lineasPara(salvo: 'subtipo' | 'familia' | 'cliente') {
+  const d = String(route.query.desde ?? ''), h = String(route.query.hasta ?? '')
+  const st = salvo === 'subtipo' ? null : marcadosUrl('subtipo')
+  const fa = salvo === 'familia' ? null : marcadosUrl('familia')
+  const cl = salvo === 'cliente' ? null : marcadosUrl('cliente')
+  return lineas.value.filter(l => (!d || l.fecha >= d) && (!h || l.fecha <= h)
+    && (!st || st.has(etiquetaSubtipo(l.subtipo))) && (!fa || fa.has(l.familia))
+    && (!cl || (l.tipo !== 'traslado' && cl.has(nombreCliente(l.cliente)))))
+}
+const opcionesSubtipo = computed(() => [...new Set(lineasPara('subtipo').map(l => l.subtipo))].sort().map(etiquetaSubtipo))
+const opcionesFamilia = computed(() => { const ls = lineasPara('familia'); return FAMILIAS.filter(f => ls.some(l => l.familia === f)) })
+const opcionesCliente = computed(() => [...new Set(lineasPara('cliente').filter(l => l.tipo !== 'traslado').map(l => nombreCliente(l.cliente)))].sort((a, b) => a.localeCompare(b)))
 
 const desde = useQueryDate('desde')
 const hasta = useQueryDate('hasta')
@@ -107,17 +128,18 @@ function onFechas(r: { from: string | null; to: string | null }) {
   desde.value = r.from ?? ''
   hasta.value = r.to ?? ''
 }
-// Conjunto vacío = sin filtro (paso intermedio al desmarcar «Todos»)
-const pasa = (sel: Set<string>, v: string) => sel.size === 0 || sel.has(v)
-const todas = (sel: Set<string>, opts: string[]) => sel.size === 0 || sel.size === opts.length
+// Los datos se filtran con lo marcado en la URL (sin marca = todos), no con la lista en cascada:
+// así el informe conserva el período anterior para comparar aunque las listas se acoten a las fechas.
 // El filtro de cliente no aplica a traslados (no tienen cliente): se conservan salvo que se filtre por cliente.
 // sinFecha: todos los filtros menos el de fechas (el informe lo usa para comparar con el período anterior)
-const sinFecha = computed(() => lineas.value.filter(l =>
-  pasa(selSubtipos.value, etiquetaSubtipo(l.subtipo))
-  && pasa(selFamilias.value, l.familia)
-  && (todas(selClientes.value, opcionesCliente.value) || (l.tipo !== 'traslado' && selClientes.value.has(nombreCliente(l.cliente))))))
+const sinFecha = computed(() => {
+  const st = marcadosUrl('subtipo'), fa = marcadosUrl('familia'), cl = marcadosUrl('cliente')
+  return lineas.value.filter(l => (!st || st.has(etiquetaSubtipo(l.subtipo))) && (!fa || fa.has(l.familia))
+    && (!cl || (l.tipo !== 'traslado' && cl.has(nombreCliente(l.cliente)))))
+})
 const filtradas = computed(() => sinFecha.value.filter(l => (!desde.value || l.fecha >= desde.value) && (!hasta.value || l.fecha <= hasta.value)))
 
+const todas = (sel: Set<string>, opts: string[]) => sel.size === 0 || sel.size === opts.length
 const hayFiltros = computed(() => !!(desde.value || hasta.value)
   || !todas(selSubtipos.value, opcionesSubtipo.value) || !todas(selFamilias.value, opcionesFamilia.value) || !todas(selClientes.value, opcionesCliente.value))
 function limpiar() {
@@ -142,11 +164,11 @@ const vistas = computed(() => VISTAS_FACTURACION.map(v => ({
 .page-title { font-size: 20px; font-weight: 700; color: var(--text-primary); margin: 0; letter-spacing: -0.4px; }
 .fuente { font-size: 12px; color: var(--text-tertiary); }
 .header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; min-width: 0; }
-/* Filtros planos, sin caja, como en Mantenimiento y Concretos */
-.filter-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; min-width: 0; }
-.filter-group :deep(.dropdown-toggle) { background: transparent; border: none; border-radius: 0; padding: 6px 4px; box-shadow: none; }
-.filter-group :deep(.dropdown-toggle:hover) { background: transparent; color: var(--accent); }
-.filter-group :deep(.badge) { background: transparent; padding: 0 4px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Filtros en un recuadro, igual que en Concretos y el resto de módulos */
+.filter-group {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; padding: 6px 8px;
+  border: 1px solid var(--card-border); border-radius: var(--radius-lg); background: var(--bg);
+}
 .clear-filters {
   display: inline-flex; align-items: center; gap: 5px; padding: 7px 10px; border: none; border-radius: var(--radius-md);
   background: transparent; color: var(--text-tertiary); font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer;
@@ -172,8 +194,7 @@ const vistas = computed(() => VISTAS_FACTURACION.map(v => ({
 
 /* Cuando los filtros bajan debajo del título, van a la izquierda y «Actualizar» sigue en la misma fila */
 @media (max-width: 1100px) {
-  .header-actions { width: 100%; justify-content: flex-start; gap: 6px; }
-  .filter-group { display: contents; }
+  .header-actions { width: 100%; justify-content: flex-start; }
 }
 @media (max-width: 768px) {
   /* En celular el encabezado no queda fijo: ocuparía media pantalla */
@@ -181,6 +202,7 @@ const vistas = computed(() => VISTAS_FACTURACION.map(v => ({
   .page-header { flex-direction: column; align-items: stretch; gap: 8px; }
   /* El título repite planta y módulo (ya visibles arriba): en celular se oculta */
   .titulo-bloque { display: none; }
-  .filter-group { gap: 4px; }
+  .filter-group { width: 100%; box-sizing: border-box; padding: 6px; gap: 4px; }
+  .filter-group > * { flex: 1 1 auto; }
 }
 </style>

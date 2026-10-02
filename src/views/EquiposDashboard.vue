@@ -7,6 +7,17 @@
         <header class="page-header">
           <!-- La planta ya la muestra PlantaLayout -->
           <h2 class="page-title">Mantenimiento<template v-if="isConcretos && props.localizacion"> · {{ props.localizacion }}</template></h2>
+          <!-- Accesos rápidos a las secciones (General, Internos, Externos): junto al título, en el encabezado fijo -->
+          <div class="filter-quick-nav" v-if="esAreaOT && subTab==='dashboard' && dashboardView==='resumen'">
+            <button class="quick-nav-btn ghost" @click="scrollToSec('sec-general')">General</button>
+            <button class="quick-nav-btn ghost" @click="scrollToSec('sec-internos')">Internos</button>
+            <button class="quick-nav-btn ghost" @click="scrollToSec('sec-externos')">Externos</button>
+          </div>
+          <div class="filter-quick-nav" v-if="esAreaOT && subTab==='gerencial'">
+            <button class="quick-nav-btn ghost" @click="scrollToSec('sec-ger-general')">General</button>
+            <button class="quick-nav-btn ghost" @click="scrollToSec('sec-ger-internos')">Internos</button>
+            <button class="quick-nav-btn ghost" @click="scrollToSec('sec-ger-externos')">Externos</button>
+          </div>
           <div class="header-actions">
             <div class="filter-group">
               <FilterBar ref="filterBarRef" :data="allData" date-field="Fecha Cierre" :showProvider="false" @dateRangeFilter="onDateRangeFilter" @clear="onClearFilters" />
@@ -35,30 +46,15 @@
                 <MultiSelect v-else v-model="selectedProveedores" :options="proveedoresDisponibles" label="Proveedor" icon="user" />
                 <MultiSelect v-model="selectedEstados" :options="estadosDisponibles" label="Estado" icon="filter" />
               </template>
-              <div class="filter-quick-nav" v-if="esAreaOT && subTab==='dashboard' && dashboardView==='resumen'">
-                <button class="quick-nav-btn ghost" @click="scrollToSec('sec-general')">General</button>
-                <button class="quick-nav-btn ghost" @click="scrollToSec('sec-internos')">Internos</button>
-                <button class="quick-nav-btn ghost" @click="scrollToSec('sec-externos')">Externos</button>
-              </div>
-              <div class="filter-quick-nav" v-if="esAreaOT && subTab==='gerencial'">
-                <button class="quick-nav-btn ghost" @click="scrollToSec('sec-ger-general')">General</button>
-                <button class="quick-nav-btn ghost" @click="scrollToSec('sec-ger-internos')">Internos</button>
-                <button class="quick-nav-btn ghost" @click="scrollToSec('sec-ger-externos')">Externos</button>
-              </div>
             </div>
-            <button class="action-btn" @click="loadData(true, false)" :disabled="loading">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-              {{ loading ? 'Cargando...' : 'Actualizar' }}
+            <!-- «Limpiar» en la misma fila que «Actualizar» -->
+            <button class="clear-filters" :class="{ oculto: !hasActiveFilters }" :tabindex="hasActiveFilters ? 0 : -1" :aria-hidden="!hasActiveFilters" title="Quitar filtros" @click="onClearFilters">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <span>Limpiar</span>
             </button>
-            <button
-              class="action-btn clear"
-              :class="{ 'is-hidden': !hasActiveFilters }"
-              :disabled="!hasActiveFilters"
-              :aria-hidden="!hasActiveFilters"
-              @click="onClearFilters"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              Limpiar
+            <button class="action-btn" @click="loadData(true, false)" :disabled="loading">
+              <svg class="icono-actualizar" :class="{ girando: loading }" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              {{ loading ? 'Actualizando…' : 'Actualizar' }}
             </button>
           </div>
         </header>
@@ -217,7 +213,7 @@
       <KpiCard :value="$$(intIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-int'>Int</span> <strong>${intTotal > 0 ? ((intIns / intTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto interno</span></div>`" />
       <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
       <KpiCard :value="$$(intCostoM3)" label="Costo por m³" :accent="intCostoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
-      <KpiCard :value="String(intCountRegistro)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${totalOrdenes > 0 ? ((intCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
+      <KpiCard :value="String(intCountRegistro)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${totalOrdenes > 0 ? ((intCountRegistro / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
       <KpiCard :value="otDiasRegistro > 0 ? (intCountRegistro / otDiasRegistro).toFixed(1) : '0.0'" label="Promedio OT / día" accent="#0EA5E9" icon="activity" />
       <KpiCard :value="otDiasActivos > 0 ? (otsIntEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" />
       <KpiCard :value="String(otsIntEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-int'>Costo</span> <strong>${$$(otsIntEstadoCostos.abiertas)}</strong></div>`" />
@@ -297,7 +293,7 @@
       <KpiCard :value="$$(extIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Ext</span> <strong>${extTotal > 0 ? ((extIns / extTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto externo</span></div>`" />
       <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
       <KpiCard :value="$$(extCostoM3)" label="Costo por m³" :accent="extCostoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
-      <KpiCard :value="String(extCountRegistro)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${totalOrdenes > 0 ? ((extCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
+      <KpiCard :value="String(extCountRegistro)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${totalOrdenes > 0 ? ((extCountRegistro / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
       <KpiCard :value="otDiasRegistro > 0 ? (extCountRegistro / otDiasRegistro).toFixed(1) : '0.0'" label="Promedio OT / día" accent="#0EA5E9" icon="activity" />
       <KpiCard :value="otDiasActivos > 0 ? (otsExtEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" />
       <KpiCard :value="String(otsExtEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Costo</span> <strong>${$$(otsExtEstadoCostos.abiertas)}</strong></div>`" />
@@ -1190,7 +1186,7 @@
         <KpiCard :value="$$(intIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-int'>Int</span> <strong>${intTotal > 0 ? ((intIns / intTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto interno</span></div>`" />
         <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
         <KpiCard :value="$$(intCostoM3)" label="Costo por m³" :accent="intCostoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
-        <KpiCard :value="String(intCountRegistro)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${totalOrdenes > 0 ? ((intCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
+        <KpiCard :value="String(intCountRegistro)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${totalOrdenes > 0 ? ((intCountRegistro / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
         <KpiCard :value="otDiasRegistro > 0 ? (intCountRegistro / otDiasRegistro).toFixed(1) : '0.0'" label="Promedio OT / día" accent="#0EA5E9" icon="activity" />
       <KpiCard :value="otDiasActivos > 0 ? (otsIntEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" />
         <KpiCard :value="String(otsIntEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-int'>Costo</span> <strong>${$$(otsIntEstadoCostos.abiertas)}</strong></div>`" />
@@ -1262,7 +1258,7 @@
         <KpiCard :value="$$(extIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Ext</span> <strong>${extTotal > 0 ? ((extIns / extTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto externo</span></div>`" />
         <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
         <KpiCard :value="$$(extCostoM3)" label="Costo por m³" :accent="extCostoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
-        <KpiCard :value="String(extCountRegistro)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${totalOrdenes > 0 ? ((extCount / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
+        <KpiCard :value="String(extCountRegistro)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${totalOrdenes > 0 ? ((extCountRegistro / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
         <KpiCard :value="otDiasRegistro > 0 ? (extCountRegistro / otDiasRegistro).toFixed(1) : '0.0'" label="Promedio OT / día" accent="#0EA5E9" icon="activity" />
       <KpiCard :value="otDiasActivos > 0 ? (otsExtEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" />
         <KpiCard :value="String(otsExtEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Costo</span> <strong>${$$(otsExtEstadoCostos.abiertas)}</strong></div>`" />
@@ -1829,7 +1825,10 @@ const paneles = computed(() => [
 const puedeDisponibilidad = computed(() => authStore.canView(`${props.planta}/mantenimiento/disponibilidad`))
 function scrollToSec(id: string) {
   const el = document.getElementById(id)
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  if (!el) return
+  // Descuenta el encabezado fijo (título, filtros y accesos rápidos) para que la sección no quede tapada
+  const fijo = (document.querySelector('.sticky-top') as HTMLElement | null)?.offsetHeight ?? 0
+  window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - fijo - 12, behavior: 'smooth' })
 }
 function rowCosto(r: Record<string, unknown>): number {
   return (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0)
@@ -5841,12 +5840,12 @@ const sistemasExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(comput
   margin: 0;
 }
 .filter-quick-nav {
+  /* Accesos rápidos junto al título, en el encabezado fijo */
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-left: 8px;
-  padding-left: 12px;
-  border-left: 1px solid var(--card-border);
+  margin: 0;
+  flex: 0 0 auto;
 }
 @media (max-width: 768px) {
   .filter-quick-nav {
@@ -5996,7 +5995,18 @@ const sistemasExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(comput
   gap: 6px;
   flex-wrap: wrap;
   min-width: 0;
+  /* Recuadro de filtros igual que en Concretos y el resto de módulos */
+  padding: 6px 8px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
 }
+.clear-filters {
+  display: inline-flex; align-items: center; gap: 5px; padding: 7px 10px;
+  border: none; border-radius: var(--radius-md); background: transparent; color: var(--text-tertiary);
+  font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer;
+}
+.clear-filters:hover { background: var(--danger-light); color: var(--danger); }
 
 /* Evita que el badge de fechas ensanche la fila al pasar de "Todas" a un rango */
 .filter-group :deep(.badge) {
@@ -6006,26 +6016,6 @@ const sistemasExtExpandOpt = computed(() => markRaw(buildCountBarColorOpt(comput
   white-space: nowrap;
 }
 
-.filter-group .dropdown-toggle,
-.filter-group :deep(.dropdown-toggle) {
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  padding: 6px 4px;
-  box-shadow: none;
-}
-
-.filter-group .dropdown-toggle:hover,
-.filter-group :deep(.dropdown-toggle:hover) {
-  background: transparent;
-  color: var(--accent);
-}
-
-.filter-group .badge,
-.filter-group :deep(.badge) {
-  background: transparent;
-  padding: 0 4px;
-}
 
 .action-btn {
   display: flex;
@@ -7932,7 +7922,9 @@ ul.res li::before {
 
 @media (max-width: 1024px) {
   .kpi-row { grid-template-columns: repeat(2, 1fr); }
-  /* El header deja de ser fijo: en pantallas chicas los filtros envueltos tapaban el contenido. */
+}
+@media (max-width: 768px) {
+  /* En celular el header deja de ser fijo (los filtros envueltos taparían el contenido); en tablet queda en una fila */
   .sticky-top { position: static; }
 }
 

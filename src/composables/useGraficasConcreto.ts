@@ -22,17 +22,13 @@ export const COLOR_EXTRA = ['#F59E0B', '#8B5CF6', '#06B6D4', '#84CC16']
 export const AZUL = '#3B82F6'
 export const FONT = 'Lato, sans-serif'
 
-export function fmtN(n: number, d = 1): string {
+// Valores enteros por defecto (m³, galones, conteos); los porcentajes y razones piden sus decimales
+export function fmtN(n: number, d = 0): string {
   return (Number.isFinite(n) ? n : 0).toLocaleString('es-CO', { minimumFractionDigits: d, maximumFractionDigits: d })
 }
 export function cop(n: number): string { return '$ ' + fmtN(n, 0) }
-export function copCorto(n: number): string {
-  const a = Math.abs(n)
-  if (a >= 1e9) return '$ ' + fmtN(n / 1e9, 1) + ' mil M'
-  if (a >= 1e6) return '$ ' + fmtN(n / 1e6, 1) + ' M'
-  if (a >= 1e3) return '$ ' + fmtN(n / 1e3, 0) + ' mil'
-  return '$ ' + fmtN(n, 0)
-}
+/** Antes abreviaba («$ 86,6 M»); por pedido del usuario los costos van siempre completos, igual que cop() */
+export function copCorto(n: number): string { return cop(n) }
 export function pct(n: number, d = 1, signo = false): string { return (signo && n > 0 ? '+' : '') + fmtN(n, d) + '%' }
 export function num(v: unknown): number { const n = Number(v); return Number.isFinite(n) ? n : 0 }
 export function nombrePlanta(v: unknown): string {
@@ -88,6 +84,9 @@ export function useEstiloGraficas() {
       animation: true,
       animationDuration: 400,
       animationEasing: 'cubicOut' as const,
+      // Al cambiar filtros las barras, líneas y donas pasan suavemente de un valor al otro
+      animationDurationUpdate: 550,
+      animationEasingUpdate: 'cubicInOut' as const,
     }
   }
   function leyenda(data: unknown[], extra: Record<string, unknown> = {}) {
@@ -120,8 +119,9 @@ export function useEstiloGraficas() {
   }
   // Siempre se envían los dos dataZoom (apagados si sobran) para que al cambiar de Día a Mes
   // ECharts no conserve la ventana anterior al fusionar la opción.
-  function zoom(n: number) {
-    const v = ventana.value
+  /** `maxVisible`: cuántos puntos se ven a la vez (por defecto la ventana normal); menos para cifras largas como pesos completos */
+  function zoom(n: number, maxVisible?: number) {
+    const v = maxVisible ?? ventana.value
     const usar = n > v
     const rango = usar ? { startValue: n - v, endValue: n - 1 } : { start: 0, end: 100 }
     return {

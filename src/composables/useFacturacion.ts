@@ -155,7 +155,10 @@ export function ventaNeta(ls: LineaFacturacion[]): { venta: number; fleteHolcim:
  */
 export function totalesFacturacion(ls: LineaFacturacion[]) {
   const r = resumen(ls), vn = ventaNeta(ls)
-  const tFleteHolcim = suma(ls.filter(l => esVenta(l) && esFleteHolcim(l)), l => l.cantidad)
+  // Toneladas del flete = las del material de su misma remisión: solo se cuentan si ese material está en las líneas
+  // (con un filtro que deja solo fletes, no hay toneladas que restar y la neta no queda negativa)
+  const docsMaterial = new Set(ls.filter(l => esVenta(l) && esMaterial(l) && l.toneladas > 0).map(l => l.doc))
+  const tFleteHolcim = suma(ls.filter(l => esVenta(l) && esFleteHolcim(l) && docsMaterial.has(l.doc)), l => l.cantidad)
   return {
     tFleteHolcim,
     tTotal: r.tVendidas + r.tTraslados + r.donaciones.t, tVendidas: r.tVendidas, tNeta: r.tVendidas - tFleteHolcim, tTraslados: r.tTraslados, tDonadas: r.donaciones.t,

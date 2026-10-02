@@ -41,8 +41,8 @@
           <h1>Informe Comercial de Ventas de Concreto</h1>
           <p class="report-intro">
             Despachos y ventas de concreto de las plantas <strong>{{ plantasTxt }}</strong>. Primero el
-            <strong>despacho del día {{ fechaCorta(hoyIso, true) }}</strong>, luego el <strong>acumulado del mes
-            (1 al {{ corteDia }} de {{ mesLbl }})</strong> por día, planta, comercial y cliente, y al final el histórico del
+            <strong>despacho del día {{ fechaCorta(hoyIso, true) }}</strong>, luego el <strong>acumulado {{ esMes ? 'del mes' : 'del período' }}
+            ({{ diasLbl }}{{ esMes ? ` de ${mesLbl}` : '' }})</strong> por día, planta, comercial y cliente, y al final el histórico del
             año, el control de calidad del dato y las conclusiones. Fuente: tabla de órdenes con precio (<strong>order_price</strong>).
           </p>
         </div>
@@ -68,11 +68,11 @@
         </div>
 
         <div class="report-section-block">
-          <h3 class="report-block-title"><span class="title-bar"></span>Indicadores del mes — {{ mesLbl }} (1 al {{ corteDia }})</h3>
+          <h3 class="report-block-title"><span class="title-bar"></span>Indicadores {{ esMes ? 'del mes' : 'del período' }} — {{ mesLbl }} ({{ diasLbl }})</h3>
           <div class="kpi-row compact-kpi">
             <KpiCard v-for="k in kpisMes" :key="k.label" :label="k.label" :value="k.value" :accent="k.accent" :icon="k.icon" :meta="k.meta" :detail="k.detail" />
           </div>
-          <div v-if="M.cierre < M.prevTotalM3" class="report-nota alerta">
+          <div v-if="esMes && M.cierre < M.prevTotalM3" class="report-nota alerta">
             <strong>Ritmo por debajo de {{ mesPrevLbl }}:</strong> para igualar los {{ fmtN(M.prevTotalM3, 0) }} m³ de {{ mesPrevLbl }}
             hacen falta {{ fmtN(M.faltaDia, 0) }} m³ por día en los {{ M.diasRestantes }} días operativos que quedan
             (hoy el promedio es {{ fmtN(M.ritmo, 0) }} m³/día).
@@ -146,7 +146,7 @@
           <p class="section-note">
             Precio m³: valor del concreto ÷ m³ de concreto (sin servicios ni agregados). Desc. lista: diferencia frente al precio de lista
             en las remisiones que lo tienen. Cierre est.: m³ ÷ {{ M.diasOp }} días operativos × {{ M.diasOpMes }}.
-            Vs. {{ mesPrevLbl }}: mismo rango de días (1 al {{ corteDia }}).
+            Vs. {{ mesPrevLbl }}: {{ esMes ? `mismo rango de días (${diasLbl})` : 'los mismos días inmediatamente antes' }}.
           </p>
           <div class="data-card"><div class="table-wrap">
             <table>
@@ -197,6 +197,25 @@
               </table>
           </div></div>
           <div ref="chComercialRef" class="echart" style="height: 200px"></div>
+        </div>
+
+        <div class="report-section-block">
+          <h3 class="report-block-title"><span class="title-bar"></span>Pedidos, bombeo y venta por comercial — {{ mesLbl }}</h3>
+          <div class="data-card"><div class="table-wrap">
+              <table>
+                <thead><tr><th v-for="c in opComerciales.cols" :key="c.t" :class="{ r: c.r }">{{ c.t }}</th></tr></thead>
+                <tbody>
+                  <tr v-for="(f, j) in opComerciales.filas" :key="j" :class="{ subtotal: f.subtotal }">
+                    <template v-for="(v, i) in f.celdas" :key="i">
+                      <td v-if="!(i === 0 && f.span === 0)" :rowspan="i === 0 && f.span ? f.span : undefined"
+                        :class="[i === 0 ? 'bold accent-text' : opComerciales.cols[i].r ? 'r' : '', { grp: i === 0 && f.span }]">{{ v }}</td>
+                    </template>
+                  </tr>
+                  <tr v-if="opComerciales.total" class="table-total-row"><td v-for="(v, i) in opComerciales.total" :key="i" :class="{ r: opComerciales.cols[i].r }">{{ v }}</td></tr>
+                </tbody>
+              </table>
+            </div></div>
+            <p class="section-note">{{ opComerciales.nota }}</p>
         </div>
 
         <div class="report-section-block">
@@ -275,6 +294,70 @@
             </div></div>
           </div>
         </div>
+        <div class="report-section-block">
+          <h3 class="report-block-title"><span class="title-bar"></span>Conductores de mixer y tiempo de viaje — {{ mesLbl }}</h3>
+          <div class="data-card"><div class="table-wrap">
+              <table>
+                <thead><tr><th v-for="c in opConductores.cols" :key="c.t" :class="{ r: c.r }">{{ c.t }}</th></tr></thead>
+                <tbody>
+                  <tr v-for="(f, j) in opConductores.filas" :key="j" :class="{ subtotal: f.subtotal }">
+                    <template v-for="(v, i) in f.celdas" :key="i">
+                      <td v-if="!(i === 0 && f.span === 0)" :rowspan="i === 0 && f.span ? f.span : undefined"
+                        :class="[i === 0 ? 'bold accent-text' : opConductores.cols[i].r ? 'r' : '', { grp: i === 0 && f.span }]">{{ v }}</td>
+                    </template>
+                  </tr>
+                  <tr v-if="opConductores.total" class="table-total-row"><td v-for="(v, i) in opConductores.total" :key="i" :class="{ r: opConductores.cols[i].r }">{{ v }}</td></tr>
+                </tbody>
+              </table>
+            </div></div>
+            <p class="section-note">{{ opConductores.nota }}</p>
+        </div>
+        <div class="report-section-block">
+          <h3 class="report-block-title"><span class="title-bar"></span>Bombas y operarios — {{ mesLbl }}</h3>
+          <div class="data-card"><div class="table-wrap">
+              <table>
+                <thead><tr><th v-for="c in opBombeo.cols" :key="c.t" :class="{ r: c.r }">{{ c.t }}</th></tr></thead>
+                <tbody>
+                  <tr v-for="(f, j) in opBombeo.filas" :key="j" :class="{ subtotal: f.subtotal }">
+                    <template v-for="(v, i) in f.celdas" :key="i">
+                      <td v-if="!(i === 0 && f.span === 0)" :rowspan="i === 0 && f.span ? f.span : undefined"
+                        :class="[i === 0 ? 'bold accent-text' : opBombeo.cols[i].r ? 'r' : '', { grp: i === 0 && f.span }]">{{ v }}</td>
+                    </template>
+                  </tr>
+                  <tr v-if="opBombeo.total" class="table-total-row"><td v-for="(v, i) in opBombeo.total" :key="i" :class="{ r: opBombeo.cols[i].r }">{{ v }}</td></tr>
+                </tbody>
+              </table>
+            </div></div>
+            <p class="section-note">{{ opBombeo.nota }}</p>
+        </div>
+        <div v-if="cancelMes.total" class="report-section-block">
+          <h3 class="report-block-title"><span class="title-bar"></span>Viajes cancelados y reubicados — {{ mesLbl }}</h3>
+          <p class="section-note"><strong>{{ cancelMes.total }}</strong> {{ cancelMes.total === 1 ? 'viaje' : 'viajes' }} ({{ cancelMes.cancelaciones }} cancelados y {{ cancelMes.reubicaciones }} reubicados, {{ fmtN(cancelMes.m3) }} m³). La causa que más se repite es <strong>{{ cancelMes.dominante?.tema }}</strong> ({{ cancelMes.dominante?.n }}).</p>
+          <div class="data-card" style="margin-bottom: 8px"><div class="table-wrap">
+              <table>
+                <thead><tr><th v-for="c in opCausas.cols" :key="c.t" :class="{ r: c.r }">{{ c.t }}</th></tr></thead>
+                <tbody>
+                  <tr v-for="(f, k) in opCausas.filas" :key="k"><td v-for="(v, n) in f.celdas" :key="n" :class="n === 0 ? 'bold accent-text' : 'r'">{{ v }}</td></tr>
+                  <tr class="table-total-row"><td v-for="(v, n) in opCausas.total" :key="n" :class="{ r: n > 0 }">{{ v }}</td></tr>
+                </tbody>
+              </table>
+            </div></div>
+          <div class="data-card"><div class="table-wrap">
+              <table>
+                <thead><tr><th v-for="c in opCancelados.cols" :key="c.t" :class="{ r: c.r }">{{ c.t }}</th></tr></thead>
+                <tbody>
+                  <tr v-for="(f, j) in opCancelados.filas" :key="j" :class="{ subtotal: f.subtotal }">
+                    <template v-for="(v, i) in f.celdas" :key="i">
+                      <td v-if="!(i === 0 && f.span === 0)" :rowspan="i === 0 && f.span ? f.span : undefined"
+                        :class="[i === 0 ? 'bold accent-text' : opCancelados.cols[i].r ? 'r' : '', { grp: i === 0 && f.span }]">{{ v }}</td>
+                    </template>
+                  </tr>
+                  <tr v-if="opCancelados.total" class="table-total-row"><td v-for="(v, i) in opCancelados.total" :key="i" :class="{ r: opCancelados.cols[i].r }">{{ v }}</td></tr>
+                </tbody>
+              </table>
+            </div></div>
+            <p class="section-note">{{ opCancelados.nota }}</p>
+        </div>
         <footer class="report-footer">
           <span>Informe Comercial de Ventas de Concreto — Gravicon</span>
           <span>Documento Oficial<span class="fp-num"> | Página 3 de 4</span></span>
@@ -286,7 +369,7 @@
         <div class="report-salto-superior"></div>
         <div class="report-section-block">
           <h3 class="report-block-title"><span class="title-bar"></span>Histórico mensual de despacho {{ corteAnio }} — m³ por planta</h3>
-          <p class="section-note">{{ mesLblCap }} va con {{ M.diasOp }} de {{ M.diasOpMes }} días operativos; la marca roja es el cierre estimado del mes.</p>
+          <p v-if="esMes" class="section-note">{{ mesLblCap }} va con {{ M.diasOp }} de {{ M.diasOpMes }} días operativos; la marca roja es el cierre estimado del mes.</p>
           <div ref="chMensualRef" class="echart" style="height: 320px"></div>
         </div>
 
@@ -337,6 +420,8 @@
  * Todo se calcula en el cliente a partir de las filas de order_price que ya carga useConcretoStore.
  */
 <script setup lang="ts">
+import { normalizarRemisiones, tablaComerciales, tablaConductores, tablaBombeo, normalizarCancelados, resumenCancelados, tablaCancelados, tablaCausasCancelacion } from '../../../composables/useOperacionConcreto'
+import { donaCentro } from '../../../utils/chartLayout'
 import { type Hallazgo, etiquetaNivel, pillNivel, porPrioridad } from '../../../utils/calidadDato'
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import KpiCard from '../../../components/dashboard/KpiCard.vue'
@@ -359,6 +444,10 @@ const props = defineProps<{
   rows: Record<string, unknown>[]
   /** Fecha fin del filtro global (YYYY-MM-DD); se usa como corte por defecto */
   corte?: string
+  /** Viajes cancelados o reubicados (order_detail), filtrados por planta/comercial/cliente */
+  cancelados?: Record<string, unknown>[]
+  /** Fecha inicial del filtro global (YYYY-MM-DD, vacía si no se eligió): si no es el día 1 del mes, el informe es de ese período */
+  desde?: string
   /** Total de remisiones en la tabla, para avisar si la carga vino incompleta */
   totalCount?: number
 }>()
@@ -375,7 +464,8 @@ const PALETA_EXTRA = ['#8b5cf6', '#f59e0b', '#06b6d4', '#ec4899']
 const CP = '#172954'
 const RE_AGREGADO = /^(CA |CG\d)/
 
-function fmtN(n: number, d = 1): string {
+// Valores enteros por defecto (m³, galones, conteos); los porcentajes y razones piden sus decimales
+function fmtN(n: number, d = 0): string {
   return (Number.isFinite(n) ? n : 0).toLocaleString('es-CO', { minimumFractionDigits: d, maximumFractionDigits: d })
 }
 function cop(n: number): string { return '$ ' + fmtN(n, 0) }
@@ -432,19 +522,32 @@ const corteIso = computed(() => (props.corte && props.corte <= fechaMax.value ? 
 const corteAnio = computed(() => Number(corteIso.value.slice(0, 4)))
 const corteMes = computed(() => Number(corteIso.value.slice(5, 7)))
 const corteDia = computed(() => Number(corteIso.value.slice(8, 10)))
-const mesLbl = computed(() => `${MESES[corteMes.value - 1]} ${corteAnio.value}`)
+// Período del informe: el mes al corte (1 al día de corte) o, si el filtro trae otra fecha inicial, ese rango
+const inicioMes = computed(() => `${corteIso.value.slice(0, 7)}-01`)
+const inicioIso = computed(() => (props.desde && props.desde < corteIso.value ? props.desde : inicioMes.value))
+const esMes = computed(() => inicioIso.value === inicioMes.value)
+const ddmm = (iso: string) => `${Number(iso.slice(8, 10))} ${MESES[Number(iso.slice(5, 7)) - 1].slice(0, 3)}`
+const diasLbl = computed(() => (esMes.value ? `1 al ${corteDia.value}` : `${ddmm(inicioIso.value)} al ${ddmm(corteIso.value)}`))
+const mesLbl = computed(() => (esMes.value ? `${MESES[corteMes.value - 1]} ${corteAnio.value}`
+  : `${ddmm(inicioIso.value)}${inicioIso.value.slice(0, 4) !== corteIso.value.slice(0, 4) ? ' ' + inicioIso.value.slice(0, 4) : ''} – ${ddmm(corteIso.value)} ${corteAnio.value}`))
 const mesLblCap = computed(() => mesLbl.value.charAt(0).toUpperCase() + mesLbl.value.slice(1))
 const prevYM = computed(() => (corteMes.value === 1 ? { y: corteAnio.value - 1, m: 12 } : { y: corteAnio.value, m: corteMes.value - 1 }))
-const mesPrevLbl = computed(() => MESES[prevYM.value.m - 1])
-const corteLargo = computed(() => `${corteDia.value} de ${mesLbl.value.replace(' ', ' de ')}`)
+const mesPrevLbl = computed(() => (esMes.value ? MESES[prevYM.value.m - 1] : 'el período anterior'))
+const corteLargo = computed(() => `${corteDia.value} de ${MESES[corteMes.value - 1]} de ${corteAnio.value}`)
 const generado = new Date().toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })
 
 function ym(y: number, m: number) { return `${y}-${String(m).padStart(2, '0')}` }
-const delMes = computed(() => {
-  const pref = ym(corteAnio.value, corteMes.value)
-  return todas.value.filter(r => r.iso.startsWith(pref) && r.iso <= corteIso.value)
-})
+const delMes = computed(() => todas.value.filter(r => r.iso >= inicioIso.value && r.iso <= corteIso.value))
 const hayDatos = computed(() => delMes.value.length > 0)
+// Tablas de operación del mes al corte (pedidos, conductores con tiempos de viaje, bombeo): mismo cálculo del tablero
+const opsMes = computed(() => normalizarRemisiones(props.rows).filter(r => r.iso >= inicioIso.value && r.iso <= corteIso.value))
+const opComerciales = computed(() => tablaComerciales(opsMes.value))
+const opConductores = computed(() => tablaConductores(opsMes.value, 8))
+const opBombeo = computed(() => tablaBombeo(opsMes.value))
+const cancelPeriodo = computed(() => normalizarCancelados(props.cancelados ?? []).filter(c => c.iso >= inicioIso.value && c.iso <= corteIso.value))
+const cancelMes = computed(() => resumenCancelados(cancelPeriodo.value))
+const opCancelados = computed(() => tablaCancelados(cancelPeriodo.value))
+const opCausas = computed(() => tablaCausasCancelacion(cancelPeriodo.value))
 const datosIncompletos = computed(() => !!props.totalCount && props.totalCount > props.rows.length)
 
 const plantas = computed(() => {
@@ -482,6 +585,14 @@ function diasOperativosMes(y: number, m: number): number {
 }
 
 const prevMesRows = computed(() => {
+  // Período elegido: se compara con los mismos días inmediatamente antes
+  if (!esMes.value) {
+    const n = Math.round((Date.parse(corteIso.value) - Date.parse(inicioIso.value)) / 86400000) + 1
+    const dia = (iso: string, k: number) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + k); return d.toISOString().slice(0, 10) }
+    const desde = dia(inicioIso.value, -n), hasta = dia(inicioIso.value, -1)
+    const rs = todas.value.filter(r => r.iso >= desde && r.iso <= hasta)
+    return { corte: rs, completo: rs }
+  }
   const { y, m } = prevYM.value
   const ult = new Date(Date.UTC(y, m, 0)).getUTCDate()
   const hasta = `${ym(y, m)}-${String(Math.min(corteDia.value, ult)).padStart(2, '0')}`
@@ -493,9 +604,10 @@ const prevMesRows = computed(() => {
 const M = computed(() => {
   const a = acumular(delMes.value)
   const diasOp = new Set(delMes.value.map(r => r.iso)).size
-  const diasOpMes = diasOperativosMes(corteAnio.value, corteMes.value)
+  // En un período elegido no hay cierre de mes que estimar: el «cierre» es lo despachado
+  const diasOpMes = esMes.value ? diasOperativosMes(corteAnio.value, corteMes.value) : diasOp
   const ritmo = diasOp ? a.m3 / diasOp : 0
-  const cierre = ritmo * diasOpMes
+  const cierre = esMes.value ? ritmo * diasOpMes : a.m3
   const prev = acumular(prevMesRows.value.corte)
   const prevTotal = acumular(prevMesRows.value.completo)
   const diasRestantes = Math.max(diasOpMes - diasOp, 0)
@@ -565,10 +677,10 @@ const kpisDia = computed<KpiDef[]>(() => {
     { label: `Vs. ${fechaCorta(ayerIso.value)}`, value: vsAyer === null ? '—' : pct(vsAyer, 1, true), accent: verdeRojo(vsAyer), icon: 'clock',
       meta: `${fmtN(a.m3)} m³`, detail: detalle(p => varTxt(hp(p).m3, ap(p).m3)) },
     { label: `m³ ${fechaCorta(ayerIso.value)}`, value: fmtN(a.m3), accent: '#64748B', icon: 'activity', meta: 'día anterior', detail: detalle(p => fmtN(ap(p).m3)) },
-    { label: 'Promedio Diario Mes', value: fmtN(M.value.ritmo), accent: '#0EA5E9', icon: 'trending-up', meta: `${M.value.diasOp} días`, detail: detalle(p => fmtN(P.value[p].ritmo)) },
+    { label: esMes.value ? 'Promedio Diario Mes' : 'Promedio Diario Período', value: fmtN(M.value.ritmo), accent: '#0EA5E9', icon: 'trending-up', meta: `${M.value.diasOp} días`, detail: detalle(p => fmtN(P.value[p].ritmo)) },
     { label: 'Vs. Promedio Diario', value: vsProm === null ? '—' : pct(vsProm, 1, true), accent: verdeRojo(vsProm), icon: 'target',
       meta: `prom. ${fmtN(M.value.ritmo)} m³`, detail: detalle(p => varTxt(hp(p).m3, P.value[p].ritmo)) },
-    { label: 'Acumulado Mes', value: fmtN(M.value.m3) + ' m³', accent: '#172954', icon: 'chart-bar', meta: `1 al ${corteDia.value}`, detail: detalle(p => fmtN(P.value[p].m3)) },
+    { label: esMes.value ? 'Acumulado Mes' : 'Acumulado Período', value: fmtN(M.value.m3) + ' m³', accent: '#172954', icon: 'chart-bar', meta: diasLbl.value, detail: detalle(p => fmtN(P.value[p].m3)) },
   ]
 })
 
@@ -582,9 +694,9 @@ const kpisMes = computed<KpiDef[]>(() => {
       detail: detalle(p => cop(pp[p].precio), p => (pp[p].desc === null ? '' : `(${pct(pp[p].desc as number)})`)) },
     { label: 'Clientes Activos', value: String(m.clientes), accent: '#10B981', icon: 'users', meta: 'sin repetir', detail: detalle(p => String(pp[p].clientes)) },
     { label: 'Promedio Diario', value: fmtN(m.ritmo) + ' m³', accent: '#64748B', icon: 'activity', meta: `${m.diasOp} de ${m.diasOpMes} días`, detail: detalle(p => fmtN(pp[p].ritmo)) },
-    { label: 'Cierre Estimado', value: fmtN(m.cierre, 0) + ' m³', accent: m.cierre < m.prevTotalM3 ? '#F59E0B' : '#16A34A', icon: 'trending-up',
-      meta: `${mesPrevLbl.value.slice(0, 3)}: ${fmtN(m.prevTotalM3, 0)}`, detail: detalle(p => fmtN(pp[p].cierre, 0), p => `(${mesPrevLbl.value.slice(0, 3)} ${fmtN(pp[p].prevTotalM3, 0)})`) },
-    { label: `Vs. ${mesPrevLbl.value} (1–${corteDia.value})`, value: m.varPrev === null ? '—' : pct(m.varPrev, 1, true), accent: verdeRojo(m.varPrev), icon: 'clock',
+    ...(!esMes.value ? [] : [{ label: 'Cierre Estimado', value: fmtN(m.cierre, 0) + ' m³', accent: m.cierre < m.prevTotalM3 ? '#F59E0B' : '#16A34A', icon: 'trending-up',
+      meta: `${mesPrevLbl.value.slice(0, 3)}: ${fmtN(m.prevTotalM3, 0)}`, detail: detalle(p => fmtN(pp[p].cierre, 0), p => `(${mesPrevLbl.value.slice(0, 3)} ${fmtN(pp[p].prevTotalM3, 0)})`) }]),
+    { label: esMes.value ? `Vs. ${mesPrevLbl.value} (1–${corteDia.value})` : 'Vs. Período Anterior', value: m.varPrev === null ? '—' : pct(m.varPrev, 1, true), accent: verdeRojo(m.varPrev), icon: 'clock',
       meta: `${fmtN(m.prevM3, 0)} m³`, detail: detalle(p => (pp[p].varPrev === null ? '—' : pct(pp[p].varPrev as number, 1, true)), p => `(${fmtN(pp[p].prevM3, 0)} m³)`) },
     { label: 'Con Bombeo', value: pct(m.m3 ? m.servM3 / m.m3 * 100 : 0), accent: '#1D4ED8', icon: 'truck', meta: cop(m.servTotal),
       detail: detalle(p => pct(pp[p].m3 ? pp[p].servM3 / pp[p].m3 * 100 : 0), p => `(${cop(pp[p].servTotal)})`) },
@@ -740,7 +852,7 @@ const conclusiones = computed(() => {
   return [
     { titulo: 'Volumen y ritmo', items: [
       `Se llevan ${fmtN(m.m3)} m³ despachados y ${cop(m.venta)} de venta sin IVA en ${m.diasOp} días operativos.`,
-      `El cierre estimado es de ${fmtN(m.cierre, 0)} m³` + (cierreVsPrev === null ? '.' : `, ${pct(Math.abs(cierreVsPrev))} ${cierreVsPrev < 0 ? 'por debajo' : 'por encima'} de ${mesPrevLbl.value} (${fmtN(m.prevTotalM3, 0)} m³).`),
+      ...(!esMes.value ? [] : [`El cierre estimado es de ${fmtN(m.cierre, 0)} m³` + (cierreVsPrev === null ? '.' : `, ${pct(Math.abs(cierreVsPrev))} ${cierreVsPrev < 0 ? 'por debajo' : 'por encima'} de ${mesPrevLbl.value} (${fmtN(m.prevTotalM3, 0)} m³).`)]),
       `Frente a ${mesPrevLbl.value} al mismo corte: ` + ps.map(p => `${p} ${pp[p].varPrev === null ? '—' : pct(pp[p].varPrev as number, 1, true)}`).join(', ') + '.',
     ] },
     { titulo: 'Precio y mezcla comercial', items: [
@@ -766,9 +878,10 @@ const analisisTexto = computed(() => {
     `y un precio promedio del concreto de <strong>${cop(m.precio)}/m³</strong>` + (m.desc === null ? '. ' : ` (${pct(m.desc)} por debajo del precio de lista). `) +
     (m.varPrev === null ? '' : `Frente al mismo corte de ${mesPrevLbl.value} el volumen va <strong class='${cls(m.varPrev)}'>${pct(m.varPrev, 1, true)}</strong>` +
       (m.varPrevVenta === null ? '. ' : ` y la venta ${pct(m.varPrevVenta, 1, true)}. `)) +
-    `Al ritmo de ${fmtN(m.ritmo)} m³ por día operativo el mes cerraría en unos <strong>${fmtN(m.cierre, 0)} m³</strong>` +
-    (m.prevTotalM3 ? `, frente a ${fmtN(m.prevTotalM3, 0)} m³ de ${mesPrevLbl.value}` : '') +
-    (promMensualPrevio.value ? ` y un promedio mensual de ${fmtN(promMensualPrevio.value, 0)} m³ en lo corrido del año` : '') + '. ' +
+    (!esMes.value ? `El promedio fue de ${fmtN(m.ritmo)} m³ por día operativo. ` :
+      `Al ritmo de ${fmtN(m.ritmo)} m³ por día operativo el mes cerraría en unos <strong>${fmtN(m.cierre, 0)} m³</strong>` +
+      (m.prevTotalM3 ? `, frente a ${fmtN(m.prevTotalM3, 0)} m³ de ${mesPrevLbl.value}` : '') +
+      (promMensualPrevio.value ? ` y un promedio mensual de ${fmtN(promMensualPrevio.value, 0)} m³ en lo corrido del año` : '') + '. ') +
     (lider ? `${lider} aporta el ${pct(pp[lider].m3 / m.m3 * 100)} del volumen` : '') +
     (crecen.length ? `; ${crecen.length === 1 ? crecen[0] + ' es la única planta que crece' : crecen.join(', ') + ' crecen'} frente a ${mesPrevLbl.value}.` : '.')
 })
@@ -848,11 +961,11 @@ function renderCharts() {
       const tot = M.value.m3
       dn.setOption(tema({ ...base,
         tooltip: { trigger: 'item', valueFormatter: (v: number) => fmtN(v) + ' m³' },
-        legend: { bottom: 0, left: 'center', orient: 'vertical', itemWidth: 10, itemHeight: 8, textStyle: { fontSize: 10, fontWeight: 'bold', color: CP },
+        legend: { data: ps, bottom: 0, left: 'center', orient: 'vertical', itemWidth: 10, itemHeight: 8, textStyle: { fontSize: 10, fontWeight: 'bold', color: CP },
           formatter: (n: string) => `${n}  ${pct(tot ? (P.value[n]?.m3 ?? 0) / tot * 100 : 0)}` },
-        title: { text: fmtN(tot, 0), subtext: 'M³ TOTAL\nPARTICIPACIÓN', left: 'center', top: '28%',
-          textStyle: { fontSize: 22, fontWeight: 900, color: CP }, subtextStyle: { fontSize: 8, color: '#666', fontWeight: 'bold', lineHeight: 12 } },
-        series: [{ type: 'pie', radius: ['46%', '64%'], center: ['50%', '40%'], label: { show: false },
+        series: [donaCentro({ center: ['50%', '40%'], radio: '46%', valor: fmtN(tot, 0), sub: 'M³ TOTAL\nPARTICIPACIÓN',
+          tamano: 22, peso: 900, color: CP, tamSub: 8, pesoSub: 700, colorSub: '#666' }),
+        { type: 'pie', radius: ['46%', '64%'], center: ['50%', '40%'], label: { show: false },
           data: ps.map(p => ({ name: p, value: +P.value[p].m3.toFixed(2), itemStyle: { color: color(p) } })) }],
       }), true)
     }
@@ -890,7 +1003,7 @@ function renderCharts() {
             label: { show: true, position: 'inside', formatter: (x: any) => (x.value >= 700 ? fmtN(x.value, 0) : ''), color: '#fff', fontSize: 8, fontWeight: 'bold' } })),
           { name: 'Total', type: 'bar', stack: 't', data: ms.map(() => 0), tooltip: { show: false },
             label: { show: true, position: 'top', formatter: (x: any) => fmtN(ms[x.dataIndex].total, 0), color: CP, fontSize: 9, fontWeight: 'bold' } },
-          { name: 'Cierre estimado', type: 'line', data: ms.map((_, i) => (i === n - 1 ? Math.round(M.value.cierre) : null)),
+          { name: 'Cierre estimado', type: 'line', data: ms.map((_, i) => (esMes.value && i === n - 1 ? Math.round(M.value.cierre) : null)),
             symbol: 'rect', symbolSize: [30, 2], itemStyle: { color: '#dc2626' },
             label: { show: true, position: 'top', formatter: (x: any) => 'est. ' + fmtN(x.value, 0), color: '#dc2626', fontSize: 9, fontWeight: 'bold' } },
         ],

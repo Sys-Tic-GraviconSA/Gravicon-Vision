@@ -1,7 +1,7 @@
 <template>
   <nav :class="`rt rt-${variant}`" :aria-label="ariaLabel">
     <RouterLink
-      v-for="t in items"
+      v-for="t in visibles"
       :key="t.id"
       :to="t.to"
       :replace="replace"
@@ -30,8 +30,11 @@
  * - toggle: vista del contenido (Gráficas · Detalles · Informe), con ícono
  *
  * `activo` lo decide quien usa el componente porque cada nivel compara un segmento distinto de la ruta.
+ * Oculta las pestañas que el usuario no tiene permitidas (mismo criterio del router).
  */
-import type { RouteLocationRaw } from 'vue-router'
+import { computed } from 'vue'
+import { useRouter, type RouteLocationRaw } from 'vue-router'
+import { rutaPermitida } from '../../router'
 
 export interface RouteTab {
   id: string
@@ -40,7 +43,7 @@ export interface RouteTab {
   icono?: 'graficas' | 'lista' | 'informe'
 }
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   items: RouteTab[]
   activo: string
   variant?: 'tabs' | 'sub' | 'toggle'
@@ -48,6 +51,11 @@ withDefaults(defineProps<{
   /** Reemplaza la entrada del historial en vez de agregar una (para cambios de vista menores) */
   replace?: boolean
 }>(), { variant: 'tabs', ariaLabel: 'Secciones', replace: false })
+
+const router = useRouter()
+const visibles = computed(() => props.items.filter(t => {
+  try { return rutaPermitida(router.resolve(t.to)) } catch { return true }
+}))
 
 function iconoDe(t: RouteTab): string {
   if (t.icono) return t.icono

@@ -323,16 +323,22 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
       const datos = await conCache('concreto', TTL_SUPABASE_MS, async () => {
         const supabase = getSupabaseAdmin()
         const limit = 100000
-        const [resPrice, resDetail] = await Promise.all([
+        const [resPrice, resDetail, resCanc] = await Promise.all([
           supabase.from('order_price').select('*', { count: 'exact', head: false }).limit(limit),
-          supabase.from('order_detail').select('remision,tiempos_hphora_programada,bomba,operario').limit(limit),
+          // Pedido y tiempos de viaje del mixer (cargue, salida, llegada a obra, salida de obra, regreso) para las tablas de operación
+          supabase.from('order_detail').select('remision,no_de_pedido,tiempos_hphora_programada,tiempos_icinicio_de_cargue,tiempos_fcfin_de_cargue,' +
+            'tiempos_spsalida_de_planta,tiempos_llollegada_a_obra,tiempos_sosalida_de_obra,tiempos_llpllegada_a_planta,bomba,operario').limit(limit),
+          // Viajes cancelados o reubicados: no llegan a order_price; el motivo viene en observaciones
+          supabase.from('order_detail').select('fecha,remision,no_de_pedido,planta,cliente,obra,comercial,mixer,conductor,concreto_mezcla,concreto_cantidad,observaciones')
+            .eq('estado', 'Cancelado').limit(limit),
         ])
         if (resPrice.error) throw resPrice.error
         if (resDetail.error) throw resDetail.error
+        if (resCanc.error) throw resCanc.error
         if (resPrice.count && resPrice.count > limit) {
           console.warn(`[concreto-data] order_price truncado: ${resPrice.count} filas, devolviendo ${limit}`)
         }
-        return { price: resPrice.data, detail: resDetail.data, count: resPrice.count }
+        return { price: resPrice.data, detail: resDetail.data, cancelados: resCanc.data, count: resPrice.count }
       }, req.query.force === 'true')
       res.json(datos)
     } catch (err) {
