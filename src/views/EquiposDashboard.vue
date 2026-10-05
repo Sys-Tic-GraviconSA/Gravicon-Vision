@@ -129,10 +129,13 @@
         <KpiCard :value="$$(totalGeneral)" label="Costo Total General" accent="#15223c" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${intPct}%)</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${extPct}%)</span></div>` + (alqTotal > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Alq</span> <strong>${$$(alqTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${alqPct}%)</span></div>` : '')" />
         <KpiCard :value="$$(servicios)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intServSinAlq)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extServSinAlq)}</strong></div>` + (alqServ > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Alq</span> <strong>${$$(alqServ)}</strong></div>` : '')" />
         <KpiCard :value="$$(insumos)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intIns)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extIns)}</strong></div>`" />
-        <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" :detail="isConcretos ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${fmt(totalProd)} m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Agregados</span> <strong>${fmt(totalProdAgg)} m³</strong></div>` : ''" />
-        <KpiCard v-if="isConcretos" :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${$$(costoM3)}/m³</strong></div>` + (totalProdAgg > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Con agregados</span> <strong>${$$(costoM3ConAgg)}/m³</strong></div>` : '')" />
-        <KpiCard v-else :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3)}/m³</strong></div>`" />
-        <KpiCard :value="String(totalOrdenes)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCountRegistro}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCountRegistro}</strong></div>`" />
+        <KpiCard v-if="isConcretos" :value="String(totalOrdenes)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCountRegistro}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCountRegistro}</strong></div>`" />
+        <KpiCard :value="fmt(isConcretos ? totalProdConAgg - bombeosProd.m3ClienteArgos : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" :detail="isConcretos ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${fmt(totalProd - bombeosProd.m3ClienteArgos)} m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Agregados</span> <strong>${fmt(totalProdAgg)} m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#8B5CF6'></span><span class='kpi-label-ext'>Bombeos</span> <strong>${fmt(bombeosProd.m3Nuestros)} m³</strong></div>` : ''" />
+        <KpiCard v-if="isConcretos" label="Costo por m³ total" accent="#DC2626" icon="target" :value="$$(costoM3)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3)}/m³</strong></div>`" />
+        <KpiCard v-if="isConcretos" label="Maquila" accent="#10B981" icon="activity" :value="fmt(bombeosProd.m3ClienteArgos) + ' m³'" :detail="argosDetail" />
+        <KpiCard v-if="isConcretos" :value="$$(costoM3SinArgos)" label="Costo por m³ s/maquila" :accent="costoM3SinArgos > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3SinArgos)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3SinArgos)}/m³</strong></div>`" />
+        <KpiCard v-if="!isConcretos" :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3)}/m³</strong></div>`" />
+        <KpiCard v-if="!isConcretos" :value="String(totalOrdenes)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCountRegistro}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCountRegistro}</strong></div>`" />
         <KpiCard :value="String(estadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.abiertas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.abiertas)}</span></div>`" />
         <KpiCard :value="String(estadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.cerradas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.cerradas)}</span></div>`" />
         <KpiCard :value="otPctCierre + '%'" label="% Cierre" accent="#3B82F6" icon="zap" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntPctCierre}%</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtPctCierre}%</strong></div>`" />
@@ -141,7 +144,7 @@
         <KpiCard :value="otDuracionEstimadaProm + ' h'" label="Duración Estimada Promedio" accent="#8B5CF6" icon="clock" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntDuracionEstimadaProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtDuracionEstimadaProm}h</strong></div>`" />
         <KpiCard :value="otTiempoRealProm + ' h'" label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntTiempoRealProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtTiempoRealProm}h</strong></div>`" />
         <KpiCard :value="otConSopledPct + '%'" label="% OT con Pedido de Almacén" accent="#10B981" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntConSopledPct}%</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtConSopledPct}%</strong></div>`" />
-        <KpiCard v-if="isConcretos" :value="$$(costoTotalOtMes)" label="Costo Total OT en el Mes" accent="#0EA5E9" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(costoTotalOtMesInt)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(costoTotalOtMesExt)}</strong></div><div class='kpi-detail-row' style='color:var(--text-tertiary);font-size:10px'>Por Fecha de Registro — mismo rango de fechas filtrado</div>`" />
+        <KpiCard v-if="isConcretos" :value="$$(costoTotalOtMes)" label="Costo Total OT en el Mes" accent="#0EA5E9" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(costoTotalOtMesInt)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(costoTotalOtMesExt)}</strong></div>`" />
       </div>
 
       <div class="ots-bar">
@@ -181,7 +184,10 @@
     </div>
 
     <div class="charts-grid cols-1" style="margin-top:22px">
+      <ChartCard v-if="isConcretos" title="Costo Total por Tipo de Vehículo" description="Costo mensual de mantenimiento por tipo de vehículo del área (Planta / Maquinaria); el tooltip muestra su costo por m³ (sin maquila)" :option="tipoVehiculoLineaOpt" :height="420" tall clickable @chart-click="(p:any)=>onRankingClick('Tipo Vehículo', { name: p?.seriesName })" />
+      <ChartCard v-if="isConcretos" title="Ranking Top 10 — Costos de Mantenimiento por Tipo de Vehículo" description="Top 10 tipos de vehículo con mayor costo acumulado" :option="tipoVehiculoGenOpt" :expand-option="tipoVehiculoGenExpandOpt" :height="500" tall clickable @chart-click="(p:any)=>onRankingClick('Tipo Vehículo', p)" />
       <ChartCard title="Ranking Top 10 — Costos de Mantenimiento por Placa" description="Top 10 placas con mayor costo acumulado" :option="vehiculoGenOpt" :expand-option="vehiculoGenExpandOpt" :height="500" tall clickable @chart-click="onPlacaClick" />
+      <ChartCard v-if="isConcretos" title="Comportamiento Mensual — Top 4 Placas con Mayor Costo" description="Las 4 placas de mayor costo de mantenimiento en cada mes (al ampliar, top 10)" :option="placaLineaOpt" :expand-option="placaLineaExpandOpt" :height="420" tall clickable @chart-click="(p:any)=>onPlacaClick({ name: p?.seriesName })" />
     </div>
 
       <div class="charts-grid cols-2" style="margin-bottom:22px">
@@ -211,9 +217,10 @@
       <KpiCard :value="$$(intTotal)" label="Costo Total Interno" accent="#15223c" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Gasto</span> <strong>${intPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del total general</span></div>`" />
       <KpiCard :value="$$(intServSinAlq)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intTotal > 0 ? ((intServSinAlq / intTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto interno</span></div>`" />
       <KpiCard :value="$$(intIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-int'>Int</span> <strong>${intTotal > 0 ? ((intIns / intTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto interno</span></div>`" />
-      <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
-      <KpiCard :value="$$(intCostoM3)" label="Costo por m³" :accent="intCostoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
-      <KpiCard :value="String(intCountRegistro)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${totalOrdenes > 0 ? ((intCountRegistro / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
+      <KpiCard v-if="isConcretos" :value="String(intCountRegistro)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${totalOrdenes > 0 ? ((intCountRegistro / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
+      <KpiCard :value="fmt(isConcretos ? totalProdConAgg - bombeosProd.m3ClienteArgos : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
+      <KpiCard :value="$$(isConcretos ? intCostoM3SinArgos : intCostoM3)" label="Costo por m³" :accent="(isConcretos ? intCostoM3SinArgos : intCostoM3) > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
+      <KpiCard v-if="!isConcretos" :value="String(intCountRegistro)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${totalOrdenes > 0 ? ((intCountRegistro / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
       <KpiCard :value="otDiasRegistro > 0 ? (intCountRegistro / otDiasRegistro).toFixed(1) : '0.0'" label="Promedio OT / día" accent="#0EA5E9" icon="activity" />
       <KpiCard :value="otDiasActivos > 0 ? (otsIntEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" />
       <KpiCard :value="String(otsIntEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-int'>Costo</span> <strong>${$$(otsIntEstadoCostos.abiertas)}</strong></div>`" />
@@ -291,9 +298,10 @@
       <KpiCard :value="$$(extTotal)" label="Costo Total Externo" accent="#15223c" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Gasto</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del total general</span></div>`" />
       <KpiCard :value="$$(extServSinAlq)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-ext'>Ext</span> <strong>${extTotal > 0 ? ((extServSinAlq / extTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto externo</span></div>`" />
       <KpiCard :value="$$(extIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Ext</span> <strong>${extTotal > 0 ? ((extIns / extTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto externo</span></div>`" />
-      <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
-      <KpiCard :value="$$(extCostoM3)" label="Costo por m³" :accent="extCostoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
-      <KpiCard :value="String(extCountRegistro)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${totalOrdenes > 0 ? ((extCountRegistro / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
+      <KpiCard v-if="isConcretos" :value="String(extCountRegistro)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${totalOrdenes > 0 ? ((extCountRegistro / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
+      <KpiCard :value="fmt(isConcretos ? totalProdConAgg - bombeosProd.m3ClienteArgos : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
+      <KpiCard :value="$$(isConcretos ? extCostoM3SinArgos : extCostoM3)" label="Costo por m³" :accent="(isConcretos ? extCostoM3SinArgos : extCostoM3) > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
+      <KpiCard v-if="!isConcretos" :value="String(extCountRegistro)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${totalOrdenes > 0 ? ((extCountRegistro / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
       <KpiCard :value="otDiasRegistro > 0 ? (extCountRegistro / otDiasRegistro).toFixed(1) : '0.0'" label="Promedio OT / día" accent="#0EA5E9" icon="activity" />
       <KpiCard :value="otDiasActivos > 0 ? (otsExtEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" />
       <KpiCard :value="String(otsExtEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Costo</span> <strong>${$$(otsExtEstadoCostos.abiertas)}</strong></div>`" />
@@ -458,10 +466,13 @@
             <KpiCard label="Costo Acumulado" accent="#1D4ED8" icon="dollar" :value="$$(repCostoTotal)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(repCostosProv.interno)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${repCostosProv.pctInt}%)</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(repCostosProv.externo)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${repCostosProv.pctExt}%)</span></div>` + (repCostosProv.alq > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Alq</span> <strong>${$$(repCostosProv.alq)}</strong></div>` : '')" />
             <KpiCard label="Costo Servicios" accent="#0EA5E9" icon="settings" :value="$$(repCostoServTotal)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(repCostosProv.servIntSinAlq)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(repCostosProv.servExtSinAlq)}</strong></div>` + (repCostosProv.alqServ > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Alq</span> <strong>${$$(repCostosProv.alqServ)}</strong></div>` : '')" />
             <KpiCard label="Costo Insumos" accent="#EF4444" icon="package" :value="$$(repCostoInsumosTotal)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(repCostosProv.insInt)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(repCostosProv.insExt)}</strong></div>`" />
-            <KpiCard label="Total Producción" accent="#10B981" icon="trending-up" :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" :detail="isConcretos ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${fmt(totalProd)} m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Agregados</span> <strong>${fmt(totalProdAgg)} m³</strong></div>` : ''" />
-            <KpiCard v-if="isConcretos" label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :value="$$(costoM3)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${$$(costoM3)}/m³</strong></div>` + (totalProdAgg > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Con agregados</span> <strong>${$$(costoM3ConAgg)}/m³</strong></div>` : '')" />
-            <KpiCard v-else label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :value="$$(costoM3)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3)}/m³</strong></div>`" />
-            <KpiCard label="Total Órdenes" accent="#8B5CF6" icon="list" :value="String(totalOrdenes)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCountRegistro}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCountRegistro}</strong></div>`" />
+            <KpiCard v-if="isConcretos" label="Total Órdenes" accent="#8B5CF6" icon="list" :value="String(totalOrdenes)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCountRegistro}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCountRegistro}</strong></div>`" />
+            <KpiCard label="Total Producción" accent="#10B981" icon="trending-up" :value="fmt(isConcretos ? totalProdConAgg - bombeosProd.m3ClienteArgos : totalProd) + ' m³'" :detail="isConcretos ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${fmt(totalProd - bombeosProd.m3ClienteArgos)} m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Agregados</span> <strong>${fmt(totalProdAgg)} m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#8B5CF6'></span><span class='kpi-label-ext'>Bombeos</span> <strong>${fmt(bombeosProd.m3Nuestros)} m³</strong></div>` : ''" />
+            <KpiCard v-if="isConcretos" label="Costo por m³ total" accent="#DC2626" icon="target" :value="$$(costoM3)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3)}/m³</strong></div>`" />
+            <KpiCard v-if="isConcretos" label="Maquila" accent="#10B981" icon="activity" :value="fmt(bombeosProd.m3ClienteArgos) + ' m³'" :detail="argosDetail" />
+            <KpiCard v-if="isConcretos" label="Costo por m³ s/maquila" :accent="costoM3SinArgos > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :value="$$(costoM3SinArgos)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3SinArgos)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3SinArgos)}/m³</strong></div>`" />
+            <KpiCard v-if="!isConcretos" label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :value="$$(costoM3)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3)}/m³</strong></div>`" />
+            <KpiCard v-if="!isConcretos" label="Total Órdenes" accent="#8B5CF6" icon="list" :value="String(totalOrdenes)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCountRegistro}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCountRegistro}</strong></div>`" />
             <KpiCard label="OT Abiertas" accent="#DC2626" icon="activity" :value="String(repAbiertas)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.abiertas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.abiertas)}</span></div>`" />
             <KpiCard label="OT Cerradas" accent="#16A34A" icon="check-circle" :value="String(repCerradas)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.cerradas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.cerradas)}</span></div>`" />
             <KpiCard
@@ -477,7 +488,7 @@
             <KpiCard label="Duración Promedio" accent="#8B5CF6" icon="clock" :value="otDuracionEstimadaProm + ' h'" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntDuracionEstimadaProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtDuracionEstimadaProm}h</strong></div>`" />
             <KpiCard label="Tiempo Real Recepción → Cierre" accent="#06B6D4" icon="target" :value="otTiempoRealProm + ' h'" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntTiempoRealProm}h</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtTiempoRealProm}h</strong></div>`" />
             <KpiCard label="% OT con Pedido de Almacén" accent="#10B981" icon="package" :value="otConSopledPct + '%'" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntConSopledPct}%</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtConSopledPct}%</strong></div>`" />
-            <KpiCard v-if="isConcretos" label="Costo Total OT en el Mes" accent="#0EA5E9" icon="dollar" :value="$$(costoTotalOtMes)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(costoTotalOtMesInt)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(costoTotalOtMesExt)}</strong></div><div class='kpi-detail-row' style='color:var(--text-tertiary);font-size:10px'>Por Fecha de Registro — mismo rango de fechas filtrado</div>`" />
+            <KpiCard v-if="isConcretos" label="Costo Total OT en el Mes" accent="#0EA5E9" icon="dollar" :value="$$(costoTotalOtMes)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(costoTotalOtMesInt)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(costoTotalOtMesExt)}</strong></div>`" />
           </div>
 
           <!-- Nota de metodología del filtro por fecha -->
@@ -1110,15 +1121,18 @@
         <KpiCard :value="$$(totalGeneral)" label="Costo Total General" accent="#15223c" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${intPct}%)</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${extPct}%)</span></div>` + (alqTotal > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Alq</span> <strong>${$$(alqTotal)}</strong> <span style='color:var(--text-tertiary);font-size:10px'>(${alqPct}%)</span></div>` : '')" />
         <KpiCard :value="$$(servicios)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intServSinAlq)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extServSinAlq)}</strong></div>` + (alqServ > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Alq</span> <strong>${$$(alqServ)}</strong></div>` : '')" />
         <KpiCard :value="$$(insumos)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intIns)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extIns)}</strong></div>`" />
-        <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" :detail="isConcretos ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${fmt(totalProd)} m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Agregados</span> <strong>${fmt(totalProdAgg)} m³</strong></div>` : ''" />
-        <KpiCard v-if="isConcretos" :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${$$(costoM3)}/m³</strong></div>` + (totalProdAgg > 0 ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Con agregados</span> <strong>${$$(costoM3ConAgg)}/m³</strong></div>` : '')" />
-        <KpiCard v-else :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3)}/m³</strong></div>`" />
-        <KpiCard :value="String(totalOrdenes)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCountRegistro}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCountRegistro}</strong></div>`" />
+        <KpiCard v-if="isConcretos" :value="String(totalOrdenes)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCountRegistro}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCountRegistro}</strong></div>`" />
+        <KpiCard :value="fmt(isConcretos ? totalProdConAgg - bombeosProd.m3ClienteArgos : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" :detail="isConcretos ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Concreto</span> <strong>${fmt(totalProd - bombeosProd.m3ClienteArgos)} m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-label-ext'>Agregados</span> <strong>${fmt(totalProdAgg)} m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#8B5CF6'></span><span class='kpi-label-ext'>Bombeos</span> <strong>${fmt(bombeosProd.m3Nuestros)} m³</strong></div>` : ''" />
+        <KpiCard v-if="isConcretos" label="Costo por m³ total" accent="#DC2626" icon="target" :value="$$(costoM3)" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3)}/m³</strong></div>`" />
+        <KpiCard v-if="isConcretos" label="Maquila" accent="#10B981" icon="activity" :value="fmt(bombeosProd.m3ClienteArgos) + ' m³'" :detail="argosDetail" />
+        <KpiCard v-if="isConcretos" :value="$$(costoM3SinArgos)" label="Costo por m³ s/maquila" :accent="costoM3SinArgos > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3SinArgos)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3SinArgos)}/m³</strong></div>`" />
+        <KpiCard v-if="!isConcretos" :value="$$(costoM3)" label="Costo por m³" :accent="costoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(intCostoM3)}/m³</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(extCostoM3)}/m³</strong></div>`" />
+        <KpiCard v-if="!isConcretos" :value="String(totalOrdenes)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intCountRegistro}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extCountRegistro}</strong></div>`" />
         <KpiCard :value="promOtDia.toFixed(1)" label="Promedio OT / día" accent="#0EA5E9" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasRegistro > 0 ? (intCountRegistro / otDiasRegistro).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasRegistro > 0 ? (extCountRegistro / otDiasRegistro).toFixed(1) : '0.0'}</strong></div>`" />
         <KpiCard :value="promCierreDia.toFixed(1)" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otDiasActivos > 0 ? (otsIntEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otDiasActivos > 0 ? (otsExtEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'}</strong></div>`" />
         <KpiCard :value="String(estadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.abiertas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.abiertas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.abiertas)}</span></div>`" />
         <KpiCard :value="String(estadoCounts.cerradas)" label="Cerradas" accent="#10B981" icon="check-circle" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${otsIntEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsIntEstadoCostos.cerradas)}</span></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${otsExtEstadoCounts.cerradas}</strong> <span style='color:var(--text-tertiary);font-size:10px'>${$$(otsExtEstadoCostos.cerradas)}</span></div>`" />
-        <KpiCard v-if="isConcretos" :value="$$(costoTotalOtMes)" label="Costo Total OT en el Mes" accent="#0EA5E9" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(costoTotalOtMesInt)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(costoTotalOtMesExt)}</strong></div><div class='kpi-detail-row' style='color:var(--text-tertiary);font-size:10px'>Por Fecha de Registro — mismo rango de fechas filtrado</div>`" />
+        <KpiCard v-if="isConcretos" :value="$$(costoTotalOtMes)" label="Costo Total OT en el Mes" accent="#0EA5E9" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${$$(costoTotalOtMesInt)}</strong></div><div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${$$(costoTotalOtMesExt)}</strong></div>`" />
       </div>
 
       <div class="ots-bar">
@@ -1157,7 +1171,10 @@
       </div>
 
       <div class="charts-grid cols-1" style="margin-top:22px">
+        <ChartCard v-if="isConcretos" title="Costo Total por Tipo de Vehículo" description="Costo mensual de mantenimiento por tipo de vehículo del área (Planta / Maquinaria); el tooltip muestra su costo por m³ (sin maquila)" :option="tipoVehiculoLineaOpt" :height="420" tall clickable @chart-click="(p:any)=>onRankingClick('Tipo Vehículo', { name: p?.seriesName })" />
+        <ChartCard v-if="isConcretos" title="Ranking Top 10 — Costos de Mantenimiento por Tipo de Vehículo" description="Top 10 tipos de vehículo con mayor costo acumulado" :option="tipoVehiculoGenOpt" :expand-option="tipoVehiculoGenExpandOpt" :height="500" tall clickable @chart-click="(p:any)=>onRankingClick('Tipo Vehículo', p)" />
         <ChartCard title="Ranking Top 10 — Costos de Mantenimiento por Placa" description="Top 10 placas con mayor costo acumulado" :option="vehiculoGenOpt" :expand-option="vehiculoGenExpandOpt" :height="500" tall clickable @chart-click="onPlacaClick" />
+        <ChartCard v-if="isConcretos" title="Comportamiento Mensual — Top 4 Placas con Mayor Costo" description="Las 4 placas de mayor costo de mantenimiento en cada mes (al ampliar, top 10)" :option="placaLineaOpt" :expand-option="placaLineaExpandOpt" :height="420" tall clickable @chart-click="(p:any)=>onPlacaClick({ name: p?.seriesName })" />
       </div>
 
       <div class="charts-grid cols-2" style="margin-bottom:22px">
@@ -1184,9 +1201,10 @@
         <KpiCard :value="$$(intTotal)" label="Costo Total Interno" accent="#15223c" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Gasto</span> <strong>${intPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del total general</span></div>`" />
         <KpiCard :value="$$(intServSinAlq)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intTotal > 0 ? ((intServSinAlq / intTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto interno</span></div>`" />
         <KpiCard :value="$$(intIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-int'>Int</span> <strong>${intTotal > 0 ? ((intIns / intTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto interno</span></div>`" />
-        <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
-        <KpiCard :value="$$(intCostoM3)" label="Costo por m³" :accent="intCostoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
-        <KpiCard :value="String(intCountRegistro)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${totalOrdenes > 0 ? ((intCountRegistro / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
+        <KpiCard v-if="isConcretos" :value="String(intCountRegistro)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${totalOrdenes > 0 ? ((intCountRegistro / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
+        <KpiCard :value="fmt(isConcretos ? totalProdConAgg - bombeosProd.m3ClienteArgos : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
+        <KpiCard :value="$$(isConcretos ? intCostoM3SinArgos : intCostoM3)" label="Costo por m³" :accent="(isConcretos ? intCostoM3SinArgos : intCostoM3) > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${intPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
+        <KpiCard v-if="!isConcretos" :value="String(intCountRegistro)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-int'>Int</span> <strong>${totalOrdenes > 0 ? ((intCountRegistro / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
         <KpiCard :value="otDiasRegistro > 0 ? (intCountRegistro / otDiasRegistro).toFixed(1) : '0.0'" label="Promedio OT / día" accent="#0EA5E9" icon="activity" />
       <KpiCard :value="otDiasActivos > 0 ? (otsIntEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" />
         <KpiCard :value="String(otsIntEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-int'>Costo</span> <strong>${$$(otsIntEstadoCostos.abiertas)}</strong></div>`" />
@@ -1256,9 +1274,10 @@
         <KpiCard :value="$$(extTotal)" label="Costo Total Externo" accent="#15223c" icon="dollar" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Gasto</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del total general</span></div>`" />
         <KpiCard :value="$$(extServSinAlq)" label="Costos Servicios" accent="#3B82F6" icon="settings" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#3B82F6'></span><span class='kpi-label-ext'>Ext</span> <strong>${extTotal > 0 ? ((extServSinAlq / extTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto externo</span></div>`" />
         <KpiCard :value="$$(extIns)" label="Costos Insumos" accent="#EF4444" icon="package" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Ext</span> <strong>${extTotal > 0 ? ((extIns / extTotal) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del gasto externo</span></div>`" />
-        <KpiCard :value="fmt(isConcretos ? totalProdConAgg : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
-        <KpiCard :value="$$(extCostoM3)" label="Costo por m³" :accent="extCostoM3 > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
-        <KpiCard :value="String(extCountRegistro)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${totalOrdenes > 0 ? ((extCountRegistro / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
+        <KpiCard v-if="isConcretos" :value="String(extCountRegistro)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${totalOrdenes > 0 ? ((extCountRegistro / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
+        <KpiCard :value="fmt(isConcretos ? totalProdConAgg - bombeosProd.m3ClienteArgos : totalProd) + ' m³'" label="Total Producción" accent="#10B981" icon="trending-up" />
+        <KpiCard :value="$$(isConcretos ? extCostoM3SinArgos : extCostoM3)" label="Costo por m³" :accent="(isConcretos ? extCostoM3SinArgos : extCostoM3) > metaM3 ? '#EF4444' : '#10B981'" :meta="metaM3Label" icon="target" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${extPct}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>del costo/m³ global</span></div>`" />
+        <KpiCard v-if="!isConcretos" :value="String(extCountRegistro)" label="Total Órdenes" accent="#8B5CF6" icon="list" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#10B981'></span><span class='kpi-label-ext'>Ext</span> <strong>${totalOrdenes > 0 ? ((extCountRegistro / totalOrdenes) * 100).toFixed(1) : '0.0'}%</strong> <span style='color:var(--text-tertiary);font-size:10px'>de todas las OTs</span></div>`" />
         <KpiCard :value="otDiasRegistro > 0 ? (extCountRegistro / otDiasRegistro).toFixed(1) : '0.0'" label="Promedio OT / día" accent="#0EA5E9" icon="activity" />
       <KpiCard :value="otDiasActivos > 0 ? (otsExtEstadoCounts.cerradas / otDiasActivos).toFixed(1) : '0.0'" label="Promedio Cierre / día" accent="#16A34A" icon="check-circle" />
         <KpiCard :value="String(otsExtEstadoCounts.abiertas)" label="Abiertas" accent="#EF4444" icon="activity" :detail="`<div class='kpi-detail-row'><span class='kpi-dot' style='background:#EF4444'></span><span class='kpi-label-ext'>Costo</span> <strong>${$$(otsExtEstadoCostos.abiertas)}</strong></div>`" />
@@ -4346,8 +4365,41 @@ const totalProdAgg = computed(() => {
 })
 /** Total de m³ movidos: concreto + agregados. */
 const totalProdConAgg = computed(() => totalProd.value + totalProdAgg.value)
-/** Costo por m³ contando también los m³ de agregados (tasa mezclada, más baja). */
-const costoM3ConAgg = computed(() => totalProdConAgg.value > 0 ? generalKpi.value.total / totalProdConAgg.value : 0)
+
+/** Bombeos del período (solo Concretos), una remisión con servicio AUTOBOMBA o
+ *  ESTACIONARIA = 1 bombeo (sin importar qué bomba se registró).
+ *  - Nuestros: cualquier bomba distinta de la de Argos.
+ *  - «AUTOBOMBA ARGOS»: bomba externa de Argos (el concreto es nuestro), se muestra aparte.
+ *  - Cliente CEMENTOS ARGOS: m³ que siguen contando en Concreto, pero se identifican aparte. */
+const bombeosProd = computed(() => {
+  const out = { nuestros: 0, m3Nuestros: 0, argos: 0, m3Argos: 0, remClienteArgos: 0, m3ClienteArgos: 0 }
+  if (!isConcretos.value) return out
+  for (const r of prodFiltered.value as unknown as Record<string, unknown>[]) {
+    if (String(r['Cliente'] ?? '').toUpperCase().includes('ARGOS')) {
+      out.m3ClienteArgos += Number(r['Cant. Concreto']) || 0
+      out.remClienteArgos++
+    }
+    if (!esServicioBomba(r['Servicio'] ?? r['servicio_nombre'])) continue
+    const m3 = Number(r['Cant. Servicio']) || Number(r['servicio_cantidad']) || 0
+    if (esBombaArgos(r['Bomba'])) { out.argos++; out.m3Argos += m3 }
+    else { out.nuestros++; out.m3Nuestros += m3 }
+  }
+  return out
+})
+
+/** Desglose del KPI «Argos» de Concretos: m³ del cliente Argos y bombeos con la bomba de Argos. */
+/** Costo por m³ de concreto sin los m³ vendidos al cliente Argos. */
+const costoM3SinArgos = computed(() => {
+  const m3 = totalProd.value - bombeosProd.value.m3ClienteArgos
+  return m3 > 0 ? generalKpi.value.total / m3 : 0
+})
+const argosDetail = computed(() => {
+  const row = (color: string, cls: string, label: string, val: string) =>
+    `<div class='kpi-detail-row'><span class='kpi-dot' style='background:${color}'></span><span class='${cls}'>${label}</span> <strong>${val}</strong></div>`
+  const b = bombeosProd.value
+  return row('#F59E0B', 'kpi-label-ext', 'Cliente Argos', `${fmt(b.m3ClienteArgos)} m³`)
+    + row('#DC2626', 'kpi-label-ext', 'Bombeos Argos', `${fmt(b.m3Argos)} m³`)
+})
 
 /** Nº de días distintos del período en que se registró al menos una OT. */
 const otDiasActivos = computed(() => {
@@ -5224,6 +5276,10 @@ const extTotal = computed(() => extKpi.value.total)
 const extPct = computed(() => totalGeneral.value > 0 ? ((extKpi.value.total / totalGeneral.value) * 100).toFixed(1) : '0.0')
 const extCount = computed(() => extKpi.value.count)
 const extCostoM3 = computed(() => totalProd.value > 0 ? extKpi.value.total / totalProd.value : 0)
+/** Costo por m³ Int/Ext sobre nuestros m³ (sin cliente Argos), solo Concretos. */
+const m3SinArgos = computed(() => totalProd.value - bombeosProd.value.m3ClienteArgos)
+const intCostoM3SinArgos = computed(() => m3SinArgos.value > 0 ? intKpi.value.total / m3SinArgos.value : 0)
+const extCostoM3SinArgos = computed(() => m3SinArgos.value > 0 ? extKpi.value.total / m3SinArgos.value : 0)
 
 const otsExtEstadoCounts = computed(() => {
   let abiertas = 0
@@ -5301,17 +5357,19 @@ const responsablesCierreExtRanking = computed(() => rankByMultiValue(extRows.val
 const jornadaExtRanking = computed(() => rankBy(extRows.value, 'Jornada', 6))
 
 
-function buildBarOpt(data: Record<string, unknown>[], groupBy: 'Tipo de Vehículo' | 'Placa del Vehículo' | 'PROVEEDOR', limit?: number) {
+function buildBarOpt(data: Record<string, unknown>[], groupBy: 'Tipo de Vehículo' | 'Tipo Vehículo' | 'Placa del Vehículo' | 'PROVEEDOR', limit?: number) {
   const map = new Map<string, { serv: number; ins: number }>()
   for (const r of data) {
-    const t = String(r[groupBy] ?? '').trim() || '(Sin ' + groupBy + ')'
+    const t = groupBy === 'Tipo Vehículo' ? tipoVehiculoCorto(r) : String(r[groupBy] ?? '').trim() || '(Sin ' + groupBy + ')'
+    // En Maquinaria no se muestra ningún tipo que diga «PLANTA»
+    if (groupBy === 'Tipo Vehículo' && tipoTab.value === 'maquinaria' && t.includes('PLANTA')) continue
     const e = map.get(t)
     if (e) { e.serv += Number(r['Costo servicios']) || 0; e.ins += Number(r['Costos Insumos']) || 0 }
     else { map.set(t, { serv: Number(r['Costo servicios']) || 0, ins: Number(r['Costos Insumos']) || 0 }) }
   }
   const sorted = [...map.entries()].sort((a, b) => (b[1].serv + b[1].ins) - (a[1].serv + a[1].ins))
   const maxTotal = sorted.length > 0 ? sorted[0][1].serv + sorted[0][1].ins : 1
-  const effectiveLimit = limit ?? (groupBy === 'Placa del Vehículo' ? 10 : 15)
+  const effectiveLimit = limit ?? (groupBy === 'Placa del Vehículo' || groupBy === 'Tipo Vehículo' ? 10 : 15)
   const labels: string[] = []; const serv: number[] = []; const ins: number[] = []
   for (const [k, v] of sorted.slice(0, effectiveLimit)) { labels.push(k); serv.push(v.serv); ins.push(v.ins) }
   // Oculta la etiqueta si el segmento es demasiado angosto para el texto: cada
@@ -5385,6 +5443,18 @@ function extraerPlacaEquipo(raw: string): string {
   return parts.length === 1 ? s : parts[parts.length - 1]
 }
 
+/** «AUTOBOMBA ARGOS»: autobomba externa de Argos usada en remisiones nuestras. */
+function esBombaArgos(bomba: unknown): boolean {
+  return String(bomba ?? '').toUpperCase().includes('ARGOS')
+}
+
+/** ¿La remisión lleva servicio de bombeo (AUTOBOMBA o ESTACIONARIA)? Para el conteo de
+ *  bombeos del KPI; no cuenta servicios como «ESTABILIZADO 2H/3H». */
+function esServicioBomba(servicio: unknown): boolean {
+  const s = String(servicio ?? '').trim().toUpperCase()
+  return s.includes('BOMBA') || s.includes('ESTACIONARIA')
+}
+
 /** ¿El servicio de la remisión implica bombeo con autobomba? Excluye "Sin Bomba",
  *  vacío y "estacionaria" (misma regla que el resto del dashboard de concreto). */
 function esServicioBombeo(servicio: unknown): boolean {
@@ -5412,7 +5482,8 @@ const m3PorPlaca = computed(() => {
 
     if (esServicioBombeo(r['Servicio'] ?? r['servicio_nombre'])) {
       const bombeado = Number(r['Cant. Servicio']) || Number(r['servicio_cantidad']) || 0
-      add(String(r['Bomba'] ?? ''), bombeado)
+      // La bomba de Argos es externa: sus m³ no se atribuyen a ninguna placa propia.
+      if (!esBombaArgos(r['Bomba'])) add(String(r['Bomba'] ?? ''), bombeado)
     }
   }
   return m3
@@ -5455,6 +5526,178 @@ const dispPorPlaca = computed(() => {
   return out
 })
 
+/** Tipo de vehículo sin placa: columna TIPO del maestro ('Tipo Vehículo'); si falta, la descripción hasta «:». */
+function tipoVehiculoCorto(r: Record<string, unknown>): string {
+  const t = String(r['Tipo Vehículo'] ?? '').trim()
+  if (t) return t.toUpperCase()
+  const d = String(r['Tipo de Vehículo'] ?? '').trim()
+  return d ? vehTypeLabel(d).toUpperCase() : '(Sin Tipo de Vehículo)'
+}
+/** Tipos de vehículo (sin placa) con costo, de mayor a menor; en Maquinaria se omite lo que diga «PLANTA». */
+const tipoVehiculoLineaTipos = computed(() => {
+  const map = new Map<string, number>()
+  for (const r of (monthlyExpandedRange.value ? dataFilteredNoAcpmExpanded.value : dataFilteredNoAcpm.value)) {
+    const t = tipoVehiculoCorto(r)
+    map.set(t, (map.get(t) ?? 0) + (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0))
+  }
+  return [...map.entries()].filter(([t, c]) => c > 0 && !(tipoTab.value === 'maquinaria' && t.includes('PLANTA'))).sort((a, b) => b[1] - a[1]).map(e => e[0])
+})
+/**
+ * Líneas por mes (fecha de cierre) del costo de mantenimiento, una por grupo (tipo de vehículo o placa).
+ * Con `conM3`, el tooltip agrega el costo por m³ propio del mes (sin maquila Argos).
+ */
+function buildCostoMensualLineasOpt(keyOf: (r: Record<string, unknown>) => string, tipos: string[], conM3: boolean, conValores = false) {
+  const isLight = theme.value === 'light'
+  const incluidos = new Set(tipos)
+  const meses = new Map<string, { label: string; costos: Map<string, number>; m3: number }>()
+  const mes = (d: Date) => {
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+    let e = meses.get(key)
+    if (!e) { e = { label: `${d.getUTCFullYear()} ${MESES_ES[d.getUTCMonth()]}`, costos: new Map(), m3: 0 }; meses.set(key, e) }
+    return e
+  }
+  // Mes único filtrado: incluye los 2 meses anteriores, igual que las demás gráficas mensuales
+  const expandido = !!monthlyExpandedRange.value
+  for (const r of (expandido ? dataFilteredNoAcpmExpanded.value : dataFilteredNoAcpm.value)) {
+    const d = parseRowDate(otCloseSerial(r))
+    if (!d) continue
+    const t = keyOf(r)
+    if (!incluidos.has(t)) continue
+    const c = (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0)
+    const e = mes(d)
+    e.costos.set(t, (e.costos.get(t) ?? 0) + c)
+  }
+  for (const r of (expandido ? prodFilteredExpanded.value : prodFiltered.value) as unknown as Record<string, unknown>[]) {
+    if (String(r['Cliente'] ?? '').toUpperCase().includes('ARGOS')) continue
+    const d = parseRowDate(r['Fecha'] ?? r['FECHA'])
+    if (!d) continue
+    mes(d).m3 += Number(r['Total de M³']) || Number(r['Cant. Concreto']) || 0
+  }
+  const keys = [...meses.keys()].sort()
+  const labels = keys.map(k => meses.get(k)!.label)
+  const money = (v: number) => '$ ' + Math.round(v).toLocaleString('es-CO')
+  const m3Txt = (v: number) => '$ ' + v.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '/m³'
+  return markRaw({
+    textStyle: { fontFamily: 'Lato, sans-serif' },
+    color: palette,
+    tooltip: {
+      trigger: 'axis' as const,
+      formatter: (params: any) => {
+        const all = Array.isArray(params) ? params : [params]
+        const e = meses.get(keys[all[0]?.dataIndex])
+        if (!e) return ''
+        const lines = all.filter((p: any) => Number(p.value) > 0).sort((x: any, y: any) => Number(y.value) - Number(x.value)).map((p: any) => {
+          const v = Number(p.value) || 0
+          return `<span style="color:${p.color}">●</span> ${p.seriesName}: <b>${money(v)}</b>` + (conM3 && e.m3 > 0 ? ` <span style="color:#94a3b8">· ${m3Txt(v / e.m3)}</span>` : '')
+        })
+        return `<b>${e.label}</b><br/>` + lines.join('<br/>') +
+          (conM3 ? `<br/><span style="color:#94a3b8;font-size:10px">Producción propia del mes: ${Math.round(e.m3).toLocaleString('es-CO')} m³ (sin maquila)</span>` : '')
+      },
+    },
+    legend: {
+      type: 'scroll' as const, top: 8, left: 12, right: 12, itemGap: 14, icon: 'circle', itemWidth: 10, itemHeight: 10,
+      textStyle: { fontFamily: 'Lato, sans-serif', fontWeight: 600 as const, color: chartTextColor.value, fontSize: 11 },
+    },
+    grid: { left: 20, right: 30, bottom: 30, top: 60, containLabel: true },
+    xAxis: {
+      type: 'category' as const, data: labels, boundaryGap: false,
+      axisLine: { lineStyle: { color: isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)' } },
+      axisTick: { show: false },
+      axisLabel: { fontFamily: 'Lato, sans-serif', fontWeight: 600 as const, color: chartTextColor.value, fontSize: 11, margin: 12 },
+    },
+    yAxis: {
+      type: 'value' as const, axisLine: { show: false }, axisTick: { show: false },
+      axisLabel: { color: chartTextColor.value, fontSize: 10, formatter: (v: number) => '$' + (v >= 1e6 ? (v / 1e6).toLocaleString('es-CO', { maximumFractionDigits: 1 }) + ' M' : Math.round(v / 1e3).toLocaleString('es-CO') + ' mil') },
+      splitLine: { show: true, lineStyle: { color: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)', type: 'dashed' as const } },
+    },
+    series: tipos.map(t => ({
+      name: t, type: 'line' as const, smooth: 0.3, symbol: 'circle' as const, symbolSize: 7, showSymbol: true,
+      lineStyle: { width: 2.5 }, emphasis: { focus: 'series' as const },
+      // Valor sobre cada marcador (en millones para que no se amontone)
+      label: conValores ? { ...labelLine.value, show: true, position: 'top' as const, distance: 6, fontSize: 10, formatter: (p: any) => { const v = Number(p.value) || 0; return v > 0 ? '$' + (v >= 1e6 ? (v / 1e6).toLocaleString('es-CO', { maximumFractionDigits: 1 }) + ' M' : Math.round(v / 1e3).toLocaleString('es-CO') + ' mil') : '' } } : undefined,
+      data: keys.map(k => Math.round(meses.get(k)!.costos.get(t) ?? 0)),
+    })),
+  })
+}
+
+/** Tipos de vehículo en líneas por mes, con costo por m³. */
+const tipoVehiculoLineaOpt = computed(() => buildCostoMensualLineasOpt(tipoVehiculoCorto, tipoVehiculoLineaTipos.value, true))
+
+/**
+ * Barras por mes con las `n` placas de mayor costo de CADA mes (fecha de cierre): una placa que se
+ * dispare en un mes aparece en ese mes aunque su total del período sea menor. Cada placa conserva
+ * su color en todos los meses (leyenda) y la barra lleva la placa; el valor va en el tooltip.
+ */
+function buildTopPlacasMesOpt(n: number) {
+  const isLight = theme.value === 'light'
+  const meses = new Map<string, { label: string; costos: Map<string, number> }>()
+  const total = new Map<string, number>()
+  for (const r of (monthlyExpandedRange.value ? dataFilteredNoAcpmExpanded.value : dataFilteredNoAcpm.value)) {
+    const pl = String(r['Placa del Vehículo'] ?? '').trim()
+    const d = parseRowDate(otCloseSerial(r))
+    if (!pl || !d) continue
+    const c = (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0)
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+    let e = meses.get(key)
+    if (!e) { e = { label: `${d.getUTCFullYear()} ${MESES_ES[d.getUTCMonth()]}`, costos: new Map() }; meses.set(key, e) }
+    e.costos.set(pl, (e.costos.get(pl) ?? 0) + c)
+    total.set(pl, (total.get(pl) ?? 0) + c)
+  }
+  const keys = [...meses.keys()].sort()
+  const tops = keys.map(k => [...meses.get(k)!.costos.entries()].filter(e => e[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, n))
+  // Color fijo por placa (orden por costo total del período)
+  const placas = [...new Set(tops.flat().map(e => e[0]))].sort((a, b) => (total.get(b) ?? 0) - (total.get(a) ?? 0))
+  const color = new Map(placas.map((pl, i) => [pl, palette[i % palette.length]]))
+  const money = (v: number) => '$ ' + Math.round(v).toLocaleString('es-CO')
+  // Mismo estilo que «Costos Generales y Costo Unitario (m³)»
+  return markRaw({
+    textStyle: { fontFamily: 'Lato, sans-serif' },
+    animation: true, animationDuration: 650, animationEasing: 'cubicOut', animationDurationUpdate: 400, animationEasingUpdate: 'cubicInOut',
+    tooltip: {
+      trigger: 'axis' as const, axisPointer: { type: 'shadow' as const, shadowStyle: { color: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)' } },
+      formatter: (params: any) => {
+        const arr = (Array.isArray(params) ? params : [params]).filter((p: any) => p.data?.name)
+        if (!arr.length) return ''
+        return `<b>${meses.get(keys[arr[0].dataIndex])?.label ?? ''}</b><br/>` + arr.map((p: any, i: number) =>
+          `<span style="color:${color.get(p.data.name)}">\u25CF</span> ${i + 1}. ${p.data.name}: <b>${money(Number(p.value) || 0)}</b>`).join('<br/>')
+      },
+    },
+    legend: {
+      type: 'scroll' as const, top: 8, left: 12, right: 12, itemGap: 18, icon: 'circle', itemWidth: 10, itemHeight: 10, selectedMode: false,
+      textStyle: { fontFamily: 'Lato, sans-serif', fontWeight: 600 as const, color: chartTextColor.value, fontSize: 11 },
+      data: placas.map(pl => ({ name: pl, itemStyle: { color: color.get(pl) } })),
+    },
+    grid: { left: 60, right: 30, bottom: 60, top: 50, containLabel: true },
+    xAxis: {
+      type: 'category' as const, data: keys.map(k => meses.get(k)!.label),
+      axisLine: { lineStyle: { color: isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)' } },
+      axisTick: { show: false },
+      axisLabel: { fontFamily: 'Lato, sans-serif', fontWeight: 600 as const, color: chartTextColor.value, fontSize: 11, margin: 12 },
+    },
+    yAxis: {
+      type: 'value' as const, axisLabel: { show: false }, axisLine: { show: false }, axisTick: { show: false },
+      splitLine: { show: true, lineStyle: { color: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)', type: 'dashed' as const } },
+      max: (val: any) => Math.ceil((val.max || 1000000) * 1.2),
+    },
+    series: [
+      // Una serie por puesto (1.º … n.º) para que cada mes tenga exactamente sus n barras
+      ...Array.from({ length: n }, (_, i) => ({
+        name: `#${i + 1}`, type: 'bar' as const, barMaxWidth: 48, barGap: '15%', barCategoryGap: '25%',
+        emphasis: { focus: 'series' as const, itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0, 0, 0, 0.25)' } },
+        label: { ...labelLine.value, position: 'top' as const, distance: 4, formatter: (p: any) => (Number(p.value) || 0) > 0 ? (p.data?.name ?? '') : '' },
+        data: tops.map(t => t[i] ? { value: Math.round(t[i][1]), name: t[i][0], itemStyle: { color: color.get(t[i][0]), borderRadius: [4, 4, 0, 0] as [number, number, number, number] } } : { value: 0, name: '' }),
+      })),
+      // Series vacías solo para la leyenda de colores por placa (tipo línea para no ocupar espacio de barra)
+      ...placas.map(pl => ({ name: pl, type: 'line' as const, data: [] as number[], itemStyle: { color: color.get(pl) } })),
+    ],
+  })
+}
+/** Top 4 placas de cada mes; al ampliar, top 10. */
+const placaLineaOpt = computed(() => buildTopPlacasMesOpt(4))
+const placaLineaExpandOpt = computed(() => buildTopPlacasMesOpt(10))
+
+const tipoVehiculoGenOpt = computed(() => markRaw(buildBarOpt(dataFilteredNoAcpm.value, 'Tipo Vehículo')))
+const tipoVehiculoGenExpandOpt = computed(() => markRaw(buildBarOpt(dataFilteredNoAcpm.value, 'Tipo Vehículo', Infinity)))
 const vehiculoGenOpt = computed(() => markRaw(buildBarOpt(dataFilteredNoAcpm.value, 'Placa del Vehículo')))
 const vehiculoIntOpt = computed(() => markRaw(buildBarOpt(intRows.value, 'Placa del Vehículo')))
 const vehiculoExtOpt = computed(() => markRaw(buildBarOpt(extRows.value, 'Placa del Vehículo')))
@@ -5601,6 +5844,7 @@ const rankingDetailRows = computed(() => {
       const lbl = fechaToDiariasLabel(otRecepcionSerial(r))
       return lbl.toLowerCase() === val
     }
+    if (field === 'Tipo Vehículo') return tipoVehiculoCorto(r).toLowerCase() === val
     return String(r[field] ?? '').trim().toLowerCase() === val
   })
 })
