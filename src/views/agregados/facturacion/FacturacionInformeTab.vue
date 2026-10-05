@@ -108,6 +108,11 @@
           <h3 class="report-block-title"><span class="title-bar"></span>Venta diaria por familia de material — {{ MES_LBL }}</h3>
           <VChart class="echart" :option="tema(optDiario)" autoresize style="height: 340px" />
         </div>
+        <div v-if="proyeccion" class="report-section-block">
+          <h3 class="report-block-title"><span class="title-bar"></span>Venta acumulada del mes y proyección de cierre — {{ MES_LBL }}</h3>
+          <p class="section-note">Línea continua: venta acumulada real al {{ flbl(hoy) }}. Línea punteada: proyección hasta fin de mes con el promedio de lunes a sábado{{ proyeccion.faltanDom ? ' y el de domingo.' : '.' }}</p>
+          <VChart class="echart" :option="tema(optAcum)" autoresize style="height: 320px" />
+        </div>
         <div class="report-section-block">
           <h3 class="report-block-title"><span class="title-bar"></span>Detalle de despacho por día — {{ MES_LBL }}</h3>
           <p class="section-note">Venta del día en verde cuando supera el promedio {{ delPer }} ({{ cop(ritmo) }}) y en rojo cuando queda por debajo.<template v-if="famOtros.length"> «Otros» agrupa: {{ famOtros.join(', ') }}.</template></p>
@@ -208,27 +213,6 @@
           </div></div>
         </div>
 
-        <div class="report-section-block">
-          <h3 class="report-block-title"><span class="title-bar"></span>Clientes — {{ MES_LBL }} (top {{ TOP }})</h3>
-          <div class="data-card"><div class="table-wrap">
-            <table>
-              <thead><tr><th class="idx">#</th><th>Cliente</th><th class="r">Remisiones</th><th class="r">Toneladas</th><th class="r">Venta</th><th class="r">Part.</th></tr></thead>
-              <tbody>
-                <tr v-for="(c, i) in clientes.slice(0, TOP)" :key="c.clave">
-                  <td class="idx">{{ i + 1 }}</td>
-                  <td><span class="bold">{{ c.nombre }}</span><br /><span class="sub">NIT/CC {{ c.clave }} · principal: {{ c.principal }}</span></td>
-                  <td class="r">{{ c.docs }}</td><td class="r">{{ c.t ? num(c.t) : '—' }}</td><td class="r bold">{{ cop(c.venta) }}</td><td class="r">{{ pct(c.venta / M.venta * 100) }}</td>
-                </tr>
-                <tr v-if="clientes.length > TOP">
-                  <td class="idx">—</td><td class="muted"><em>Otros {{ clientes.length - TOP }} clientes</em></td>
-                  <td class="r">{{ restoCli.docs }}</td><td class="r">{{ num(restoCli.t) }}</td><td class="r">{{ cop(restoCli.venta) }}</td><td class="r">{{ pct(restoCli.venta / M.venta * 100) }}</td>
-                </tr>
-                <tr class="table-total-row"><td></td><td class="bold">TOTAL · {{ M.clientes }} CLIENTES</td><td class="r">{{ M.rem }}</td><td class="r">{{ num(M.t) }}</td><td class="r bold">{{ cop(M.venta) }}</td><td class="r">100%</td></tr>
-              </tbody>
-            </table>
-          </div></div>
-        </div>
-
         <div class="charts-grid cols-2 align-start">
           <div class="report-section-block">
             <h3 class="report-block-title"><span class="title-bar"></span>Rango de precios por material — {{ MES_LBL }}</h3>
@@ -259,47 +243,33 @@
             </div></div>
           </div>
         </div>
+        <div class="report-section-block">
+          <h3 class="report-block-title"><span class="title-bar"></span>Clientes — {{ MES_LBL }} (top {{ TOP }})</h3>
+          <div class="data-card"><div class="table-wrap">
+            <table>
+              <thead><tr><th class="idx">#</th><th>Cliente</th><th class="r">Remisiones</th><th class="r">Toneladas</th><th class="r">Venta</th><th class="r">Part.</th></tr></thead>
+              <tbody>
+                <tr v-for="(c, i) in clientes.slice(0, TOP)" :key="c.clave">
+                  <td class="idx">{{ i + 1 }}</td>
+                  <td><span class="bold">{{ c.nombre }}</span><br /><span class="sub">NIT/CC {{ c.clave }} · principal: {{ c.principal }}</span></td>
+                  <td class="r">{{ c.docs }}</td><td class="r">{{ c.t ? num(c.t) : '—' }}</td><td class="r bold">{{ cop(c.venta) }}</td><td class="r">{{ pct(c.venta / M.venta * 100) }}</td>
+                </tr>
+                <tr v-if="clientes.length > TOP">
+                  <td class="idx">—</td><td class="muted"><em>Otros {{ clientes.length - TOP }} clientes</em></td>
+                  <td class="r">{{ restoCli.docs }}</td><td class="r">{{ num(restoCli.t) }}</td><td class="r">{{ cop(restoCli.venta) }}</td><td class="r">{{ pct(restoCli.venta / M.venta * 100) }}</td>
+                </tr>
+                <tr class="table-total-row"><td></td><td class="bold">TOTAL · {{ M.clientes }} CLIENTES</td><td class="r">{{ M.rem }}</td><td class="r">{{ num(M.t) }}</td><td class="r bold">{{ cop(M.venta) }}</td><td class="r">100%</td></tr>
+              </tbody>
+            </table>
+          </div></div>
+        </div>
+
         <footer class="report-footer"><span>Informe Comercial de Ventas de Agregados {{ PLANTA }} — Gravicon</span><span>Documento Oficial · Generado {{ GENERADO }}<span class="fp-num"> | Página 3 de 4</span></span></footer>
       </div>
 
       <!-- ============================================== PÁGINA 4 -->
       <div class="report-page">
         <div class="report-salto-superior"></div>
-        <div v-if="proyeccion" class="report-section-block">
-          <h3 class="report-block-title"><span class="title-bar"></span>Venta acumulada del mes y proyección de cierre — {{ MES_LBL }}</h3>
-          <p class="section-note">Línea continua: venta acumulada real al {{ flbl(hoy) }}. Línea punteada: proyección hasta fin de mes con el promedio de lunes a sábado{{ proyeccion.faltanDom ? ' y el de domingo.' : '.' }}</p>
-          <VChart class="echart" :option="tema(optAcum)" autoresize style="height: 320px" />
-        </div>
-
-        <div class="report-section-block">
-          <h3 class="report-block-title"><span class="title-bar"></span>Donaciones por material — {{ MES_LBL }}</h3>
-          <p class="section-note">El total de documentos cuenta cada donación una vez aunque tenga varios materiales.</p>
-          <div v-if="don.length" class="data-card"><div class="table-wrap">
-            <table>
-              <thead><tr><th>Material</th><th>Familia</th><th class="r">Documentos</th><th class="r">Toneladas</th><th class="r">Part.</th><th class="r">Valor</th></tr></thead>
-              <tbody>
-                <tr v-for="r in porProducto(don)" :key="r.prod"><td class="bold accent-text">{{ titulo(r.prod) }}</td><td>{{ r.fam }}</td><td class="r">{{ r.docs }}</td><td class="r bold">{{ num(r.t) }}</td><td class="r">{{ tDe(don) ? pct(r.t / tDe(don) * 100) : '—' }}</td><td class="r">{{ cop(r.valor) }}</td></tr>
-                <tr class="table-total-row"><td colspan="2">TOTAL DONACIONES</td><td class="r">{{ docsDe(don) }}</td><td class="r">{{ num(tDe(don)) }}</td><td class="r">100%</td><td class="r">{{ cop(sumTotal(don)) }}</td></tr>
-              </tbody>
-            </table>
-          </div></div>
-          <div v-else class="report-nota">No hay donaciones en {{ esMes ? 'el mes' : 'el período' }}.</div>
-        </div>
-
-        <div class="report-section-block">
-          <h3 class="report-block-title"><span class="title-bar"></span>Donaciones por beneficiario — {{ MES_LBL }}</h3>
-          <div v-if="don.length" class="data-card"><div class="table-wrap">
-            <table>
-              <thead><tr><th>#</th><th>Beneficiario</th><th>Material</th><th class="r">Documentos</th><th class="r">Toneladas</th><th class="r">Valor</th></tr></thead>
-              <tbody>
-                <tr v-for="(b, i) in beneficiarios" :key="b.nombre"><td class="idx">{{ i + 1 }}</td><td class="bold">{{ titulo(b.nombre) }}</td><td>{{ b.mat }}</td><td class="r">{{ b.docs }}</td><td class="r bold">{{ num(b.t) }}</td><td class="r">{{ cop(b.valor) }}</td></tr>
-                <tr class="table-total-row"><td colspan="3">TOTAL DONACIONES</td><td class="r">{{ docsDe(don) }}</td><td class="r">{{ num(tDe(don)) }}</td><td class="r">{{ cop(sumTotal(don)) }}</td></tr>
-              </tbody>
-            </table>
-          </div></div>
-          <div v-else class="report-nota">No hay donaciones en {{ esMes ? 'el mes' : 'el período' }}.</div>
-        </div>
-
         <!-- ── Traslados de inventario (subtipo 003): a dónde fue (bodega de destino), qué material y el cruce de ambos ── -->
         <div class="report-section-block">
           <h3 class="report-block-title"><span class="title-bar"></span>Traslados de inventario por bodega de destino — {{ MES_LBL }}</h3>
@@ -347,6 +317,35 @@
             </div></div>
           </div>
         </template>
+
+        <div class="report-section-block">
+          <h3 class="report-block-title"><span class="title-bar"></span>Donaciones por material — {{ MES_LBL }}</h3>
+          <p class="section-note">El total de documentos cuenta cada donación una vez aunque tenga varios materiales.</p>
+          <div v-if="don.length" class="data-card"><div class="table-wrap">
+            <table>
+              <thead><tr><th>Material</th><th>Familia</th><th class="r">Documentos</th><th class="r">Toneladas</th><th class="r">Part.</th><th class="r">Valor</th></tr></thead>
+              <tbody>
+                <tr v-for="r in porProducto(don)" :key="r.prod"><td class="bold accent-text">{{ titulo(r.prod) }}</td><td>{{ r.fam }}</td><td class="r">{{ r.docs }}</td><td class="r bold">{{ num(r.t) }}</td><td class="r">{{ tDe(don) ? pct(r.t / tDe(don) * 100) : '—' }}</td><td class="r">{{ cop(r.valor) }}</td></tr>
+                <tr class="table-total-row"><td colspan="2">TOTAL DONACIONES</td><td class="r">{{ docsDe(don) }}</td><td class="r">{{ num(tDe(don)) }}</td><td class="r">100%</td><td class="r">{{ cop(sumTotal(don)) }}</td></tr>
+              </tbody>
+            </table>
+          </div></div>
+          <div v-else class="report-nota">No hay donaciones en {{ esMes ? 'el mes' : 'el período' }}.</div>
+        </div>
+
+        <div class="report-section-block">
+          <h3 class="report-block-title"><span class="title-bar"></span>Donaciones por beneficiario — {{ MES_LBL }}</h3>
+          <div v-if="don.length" class="data-card"><div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Beneficiario</th><th>Material</th><th class="r">Documentos</th><th class="r">Toneladas</th><th class="r">Valor</th></tr></thead>
+              <tbody>
+                <tr v-for="(b, i) in beneficiarios" :key="b.nombre"><td class="idx">{{ i + 1 }}</td><td class="bold">{{ titulo(b.nombre) }}</td><td>{{ b.mat }}</td><td class="r">{{ b.docs }}</td><td class="r bold">{{ num(b.t) }}</td><td class="r">{{ cop(b.valor) }}</td></tr>
+                <tr class="table-total-row"><td colspan="3">TOTAL DONACIONES</td><td class="r">{{ docsDe(don) }}</td><td class="r">{{ num(tDe(don)) }}</td><td class="r">{{ cop(sumTotal(don)) }}</td></tr>
+              </tbody>
+            </table>
+          </div></div>
+          <div v-else class="report-nota">No hay donaciones en {{ esMes ? 'el mes' : 'el período' }}.</div>
+        </div>
 
         <div class="report-section-block">
           <h3 class="report-block-title"><span class="title-bar"></span>Control de calidad del dato — {{ MES_LBL }}</h3>

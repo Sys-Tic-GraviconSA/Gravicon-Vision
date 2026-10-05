@@ -17,6 +17,29 @@
         <KpiCard v-for="k in kpis.despacho" :key="k.label" v-bind="k" />
       </div>
 
+      <!-- Orden del tablero (igual al informe): lo diario y el ritmo → producto → clientes → traslados -->
+      <template v-if="dias.length > 1">
+        <h3 class="section-title"><span class="title-bar"></span>Tendencia diaria</h3>
+        <div class="charts-grid cols-1">
+          <ChartCard title="Venta Diaria frente al Promedio" :description="`Venta antes de IVA de cada día: verde si superó el promedio de los días con venta (${diasVenta.length ? copCorto(R.venta / diasVenta.length) : '—'}), rojo si quedó por debajo · en el detalle, la venta por familia`" :option="optDiaria" :height="340" />
+        </div>
+        <div class="charts-grid cols-1">
+          <ChartCard title="Toneladas Despachadas por Día" :description="`Toneladas vendidas${R.tTraslados ? ' y trasladadas' : ''} cada día, lado a lado${R.tTraslados ? ' (juntas son las despachadas)' : ''}${fleteDia.size ? '; Flete Holcim: toneladas que se le transportaron a Holcim, ya incluidas en las vendidas (no se suman)' : ''}`" :option="optToneladasDia" :height="340" />
+        </div>
+        <div class="charts-grid cols-1">
+          <ChartCard title="Ticket Promedio por Remisión" :description="`Venta del día ÷ remisiones del día (incluye fletes): los picos señalan días con pedidos grandes; la línea punteada es el promedio del período: ${R.remisiones ? cop(R.venta / R.remisiones) : '—'}`" :option="optTicket" :height="300" />
+        </div>
+      </template>
+
+      <template v-if="diasVenta.length > 1">
+        <h3 class="section-title"><span class="title-bar"></span>Ritmo de venta</h3>
+        <div class="charts-grid cols-2">
+          <ChartCard :title="proyeccion ? 'Venta Acumulada y Proyección de Cierre' : 'Venta Acumulada del Período'" :description="acumTxt" :option="optAcumulado" :height="340" />
+          <ChartCard title="Venta Promedio por Día de la Semana" :description="semanaTxt" :option="optSemana" :height="340" />
+        </div>
+      </template>
+
+
       <h3 class="section-title"><span class="title-bar"></span>Ventas por familia y material</h3>
       <div class="charts-grid cols-2">
         <ChartCard title="Venta por Familia" description="Venta antes de IVA y toneladas vendidas; los fletes suman a la venta pero no a las toneladas" :option="optFamilias" :height="300" />
@@ -46,27 +69,6 @@
         </div>
         <div v-if="trasDias.length > 1" class="charts-grid cols-1">
           <ChartCard title="Traslados por Día y Bodega de Destino" description="Toneladas trasladadas cada día a cada bodega, barras lado a lado (en el detalle, el total del día y los documentos)" :option="optTrasDia" :height="320" />
-        </div>
-      </template>
-
-      <template v-if="diasVenta.length > 1">
-        <h3 class="section-title"><span class="title-bar"></span>Ritmo de venta</h3>
-        <div class="charts-grid cols-2">
-          <ChartCard :title="proyeccion ? 'Venta Acumulada y Proyección de Cierre' : 'Venta Acumulada del Período'" :description="acumTxt" :option="optAcumulado" :height="340" />
-          <ChartCard title="Venta Promedio por Día de la Semana" :description="semanaTxt" :option="optSemana" :height="340" />
-        </div>
-      </template>
-
-      <template v-if="dias.length > 1">
-        <h3 class="section-title"><span class="title-bar"></span>Tendencia diaria</h3>
-        <div class="charts-grid cols-1">
-          <ChartCard title="Venta Diaria frente al Promedio" :description="`Venta antes de IVA de cada día: verde si superó el promedio de los días con venta (${diasVenta.length ? copCorto(R.venta / diasVenta.length) : '—'}), rojo si quedó por debajo · en el detalle, la venta por familia`" :option="optDiaria" :height="340" />
-        </div>
-        <div class="charts-grid cols-1">
-          <ChartCard title="Toneladas Despachadas por Día" :description="`Toneladas vendidas${R.tTraslados ? ' y trasladadas' : ''} cada día, lado a lado${R.tTraslados ? ' (juntas son las despachadas)' : ''}${fleteDia.size ? '; Flete Holcim: toneladas que se le transportaron a Holcim, ya incluidas en las vendidas (no se suman)' : ''}`" :option="optToneladasDia" :height="340" />
-        </div>
-        <div class="charts-grid cols-1">
-          <ChartCard title="Ticket Promedio por Remisión" :description="`Venta del día ÷ remisiones del día (incluye fletes): los picos señalan días con pedidos grandes; la línea punteada es el promedio del período: ${R.remisiones ? cop(R.venta / R.remisiones) : '—'}`" :option="optTicket" :height="300" />
         </div>
       </template>
     </template>
