@@ -24,7 +24,7 @@
           <ChartCard title="Venta Diaria frente al Promedio" :description="`Venta antes de IVA de cada día: verde si superó el promedio de los días con venta (${diasVenta.length ? copCorto(R.venta / diasVenta.length) : '—'}), rojo si quedó por debajo · en el detalle, la venta por familia`" :option="optDiaria" :height="340" />
         </div>
         <div class="charts-grid cols-1">
-          <ChartCard title="Toneladas Despachadas por Día" :description="`Toneladas vendidas${R.tTraslados ? ' y trasladadas' : ''} cada día, lado a lado${R.tTraslados ? ' (juntas son las despachadas)' : ''}${fleteDia.size ? '; Flete Holcim: toneladas que se le transportaron a Holcim, ya incluidas en las vendidas (no se suman)' : ''}`" :option="optToneladasDia" :height="340" />
+          <ChartCard :title="`${T.Cant} ${T.g('Despachadas')} por Día`" :description="`${T.Cant} ${T.g('vendidas')}${R.tTraslados ? ` y ${T.g('trasladadas')}` : ''} cada día, lado a lado${R.tTraslados ? (T.u === 't' ? ' (juntas son las despachadas)' : ' (juntos son los despachados)') : ''}${fleteDia.size ? `; Flete Holcim: ${T.cant} que se le transportaron a Holcim, ya ${T.g('incluidas')} en ${T.art} ${T.g('vendidas')} (no se suman)` : ''}`" :option="optToneladasDia" :height="340" />
         </div>
         <div class="charts-grid cols-1">
           <ChartCard title="Ticket Promedio por Remisión" :description="`Venta del día ÷ remisiones del día (incluye fletes): los picos señalan días con pedidos grandes; la línea punteada es el promedio del período: ${R.remisiones ? cop(R.venta / R.remisiones) : '—'}`" :option="optTicket" :height="300" />
@@ -42,11 +42,11 @@
 
       <h3 class="section-title"><span class="title-bar"></span>Ventas por familia y material</h3>
       <div class="charts-grid cols-2">
-        <ChartCard title="Venta por Familia" description="Venta antes de IVA y toneladas vendidas; los fletes suman a la venta pero no a las toneladas" :option="optFamilias" :height="300" />
-        <ChartCard :title="`Toneladas por Material — Top ${TOP}`" description="Toneladas vendidas y trasladadas de cada material (m³ convertidos con el factor de cada material)" :option="optToneladas" :expand-option="optToneladasTodos" :height="380" />
+        <ChartCard title="Venta por Familia" :description="`Venta antes de IVA y ${T.cant} ${T.g('vendidas')}; los fletes suman a la venta pero no a ${T.art} ${T.cant}`" :option="optFamilias" :height="300" />
+        <ChartCard :title="`${T.Cant} por Material — Top ${TOP}`" :description="T.u === 't' ? 'Toneladas vendidas y trasladadas de cada material (m³ convertidos con el factor de cada material)' : `m³ vendidos y trasladados de cada material, tal como vienen de Novasoft (sin convertir con densidades)${tAparte.length ? '; lo registrado en toneladas no se suma aquí: ver el informe' : ''}`" :option="optToneladas" :expand-option="optToneladasTodos" :height="380" />
       </div>
       <div class="charts-grid cols-1">
-        <ChartCard title="Precio por Tonelada y su Rango" description="Barra: precio promedio (venta ÷ toneladas) · marcas: rango habitual de precio de sus líneas (del 10 % más barato al 10 % más caro). Un rango ancho indica descuentos o precios distintos por cliente." :option="optPrecios" :expand-option="optPreciosTodos" :height="400" />
+        <ChartCard :title="T.u === 't' ? 'Precio por Tonelada y su Rango' : 'Precio por m³ y su Rango'" :description="`Barra: precio promedio (venta ÷ ${T.cant}) · marcas: rango habitual de precio de sus líneas (del 10 % más barato al 10 % más caro). Un rango ancho indica descuentos o precios distintos por cliente.`" :option="optPrecios" :expand-option="optPreciosTodos" :height="400" />
       </div>
 
       <h3 class="section-title"><span class="title-bar"></span>Clientes</h3>
@@ -64,11 +64,11 @@
       <template v-if="trasLs.length">
         <h3 class="section-title"><span class="title-bar"></span>Traslados de inventario</h3>
         <div class="charts-grid cols-2">
-          <ChartCard title="Toneladas Trasladadas por Bodega de Destino" :description="trasTxt" :option="optTrasBodega" :height="300" />
-          <ChartCard title="Material Trasladado a Cada Bodega" description="Toneladas de cada material por bodega de destino, barras lado a lado con el color de cada planta" :option="optTrasMaterialConLeyenda" :height="300" />
+          <ChartCard :title="`${T.Cant} ${T.g('Trasladadas')} por Bodega de Destino`" :description="trasTxt" :option="optTrasBodega" :height="300" />
+          <ChartCard title="Material Trasladado a Cada Bodega" :description="`${T.Cant} de cada material por bodega de destino, barras lado a lado con el color de cada planta`" :option="optTrasMaterialConLeyenda" :height="300" />
         </div>
         <div v-if="trasDias.length > 1" class="charts-grid cols-1">
-          <ChartCard title="Traslados por Día y Bodega de Destino" description="Toneladas trasladadas cada día a cada bodega, barras lado a lado (en el detalle, el total del día y los documentos)" :option="optTrasDia" :height="320" />
+          <ChartCard title="Traslados por Día y Bodega de Destino" :description="`${T.Cant} ${T.g('trasladadas')} cada día a cada bodega, barras lado a lado (en el detalle, el total del día y los documentos)`" :option="optTrasDia" :height="320" />
         </div>
       </template>
     </template>
@@ -91,7 +91,7 @@ import {
   resumen, porFamilia, porMaterial, porCliente, porDia, toneladasPorProducto, nombreMaterial, fechaLarga, fechaCorta,
   porDiaSemana, paretoClientes, proyeccionDiaria, cierreEstimado, totalesFacturacion,
   COLOR_FAMILIA, COLOR_TIPO, esVenta, esMaterial, esFleteHolcim, FAMILIAS,
-  porBodega,
+  porBodega, unidadDespacho, textosUnidad, enTAparte,
 } from '../../../composables/useFacturacion'
 import { inicioFacturacionCompleta } from '../../../composables/useBalanceProduccion'
 import type { LineaFacturacion } from '../../../types/facturacion'
@@ -111,6 +111,10 @@ const props = defineProps<{
 }>()
 
 const TOP = 10
+// Unidad del despacho: Cuncía en toneladas (m³ × densidad); Acacías en m³, como viene (lo registrado en t va aparte)
+const T = computed(() => textosUnidad(unidadDespacho(props.plantaId)))
+/** Acacías: líneas registradas en t (no se suman a los m³) */
+const tAparte = computed(() => enTAparte(props.lineas, T.value.u))
 const { isLight, chartTextColor, tinta, labelPill, base, leyenda, ejeX, ejeY, zoom, barrasH, movil, ventana } = useEstiloGraficas()
 const VERDE = '#16A34A', ROJO = '#DC2626'
 
@@ -139,21 +143,23 @@ const kpis = computed(() => {
   const acum = (k: number) => filas[Math.min(k, filas.length) - 1]?.acumPct ?? 0
   const c = proyeccion.value
   // Traslados por bodega de destino (cada planta con su color), luego documentos
-  const traslados = { label: 'Traslados de Inventario', value: `${tFmt(r.traslados.t)} t`, icon: 'layers', accent: '#64748B',
-    detail: trasBodegas.value.map(b => fila(b.color, b.nombre, `${tFmt(b.t)} t`)).join('') + fila('#94A3B8', 'Documentos', fmtN(r.traslados.docs, 0)) }
-  const donaciones = { label: 'Donaciones', value: `${tFmt(r.donaciones.t)} t`, icon: 'check-circle', accent: '#10B981',
+  const traslados = { label: 'Traslados de Inventario', value: `${tFmt(r.traslados.t)} ${T.value.u}`, icon: 'layers', accent: '#64748B',
+    detail: trasBodegas.value.map(b => fila(b.color, b.nombre, `${tFmt(b.t)} ${T.value.u}`)).join('') + fila('#94A3B8', 'Documentos', fmtN(r.traslados.docs, 0)) }
+  const donaciones = { label: 'Donaciones', value: `${tFmt(r.donaciones.t)} ${T.value.u}`, icon: 'check-circle', accent: '#10B981',
     detail: fila('#10B981', 'Valor', cop(r.donaciones.valor)) + fila('#10B981', 'Beneficiarios', fmtN(r.donaciones.beneficiarios, 0)) + fila('#10B981', 'Subtipo', '952') }
   const tarjeta = {
     venta: { label: 'Venta (sin IVA)', value: cop(r.venta), icon: 'dollar', accent: '#3B82F6',
       detail: detFam(f => `${cop(f.venta)} <span style='color:var(--text-tertiary)'>(${pct(f.part)})</span>`) + (r.fletes ? fila(COLOR_FAMILIA.Fletes, 'Fletes', cop(r.fletes)) : '') },
-    toneladas: { label: 'Toneladas Despachadas', value: `${tFmt(r.tDespachadas)} t`, icon: 'truck', accent: '#15223c',
-      detail: fila(COLOR_TIPO.venta, 'Vendidas', `${tFmt(r.tVendidas)} t`) + fila(COLOR_TIPO.traslado, 'Traslados', `${tFmt(r.tTraslados)} t`) +
-        (r.donaciones.t ? fila(COLOR_TIPO.donacion, 'Donadas', `${tFmt(r.donaciones.t)} t`) : '') +
-        (n ? fila(tinta.value, 'Vendidas por día', `${tFmt(r.tVendidas / n)} t`) : '') },
-    precio: { label: 'Precio Promedio por t', value: r.precioT ? cop(r.precioT) : '—', icon: 'target', accent: '#F59E0B',
+    toneladas: { label: `${T.value.Cant} ${T.value.g('Despachadas')}`, value: `${tFmt(r.tDespachadas)} ${T.value.u}`, icon: 'truck', accent: '#15223c',
+      detail: fila(COLOR_TIPO.venta, T.value.g('Vendidas'), `${tFmt(r.tVendidas)} ${T.value.u}`) + fila(COLOR_TIPO.traslado, 'Traslados', `${tFmt(r.tTraslados)} ${T.value.u}`) +
+        (r.donaciones.t ? fila(COLOR_TIPO.donacion, T.value.g('Donadas'), `${tFmt(r.donaciones.t)} ${T.value.u}`) : '') +
+        (n ? fila(tinta.value, `${T.value.g('Vendidas')} por día`, `${tFmt(r.tVendidas / n)} ${T.value.u}`) : '') +
+        // Acacías: lo registrado en t va aparte (no se suma a los m³)
+        (tAparte.value.length ? fila('#F59E0B', 'Registrado en t (aparte)', `${tFmt(tAparte.value.reduce((a, l) => a + l.cantidad, 0))} t`) : '') },
+    precio: { label: `Precio Promedio por ${T.value.u}`, value: r.precioT ? cop(r.precioT) : '—', icon: 'target', accent: '#F59E0B',
       detail: detFam(f => (f.precioT ? cop(f.precioT) : '—')) },
     remisiones: { label: 'Remisiones', value: fmtN(r.remisiones, 0), icon: 'list', accent: '#8B5CF6',
-      detail: detFam(f => fmtN(f.remisiones, 0)) + (r.remisiones ? fila(tinta.value, 'Ticket', cop(r.venta / r.remisiones)) + fila(tinta.value, 'Por remisión', `${tFmt(r.tVendidas / r.remisiones)} t`) : '') },
+      detail: detFam(f => fmtN(f.remisiones, 0)) + (r.remisiones ? fila(tinta.value, 'Ticket', cop(r.venta / r.remisiones)) + fila(tinta.value, 'Por remisión', `${tFmt(r.tVendidas / r.remisiones)} ${T.value.u}`) : '') },
     clientes: { label: 'Clientes Activos', value: fmtN(r.clientes, 0), icon: 'users', accent: '#10B981',
       detail: (r.clientes ? fila('#10B981', 'Venta por cliente', cop(r.venta / r.clientes)) : '') +
         (filas.length ? fila('#8B5CF6', 'Hacen el 80 %', `${n80} ${n80 === 1 ? 'cliente' : 'clientes'}`) + fila('#8B5CF6', 'Principal', pct(acum(1))) + (filas.length > 5 ? fila('#8B5CF6', 'Top 5', pct(acum(5))) : '') : '') },
@@ -194,22 +200,22 @@ const kpisTotales = computed(() => {
         fila(COLOR_TIPO.traslado, 'Traslados', '− $ 0') +
         fila(COLOR_TIPO.donacion, 'Donaciones', `− ${cop(x.valorDonado)}`) },
     // Toneladas: todo lo que salió y solo lo vendido (el flete no tiene toneladas)
-    { label: 'Toneladas Totales', value: `${tFmt(x.tTotal)} t`, icon: 'truck', accent: '#15223c',
-      detail: fila(COLOR_TIPO.venta, 'Vendidas', `${tFmt(x.tVendidas)} t`) +
-        (x.tFleteHolcim ? fila(COLOR_FAMILIA.Fletes, 'Flete', `${tFmt(x.tFleteHolcim)} t <span style='color:var(--text-tertiary);font-weight:500'>(en vendidas)</span>`) : '') +
-        fila(COLOR_TIPO.traslado, 'Traslados', `${tFmt(x.tTraslados)} t`) + fila(COLOR_TIPO.donacion, 'Donadas', `${tFmt(x.tDonadas)} t`) },
-    { label: 'Toneladas Netas', value: `${tFmt(x.tNeta)} t`, icon: 'package', accent: '#0F766E',
-      detail: fila(tinta.value, 'Total', `${tFmt(x.tTotal)} t`) +
-        (x.tFleteHolcim ? fila(COLOR_FAMILIA.Fletes, 'Flete Holcim', `− ${tFmt(x.tFleteHolcim)} t`) : '') +
-        fila(COLOR_TIPO.traslado, 'Traslados', `− ${tFmt(x.tTraslados)} t`) +
-        fila(COLOR_TIPO.donacion, 'Donadas', `− ${tFmt(x.tDonadas)} t`) },
+    { label: `${T.value.Cant} ${T.value.g('Totales')}`, value: `${tFmt(x.tTotal)} ${T.value.u}`, icon: 'truck', accent: '#15223c',
+      detail: fila(COLOR_TIPO.venta, T.value.g('Vendidas'), `${tFmt(x.tVendidas)} ${T.value.u}`) +
+        (x.tFleteHolcim ? fila(COLOR_FAMILIA.Fletes, 'Flete', `${tFmt(x.tFleteHolcim)} ${T.value.u} <span style='color:var(--text-tertiary);font-weight:500'>(en vendidas)</span>`) : '') +
+        fila(COLOR_TIPO.traslado, 'Traslados', `${tFmt(x.tTraslados)} ${T.value.u}`) + fila(COLOR_TIPO.donacion, T.value.g('Donadas'), `${tFmt(x.tDonadas)} ${T.value.u}`) },
+    { label: `${T.value.Cant} ${T.value.g('Netas')}`, value: `${tFmt(x.tNeta)} ${T.value.u}`, icon: 'package', accent: '#0F766E',
+      detail: fila(tinta.value, 'Total', `${tFmt(x.tTotal)} ${T.value.u}`) +
+        (x.tFleteHolcim ? fila(COLOR_FAMILIA.Fletes, 'Flete Holcim', `− ${tFmt(x.tFleteHolcim)} ${T.value.u}`) : '') +
+        fila(COLOR_TIPO.traslado, 'Traslados', `− ${tFmt(x.tTraslados)} ${T.value.u}`) +
+        fila(COLOR_TIPO.donacion, T.value.g('Donadas'), `− ${tFmt(x.tDonadas)} ${T.value.u}`) },
   ]
 })
 
 // ── Venta por familia ──
 const optFamilias = computed(() => {
   const f = familias.value.filter(x => x.venta > 0)
-  const txt = (x: typeof f[number]) => `${copCorto(x.venta)}${x.t ? ` · ${tFmt(x.t)} t` : ''}`
+  const txt = (x: typeof f[number]) => `${copCorto(x.venta)}${x.t ? ` · ${tFmt(x.t)} ${T.value.u}` : ''}`
   return vacio(barrasH(f.map(x => x.familia), [{
     name: 'Venta', type: 'bar', barWidth: '55%', emphasis,
     data: f.map(x => ({ value: Math.round(x.venta), itemStyle: { color: COLOR_FAMILIA[x.familia], borderRadius: [0, 4, 4, 0] } })),
@@ -218,13 +224,14 @@ const optFamilias = computed(() => {
     trigger: 'axis', axisPointer: { type: 'shadow' },
     formatter: (ps: any[]) => { const x = f[ps[0].dataIndex]
       return `<b>${x.familia}</b><br/>${punto(COLOR_FAMILIA[x.familia])} Venta: <b>${cop(x.venta)}</b> (${pct(x.part)})<br/>` +
-        (x.t ? `${punto(tinta.value)} Toneladas: <b>${tFmt(x.t)} t</b> · ${x.precioT ? cop(x.precioT) + '/t' : ''}<br/>` : '') +
+        (x.t ? `${punto(tinta.value)} ${T.value.Cant}: <b>${tFmt(x.t)} ${T.value.u}</b> · ${x.precioT ? cop(x.precioT) + '/' + T.value.u : ''}<br/>` : '') +
         `${punto('#8B5CF6')} Remisiones: <b>${x.remisiones}</b> · Clientes: <b>${x.clientes}</b>` },
   }, false), f.length > 0)
 })
 
 // ── Toneladas por material: vendidas y traslados lado a lado ──
-const tonProducto = computed(() => toneladasPorProducto(props.lineas))
+// En la gráfica solo la unidad de reporte; lo registrado en t de Acacías no se mezcla con los m³ (va en el KPI y el informe)
+const tonProducto = computed(() => toneladasPorProducto(props.lineas, T.value.u).filter(x => x.unidad === T.value.u))
 function opcionToneladas(lista: ReturnType<typeof toneladasPorProducto>) {
   const hayTras = lista.some(x => x.tTraslados > 0)
   const serie = (name: string, color: string, datos: number[]) => ({
@@ -232,16 +239,16 @@ function opcionToneladas(lista: ReturnType<typeof toneladasPorProducto>) {
     itemStyle: { color, borderRadius: [0, 4, 4, 0] },
     label: { ...labelPill.value, position: 'right', formatter: (p: any) => (p.value > 0 ? tFmt(p.value) : '') },
   })
-  const series = [serie('Vendidas', COLOR_TIPO.venta, lista.map(x => x.tVendidas)), ...(hayTras ? [serie('Traslados', COLOR_TIPO.traslado, lista.map(x => x.tTraslados))] : [])]
+  const series = [serie(T.value.g('Vendidas'), COLOR_TIPO.venta, lista.map(x => x.tVendidas)), ...(hayTras ? [serie('Traslados', COLOR_TIPO.traslado, lista.map(x => x.tTraslados))] : [])]
   return vacio({
     ...barrasH(lista.map(x => nombreMaterial(x.producto)), series, lista.flatMap(x => [tFmt(x.tVendidas), tFmt(x.tTraslados)]), {
       trigger: 'axis', axisPointer: { type: 'shadow' },
       formatter: (ps: any[]) => { const x = lista[ps[0].dataIndex]
         return `<b>${nombreMaterial(x.producto)}</b> <span style="color:#94a3b8">· registrado en ${x.registrado}${x.factor !== '—' ? ' ' + x.factor : ''}</span><br/>` +
-          `${punto(COLOR_TIPO.venta)} Vendidas: <b>${tFmt(x.tVendidas)} t</b><br/>${punto(COLOR_TIPO.traslado)} Traslados: <b>${tFmt(x.tTraslados)} t</b><br/>` +
-          `${punto(tinta.value)} Despachadas: <b>${tFmt(x.tDespachadas)} t</b>` + (x.tDonadas ? `<br/>${punto(COLOR_TIPO.donacion)} Donadas: <b>${tFmt(x.tDonadas)} t</b>` : '') },
+          `${punto(COLOR_TIPO.venta)} ${T.value.g('Vendidas')}: <b>${tFmt(x.tVendidas)} ${T.value.u}</b><br/>${punto(COLOR_TIPO.traslado)} Traslados: <b>${tFmt(x.tTraslados)} ${T.value.u}</b><br/>` +
+          `${punto(tinta.value)} ${T.value.g('Despachadas')}: <b>${tFmt(x.tDespachadas)} ${T.value.u}</b>` + (x.tDonadas ? `<br/>${punto(COLOR_TIPO.donacion)} ${T.value.g('Donadas')}: <b>${tFmt(x.tDonadas)} ${T.value.u}</b>` : '') },
     }, hayTras),
-    ...(hayTras ? { legend: leyenda([{ name: 'Vendidas', itemStyle: { color: COLOR_TIPO.venta } }, { name: 'Traslados', itemStyle: { color: COLOR_TIPO.traslado } }]) } : {}),
+    ...(hayTras ? { legend: leyenda([{ name: T.value.g('Vendidas'), itemStyle: { color: COLOR_TIPO.venta } }, { name: 'Traslados', itemStyle: { color: COLOR_TIPO.traslado } }]) } : {}),
   }, lista.length > 0)
 }
 const optToneladas = computed(() => opcionToneladas(tonProducto.value.slice(0, TOP)))
@@ -282,10 +289,10 @@ function opcionPrecios(lista: ReturnType<typeof porMaterial>) {
     trigger: 'axis', axisPointer: { type: 'shadow' },
     formatter: (ps: any[]) => { const i = ps[0].dataIndex, x = orden[i], r = rango[i]
       return `<b>${nombreMaterial(x.producto)}</b> <span style="color:#94a3b8">· ${x.familia}</span><br/>` +
-        `${punto(COLOR_FAMILIA[x.familia])} Precio promedio: <b>${cop(x.precioT ?? 0)}/t</b><br/>` +
-        (r ? `${punto(tinta.value)} Rango habitual: <b>${cop(r.p10)} – ${cop(r.p90)}</b>/t<br/>` : '') +
-        (x.minT && x.maxT ? `<span style="color:#94a3b8;font-size:11px">Extremos: ${cop(x.minT)} – ${cop(x.maxT)} /t</span><br/>` : '') +
-        `<span style="color:#94a3b8;font-size:11px">${tFmt(x.t)} t · ${cop(x.venta)} · ${x.lineas} líneas</span>` },
+        `${punto(COLOR_FAMILIA[x.familia])} Precio promedio: <b>${cop(x.precioT ?? 0)}/${T.value.u}</b><br/>` +
+        (r ? `${punto(tinta.value)} Rango habitual: <b>${cop(r.p10)} – ${cop(r.p90)}</b>/${T.value.u}<br/>` : '') +
+        (x.minT && x.maxT ? `<span style="color:#94a3b8;font-size:11px">Extremos: ${cop(x.minT)} – ${cop(x.maxT)} /${T.value.u}</span><br/>` : '') +
+        `<span style="color:#94a3b8;font-size:11px">${tFmt(x.t)} ${T.value.u} · ${cop(x.venta)} · ${x.lineas} líneas</span>` },
   }, false)
   // El eje arranca en 0 para que la barra represente el precio completo
   return vacio({ ...o, xAxis: { ...(o.xAxis as object), min: 0 } }, orden.length > 0)
@@ -297,7 +304,7 @@ const optPreciosTodos = computed(() => opcionPrecios(materiales.value))
 const clientes = computed(() => porCliente(props.lineas))
 const clienteTop = computed(() => clientes.value[0] ?? null)
 function opcionClientes(lista: ReturnType<typeof porCliente>) {
-  const txt = (x: typeof lista[number]) => `${copCorto(x.venta)} · ${tFmt(x.t)} t`
+  const txt = (x: typeof lista[number]) => `${copCorto(x.venta)} · ${tFmt(x.t)} ${T.value.u}`
   return vacio(barrasH(lista.map(x => x.cliente), [{
     name: 'Venta', type: 'bar', barWidth: '60%', emphasis,
     data: lista.map((x, i) => ({ value: Math.round(x.venta), itemStyle: { color: colorCliente(i + 1), borderRadius: [0, 4, 4, 0] } })),
@@ -307,7 +314,7 @@ function opcionClientes(lista: ReturnType<typeof porCliente>) {
     formatter: (ps: any[]) => { const x = lista[ps[0].dataIndex]
       return `${punto(colorCliente(ps[0].dataIndex + 1))} <b>${x.cliente}</b>${x.nit ? ` <span style="color:#94a3b8">· NIT ${x.nit}</span>` : ''}<br/>` +
         FAMILIAS.filter(f => x.familias[f]).map(f => `${punto(COLOR_FAMILIA[f])} ${f}: <b>${cop(x.familias[f] ?? 0)}</b>`).join('<br/>') +
-        `<br/>${punto(tinta.value)} Total: <b>${cop(x.venta)}</b> (${pct(x.part)}) · ${tFmt(x.t)} t · ${x.remisiones} remisiones` },
+        `<br/>${punto(tinta.value)} Total: <b>${cop(x.venta)}</b> (${pct(x.part)}) · ${tFmt(x.t)} ${T.value.u} · ${x.remisiones} remisiones` },
   }, false), lista.length > 0)
 }
 const optClientes = computed(() => opcionClientes(clientes.value.slice(0, TOP)))
@@ -327,7 +334,7 @@ const optDiaria = computed(() => {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
       formatter: (ps: any[]) => { const x = d[ps[0].dataIndex]
         return `<b>${fechaLarga(x.fecha)}</b><br/>` + fams.filter(f => x.porFamilia[f]).map(f => `${punto(COLOR_FAMILIA[f])} ${f}: <b>${cop(x.porFamilia[f] ?? 0)}</b>`).join('<br/>') +
-          `<br/>${punto(tinta.value)} Total: <b>${cop(x.venta)}</b> · ${tFmt(x.tVendidas)} t · ${x.remisiones} remisiones` +
+          `<br/>${punto(tinta.value)} Total: <b>${cop(x.venta)}</b> · ${tFmt(x.tVendidas)} ${T.value.u} · ${x.remisiones} remisiones` +
           (prom ? `<br/>${punto(x.venta >= prom ? VERDE : ROJO)} Frente al promedio: <b>${x.venta >= prom ? '+' : ''}${pct((x.venta / prom - 1) * 100, 0)}</b>` : '') } },
     legend: leyenda([{ name: 'Sobre el promedio', itemStyle: { color: VERDE } }, { name: 'Bajo el promedio', itemStyle: { color: ROJO } }]),
     grid: { left: 12, right: movil.value ? 20 : 70, bottom: z.gridBottom, top: 40, containLabel: true },
@@ -366,7 +373,7 @@ function opcionPareto(filas: typeof pareto.value.filas) {
     tooltip: { trigger: 'axis' as const, axisPointer: { type: 'shadow' as const },
       formatter: (ps: any[]) => { const x = filas[ps[0].dataIndex]
         return `<b>${x.rango}. ${x.cliente}</b>${x.nit ? ` <span style="color:#94a3b8">· NIT ${x.nit}</span>` : ''}<br/>` +
-          `${punto(colorBarra(x.rango - 1))} Venta: <b>${cop(x.venta)}</b> (${pct(x.part)}) · ${tFmt(x.t)} t<br/>` +
+          `${punto(colorBarra(x.rango - 1))} Venta: <b>${cop(x.venta)}</b> (${pct(x.part)}) · ${tFmt(x.t)} ${T.value.u}<br/>` +
           `${punto(tinta.value)} Acumulado: <b>${pct(x.acumPct)}</b> de la venta con ${x.rango} ${x.rango === 1 ? 'cliente' : 'clientes'}` } },
     legend: leyenda([{ name: '% acumulado', itemStyle: { color: tinta.value } }]),
     grid: { left: 12, right: movil.value ? 40 : 48, bottom: 24, top: 40, containLabel: true },
@@ -404,7 +411,7 @@ function opcionParetoNombres(filas: typeof pareto.value.filas) {
     trigger: 'axis', axisPointer: { type: 'shadow' },
     formatter: (ps: any[]) => { const x = filas[ps[0].dataIndex]
       return `<b>${x.rango}. ${x.cliente}</b>${x.nit ? ` <span style="color:#94a3b8">· NIT ${x.nit}</span>` : ''}<br/>` +
-        `${punto(colorBarra(x.rango - 1))} Venta: <b>${cop(x.venta)}</b> (${pct(x.part)}) · ${tFmt(x.t)} t<br/>` +
+        `${punto(colorBarra(x.rango - 1))} Venta: <b>${cop(x.venta)}</b> (${pct(x.part)}) · ${tFmt(x.t)} ${T.value.u}<br/>` +
         `${punto(tinta.value)} Acumulado: <b>${pct(x.acumPct)}</b> de la venta` },
   }, true)
   return vacio({ ...o,
@@ -491,7 +498,7 @@ const proyeccion = computed(() => {
 })
 const acumTxt = computed(() => {
   const c = proyeccion.value
-  const base = 'Venta antes de IVA acumulada en los días con despacho; en la etiqueta y el detalle, las toneladas vendidas acumuladas'
+  const base = `Venta antes de IVA acumulada en los días con despacho; en la etiqueta y el detalle, ${T.value.art} ${T.value.cant} ${T.value.g('vendidas')} ${T.value.g('acumuladas')}`
   const vendeDom = diasVenta.value.some(d => new Date(d.fecha + 'T00:00:00Z').getUTCDay() === 0)
   return c ? `${base}. Punteada: proyección a fin de mes con el promedio de lunes a sábado${vendeDom ? ' y el de domingo' : ''}: cierre estimado ${cop(c.cierre.valor)}` : base
 })
@@ -502,7 +509,7 @@ const optAcumulado = computed(() => {
   const futuros = c ? c.venta.map((x, i) => ({ fecha: x.fecha, venta: x.acumulado, t: c.t[i]?.acumulado ?? 0 })) : []
   const todos = [...reales, ...futuros]
   const nR = reales.length
-  const txt = (v: number, t: number, aprox = false) => `${aprox ? '≈ ' : ''}${copCorto(v)} · ${tFmt(t)} t`
+  const txt = (v: number, t: number, aprox = false) => `${aprox ? '≈ ' : ''}${copCorto(v)} · ${tFmt(t)} ${T.value.u}`
   const colorProy = '#F59E0B'
   return vacio({
     ...base(),
@@ -511,8 +518,8 @@ const optAcumulado = computed(() => {
         const dia = d[i]
         return `<b>${fechaLarga(x.fecha)}</b>${proy ? ' <span style="color:#94a3b8">· proyección</span>' : ''}<br/>` +
           `${punto(proy ? colorProy : COLOR_TIPO.venta)} Venta acumulada: <b>${cop(x.venta)}</b><br/>` +
-          `${punto(tinta.value)} Toneladas vendidas acumuladas: <b>${tFmt(x.t)} t</b>` +
-          (!proy && dia ? `<br/><span style="color:#94a3b8;font-size:11px">Del día: ${cop(dia.venta)} · ${tFmt(dia.tVendidas)} t · ${dia.remisiones} remisiones</span>` : '') } },
+          `${punto(tinta.value)} ${T.value.Cant} ${T.value.g('vendidas')} ${T.value.g('acumuladas')}: <b>${tFmt(x.t)} ${T.value.u}</b>` +
+          (!proy && dia ? `<br/><span style="color:#94a3b8;font-size:11px">Del día: ${cop(dia.venta)} · ${tFmt(dia.tVendidas)} ${T.value.u} · ${dia.remisiones} remisiones</span>` : '') } },
     legend: leyenda([{ name: 'Venta acumulada', itemStyle: { color: COLOR_TIPO.venta } }, ...(c ? [{ name: 'Proyección a fin de mes', itemStyle: { color: colorProy } }] : [])]),
     grid: { left: 12, right: movil.value ? 16 : 24, bottom: 24, top: 56, containLabel: true },
     xAxis: ejeX(todos.map(x => ddmm(x.fecha)), { boundaryGap: false }),
@@ -555,9 +562,9 @@ const optSemana = computed(() => {
       formatter: (ps: any[]) => { const x = s[ps[0].dataIndex]
         return `<b>${x.nombre}</b> <span style="color:#94a3b8">· ${x.dias} ${x.dias === 1 ? 'día' : 'días'} con venta</span><br/>` +
           `${punto(COLOR_TIPO.venta)} Venta promedio: <b>${cop(x.promVenta)}</b><br/>` +
-          `${punto(tinta.value)} Toneladas promedio: <b>${tFmt(x.promT)} t</b><br/>` +
+          `${punto(tinta.value)} ${T.value.Cant} promedio: <b>${tFmt(x.promT)} ${T.value.u}</b><br/>` +
           `${punto('#8B5CF6')} Remisiones promedio: <b>${fmtN(x.promRemisiones, 0)}</b><br/>` +
-          `<span style="color:#94a3b8;font-size:11px">Total: ${cop(x.venta)} · ${tFmt(x.t)} t</span>` } },
+          `<span style="color:#94a3b8;font-size:11px">Total: ${cop(x.venta)} · ${tFmt(x.t)} ${T.value.u}</span>` } },
     grid: { left: 12, right: movil.value ? 58 : 70, bottom: 24, top: 28, containLabel: true },
     xAxis: ejeX(s.map(x => (movil.value ? x.corto : x.nombre))),
     yAxis: ejeY(),
@@ -588,24 +595,24 @@ const optToneladasDia = computed(() => {
     name, type: 'bar' as const, barMaxWidth: 18, barGap: '12%', emphasis, data: datos.map(v => +v.toFixed(1)),
     itemStyle: { color, borderRadius: [3, 3, 0, 0] },
     // Solo se rotulan las vendidas (encima); traslados y flete van en el detalle para no amontonar números
-    label: name !== 'Vendidas' ? { show: false } : { ...labelPill.value, position: 'top' as const, formatter: (x: any) => (x.value >= 1 ? fmtN(x.value, 0) : '') },
+    label: name !== T.value.g('Vendidas') ? { show: false } : { ...labelPill.value, position: 'top' as const, formatter: (x: any) => (x.value >= 1 ? fmtN(x.value, 0) : '') },
     labelLayout: { hideOverlap: true },
   })
   return vacio({
     ...base(),
     tooltip: { trigger: 'axis' as const, axisPointer: { type: 'shadow' as const },
       formatter: (ps: any[]) => { const x = d[ps[0].dataIndex]
-        return `<b>${fechaLarga(x.fecha)}</b><br/>${punto(COLOR_TIPO.venta)} Vendidas: <b>${tFmt(x.tVendidas)} t</b>` +
-          (hayFlete ? `<br/>${punto(COLOR_FAMILIA.Fletes)} Flete Holcim: <b>${tFmt(flete(x.fecha))} t</b> <span style="color:#94a3b8;font-size:11px">(ya en vendidas)</span>` : '') +
-          (hayTras ? `<br/>${punto(COLOR_TIPO.traslado)} Traslados: <b>${tFmt(x.tTraslados)} t</b><br/>${punto(tinta.value)} Despachadas: <b>${tFmt(x.tVendidas + x.tTraslados)} t</b>` : '') +
+        return `<b>${fechaLarga(x.fecha)}</b><br/>${punto(COLOR_TIPO.venta)} ${T.value.g('Vendidas')}: <b>${tFmt(x.tVendidas)} ${T.value.u}</b>` +
+          (hayFlete ? `<br/>${punto(COLOR_FAMILIA.Fletes)} Flete Holcim: <b>${tFmt(flete(x.fecha))} ${T.value.u}</b> <span style="color:#94a3b8;font-size:11px">(ya en ${T.value.g('vendidas')})</span>` : '') +
+          (hayTras ? `<br/>${punto(COLOR_TIPO.traslado)} Traslados: <b>${tFmt(x.tTraslados)} ${T.value.u}</b><br/>${punto(tinta.value)} ${T.value.g('Despachadas')}: <b>${tFmt(x.tVendidas + x.tTraslados)} ${T.value.u}</b>` : '') +
           `<br/><span style="color:#94a3b8;font-size:11px">${x.remisiones} remisiones de venta</span>` } },
-    legend: leyenda([{ name: 'Vendidas', itemStyle: { color: COLOR_TIPO.venta } }, ...(hayFlete ? [{ name: 'Flete Holcim', itemStyle: { color: COLOR_FAMILIA.Fletes } }] : []),
+    legend: leyenda([{ name: T.value.g('Vendidas'), itemStyle: { color: COLOR_TIPO.venta } }, ...(hayFlete ? [{ name: 'Flete Holcim', itemStyle: { color: COLOR_FAMILIA.Fletes } }] : []),
       ...(hayTras ? [{ name: 'Traslados', itemStyle: { color: COLOR_TIPO.traslado } }] : [])]),
     grid: { left: 12, right: 20, bottom: z.gridBottom, top: 40, containLabel: true },
     dataZoom: z.dataZoom,
     xAxis: ejeX(d.map(x => ddmm(x.fecha))),
     yAxis: ejeY(),
-    series: [serie('Vendidas', COLOR_TIPO.venta, d.map(x => x.tVendidas)),
+    series: [serie(T.value.g('Vendidas'), COLOR_TIPO.venta, d.map(x => x.tVendidas)),
       ...(hayFlete ? [serie('Flete Holcim', COLOR_FAMILIA.Fletes, d.map(x => flete(x.fecha)))] : []),
       ...(hayTras ? [serie('Traslados', COLOR_TIPO.traslado, d.map(x => x.tTraslados))] : [])],
   }, d.length > 0)
@@ -616,19 +623,19 @@ const trasLs = computed(() => props.lineas.filter(l => l.tipo === 'traslado'))
 const trasBodegas = computed(() => porBodega(trasLs.value))
 const trasTxt = computed(() => {
   const b = trasBodegas.value, tot = b.reduce((a, x) => a + x.t, 0)
-  return b.length ? `${tFmt(tot)} t trasladadas en ${fmtN(new Set(trasLs.value.map(l => l.doc)).size, 0)} documentos · el principal destino es ${b[0].nombre} (${pct(b[0].part)})` : ''
+  return b.length ? `${tFmt(tot)} ${T.value.u} ${T.value.g('trasladadas')} en ${fmtN(new Set(trasLs.value.map(l => l.doc)).size, 0)} documentos · el principal destino es ${b[0].nombre} (${pct(b[0].part)})` : ''
 })
 const optTrasBodega = computed(() => {
   const b = trasBodegas.value
-  const txt = (x: typeof b[number]) => `${tFmt(x.t)} t · ${pct(x.part)}`
+  const txt = (x: typeof b[number]) => `${tFmt(x.t)} ${T.value.u} · ${pct(x.part)}`
   return vacio(barrasH(b.map(x => x.nombre), [{
-    name: 'Toneladas', type: 'bar', barWidth: '60%', emphasis,
+    name: T.value.Cant, type: 'bar', barWidth: '60%', emphasis,
     data: b.map(x => ({ value: +x.t.toFixed(1), itemStyle: { color: x.color, borderRadius: [0, 4, 4, 0] } })),
     label: { ...labelPill.value, position: 'right', formatter: (p: any) => txt(b[p.dataIndex]) },
   }], b.map(txt), {
     trigger: 'axis', axisPointer: { type: 'shadow' },
     formatter: (ps: any[]) => { const x = b[ps[0].dataIndex]
-      return `${punto(x.color)} <b>${x.nombre}</b><br/>Toneladas: <b>${tFmt(x.t)} t</b> (${pct(x.part)})<br/>Documentos: <b>${x.docs}</b><br/>Último traslado: <b>${fechaLarga(x.ultimo)}</b>` },
+      return `${punto(x.color)} <b>${x.nombre}</b><br/>${T.value.Cant}: <b>${tFmt(x.t)} ${T.value.u}</b> (${pct(x.part)})<br/>Documentos: <b>${x.docs}</b><br/>Último traslado: <b>${fechaLarga(x.ultimo)}</b>` },
   }, false), b.length > 0)
 })
 const optTrasMaterial = computed(() => {
@@ -646,7 +653,7 @@ const optTrasMaterial = computed(() => {
   })), textos, {
     trigger: 'axis', axisPointer: { type: 'shadow' },
     formatter: (ps: any[]) => `<b>${nombreMaterial(mats[ps[0].dataIndex])}</b><br/>` +
-      ps.filter(p => p.value > 0).map(p => `${punto(b[p.seriesIndex].color)} ${p.seriesName}: <b>${tFmt(p.value)} t</b>`).join('<br/>'),
+      ps.filter(p => p.value > 0).map(p => `${punto(b[p.seriesIndex].color)} ${p.seriesName}: <b>${tFmt(p.value)} ${T.value.u}</b>`).join('<br/>'),
   }, true), mats.length > 0) as any
 })
 // leyenda arriba para la gráfica agrupada (barrasH no la trae)
@@ -660,8 +667,8 @@ const optTrasDia = computed(() => {
     ...base(),
     tooltip: { trigger: 'axis' as const, axisPointer: { type: 'shadow' as const },
       formatter: (ps: any[]) => { const f = d[ps[0].dataIndex], del = trasLs.value.filter(l => l.fecha === f)
-        return `<b>${fechaLarga(f)}</b><br/>` + ps.filter(p => p.value > 0).map(p => `${punto(b[p.seriesIndex].color)} ${p.seriesName}: <b>${tFmt(p.value)} t</b>`).join('<br/>') +
-          `<br/>${punto(tinta.value)} Total: <b>${tFmt(del.reduce((a, l) => a + l.toneladas, 0))} t</b> · ${new Set(del.map(l => l.doc)).size} documentos` } },
+        return `<b>${fechaLarga(f)}</b><br/>` + ps.filter(p => p.value > 0).map(p => `${punto(b[p.seriesIndex].color)} ${p.seriesName}: <b>${tFmt(p.value)} ${T.value.u}</b>`).join('<br/>') +
+          `<br/>${punto(tinta.value)} Total: <b>${tFmt(del.reduce((a, l) => a + l.toneladas, 0))} ${T.value.u}</b> · ${new Set(del.map(l => l.doc)).size} documentos` } },
     legend: leyenda(b.map(x => ({ name: x.nombre, itemStyle: { color: x.color } }))),
     grid: { left: 12, right: 20, bottom: z.gridBottom, top: 40, containLabel: true },
     dataZoom: z.dataZoom,

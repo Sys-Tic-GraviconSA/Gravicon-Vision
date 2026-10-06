@@ -4,7 +4,8 @@
     <div class="bal-bar">
       <div class="bal-info">
         <span v-if="B" class="bal-sub">
-          Lo despachado (facturado en Novasoft) se pasa a m³ con el factor de cada material (t ÷ factor).
+          <template v-if="CONV">Lo despachado (facturado en Novasoft) se pasa a m³ con el factor de cada material (t ÷ factor).</template>
+          <template v-else>Lo despachado se cruza en m³ tal como viene de Novasoft, sin densidades (lo que viene sin unidad se toma en m³).<template v-if="tAparte"> Lo registrado en toneladas ({{ t(tAparte) }} t) no entra al cruce: no hay m³ sin convertirlo.</template></template>
           <template v-if="B.lineasSueltas"> Los despachos están completos desde el {{ fechaCorta(B.desde) }}; antes solo hay {{ B.lineasSueltas }} {{ B.lineasSueltas === 1 ? 'línea suelta' : 'líneas sueltas' }} (desde el {{ fechaCorta(B.primeraFacturada) }}) que no se cruzan.</template>
           <template v-if="B.hasta < B.ultFacturacion"> Corte en {{ fechaCorta(B.hasta) }}: la producción está cargada hasta ese día y los despachos hasta {{ fechaCorta(B.ultFacturacion) }}.</template>
         </span>
@@ -31,7 +32,7 @@
       </div>
 
       <div class="charts-grid cols-1">
-        <ChartCard :title="`Producido vs ${salidaLbl} — por ${agrupNombre}`" :description="`m³ producidos (tabla diaria de la planta) y m³ equivalentes de lo ${trasladosOn || donacionesOn ? 'que salió del patio' : 'despachado'}, barras lado a lado`" :option="optComparativo" :height="380" tall />
+        <ChartCard :title="`Producido vs ${salidaLbl} — por ${agrupNombre}`" :description="`m³ producidos (tabla diaria de la planta) y ${CONV ? 'm³ equivalentes' : 'm³ (como vienen)'} de lo ${trasladosOn || donacionesOn ? 'que salió del patio' : 'despachado'}, barras lado a lado`" :option="optComparativo" :height="380" tall />
       </div>
       <div class="charts-grid cols-2">
         <ChartCard title="Diferencia Acumulada (inventario estimado)" description="Producido − salidas, acumulado desde el inicio del cruce. Sube: se acumula en patio; baja: se consume inventario" :option="optAcumulado" :height="320" />
@@ -39,7 +40,7 @@
       </div>
       <div class="charts-grid cols-2">
         <ChartCard title="Producción por Línea" description="m³ producidos por cada línea en el período cruzado" :option="optLineas" :height="280" />
-        <ChartCard title="Salidas por Familia" description="m³ equivalentes (y toneladas) de lo que salió, por familia de material" :option="optFamilias" :height="280" />
+        <ChartCard title="Salidas por Familia" :description="CONV ? 'm³ equivalentes (y toneladas) de lo que salió, por familia de material' : 'm³ de lo que salió, por familia de material (sin convertir)'" :option="optFamilias" :height="280" />
       </div>
 
       <div class="bal-card">
@@ -50,7 +51,7 @@
               <tr>
                 <th>{{ agrupNombre.charAt(0).toUpperCase() + agrupNombre.slice(1) }}</th>
                 <th class="r">Producido m³</th><th class="r">Proyectado m³</th>
-                <th class="r">Vendido t</th><th class="r">Vendido m³</th>
+                <th v-if="CONV" class="r">Vendido t</th><th class="r">Vendido m³</th>
                 <th v-if="trasladosOn" class="r">Traslados m³</th><th v-if="donacionesOn" class="r">Donaciones m³</th>
                 <th class="r">Diferencia m³</th><th class="r">Acumulado m³</th><th class="r">Índice salida</th>
                 <th class="r">Venta</th><th class="r">$ por m³ producido</th>
@@ -60,7 +61,7 @@
               <tr v-for="f in B.filas" :key="f.clave">
                 <td class="strong">{{ f.etiqueta }}</td>
                 <td class="r">{{ m3(f.producido) }}</td><td class="r muted">{{ f.proyectado ? m3(f.proyectado) : '—' }}</td>
-                <td class="r">{{ t(f.vendidoT) }}</td><td class="r">{{ m3(f.vendidoM3) }}</td>
+                <td v-if="CONV" class="r">{{ t(f.vendidoT) }}</td><td class="r">{{ m3(f.vendidoM3) }}</td>
                 <td v-if="trasladosOn" class="r">{{ f.trasladosM3 ? m3(f.trasladosM3) : '—' }}</td>
                 <td v-if="donacionesOn" class="r">{{ f.donacionesM3 ? m3(f.donacionesM3) : '—' }}</td>
                 <td class="r" :class="f.diferencia >= 0 ? 'pos' : 'neg'">{{ signo(f.diferencia) }}</td>
@@ -74,7 +75,7 @@
               <tr>
                 <td>Total</td>
                 <td class="r">{{ m3(B.total.producido) }}</td><td class="r">{{ B.total.proyectado ? m3(B.total.proyectado) : '—' }}</td>
-                <td class="r">{{ t(B.total.vendidoT) }}</td><td class="r">{{ m3(B.total.vendidoM3) }}</td>
+                <td v-if="CONV" class="r">{{ t(B.total.vendidoT) }}</td><td class="r">{{ m3(B.total.vendidoM3) }}</td>
                 <td v-if="trasladosOn" class="r">{{ m3(B.total.trasladosM3) }}</td><td v-if="donacionesOn" class="r">{{ m3(B.total.donacionesM3) }}</td>
                 <td class="r" :class="B.total.diferencia >= 0 ? 'pos' : 'neg'">{{ signo(B.total.diferencia) }}</td>
                 <td class="r">—</td>
@@ -88,7 +89,7 @@
         <p class="bal-nota">
           Diferencia = producido − salidas (m³). Positiva: la planta produjo más de lo que salió (el material queda en patio);
           negativa: salió más de lo producido (se consume inventario o hay producción sin registrar).
-          <template v-if="soloProcesadoOn && B.excluidoT"> Se excluyen {{ t(B.excluidoT) }} t ({{ m3(B.excluidoM3) }} m³) de material de río sin procesar vendido.</template>
+          <template v-if="soloProcesadoOn && B.excluidoM3"> Se excluyen <template v-if="CONV">{{ t(B.excluidoT) }} t ({{ m3(B.excluidoM3) }} m³)</template><template v-else>{{ m3(B.excluidoM3) }} m³</template> de material de río sin procesar vendido.</template>
           Los fletes nunca cuentan.
         </p>
       </div>
@@ -110,7 +111,7 @@ import { useProduccionStore } from '../../../stores'
 import { useQueryParam } from '../../../composables/useQueryState'
 import { useEstiloGraficas, fmtN, cop, pct, punto, vacio, emphasis } from '../../../composables/useGraficasConcreto'
 import { calcularBalance, produccionPorDia, type Agrupacion } from '../../../composables/useBalanceProduccion'
-import { COLOR_FAMILIA, COLOR_TIPO, fechaCorta } from '../../../composables/useFacturacion'
+import { COLOR_FAMILIA, COLOR_TIPO, fechaCorta, unidadDespacho, enTAparte } from '../../../composables/useFacturacion'
 import { PLANTAS } from '../../../config/plantas'
 import type { LineaFacturacion } from '../../../types/facturacion'
 
@@ -155,6 +156,15 @@ const produccion = computed(() => produccionPorDia(filasProd.value, lineasPlanta
 const B = computed(() => calcularBalance(props.lineas, produccion.value,
   { traslados: trasladosOn.value, donaciones: donacionesOn.value, soloProcesado: soloProcesadoOn.value }, agrupacion.value))
 
+// Cuncía convierte t → m³ con la densidad del material; Acacías ya viene en m³ y se cruza tal cual (sin densidades).
+// Lo que Acacías registre en t no tiene m³ sin convertir: queda fuera del cruce (factorMaterial 0) y se avisa arriba.
+const CONV = computed(() => unidadDespacho(props.plantaId) === 't')
+const tAparte = computed(() => {
+  const b = B.value
+  if (!b || CONV.value) return 0
+  return enTAparte(props.lineas.filter(l => l.fecha >= b.desde && l.fecha <= b.hasta), 'm³').reduce((a, l) => a + l.cantidad, 0)
+})
+
 const claseIndice = (i: number) => (i > 110 ? 'p-rojo' : i < 90 ? 'p-ambar' : 'p-verde')
 
 // ── KPIs ──
@@ -168,13 +178,13 @@ const kpis = computed(() => {
       detail: lineasPlanta.value.map((l, i) => fila(['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'][i % 4], l.label, `${m3(T.porLinea[l.label] ?? 0)} m³`)).join('')
         + (cumpl !== null ? fila('#64748B', 'Vs. proyectado', pct(cumpl, 0)) : '') },
     { label: salidaLbl.value, value: `${m3(T.salidaM3)} m³`, icon: 'truck', accent: COLOR_SALIDA,
-      detail: fila(COLOR_TIPO.venta, 'Vendido', `${t(T.vendidoT)} t · ${m3(T.vendidoM3)} m³`)
+      detail: fila(COLOR_TIPO.venta, 'Vendido', CONV.value ? `${t(T.vendidoT)} t · ${m3(T.vendidoM3)} m³` : `${m3(T.vendidoM3)} m³`)
         + (trasladosOn.value ? fila(COLOR_TIPO.traslado, 'Traslados', `${m3(T.trasladosM3)} m³`) : '')
         + (donacionesOn.value ? fila(COLOR_TIPO.donacion, 'Donaciones', `${m3(T.donacionesM3)} m³`) : '') },
     { label: 'Diferencia (Producido − Salidas)', value: `${signo(T.diferencia)} m³`, icon: 'activity', accent: T.diferencia >= 0 ? '#16A34A' : '#DC2626',
       detail: fila('#64748B', T.diferencia >= 0 ? 'Queda en patio' : 'Sale de inventario', `${m3(Math.abs(T.diferencia))} m³`) },
     { label: 'Índice de Salida', value: T.indice !== null ? pct(T.indice, 0) : '—', icon: 'target', accent: T.indice === null ? '#64748B' : T.indice > 110 ? '#DC2626' : T.indice < 90 ? '#F59E0B' : '#16A34A',
-      detail: fila('#64748B', 'Salidas ÷ producido', '') + fila('#64748B', 't por m³ producido', T.producido ? fmtN(T.salidaT / T.producido, 2) : '—') },
+      detail: fila('#64748B', 'Salidas ÷ producido', '') + (CONV.value ? fila('#64748B', 't por m³ producido', T.producido ? fmtN(T.salidaT / T.producido, 2) : '—') : '') },
     { label: 'Venta por m³ Producido', value: T.producido ? cop(T.venta / T.producido) : '—', icon: 'dollar', accent: '#10B981',
       detail: fila('#10B981', 'Venta', cop(T.venta)) },
     { label: 'Días Cruzados', value: fmtN(T.dias, 0), icon: 'clock', accent: '#8B5CF6',
@@ -200,7 +210,7 @@ const optComparativo = computed(() => {
       formatter: (ps: any[]) => { const x = f[ps[0].dataIndex]
         return `<b>${x.etiqueta}</b> <span style="color:#94a3b8">· ${x.dias} ${x.dias === 1 ? 'día' : 'días'}</span><br/>` +
           `${punto(tinta.value)} Producido: <b>${m3(x.producido)} m³</b>${x.proyectado ? ` <span style="color:#94a3b8">(proyectado ${m3(x.proyectado)})</span>` : ''}<br/>` +
-          `${punto(COLOR_TIPO.venta)} Vendido: <b>${m3(x.vendidoM3)} m³</b> · ${t(x.vendidoT)} t<br/>` +
+          `${punto(COLOR_TIPO.venta)} Vendido: <b>${m3(x.vendidoM3)} m³</b>${CONV.value ? ` · ${t(x.vendidoT)} t` : ''}<br/>` +
           (trasladosOn.value ? `${punto(COLOR_TIPO.traslado)} Traslados: <b>${m3(x.trasladosM3)} m³</b><br/>` : '') +
           (donacionesOn.value ? `${punto(COLOR_TIPO.donacion)} Donaciones: <b>${m3(x.donacionesM3)} m³</b><br/>` : '') +
           `${punto(x.diferencia >= 0 ? '#16A34A' : '#DC2626')} Diferencia: <b>${signo(x.diferencia)} m³</b>` + (x.indice !== null ? ` · índice ${pct(x.indice, 0)}` : '') } },
@@ -268,7 +278,7 @@ const optLineas = computed(() => {
 const optFamilias = computed(() => {
   const fs = B.value?.porFamiliaM3 ?? []
   const total = fs.reduce((a, f) => a + f.m3, 0)
-  const txt = (f: typeof fs[number]) => `${m3(f.m3)} m³ · ${t(f.t)} t`
+  const txt = (f: typeof fs[number]) => (CONV.value ? `${m3(f.m3)} m³ · ${t(f.t)} t` : `${m3(f.m3)} m³`)
   return vacio(barrasH(fs.map(f => f.familia), [{
     name: 'Salidas', type: 'bar', barWidth: '50%', emphasis,
     data: fs.map(f => ({ value: Math.round(f.m3), itemStyle: { color: COLOR_FAMILIA[f.familia], borderRadius: [0, 4, 4, 0] } })),

@@ -13,13 +13,20 @@ import { leerXlsx, type Celda } from './xlsx-reader.js'
  * - Planta por sucursal: 002 = Cuncía, 004 = Acacías.
  * - Subtipo 952 (o documentos DON/ADO) = donación: no es venta. Subtipo 003 = traslado de inventario: sin valor ni cliente,
  *   no suma a la venta pero sí a las toneladas despachadas. El resto de subtipos con valor es venta.
- * - Todo se reporta en toneladas: lo registrado en m³ (M3/M4) se pasa a t con el factor de cada material.
- *   Si la sucursal ya vende en toneladas (hay líneas en TN), lo que viene sin unidad se toma como t; si no, como m³.
+ * - Unidad de la línea: si la sucursal ya vende en toneladas (hay líneas en TN), lo que viene sin unidad se toma
+ *   como t; si no, como m³.
+ * - Conversión por planta (CONVIERTE_A_T):
+ *   · Cuncía: todo se reporta en toneladas; lo registrado en m³ (M3/M4) se pasa a t con la densidad del material.
+ *   · Acacías: no se convierte; cada cantidad queda con su unidad original. `toneladas` lleva solo los m³
+ *     (unidad de reporte de la planta) y lo registrado en t queda en `cantidad` con `unidad` = 't', aparte:
+ *     nunca se suma a los m³.
  * - Los fletes son un servicio: suman a la venta, no a las toneladas.
  */
 
 export const SUCURSALES = { cuncia: '002', acacias: '004' } as const
 export type PlantaFacturacion = keyof typeof SUCURSALES
+/** ¿La planta pasa los m³ a toneladas con densidades? Cuncía sí; Acacías deja cada cantidad como viene */
+export const CONVIERTE_A_T: Record<PlantaFacturacion, boolean> = { cuncia: true, acacias: false }
 
 /** Nombre de los subtipos conocidos del ERP */
 export const SUBTIPOS: Record<string, string> = {
@@ -29,11 +36,19 @@ export const SUBTIPOS: Record<string, string> = {
   '003': 'Traslado de inventario',
 }
 
-/** Factor m³ → t por material (tabla de planta, igual en Cuncía y Acacías) */
+/**
+ * Factor m³ → t por material, según la tabla oficial «DENSIDADES GENERALES» (t/m³), igual en Cuncía y Acacías.
+ * La clave es el producto tal como llega de Novasoft (descripción sin la unidad).
+ */
 export const FACTORES_T_M3: Record<string, number> = {
-  'ARENA LAVADA': 1.6, 'ARENA MANUFACTURADA': 1.6,
-  'GRAVA DE 1': 1.4, 'GRAVA DE 3/4': 1.4, 'GRAVA DE 1/2': 1.5,
-  'MATERIAL DE RIO SIN PROCESAR': 2.0, 'SUB-BASE GRANULAR': 2.0, 'BASE GRANULAR': 1.9,
+  // ARENA 1,6
+  'ARENA LAVADA': 1.6, 'ARENA MANUFACTURADA': 1.6, 'ARENA GRUESA': 1.6,
+  // GRAVA 1/2" 1,5; GRAVA 3/4" y 1" (gradada o mono), 1 1/2" y PIEDRA FILTRO 1,4
+  'GRAVA DE 1/2': 1.5,
+  'GRAVA DE 3/4': 1.4, 'GRAVA DE 1': 1.4, 'GRAVA1"GRADADA': 1.4, 'GRAVA DE 1 1/2': 1.4,
+  'PIEDRA FILTRO': 1.4,
+  // BASE 1,9; SUB BASE 2,0; CRUDO (material de río sin procesar) 2,0
+  'BASE GRANULAR': 1.9, 'SUB-BASE GRANULAR': 2.0, 'MATERIAL DE RIO SIN PROCESAR': 2.0,
 }
 /** Factor para materiales sin factor propio en la tabla (queda anotado en calidad del dato) */
 export const FACTOR_T_M3_DEFECTO = 1.55
@@ -52,10 +67,14 @@ export interface LineaFacturacion {
   producto: string         // descripción sin la unidad
   registrado: 't' | 'm³' | 'sin unidad' | 'servicio'
   cantidad: number         // tal como viene en el documento
+  /** Unidad real de `cantidad` (la de «sin unidad» ya resuelta): 't' o 'm³'; '' en fletes */
+  unidad: 't' | 'm³' | ''
   factor: number           // 1 si no se convierte
   factorPropio: boolean    // false si usa el factor por defecto
-  factorMaterial: number   // t por m³ del material aunque la línea venga en t (para pasar t → m³ equivalentes); 0 en fletes
-  toneladas: number        // 0 en fletes
+  factorMaterial: number   // t por m³ del material aunque la línea venga en t (para pasar t → m³ equivalentes); 0 en fletes.
+                           // Sin conversión (Acacías): 1 en las líneas en m³ y 0 en las líneas en t (no hay m³ que sacar de ellas)
+  /** Cantidad en la unidad de reporte de la planta: t en Cuncía (m³ × densidad); m³ en Acacías (0 en las líneas en t). 0 en fletes */
+  toneladas: number
   total: number            // precio total (sin IVA) del documento
   cliente: string
   nit: string
@@ -69,6 +88,10 @@ export interface LineaFacturacion {
 export interface DatosFacturacion {
   planta: PlantaFacturacion
   sucursal: string
+  /** false: la planta no convierte (Acacías): `toneladas` son m³ y lo registrado en t va aparte */
+  convierte: boolean
+  /** Unidad de `toneladas`: 't' si convierte, 'm³' si no */
+  unidadReporte: 't' | 'm³'
   archivo: { nombre: string; modificado: string | null }
   actualizado: string
   subtipos: Record<string, string>
@@ -78,13 +101,13 @@ export interface DatosFacturacion {
 /** Orden de las columnas en la respuesta compacta (el cliente la vuelve a convertir en objetos) */
 export const COLUMNAS: (keyof LineaFacturacion)[] = [
   'fecha', 'subtipo', 'tipo', 'doc', 'item', 'descripcion', 'familia', 'producto', 'registrado',
-  'cantidad', 'factor', 'factorPropio', 'factorMaterial', 'toneladas', 'total', 'cliente', 'nit', 'placa', 'ficha', 'tituloMinero',
+  'cantidad', 'unidad', 'factor', 'factorPropio', 'factorMaterial', 'toneladas', 'total', 'cliente', 'nit', 'placa', 'ficha', 'tituloMinero',
   'bodegaDestino',
 ]
 
 /** Columnas de texto muy repetido: viajan como índice a un diccionario por columna */
 const COLUMNAS_DICCIONARIO = new Set<keyof LineaFacturacion>([
-  'fecha', 'subtipo', 'tipo', 'item', 'descripcion', 'familia', 'producto', 'registrado', 'cliente', 'nit', 'tituloMinero', 'bodegaDestino',
+  'fecha', 'subtipo', 'tipo', 'item', 'descripcion', 'familia', 'producto', 'registrado', 'unidad', 'cliente', 'nit', 'tituloMinero', 'bodegaDestino',
 ])
 
 /**
@@ -155,8 +178,11 @@ function fechaIso(v: Celda): string {
   return s.slice(0, 10)
 }
 
-/** Convierte las filas del Excel en líneas normalizadas de una sucursal, con toneladas y tipo. */
-export function normalizar(filas: Record<string, Celda>[], sucursal: string): LineaFacturacion[] {
+/**
+ * Convierte las filas del Excel en líneas normalizadas de una sucursal, con su cantidad de reporte y tipo.
+ * convierte=true (Cuncía): m³ → t con la densidad del material · false (Acacías): cada cantidad con su unidad, sin densidades.
+ */
+export function normalizar(filas: Record<string, Celda>[], sucursal: string, convierte = true): LineaFacturacion[] {
   const propias = filas.filter(f => codigo(f['SUCURSAL']) === sucursal)
   const base = propias.map(f => {
     let descripcion = txt(f['Descripcion'] ?? f['DESCRIPCION']).toUpperCase()
@@ -172,9 +198,10 @@ export function normalizar(filas: Record<string, Celda>[], sucursal: string): Li
     const doc = txt(f['NUMERO DOC'])
     const cantidad = numero(f['CANTIDAD'])
     const prod = producto(descripcion)
-    const convierte = und === 'M3' || (und === 'SIN' && !nativoT)
+    const unidad: LineaFacturacion['unidad'] = und === 'servicio' ? '' : und === 'TN' || (und === 'SIN' && nativoT) ? 't' : 'm³'
+    const pasaAT = convierte && unidad === 'm³'
     const factorPropio = prod in FACTORES_T_M3
-    const factor = convierte ? (FACTORES_T_M3[prod] ?? FACTOR_T_M3_DEFECTO) : 1
+    const factor = pasaAT ? (FACTORES_T_M3[prod] ?? FACTOR_T_M3_DEFECTO) : 1
     const tipo: TipoLinea = subtipo === '952' || /^(DON|ADO)/i.test(doc) ? 'donacion' : subtipo === '003' ? 'traslado' : 'venta'
     const nit = txt(f['CLIENTE'])
     return {
@@ -188,10 +215,12 @@ export function normalizar(filas: Record<string, Celda>[], sucursal: string): Li
       producto: prod,
       registrado: und === 'servicio' ? 'servicio' : und === 'TN' ? 't' : und === 'M3' ? 'm³' : 'sin unidad',
       cantidad,
+      unidad,
       factor,
-      factorPropio: !convierte || factorPropio,
-      factorMaterial: und === 'servicio' ? 0 : (FACTORES_T_M3[prod] ?? FACTOR_T_M3_DEFECTO),
-      toneladas: und === 'servicio' ? 0 : cantidad * factor,
+      factorPropio: !pasaAT || factorPropio,
+      factorMaterial: !unidad ? 0 : !convierte ? (unidad === 'm³' ? 1 : 0) : (FACTORES_T_M3[prod] ?? FACTOR_T_M3_DEFECTO),
+      // Sin conversión, lo registrado en t no entra a la cantidad de reporte (m³): se cuenta aparte con `cantidad`
+      toneladas: !unidad || (!convierte && unidad === 't') ? 0 : cantidad * factor,
       total: numero(f['PRECIO TOTAL']),
       cliente: tipo === 'traslado' ? '' : txt(f['NOMBRE CLIENTE']),
       nit: nit === '0' ? '' : nit,
@@ -250,12 +279,15 @@ export async function loadFacturacion(planta: PlantaFacturacion, force = false):
     actual = cache = await enCurso
   }
   const sucursal = SUCURSALES[planta]
+  const convierte = CONVIERTE_A_T[planta]
   return {
     planta,
     sucursal,
+    convierte,
+    unidadReporte: convierte ? 't' : 'm³',
     archivo: actual.archivo,
     actualizado: new Date(actual.ts).toISOString(),
     subtipos: SUBTIPOS,
-    lineas: normalizar(actual.filas, sucursal),
+    lineas: normalizar(actual.filas, sucursal, convierte),
   }
 }

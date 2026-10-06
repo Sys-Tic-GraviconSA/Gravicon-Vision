@@ -16,10 +16,16 @@ export interface LineaFacturacion {
   producto: string
   registrado: 't' | 'm³' | 'sin unidad' | 'servicio'
   cantidad: number
+  /** Unidad real de `cantidad` («sin unidad» ya resuelta): 't' o 'm³'; '' en fletes */
+  unidad: 't' | 'm³' | ''
   factor: number
   factorPropio: boolean
-  /** t por m³ del material (aunque la línea venga en t); 0 en fletes. m³ equivalentes = toneladas ÷ factorMaterial */
+  /**
+   * t por m³ del material (aunque la línea venga en t); 0 en fletes. m³ equivalentes = toneladas ÷ factorMaterial.
+   * Sin conversión (Acacías): 1 en las líneas en m³ y 0 en las líneas en t.
+   */
   factorMaterial: number
+  /** Cantidad de reporte: t en Cuncía (m³ × densidad); m³ en Acacías, sin convertir (0 en sus líneas en t). 0 en fletes */
   toneladas: number
   total: number
   cliente: string
@@ -34,6 +40,10 @@ export interface LineaFacturacion {
 export interface DatosFacturacion {
   planta: 'cuncia' | 'acacias'
   sucursal: string
+  /** false en Acacías: no se convierte con densidades (`toneladas` son m³ y lo registrado en t va aparte) */
+  convierte?: boolean
+  /** Unidad de `toneladas`: 't' (Cuncía) o 'm³' (Acacías) */
+  unidadReporte?: 't' | 'm³'
   archivo: { nombre: string; modificado: string | null }
   actualizado: string
   subtipos: Record<string, string>
