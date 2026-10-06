@@ -89,6 +89,8 @@
           :plantas-filtro="selectedPlantasComb.size === plantasCombDisponibles.length ? [] : [...selectedPlantasComb]" />
       </template>
 
+      <!-- Concretos · Maquinaria: desempeño mensual por placa (mapa de calor), ajustado al alto de la pantalla -->
+
       <!-- Disponibilidad: el área (Planta/Maquinaria) la impone la pestaña activa -->
       <template v-if="subTab === 'disponibilidad'">
         <DisponibilidadTab
@@ -371,6 +373,10 @@
       <ChartCard title="Órdenes Diarias" description="Abiertas y cerradas con sus costos (Externas)" :option="ordenesDiariasExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fecha', p, 'ext')" />
     </div>
 
+    <div v-if="isConcretos && tipoTab === 'maquinaria'" class="charts-grid cols-1" style="margin-bottom:22px">
+      <DesempenoFlota :filas="flotaMensual" :visibles="4" :placas="flotaPlacasFiltro" />
+    </div>
+
     </div>
     </template>
     </template>
@@ -442,7 +448,7 @@
             <div class="report-header-meta">
               <div class="meta-item"><span>Período:</span> <strong>{{ informeDesde }} al {{ informeHasta }}</strong></div>
               <div class="meta-item"><span>Código:</span> <strong>GRV-INF-{{ repReferencia }}-{{ repTipoLabel.toUpperCase() }}</strong></div>
-              <div class="meta-item page-counter"><span>Pág. 1 de 3</span></div>
+              <div class="meta-item page-counter"><span>Pág. 1 de {{ repPaginas }}</span></div>
             </div>
           </header>
 
@@ -641,7 +647,7 @@
 
           <footer class="report-footer">
             <span>Informe de Órdenes de Trabajo — Gravicon</span>
-            <span>Documento Oficial<span class="fp-num"> | Página 1 de 3</span></span>
+            <span>Documento Oficial<span class="fp-num"> | Página 1 de {{ repPaginas }}</span></span>
           </footer>
         </div>
 
@@ -897,7 +903,7 @@
 
           <footer class="report-footer">
             <span>Informe de Órdenes de Trabajo — Gravicon</span>
-            <span>Documento Oficial<span class="fp-num"> | Página 2 de 3</span></span>
+            <span>Documento Oficial<span class="fp-num"> | Página 2 de {{ repPaginas }}</span></span>
           </footer>
         </div>
 
@@ -1049,7 +1055,24 @@
 
           <footer class="report-footer">
             <span>Informe de Órdenes de Trabajo — Gravicon</span>
-            <span>Documento Oficial<span class="fp-num"> | Página 3 de 3</span></span>
+            <span>Documento Oficial<span class="fp-num"> | Página 3 de {{ repPaginas }}</span></span>
+          </footer>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- PÁGINA 4: DESEMPEÑO DE LA FLOTA (Concretos · Maquinaria) -->
+        <!-- ============================================== -->
+        <div v-if="repConFlota" class="report-page">
+          <div class="report-salto-superior"></div>
+          <div class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Desempeño Mensual de la Flota — 4 Vehículos con Mayor Costo</h3>
+            <div class="data-card" style="padding: 10px 12px;">
+              <DesempenoFlota :filas="flotaMensual" :visibles="4" :placas="flotaPlacasFiltro" informe />
+            </div>
+          </div>
+          <footer class="report-footer">
+            <span>Informe de Órdenes de Trabajo — Gravicon</span>
+            <span>Documento Oficial<span class="fp-num"> | Página 4 de {{ repPaginas }}</span></span>
           </footer>
         </div>
 
@@ -1333,6 +1356,9 @@
 
       <div class="charts-grid cols-1" style="margin-bottom:22px">
         <ChartCard title="Órdenes Diarias" description="Abiertas y cerradas con sus costos (Externas)" :option="ordenesDiariasExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fecha', p, 'ext')" />
+      </div>
+        <div v-if="isConcretos && tipoTab === 'maquinaria'" class="charts-grid cols-1" style="margin-bottom:22px">
+        <DesempenoFlota :filas="flotaMensual" :visibles="4" :placas="flotaPlacasFiltro" />
       </div>
     </template>
 
@@ -1789,6 +1815,8 @@ import DisponibilidadTab from './mantenimiento/DisponibilidadTab.vue'
 import TareasTab from './mantenimiento/TareasTab.vue'
 import { nombrePlanta, titulo, ordenarPlantas } from '../composables/useGraficasConcreto'
 import CombustibleTab from './mantenimiento/CombustibleTab.vue'
+import DesempenoFlota from './mantenimiento/DesempenoFlota.vue'
+import type { FilaFlota } from '../types/flota'
 import InspeccionLlantasTab from './mantenimiento/InspeccionLlantasTab.vue'
 import DataTable from '../components/dashboard/DataTable.vue'
 import FilterBar from '../components/dashboard/FilterBar.vue'
@@ -5523,6 +5551,144 @@ const dispPorPlaca = computed(() => {
   }
   const out = new Map<string, number>()
   for (const [k, e] of acc) if (e.n > 0) out.set(k, Math.round((e.sum / e.n) * 100))
+  return out
+})
+
+/**
+ * Desempeño mensual por placa (solo Concretos), para el mapa de calor de la flota. Une cuatro fuentes
+ * dentro del rango filtrado, por mes:
+ * - Producción (remisiones): viajes y m³, con la misma regla de `m3PorPlaca` (mixer = concreto; autobomba = bombeo).
+ * - Disponibilidad: promedio del score diario y días con «¿Vehículo en taller?».
+ * - Mantenimiento: costo de servicios + insumos por fecha de cierre.
+ * - Combustible: valor, galones y horómetro válido de los tanqueos.
+ * Lo que no tiene registro queda en null («sin dato»); nunca se rellena con 0.
+ */
+/** El informe de OT suma la página de la flota solo en Concretos · Maquinaria y si hay datos */
+/**
+ * Mapa de calor de la flota: si arriba se filtró por placa o tipo de vehículo, muestra exactamente las placas
+ * que quedan en las OT filtradas; sin esos filtros, null (el mapa toma el Top 4 de mayor costo total).
+ */
+const flotaPlacasFiltro = computed<string[] | null>(() => {
+  const porPlaca = selectedPlacas.value.size > 0 && selectedPlacas.value.size !== placasDisponibles.value.length
+  const porTipo = selectedVehiculos.value.size > 0 && selectedVehiculos.value.size !== vehiculosDisponibles.value.length
+  if (!porPlaca && !porTipo) return null
+  return [...new Set(dataFilteredNoAcpm.value.map(r => normPlaca(r['Placa del Vehículo'])).filter(Boolean))]
+})
+const repConFlota = computed(() => isConcretos.value && tipoTab.value === 'maquinaria' && flotaMensual.value.length > 0)
+const repPaginas = computed(() => (repConFlota.value ? 4 : 3))
+const flotaMensual = computed<FilaFlota[]>(() => {
+  if (!isConcretos.value) return []
+  const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
+  const until = fechaFin.value ? dateToSerial(fechaFin.value) + 1 : Infinity
+  const enRango = (v: number) => v >= since && v < until
+  const mesDe = (serial: number) => serialToDate(serial).toISOString().slice(0, 7)
+  interface Acc {
+    viajes: number; m3: number; prod: boolean; dispSum: number; dispN: number; taller: Set<string>
+    mant: number; comb: number; gal: number; combN: number; horas: number; galHoras: number
+  }
+  const acc = new Map<string, Acc>()
+  const tipos = new Map<string, string>()
+  const productoras = new Set<string>()
+  const get = (placa: string, mes: string) => {
+    const k = `${placa}|${mes}`
+    let e = acc.get(k)
+    if (!e) { e = { viajes: 0, m3: 0, prod: false, dispSum: 0, dispN: 0, taller: new Set(), mant: 0, comb: 0, gal: 0, combN: 0, horas: 0, galHoras: 0 }; acc.set(k, e) }
+    return e
+  }
+  const tipo = (placa: string, t: unknown) => { const s = String(t ?? '').trim(); if (s && !tipos.has(placa)) tipos.set(placa, s.toUpperCase()) }
+
+  // Producción: un viaje por remisión del mixer; en autobombas, una por bombeo
+  for (const r of prodFiltered.value as unknown as Record<string, unknown>[]) {
+    const f = Number(r['Fecha'])
+    if (!f) continue
+    const mes = mesDe(f)
+    const mixer = normPlaca(extraerPlacaEquipo(String(r['Mixer'] ?? '')))
+    if (mixer) {
+      const e = get(mixer, mes)
+      e.viajes++; e.m3 += Number(r['Cant. Concreto']) || Number(r['concreto_cantidad']) || 0; e.prod = true
+      productoras.add(mixer); tipo(mixer, 'MIXER')
+    }
+    if (esServicioBombeo(r['Servicio'] ?? r['servicio_nombre']) && !esBombaArgos(r['Bomba'])) {
+      const bomba = normPlaca(extraerPlacaEquipo(String(r['Bomba'] ?? '')))
+      if (bomba) {
+        const e = get(bomba, mes)
+        e.viajes++; e.m3 += Number(r['Cant. Servicio']) || Number(r['servicio_cantidad']) || 0; e.prod = true
+        productoras.add(bomba); tipo(bomba, 'AUTOBOMBA')
+      }
+    }
+  }
+
+  // Disponibilidad (mismo score que la pestaña Disponibilidad) y días en taller
+  const placasDisp = disp.data?.planta === 'concretos' ? (disp.data?.placas ?? []) : []
+  for (const r of placasDisp as Record<string, unknown>[]) {
+    const f = Number(r['Fecha'])
+    if (!f || !enRango(f)) continue
+    const placa = normPlaca(r['Placa_Texto'] ?? r['Placa'] ?? r['Placa del Vehículo'])
+    if (!placa) continue
+    const e = get(placa, mesDe(f))
+    const revAm = Number(r['Rev_AM'] ?? r['rev_am'] ?? NaN)
+    const revPm = Number(r['Rev_PM'] ?? r['rev_pm'] ?? NaN)
+    const pctPlaca = Number(r['Porcentaje_Placa'] ?? r['porcentaje_placa'] ?? NaN)
+    const score = !isNaN(pctPlaca) && pctPlaca >= 0 ? pctPlaca
+      : !isNaN(revAm) && !isNaN(revPm) ? (revAm + revPm) / 2
+        : !isNaN(revAm) ? revAm : !isNaN(revPm) ? revPm : NaN
+    if (!isNaN(score)) { e.dispSum += score; e.dispN++ }
+    const t = String(r['¿Vehiculo en Taller?'] ?? r['Vehiculo_en_Taller'] ?? '').toUpperCase()
+    if (t === 'TRUE' || t === 'Y' || t === 'SÍ' || t === 'SI') e.taller.add(String(Math.floor(f)))
+    tipo(placa, r['Tipo de Vehiculos'] ?? r['Tipo Vehículo'])
+  }
+
+  // Mantenimiento por fecha de cierre
+  for (const r of dataFilteredNoAcpm.value) {
+    const placa = normPlaca(r['Placa del Vehículo'])
+    const f = otCloseSerial(r)
+    if (!placa || !f) continue
+    get(placa, mesDe(f)).mant += (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0)
+    if (String(r['Tipo Vehículo'] ?? '').trim()) tipo(placa, r['Tipo Vehículo'])
+  }
+
+  // Combustible (solo vales con fecha); horómetro con el mismo filtro de la pestaña Combustible
+  for (const r of (disp.data?.combustible ?? []) as Record<string, unknown>[]) {
+    const f = Number(r['Fecha'])
+    if (!f || !enRango(f)) continue
+    const placa = normPlaca(r['Placa'])
+    if (!placa) continue
+    const e = get(placa, mesDe(f))
+    const gal = Number(r['Cant gl']) || 0
+    const horas = Number(r['Horometro recorrido']) || 0
+    e.comb += Number(r['Precio']) || 0; e.gal += gal; e.combN++
+    if (horas >= 1 && horas <= 300 && gal > 0 && gal / horas >= 0.2 && gal / horas <= 20) { e.horas += horas; e.galHoras += gal }
+    tipo(placa, r['Tipo_Vehiculo'])
+  }
+
+  const div = (a: number | null, b: number | null) => (a != null && b ? a / b : null)
+  const out: FilaFlota[] = []
+  for (const [k, e] of acc) {
+    const [placa, mes] = k.split('|')
+    const productora = productoras.has(placa)
+    const m3 = productora ? e.m3 : null
+    const comb = e.combN ? e.comb : null
+    const gal = e.combN ? e.gal : null
+    out.push({
+      placa, mes, tipo: tipos.get(placa) ?? '—',
+      valores: {
+        viajes: productora ? e.viajes : null,
+        m3,
+        disp: e.dispN ? (e.dispSum / e.dispN) * 100 : null,
+        taller: e.dispN || e.taller.size ? e.taller.size : null,
+        mant: e.mant,
+        mantM3: div(e.mant, m3),
+        comb,
+        gal,
+        combM3: div(comb, m3),
+        costoGal: div(comb, gal),
+        galHr: e.horas ? e.galHoras / e.horas : null,
+        hrGal: e.galHoras ? e.horas / e.galHoras : null,
+        total: e.mant + (comb ?? 0),
+        totalM3: div(e.mant + (comb ?? 0), m3),
+      },
+    })
+  }
   return out
 })
 
