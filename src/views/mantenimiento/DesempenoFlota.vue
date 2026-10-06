@@ -4,7 +4,7 @@
       <div class="flota-head-text">
         <h3 class="flota-titulo">Desempeño Mensual de la Flota — Top {{ placasSel.length }} {{ placasSel.length === 1 ? 'Vehículo' : 'Vehículos' }} con Mayor Costo</h3>
         <p class="flota-sub">
-          <template v-if="vista === 'calor'">De mayor a menor costo total (el #1 es el más crítico). Cada mes se compara con los demás del mismo vehículo: <b class="ok">verde = su mejor mes</b>, <b class="mal">rojo = su peor mes</b>; en costos y días en taller, más alto es peor. Gris = sin dato.</template>
+          <template v-if="vista === 'calor'">Ordenados por costo total. Cada mes se compara con los demás meses del mismo vehículo; en costos y días en taller, más alto es peor.</template>
           <template v-else>Una línea por vehículo, de mayor a menor costo total; los huecos son meses sin dato.</template>
         </p>
       </div>
@@ -33,27 +33,27 @@
         </thead>
         <TransitionGroup name="hm-mov">
           <tbody v-for="(p, i) in placasSel" :key="p" :class="{ abierto: !cerrados.has(p) }">
+            <!-- Encabezado del vehículo en una fila completa: la primera columna queda angosta y los meses ganan ancho -->
             <tr class="hm-grupo">
-              <th class="hm-fija">
-                <div class="hm-veh">
-                  <span class="hm-rank">#{{ i + 1 }}</span>
-                  <div>
-                    <div class="hm-placa">
-                      <span class="hm-flecha" title="Plegar / desplegar" @click="alternar(p)">{{ cerrados.has(p) ? '▸' : '▾' }}</span>{{ p }}
-                      <span class="hm-tipo">{{ tipoDe.get(p) ?? '' }}</span>
-                    </div>
-                    <div v-if="resumen.get(p)?.total != null" class="hm-indice">Costo total <b>{{ cop(resumen.get(p)!.total!) }}</b></div>
+              <th :colspan="meses.length + 1" class="hm-grupo-celda">
+                <div class="hm-grupo-fila">
+                  <div class="hm-veh">
+                    <span class="hm-rank">#{{ i + 1 }}</span>
+                    <span class="hm-flecha" title="Plegar / desplegar" @click="alternar(p)">{{ cerrados.has(p) ? '▸' : '▾' }}</span>
+                    <span class="hm-placa">{{ p }}</span>
+                    <span class="hm-tipo">{{ tipoDe.get(p) ?? '' }}</span>
+                    <span v-if="resumen.get(p)?.total != null" class="hm-indice">Costo total <b>{{ cop(resumen.get(p)!.total!) }}</b></span>
+                  </div>
+                  <div class="hm-resumen">
+                    <span v-for="k in resumenItems(p)" :key="k.label" class="hm-chip" :class="k.clase">
+                      {{ k.label }} <b>{{ k.valor }}</b>
+                    </span>
                   </div>
                 </div>
               </th>
-              <td :colspan="meses.length" class="hm-resumen">
-                <span v-for="k in resumenItems(p)" :key="k.label" class="hm-chip" :class="k.clase">
-                  {{ k.label }} <b>{{ k.valor }}</b>
-                </span>
-              </td>
             </tr>
             <template v-if="!cerrados.has(p)">
-              <tr v-for="v in varsSel" :key="v.key" :class="{ foco: hover?.placa === p && hover?.var === v.key }">
+              <tr v-for="v in varsDe(p)" :key="v.key" :class="{ foco: hover?.placa === p && hover?.var === v.key }">
                 <th class="hm-fija hm-var">{{ v.label }}</th>
                 <td
                   v-for="c in celdas(p, v)" :key="c.mes"
@@ -61,7 +61,7 @@
                   :style="c.estilo"
                   tabindex="0"
                   @mouseenter="mostrarTip($event, p, v, c)" @focus="mostrarTip($event, p, v, c)" @click="mostrarTip($event, p, v, c)"
-                >{{ c.valor == null ? 'sin dato' : v.fmt(c.valor) }}</td>
+                >{{ c.valor == null ? '—' : v.fmt(c.valor) }}</td>
               </tr>
             </template>
           </tbody>
@@ -82,7 +82,7 @@
     <div v-if="vista === 'calor' && placasSel.length && meses.length" class="flota-leyenda">
       <span>Mejor mes</span><span class="flota-grad"></span><span>Peor mes</span>
       <span class="flota-sep"></span>
-      <span class="flota-nulo"></span><span>Sin dato</span>
+      <span class="flota-nulo">—</span><span>Sin dato</span>
       <span class="flota-sep"></span>
       <span class="flota-plano"></span><span>Igual todos los meses</span>
     </div>
@@ -116,34 +116,40 @@ const { base, leyenda, ejeX, chartTextColor, isLight } = useEstiloGraficas()
 
 // ---------------------------------------------------------------- Variables (valores siempre completos)
 interface Variable { key: VariableFlota; label: string; fmt: (v: number) => string; mejor: 'alto' | 'bajo' }
+// El orden de esta lista es el orden de las filas de cada vehículo: primero los costos
 const VARIABLES: Variable[] = [
+  { key: 'total', label: 'Costo total', fmt: cop, mejor: 'bajo' },
   { key: 'totalM3', label: 'Costo total/m³', fmt: cop, mejor: 'bajo' },
+  { key: 'mantM3', label: 'Mantenimiento/m³', fmt: cop, mejor: 'bajo' },
+  { key: 'combM3', label: 'Combustible/m³', fmt: cop, mejor: 'bajo' },
   { key: 'disp', label: 'Disponibilidad %', fmt: v => fmtN(v, 1) + ' %', mejor: 'alto' },
   { key: 'm3', label: 'Producción m³', fmt: v => fmtN(v, 2) + ' m³', mejor: 'alto' },
   { key: 'taller', label: 'Días en taller', fmt: v => fmtN(v, 0) + (v === 1 ? ' día' : ' días'), mejor: 'bajo' },
   { key: 'viajes', label: 'Viajes', fmt: v => fmtN(v, 0), mejor: 'alto' },
-  { key: 'total', label: 'Costo total', fmt: cop, mejor: 'bajo' },
   { key: 'mant', label: 'Costo mantenimiento', fmt: cop, mejor: 'bajo' },
-  { key: 'mantM3', label: 'Mantenimiento/m³', fmt: cop, mejor: 'bajo' },
   { key: 'comb', label: 'Costo combustible', fmt: cop, mejor: 'bajo' },
-  { key: 'combM3', label: 'Combustible/m³', fmt: cop, mejor: 'bajo' },
   { key: 'gal', label: 'Galones', fmt: v => fmtN(v, 1) + ' gal', mejor: 'bajo' },
   { key: 'costoGal', label: 'Costo por galón', fmt: v => cop(v) + '/gal', mejor: 'bajo' },
   { key: 'hrGal', label: 'Horas por galón', fmt: v => fmtN(v, 2) + ' h/gal', mejor: 'alto' },
   { key: 'galHr', label: 'Galones por hora', fmt: v => fmtN(v, 2) + ' gal/h', mejor: 'bajo' },
 ]
-const POR_DEFECTO: VariableFlota[] = ['totalM3', 'disp', 'm3', 'taller', 'viajes']
+const POR_DEFECTO: VariableFlota[] = ['total', 'totalM3', 'mantM3', 'combM3', 'disp', 'm3', 'taller', 'viajes']
 const etiquetaMes = (k: string) => `${MESES_CORTOS[Number(k.slice(5, 7)) - 1]} ${k.slice(2, 4)}`
 const etiquetaMesLarga = (k: string) => `${MESES_CORTOS[Number(k.slice(5, 7)) - 1]} ${k.slice(0, 4)}`
 
-// ---------------------------------------------------------------- Semáforo
-type RGB = [number, number, number]
-/** 5 niveles con colores de la paleta de la app: verde, lima, ámbar, naranja y rojo (0 = mejor, 1 = peor) */
-const NIVELES: RGB[] = [[16, 185, 129], [132, 204, 22], [245, 158, 11], [249, 115, 22], [239, 68, 68]]
-function semaforo(malo: number): RGB { return NIVELES[Math.min(NIVELES.length - 1, Math.floor(malo * NIVELES.length))] }
-const rgb = (c: RGB) => `rgb(${c[0]}, ${c[1]}, ${c[2]})`
-/** Texto oscuro sobre los tonos claros (ámbar), blanco sobre verde y rojo */
-const textoSobre = (c: RGB) => (0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2] > 150 ? '#1f2937' : '#fff')
+// ---------------------------------------------------------------- Escala de color
+/**
+ * Escala suave con los azules de la página: los meses buenos quedan casi blancos y solo los malos se
+ * oscurecen, así el ojo va directo a lo crítico. El número cambia de color según el fondo para leerse
+ * siempre: azul marino sobre los tonos claros, blanco sobre los fuertes.
+ * En tema oscuro la escala va de un azul apagado (bueno) a uno brillante (malo).
+ */
+const ESCALA_CLARO: [string, string][] = [['#EEF4FD', '#172954'], ['#D3E2FB', '#172954'], ['#9DBDF4', '#172954'], ['#3B6FE0', '#FFFFFF'], ['#1E3F8F', '#FFFFFF']]
+const ESCALA_OSCURO: [string, string][] = [['#18233A', '#CBD5E1'], ['#1D3157', '#E2E8F0'], ['#244781', '#FFFFFF'], ['#3566D1', '#FFFFFF'], ['#7AA5F2', '#0B1220']]
+function tono(malo: number): [string, string] {
+  const n = isLight.value ? ESCALA_CLARO : ESCALA_OSCURO
+  return n[Math.min(n.length - 1, Math.floor(malo * n.length))]
+}
 
 // ---------------------------------------------------------------- Datos
 /** placa → mes → fila */
@@ -203,14 +209,18 @@ const vista = ref<'calor' | 'lineas'>('calor')
 const cerrados = reactive(new Set<string>())
 function alternar(p: string) { if (cerrados.has(p)) cerrados.delete(p); else cerrados.add(p) }
 
+/** Variables con al menos un dato en el período para ese vehículo: las filas vacías no se muestran */
+function varsDe(p: string) {
+  return varsSel.value.filter(v => meses.value.some(m => val(p, m, v.key) != null))
+}
 function resumenItems(p: string) {
   const r = resumen.value.get(p)
   if (!r) return []
   const out: { label: string; valor: string; clase?: string }[] = []
   if (r.costoM3 != null) out.push({ label: 'Costo/m³', valor: cop(r.costoM3) })
   if (r.m3) out.push({ label: 'Producción', valor: fmtN(r.m3, 0) + ' m³' })
-  if (r.disp != null) out.push({ label: 'Disp. prom.', valor: fmtN(r.disp, 1) + ' %', clase: r.disp < 60 ? 'mal' : r.disp < 85 ? 'medio' : 'ok' })
-  if (r.taller) out.push({ label: 'Taller', valor: fmtN(r.taller, 0) + (r.taller === 1 ? ' día' : ' días'), clase: 'mal' })
+  if (r.disp != null) out.push({ label: 'Disp. prom.', valor: fmtN(r.disp, 1) + ' %' })
+  if (r.taller) out.push({ label: 'Taller', valor: fmtN(r.taller, 0) + (r.taller === 1 ? ' día' : ' días') })
   return out
 }
 
@@ -225,8 +235,8 @@ function celdas(p: string, v: Variable): Celda[] {
     if (!(max > min)) return { mes: meses.value[i], valor, malo: null }
     const t = (valor - min) / (max - min)
     const malo = v.mejor === 'alto' ? 1 - t : t
-    const c = semaforo(malo)
-    return { mes: meses.value[i], valor, malo, estilo: { background: rgb(c), color: textoSobre(c) } }
+    const [fondo, texto] = tono(malo)
+    return { mes: meses.value[i], valor, malo, estilo: { background: fondo, color: texto } }
   })
 }
 
@@ -339,7 +349,7 @@ const hallazgos = computed(() => {
 .flota, .flota :is(button, select, table, th, td, p, h3, ul) { font-family: 'Lato', sans-serif; }
 .flota {
   --hm-nulo: #f1f4f8;
-  --hm-plano: #dde5ef;
+  --hm-plano: #e5e7eb;
   --hm-linea: var(--card-border);
   /* Mismo aspecto que ChartCard */
   background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius-lg); padding: 20px; min-width: 0;
@@ -354,7 +364,6 @@ const hallazgos = computed(() => {
 .flota-head-text { min-width: 0; }
 .flota-titulo { margin: 0; font-size: 14px; font-weight: 700; color: var(--text-primary); letter-spacing: -.2px; }
 .flota-sub { margin: 4px 0 0; font-size: 12px; font-weight: 400; color: var(--text-secondary); max-width: 900px; line-height: 1.45; }
-.flota-sub .ok { color: #10B981; font-weight: 700; } .flota-sub .mal { color: #EF4444; font-weight: 700; }
 .flota-vista { display: inline-flex; align-items: center; gap: 6px; }
 /* Botones con el estilo de los selectores de vista de la app (.av-btn) */
 .fl-btn {
@@ -370,7 +379,7 @@ const hallazgos = computed(() => {
 .hm-scroll { position: relative; overflow-x: auto; overflow-y: visible; max-width: 100%; }
 .hm { width: 100%; border-collapse: separate; border-spacing: 4px 4px; font-size: 12.5px; }
 .hm th, .hm td { white-space: nowrap; }
-.hm-fija { text-align: left; padding: 2px 12px 2px 0; font-weight: 400; }
+.hm-fija { text-align: left; padding: 2px 10px 2px 0; font-weight: 400; width: 1%; }
 .hm-esq { font-size: 10.5px; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: .06em; }
 .hm-mes {
   padding: 4px 8px 8px; font-size: 10.5px; font-weight: 700; color: var(--text-tertiary); text-align: right;
@@ -383,32 +392,34 @@ const hallazgos = computed(() => {
 .hm-flecha { cursor: pointer; }
 .hm-grupo > th, .hm-grupo > td { padding-top: 16px; padding-bottom: 6px; border-top: 1px solid var(--hm-linea); }
 tbody:first-of-type .hm-grupo > th, tbody:first-of-type .hm-grupo > td { border-top: 0; padding-top: 6px; }
-.hm-veh { display: flex; align-items: center; gap: 10px; }
+.hm-grupo-celda { text-align: left; font-weight: 400; }
+.hm-grupo-fila { display: flex; align-items: center; justify-content: space-between; gap: 6px 16px; flex-wrap: wrap; }
+.hm-veh { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .hm-rank { min-width: 26px; font-size: 14px; font-weight: 700; color: var(--text-primary); background: none; }
 .hm-placa { font-size: 14px; font-weight: 700; color: var(--text-primary); letter-spacing: .01em; }
 .hm-flecha { display: inline-block; width: 14px; color: var(--text-tertiary); font-size: 10px; }
-.hm-tipo { font-size: 10px; font-weight: 700; color: var(--text-tertiary); margin-left: 8px; letter-spacing: .08em; text-transform: uppercase; }
-.hm-indice { font-size: 11.5px; font-weight: 400; color: var(--text-tertiary); margin: 2px 0 0 14px; }
-.hm-indice b { color: #EF4444; font-weight: 700; }
-.hm-resumen { vertical-align: middle; white-space: normal; }
+.hm-tipo { font-size: 10px; font-weight: 700; color: var(--text-tertiary); letter-spacing: .08em; text-transform: uppercase; }
+.hm-indice { font-size: 12px; font-weight: 400; color: var(--text-tertiary); margin-left: 6px; }
+.hm-indice b { color: var(--text-primary); font-weight: 700; }
+.hm-resumen { white-space: normal; }
 .hm-chip {
   display: inline-block; margin: 2px 6px 2px 0; padding: 4px 10px; border-radius: 999px;
   background: var(--bg-alt); border: 1px solid var(--card-border); font-size: 11.5px; font-weight: 400; color: var(--text-secondary);
 }
 .hm-chip b { color: var(--text-primary); font-weight: 700; }
-.hm-chip.ok b { color: #10B981; } .hm-chip.medio b { color: #F59E0B; } .hm-chip.mal b { color: #EF4444; }
-.hm-var { padding-left: 46px; font-size: 12px; font-weight: 400; color: var(--text-secondary); transition: color .15s; }
+
+.hm-var { padding-left: 34px; font-size: 12px; font-weight: 400; color: var(--text-secondary); transition: color .15s; }
 tr.foco .hm-var { color: var(--accent); font-weight: 700; }
 
 /* Celdas: altas, valores completos, cifras alineadas */
 .hm-celda {
-  height: 38px; padding: 6px 10px; border-radius: 7px; text-align: right; cursor: default;
-  font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .01em;
+  height: 38px; padding: 6px 8px; border-radius: 7px; text-align: right; cursor: default;
+  font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .01em;
   transition: background-color .45s ease, color .45s ease, box-shadow .15s ease;
 }
 .hm-celda:hover, .hm-celda:focus-visible { box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 4px currentColor; position: relative; z-index: 1; outline: none; }
-.hm-celda.colfoco:not(:hover) { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .6); }
-.hm-celda.nulo { background: var(--hm-nulo); color: var(--text-tertiary); font-size: 11px; font-weight: 400; font-style: italic; text-align: center; letter-spacing: 0; }
+.hm-celda.colfoco:not(:hover):not(.nulo) { box-shadow: inset 0 0 0 1.5px rgba(37, 99, 235, .45); }
+.hm-celda.nulo { background: transparent; box-shadow: inset 0 0 0 1px var(--card-border); color: var(--text-tertiary); font-weight: 400; text-align: center; opacity: .8; }
 .hm-celda.plano { background: var(--hm-plano); color: var(--text-primary); }
 
 /* Plegar / desplegar con animación */
@@ -433,18 +444,21 @@ tr.foco .hm-var { color: var(--accent); font-weight: 700; }
 .hm-tip-enter-from, .hm-tip-leave-to { opacity: 0; }
 
 .flota-leyenda { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; font-size: 11.5px; color: var(--text-secondary); }
-.flota-grad { width: 140px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #10B981 0 20%, #84CC16 20% 40%, #F59E0B 40% 60%, #F97316 60% 80%, #EF4444 80%); }
-.flota-nulo, .flota-plano { width: 18px; height: 10px; border-radius: 3px; background: var(--hm-nulo); border: 1px solid var(--card-border); }
-.flota-plano { background: var(--hm-plano); }
+.flota-grad { width: 140px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #EEF4FD 0 20%, #D3E2FB 20% 40%, #9DBDF4 40% 60%, #3B6FE0 60% 80%, #1E3F8F 80%); box-shadow: inset 0 0 0 1px rgba(23, 41, 84, .08); }
+.oscuro .flota-grad { background: linear-gradient(90deg, #18233A 0 20%, #1D3157 20% 40%, #244781 40% 60%, #3566D1 60% 80%, #7AA5F2 80%); box-shadow: none; }
+.flota-nulo, .flota-plano { width: 22px; height: 14px; border-radius: 4px; background: transparent; box-shadow: inset 0 0 0 1px var(--card-border); display: inline-flex; align-items: center; justify-content: center; font-size: 10px; color: var(--text-tertiary); }
+.flota-plano { background: var(--hm-plano); box-shadow: none; }
 .flota-sep { width: 1px; height: 14px; background: var(--card-border); margin: 0 4px; }
 
-.flota-hallazgos { margin: 14px 0 0; padding: 14px 0 0 18px; border-top: 1px solid var(--hm-linea); font-size: 12.5px; color: var(--text-secondary); display: grid; gap: 5px; line-height: 1.5; }
+.flota-hallazgos { margin: 16px 0 0; padding: 14px 0 0; list-style: none; border-top: 1px solid var(--hm-linea); font-size: 12.5px; color: var(--text-secondary); display: grid; gap: 6px; line-height: 1.5; }
+.flota-hallazgos li { position: relative; padding-left: 16px; }
+.flota-hallazgos li::before { content: ''; position: absolute; left: 2px; top: .62em; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
 .flota-hallazgos :deep(b) { color: var(--text-primary); font-weight: 700; }
 
 /* ── Informe (PDF): sin encabezado ni controles; mismo alto de celda que en pantalla ── */
 .flota.informe { border: 0; padding: 0; background: transparent; backdrop-filter: none; }
 .informe .hm { font-size: 12px; border-spacing: 3px; }
-.informe .hm-var { padding-left: 30px; }
+.informe .hm-var { padding-left: 24px; }
 .informe .hm-celda { height: 36px; padding: 5px 7px; font-size: 12px; }
 .informe .hm-celda:hover { box-shadow: none; }
 .informe .hm-flecha { display: none; }
