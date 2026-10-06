@@ -42,8 +42,10 @@
             Ventas de agregados de la planta <strong>{{ PLANTA }}</strong> (sucursal {{ PLANTA }} Agregados). Primero el
             <strong>despacho del día {{ flbl(hoy, true) }}</strong>, luego el <strong>acumulado {{ esMes ? `del mes (1 al ${cd} de ${MES_LBL})` : `del período (${RANGO_LBL})` }}</strong> por día,
             familia de material, material y cliente, y al final {{ proyeccion ? 'la proyección de cierre, ' : '' }}el control de calidad del dato y las conclusiones.
-            Las cantidades van en toneladas: lo registrado en m³ se convierte con el factor de cada material y las toneladas despachadas
-            incluyen los traslados de inventario; la venta en pesos solo cuenta lo vendido.
+            <template v-if="CONV">Las cantidades van en toneladas: lo registrado en m³ se convierte con el factor de cada material y las toneladas despachadas
+            incluyen los traslados de inventario; la venta en pesos solo cuenta lo vendido.</template>
+            <template v-else>Las cantidades van como se registraron en Novasoft, sin convertir con densidades: en m³ (lo que viene sin unidad se toma en m³)
+            y, si hubiera algo registrado en toneladas, aparte y sin sumarlo a los m³. Lo despachado incluye los traslados de inventario; la venta en pesos solo cuenta lo vendido.</template>
             Fuente: facturación Novasoft (<strong>{{ archivo.nombre }}</strong>, sucursal {{ sucursal }}).
           </p>
         </div>
@@ -68,18 +70,20 @@
         </div>
 
         <div class="report-section-block">
-          <h3 class="report-block-title"><span class="title-bar"></span>Toneladas por producto — {{ flbl(hoy, true) }}</h3>
+          <h3 class="report-block-title"><span class="title-bar"></span>{{ T.Cant }} por producto — {{ flbl(hoy, true) }}</h3>
           <p class="section-note">{{ NOTA_TON }}</p>
           <div class="data-card"><div class="table-wrap">
             <table>
-              <thead><tr><th>Material</th><th>Registrado en</th><th class="r">Cantidad registrada</th><th class="r">Factor</th><th class="r">t vendidas</th><th class="r">t traslados</th><th class="r">t despachadas</th></tr></thead>
+              <thead><tr><th>Material</th><th>Registrado en</th><th class="r">Cantidad registrada</th><th v-if="CONV" class="r">Factor</th><th class="r">{{ CONV ? 't vendidas' : 'Vendido' }}</th><th class="r">{{ CONV ? 't traslados' : 'Traslados' }}</th><th v-if="CONV" class="r">m³ despachados</th><th class="r">{{ CONV ? 't despachadas' : 'Despachado' }}</th></tr></thead>
               <tbody>
                 <tr v-for="r in tonHoy.filas" :key="r.clave">
                   <td><span class="kpi-dot tdot" :style="{ background: COL[r.fam] }"></span><span class="bold">{{ titulo(r.prod) }}</span></td><td>{{ r.u }}</td>
-                  <td class="r">{{ r.reg ? `${num(r.reg)} ${r.u}` : '—' }}</td><td class="r">{{ r.u === 'm³' ? `× ${num(r.factor, 2)}` : '—' }}</td>
-                  <td class="r">{{ r.vend ? num(r.vend) : '—' }}</td><td class="r">{{ r.tr ? num(r.tr) : '—' }}</td><td class="r bold">{{ num(r.vend + r.tr) }}</td>
+                  <td class="r">{{ r.reg ? `${num(r.reg)} ${r.u}` : '—' }}</td><td v-if="CONV" class="r">{{ r.u === 'm³' ? `× ${num(r.factor, 2)}` : '—' }}</td>
+                  <td class="r">{{ r.vend ? qU(r.vend, r.u) : '—' }}</td><td class="r">{{ r.tr ? qU(r.tr, r.u) : '—' }}</td><td v-if="CONV" class="r">{{ num(r.m3) }}</td><td class="r bold">{{ qU(r.vend + r.tr, r.u) }}</td>
                 </tr>
-                <tr class="table-total-row"><td class="bold" colspan="4">TOTAL {{ flbl(hoy) }}</td><td class="r bold">{{ num(tonHoy.tv) }}</td><td class="r bold">{{ num(tonHoy.tt) }}</td><td class="r bold">{{ num(tonHoy.tv + tonHoy.tt) }}</td></tr>
+                <tr v-if="CONV" class="table-total-row"><td class="bold" colspan="4">TOTAL {{ flbl(hoy) }}</td><td class="r bold">{{ num(tonHoy.tv) }}</td><td class="r bold">{{ num(tonHoy.tt) }}</td><td class="r bold">{{ num(tonHoy.m3) }}</td><td class="r bold">{{ num(tonHoy.tv + tonHoy.tt) }}</td></tr>
+                <!-- Acacías: un total por unidad (m³ y, si hay, t), nunca sumados entre sí -->
+                <template v-else><tr v-for="x in tonHoy.totU" :key="x.u" class="table-total-row"><td class="bold" colspan="3">TOTAL {{ flbl(hoy) }}{{ tonHoy.totU.length > 1 ? ` EN ${x.u}` : '' }}</td><td class="r bold">{{ qU(x.tv, x.u) }}</td><td class="r bold">{{ qU(x.tt, x.u) }}</td><td class="r bold">{{ qU(x.tv + x.tt, x.u) }}</td></tr></template>
               </tbody>
             </table>
           </div></div>
@@ -118,7 +122,7 @@
           <p class="section-note">Venta del día en verde cuando supera el promedio {{ delPer }} ({{ cop(ritmo) }}) y en rojo cuando queda por debajo.<template v-if="famOtros.length"> «Otros» agrupa: {{ famOtros.join(', ') }}.</template></p>
           <div class="data-card"><div class="table-wrap">
             <table>
-              <thead><tr><th>Día</th><th v-for="c in colsFam" :key="c" class="r">{{ c }}</th><th class="r">Venta del día</th><th class="r">{{ hayTr ? 't vendidas' : 'Toneladas' }}</th><template v-if="hayTr"><th class="r">t traslados</th><th class="r">t despachadas</th></template><th class="r">Remisiones</th><th class="r">Clientes</th><th class="r">Venta acumulada</th></tr></thead>
+              <thead><tr><th>Día</th><th v-for="c in colsFam" :key="c" class="r">{{ c }}</th><th class="r">Venta del día</th><th class="r">{{ hayTr ? `${U} ${T.g('vendidas')}` : T.Cant }}</th><template v-if="hayTr"><th class="r">{{ U }} traslados</th><th class="r">{{ U }} {{ T.g('despachadas') }}</th></template><th class="r">Remisiones</th><th class="r">Clientes</th><th class="r">Venta acumulada</th></tr></thead>
               <tbody>
                 <tr v-for="d in diario" :key="d.fecha" :class="{ hoy: d.fecha === hoy }">
                   <td class="bold accent-text nowrap">{{ flbl(d.fecha) }}</td>
@@ -155,19 +159,19 @@
 
         <div class="report-section-block">
           <h3 class="report-block-title"><span class="title-bar"></span>Matriz comercial por familia — {{ MES_LBL }}</h3>
-          <p class="section-note">Precio prom.: venta ÷ toneladas.<template v-if="proyeccion"> Cierre est.: lo vendido + promedio de lunes a sábado por los días hábiles que faltan{{ proyeccion.faltanDom ? ' + promedio de domingo por los domingos que faltan.' : '.' }}</template></p>
+          <p class="section-note">Precio prom.: venta ÷ {{ T.cant }}.<template v-if="proyeccion"> Cierre est.: lo vendido + promedio de lunes a sábado por los días hábiles que faltan{{ proyeccion.faltanDom ? ' + promedio de domingo por los domingos que faltan.' : '.' }}</template></p>
           <div class="data-card"><div class="table-wrap">
             <table>
-              <thead><tr><th>Familia</th><th class="r">Cantidad</th><th class="r">Venta</th><th class="r">Part.</th><th class="r">Remisiones</th><th class="r">Clientes</th><th class="r">Precio prom. /t</th><th class="r">Venta {{ flbl(hoy) }}</th><th v-if="proyeccion" class="r">Cierre est.</th></tr></thead>
+              <thead><tr><th>Familia</th><th class="r">Cantidad</th><th class="r">Venta</th><th class="r">Part.</th><th class="r">Remisiones</th><th class="r">Clientes</th><th class="r">Precio prom. /{{ U }}</th><th class="r">Venta {{ flbl(hoy) }}</th><th v-if="proyeccion" class="r">Cierre est.</th></tr></thead>
               <tbody>
                 <tr v-for="f in famsPorVenta" :key="f">
                   <td><span class="kpi-dot tdot" :style="{ background: COL[f] }"></span><span class="bold accent-text">{{ f }}</span></td>
-                  <td class="r">{{ mt[f] ? `${num(mt[f], 0)} t` : '—' }}</td><td class="r bold">{{ cop(mv[f]) }}</td><td class="r">{{ pct(mv[f] / M.venta * 100) }}</td>
-                  <td class="r">{{ num(mr[f], 0) }}</td><td class="r">{{ cliFam[f]?.size ?? 0 }}</td><td class="r">{{ precioFam(f) ? `${cop(precioFam(f)!)}/t` : '—' }}</td>
+                  <td class="r">{{ mt[f] ? `${num(mt[f], 0)} ${U}` : '—' }}</td><td class="r bold">{{ cop(mv[f]) }}</td><td class="r">{{ pct(mv[f] / M.venta * 100) }}</td>
+                  <td class="r">{{ num(mr[f], 0) }}</td><td class="r">{{ cliFam[f]?.size ?? 0 }}</td><td class="r">{{ precioFam(f) ? `${cop(precioFam(f)!)}/${U}` : '—' }}</td>
                   <td class="r">{{ hv[f] ? cop(hv[f]) : '—' }}</td><td v-if="proyeccion" class="r">{{ cop(proyeccion.fam[f] ?? 0) }}</td>
                 </tr>
                 <tr class="table-total-row">
-                  <td class="bold">TOTAL {{ PLANTA.toUpperCase() }}</td><td class="r">{{ num(M.t, 0) }} t</td><td class="r bold">{{ cop(M.venta) }}</td><td class="r">100%</td>
+                  <td class="bold">TOTAL {{ PLANTA.toUpperCase() }}</td><td class="r">{{ num(M.t, 0) }} {{ U }}</td><td class="r bold">{{ cop(M.venta) }}</td><td class="r">100%</td>
                   <td class="r">{{ num(M.rem, 0) }}</td><td class="r">{{ M.clientes }}</td><td class="r">—</td><td class="r">{{ cop(H.venta) }}</td><td v-if="proyeccion" class="r">{{ cop(proyeccion.total) }}</td>
                 </tr>
               </tbody>
@@ -177,14 +181,14 @@
 
         <div class="report-section-block">
           <h3 class="report-block-title"><span class="title-bar"></span>Ventas por material — {{ MES_LBL }}</h3>
-          <p class="section-note">Precios por tonelada. Rango en rojo cuando el precio más alto duplica o más al más bajo.</p>
+          <p class="section-note">Precios {{ T.porU }}. Rango en rojo cuando el precio más alto duplica o más al más bajo.</p>
           <div class="data-card"><div class="table-wrap">
             <table>
-              <thead><tr><th>Material</th><th class="r">Líneas</th><th class="r">Cantidad (t)</th><th class="r">Venta</th><th class="r">Part.</th><th class="r">Precio prom. /t</th><th class="r">Rango de precio /t</th></tr></thead>
+              <thead><tr><th>Material</th><th class="r">Líneas</th><th class="r">Cantidad ({{ U }})</th><th class="r">Venta</th><th class="r">Part.</th><th class="r">Precio prom. /{{ U }}</th><th class="r">Rango de precio /{{ U }}</th></tr></thead>
               <tbody>
                 <tr v-for="m in materiales" :key="m.prod">
                   <td><span class="kpi-dot tdot" :style="{ background: COL[m.fam] }"></span><span class="bold">{{ titulo(m.prod) }}</span></td>
-                  <td class="r">{{ m.lineas }}</td><td class="r bold">{{ m.und === 'servicio' ? 'servicio' : `${num(m.cant)} t` }}</td>
+                  <td class="r">{{ m.lineas }}</td><td class="r bold">{{ m.und === 'servicio' ? 'servicio' : `${num(m.cant)} ${U}` }}</td>
                   <td class="r bold">{{ cop(m.venta) }}</td><td class="r">{{ pct(m.venta / M.venta * 100) }}</td>
                   <td class="r">{{ promTxt(m) }}</td><td class="r" :class="{ red: disperso(m) }">{{ rangoTxt(m) }}</td>
                 </tr>
@@ -196,18 +200,20 @@
         </div>
 
         <div class="report-section-block">
-          <h3 class="report-block-title"><span class="title-bar"></span>Toneladas por producto — {{ esMes ? `${MES_LBL} (1 al ${cd})` : RANGO_LBL }}</h3>
+          <h3 class="report-block-title"><span class="title-bar"></span>{{ T.Cant }} por producto — {{ esMes ? `${MES_LBL} (1 al ${cd})` : RANGO_LBL }}</h3>
           <p class="section-note">{{ NOTA_TON }}</p>
           <div class="data-card"><div class="table-wrap">
             <table>
-              <thead><tr><th>Material</th><th>Registrado en</th><th class="r">Cantidad registrada</th><th class="r">Factor</th><th class="r">t vendidas</th><th class="r">t traslados</th><th class="r">t despachadas</th></tr></thead>
+              <thead><tr><th>Material</th><th>Registrado en</th><th class="r">Cantidad registrada</th><th v-if="CONV" class="r">Factor</th><th class="r">{{ CONV ? 't vendidas' : 'Vendido' }}</th><th class="r">{{ CONV ? 't traslados' : 'Traslados' }}</th><th v-if="CONV" class="r">m³ despachados</th><th class="r">{{ CONV ? 't despachadas' : 'Despachado' }}</th></tr></thead>
               <tbody>
                 <tr v-for="r in tonPer.filas" :key="r.clave">
                   <td><span class="kpi-dot tdot" :style="{ background: COL[r.fam] }"></span><span class="bold">{{ titulo(r.prod) }}</span></td><td>{{ r.u }}</td>
-                  <td class="r">{{ r.reg ? `${num(r.reg)} ${r.u}` : '—' }}</td><td class="r">{{ r.u === 'm³' ? `× ${num(r.factor, 2)}` : '—' }}</td>
-                  <td class="r">{{ r.vend ? num(r.vend) : '—' }}</td><td class="r">{{ r.tr ? num(r.tr) : '—' }}</td><td class="r bold">{{ num(r.vend + r.tr) }}</td>
+                  <td class="r">{{ r.reg ? `${num(r.reg)} ${r.u}` : '—' }}</td><td v-if="CONV" class="r">{{ r.u === 'm³' ? `× ${num(r.factor, 2)}` : '—' }}</td>
+                  <td class="r">{{ r.vend ? qU(r.vend, r.u) : '—' }}</td><td class="r">{{ r.tr ? qU(r.tr, r.u) : '—' }}</td><td v-if="CONV" class="r">{{ num(r.m3) }}</td><td class="r bold">{{ qU(r.vend + r.tr, r.u) }}</td>
                 </tr>
-                <tr class="table-total-row"><td class="bold" colspan="4">TOTAL {{ esMes ? MES_LBL.toUpperCase() : 'DEL PERÍODO' }}</td><td class="r bold">{{ num(tonPer.tv) }}</td><td class="r bold">{{ num(tonPer.tt) }}</td><td class="r bold">{{ num(tonPer.tv + tonPer.tt) }}</td></tr>
+                <tr v-if="CONV" class="table-total-row"><td class="bold" colspan="4">TOTAL {{ esMes ? MES_LBL.toUpperCase() : 'DEL PERÍODO' }}</td><td class="r bold">{{ num(tonPer.tv) }}</td><td class="r bold">{{ num(tonPer.tt) }}</td><td class="r bold">{{ num(tonPer.m3) }}</td><td class="r bold">{{ num(tonPer.tv + tonPer.tt) }}</td></tr>
+                <!-- Acacías: un total por unidad (m³ y, si hay, t), nunca sumados entre sí -->
+                <template v-else><tr v-for="x in tonPer.totU" :key="x.u" class="table-total-row"><td class="bold" colspan="3">TOTAL {{ esMes ? MES_LBL.toUpperCase() : 'DEL PERÍODO' }}{{ tonPer.totU.length > 1 ? ` EN ${x.u}` : '' }}</td><td class="r bold">{{ qU(x.tv, x.u) }}</td><td class="r bold">{{ qU(x.tt, x.u) }}</td><td class="r bold">{{ qU(x.tv + x.tt, x.u) }}</td></tr></template>
               </tbody>
             </table>
           </div></div>
@@ -218,7 +224,7 @@
             <h3 class="report-block-title"><span class="title-bar"></span>Rango de precios por material — {{ MES_LBL }}</h3>
             <div class="data-card"><div class="table-wrap">
               <table>
-                <thead><tr><th>Material (precio por t)</th><th class="r">Mínimo</th><th class="r">Promedio</th><th class="r">Máximo</th><th class="r">Máx ÷ mín</th></tr></thead>
+                <thead><tr><th>Material (precio {{ T.porU }})</th><th class="r">Mínimo</th><th class="r">Promedio</th><th class="r">Máximo</th><th class="r">Máx ÷ mín</th></tr></thead>
                 <tbody>
                   <tr v-for="r in rangoPrecios" :key="r.prod + r.k">
                     <td class="bold accent-text">{{ titulo(r.prod) }}</td><td class="r">{{ cop(r.min) }}</td><td class="r bold">{{ cop(r.prom) }}</td><td class="r">{{ cop(r.max) }}</td>
@@ -236,7 +242,7 @@
                 <tbody>
                   <tr v-for="(m, i) in materiales.slice(0, 8)" :key="m.prod">
                     <td class="idx">{{ i + 1 }}</td><td class="bold accent-text">{{ titulo(m.prod) }}</td>
-                    <td class="r bold">{{ m.und === 'servicio' ? 'servicio' : `${num(m.cant)} t` }}</td><td class="r">{{ pct(m.venta / M.venta * 100) }}</td>
+                    <td class="r bold">{{ m.und === 'servicio' ? 'servicio' : `${num(m.cant)} ${U}` }}</td><td class="r">{{ pct(m.venta / M.venta * 100) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -247,7 +253,7 @@
           <h3 class="report-block-title"><span class="title-bar"></span>Clientes — {{ MES_LBL }} (top {{ TOP }})</h3>
           <div class="data-card"><div class="table-wrap">
             <table>
-              <thead><tr><th class="idx">#</th><th>Cliente</th><th class="r">Remisiones</th><th class="r">Toneladas</th><th class="r">Venta</th><th class="r">Part.</th></tr></thead>
+              <thead><tr><th class="idx">#</th><th>Cliente</th><th class="r">Remisiones</th><th class="r">{{ T.Cant }}</th><th class="r">Venta</th><th class="r">Part.</th></tr></thead>
               <tbody>
                 <tr v-for="(c, i) in clientes.slice(0, TOP)" :key="c.clave">
                   <td class="idx">{{ i + 1 }}</td>
@@ -273,10 +279,10 @@
         <!-- ── Traslados de inventario (subtipo 003): a dónde fue (bodega de destino), qué material y el cruce de ambos ── -->
         <div class="report-section-block">
           <h3 class="report-block-title"><span class="title-bar"></span>Traslados de inventario por bodega de destino — {{ MES_LBL }}</h3>
-          <p class="section-note">Subtipo 003 de Novasoft: sin valor ni cliente. No suman a la venta, pero sí a las toneladas despachadas del día y {{ esMes ? 'del mes' : 'del período' }}. La bodega de destino es la planta de Concretos que recibe el material (cada una con su color).</p>
+          <p class="section-note">Subtipo 003 de Novasoft: sin valor ni cliente. No suman a la venta, pero sí a {{ T.art }} {{ T.cant }} {{ T.g('despachadas') }} del día y {{ esMes ? 'del mes' : 'del período' }}. La bodega de destino es la planta de Concretos que recibe el material (cada una con su color).</p>
           <div v-if="tras.length" class="data-card"><div class="table-wrap">
             <table>
-              <thead><tr><th>Bodega de destino</th><th class="r">Documentos</th><th class="r">Toneladas</th><th class="r">Part.</th><th class="r">Último</th></tr></thead>
+              <thead><tr><th>Bodega de destino</th><th class="r">Documentos</th><th class="r">{{ T.Cant }}</th><th class="r">Part.</th><th class="r">Último</th></tr></thead>
               <tbody>
                 <tr v-for="b in porBodega(tras)" :key="b.codigo"><td class="bold"><span class="dot-bodega" :style="{ background: b.color }"></span>{{ b.nombre }}</td><td class="r">{{ b.docs }}</td><td class="r bold">{{ num(b.t) }}</td><td class="r">{{ pct(b.part) }}</td><td class="r">{{ flbl(b.ultimo) }}</td></tr>
                 <tr class="table-total-row"><td>TOTAL TRASLADOS</td><td class="r">{{ docsDe(tras) }}</td><td class="r">{{ num(tDe(tras)) }}</td><td class="r">100%</td><td></td></tr>
@@ -291,7 +297,7 @@
             <h3 class="report-block-title"><span class="title-bar"></span>Traslados de inventario por material — {{ MES_LBL }}</h3>
             <div class="data-card"><div class="table-wrap">
               <table>
-                <thead><tr><th>Material</th><th>Familia</th><th class="r">Documentos</th><th class="r">Toneladas</th><th class="r">Part.</th><th class="r">Último</th></tr></thead>
+                <thead><tr><th>Material</th><th>Familia</th><th class="r">Documentos</th><th class="r">{{ T.Cant }}</th><th class="r">Part.</th><th class="r">Último</th></tr></thead>
                 <tbody>
                   <tr v-for="r in porProducto(tras)" :key="r.prod"><td class="bold accent-text">{{ titulo(r.prod) }}</td><td>{{ r.fam }}</td><td class="r">{{ r.docs }}</td><td class="r bold">{{ num(r.t) }}</td><td class="r">{{ tDe(tras) ? pct(r.t / tDe(tras) * 100) : '—' }}</td><td class="r">{{ flbl(r.ult) }}</td></tr>
                   <tr class="table-total-row"><td colspan="2">TOTAL TRASLADOS</td><td class="r">{{ docsDe(tras) }}</td><td class="r">{{ num(tDe(tras)) }}</td><td class="r">100%</td><td></td></tr>
@@ -301,7 +307,7 @@
           </div>
 
           <div v-if="porBodega(tras).length > 1" class="report-section-block">
-            <h3 class="report-block-title"><span class="title-bar"></span>Material trasladado a cada bodega (t) — {{ MES_LBL }}</h3>
+            <h3 class="report-block-title"><span class="title-bar"></span>Material trasladado a cada bodega ({{ U }}) — {{ MES_LBL }}</h3>
             <div class="data-card"><div class="table-wrap">
               <table>
                 <thead><tr><th>Material</th><th v-for="b in porBodega(tras)" :key="b.codigo" class="r"><span class="dot-bodega" :style="{ background: b.color }"></span>{{ b.nombre }}</th><th class="r">Total</th></tr></thead>
@@ -323,7 +329,7 @@
           <p class="section-note">El total de documentos cuenta cada donación una vez aunque tenga varios materiales.</p>
           <div v-if="don.length" class="data-card"><div class="table-wrap">
             <table>
-              <thead><tr><th>Material</th><th>Familia</th><th class="r">Documentos</th><th class="r">Toneladas</th><th class="r">Part.</th><th class="r">Valor</th></tr></thead>
+              <thead><tr><th>Material</th><th>Familia</th><th class="r">Documentos</th><th class="r">{{ T.Cant }}</th><th class="r">Part.</th><th class="r">Valor</th></tr></thead>
               <tbody>
                 <tr v-for="r in porProducto(don)" :key="r.prod"><td class="bold accent-text">{{ titulo(r.prod) }}</td><td>{{ r.fam }}</td><td class="r">{{ r.docs }}</td><td class="r bold">{{ num(r.t) }}</td><td class="r">{{ tDe(don) ? pct(r.t / tDe(don) * 100) : '—' }}</td><td class="r">{{ cop(r.valor) }}</td></tr>
                 <tr class="table-total-row"><td colspan="2">TOTAL DONACIONES</td><td class="r">{{ docsDe(don) }}</td><td class="r">{{ num(tDe(don)) }}</td><td class="r">100%</td><td class="r">{{ cop(sumTotal(don)) }}</td></tr>
@@ -337,7 +343,7 @@
           <h3 class="report-block-title"><span class="title-bar"></span>Donaciones por beneficiario — {{ MES_LBL }}</h3>
           <div v-if="don.length" class="data-card"><div class="table-wrap">
             <table>
-              <thead><tr><th>#</th><th>Beneficiario</th><th>Material</th><th class="r">Documentos</th><th class="r">Toneladas</th><th class="r">Valor</th></tr></thead>
+              <thead><tr><th>#</th><th>Beneficiario</th><th>Material</th><th class="r">Documentos</th><th class="r">{{ T.Cant }}</th><th class="r">Valor</th></tr></thead>
               <tbody>
                 <tr v-for="(b, i) in beneficiarios" :key="b.nombre"><td class="idx">{{ i + 1 }}</td><td class="bold">{{ titulo(b.nombre) }}</td><td>{{ b.mat }}</td><td class="r">{{ b.docs }}</td><td class="r bold">{{ num(b.t) }}</td><td class="r">{{ cop(b.valor) }}</td></tr>
                 <tr class="table-total-row"><td colspan="3">TOTAL DONACIONES</td><td class="r">{{ docsDe(don) }}</td><td class="r">{{ num(tDe(don)) }}</td><td class="r">{{ cop(sumTotal(don)) }}</td></tr>
@@ -403,7 +409,7 @@ import { BarChart, LineChart, PieChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent, TitleComponent, MarkPointComponent } from 'echarts/components'
 import KpiCard from '../../../components/dashboard/KpiCard.vue'
 import { useQueryDate } from '../../../composables/useQueryState'
-import { MESES, FAMILIAS, totalesFacturacion, porBodega } from '../../../composables/useFacturacion'
+import { MESES, FAMILIAS, totalesFacturacion, porBodega, unidadDespacho, textosUnidad, enTAparte } from '../../../composables/useFacturacion'
 import { descargarInformePdf } from '../../../utils/pdfInforme'
 import type { Familia, LineaFacturacion } from '../../../types/facturacion'
 import { useTemaInforme } from '../../../composables/useTemaInforme'
@@ -454,8 +460,16 @@ const COL: Record<Familia, string> = {
 const TOP = 15
 const PLANTA = computed(() => (props.plantaId === 'cuncia' ? 'Cuncia' : 'Acacías'))
 const GENERADO = computed(() => new Date().toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).replace(',', ''))
-const NOTA_TON = 'Lo registrado en m³ se pasa a toneladas con el factor de cada material; lo registrado en toneladas queda igual. Los traslados de inventario suman a las toneladas despachadas; los fletes no (son servicio).'
-const NOTA_DT = 'Donaciones y traslados de inventario no son venta: no suman a la venta. Los traslados sí suman a las toneladas despachadas (como la tabla de planta); las donaciones no.'
+// Unidad del despacho: Cuncía en toneladas (m³ × densidad); Acacías como viene en Novasoft (m³), sin densidades
+const T = computed(() => textosUnidad(unidadDespacho(props.plantaId)))
+const U = computed(() => T.value.u)
+const CONV = computed(() => U.value === 't')
+/** Cantidad con su unidad en Acacías (las filas pueden ser m³ o t); en Cuncía, el número solo (la columna dice «t») */
+const qU = (v: number, u: string) => (CONV.value ? num(v) : `${num(v)} ${u}`)
+const NOTA_TON = computed(() => CONV.value
+  ? 'Toneladas = m³ × densidad del material (DENSIDADES GENERALES); lo registrado en toneladas queda igual y sus m³ despachados salen de t ÷ densidad. Los traslados de inventario suman a las toneladas despachadas; los fletes no (son servicio).'
+  : 'En Acacías no se convierte con densidades: cada cantidad va con la unidad en que se registró en Novasoft (lo que viene sin unidad se toma en m³, como se vende). Lo registrado en toneladas, si lo hay, va en su propia fila y su propio total: nunca se suma a los m³. Los traslados de inventario suman a lo despachado; los fletes no (son servicio).')
+const NOTA_DT = computed(() => `Donaciones y traslados de inventario no son venta: no suman a la venta. Los traslados sí suman a ${T.value.art} ${T.value.cant} ${T.value.g('despachadas')} (como la tabla de planta); las donaciones no.`)
 
 // ── Rango: filtro de fechas de Facturación (URL); por defecto, mes en curso hasta el último dato ──
 const todas = computed(() => props.lineasSinFecha ?? props.lineas)
@@ -558,16 +572,21 @@ const mapFam = (fn: (f: Familia) => string) => Object.fromEntries(fams.value.map
 const famsT = computed(() => fams.value.filter(f => f !== 'Fletes' && mt.value[f] > 0))
 function famsDe(ls: LineaFacturacion[]) { return FAMILIAS.filter(f => ls.some(l => l.familia === f)) }
 
+/** Acacías: lo registrado en t va aparte en el detalle de la tarjeta (no se suma a los m³) */
+function tApartTxt(ls: LineaFacturacion[]) {
+  const q = enTAparte(ls, U.value).reduce((a, l) => a + l.cantidad, 0)
+  return q ? `<div class='kpi-detail-row'><span class='kpi-dot' style='background:#F59E0B'></span><span class='kpi-det-lbl'>Registrado en t (aparte)</span> <strong>${num(q)} t</strong></div>` : ''
+}
 function kpisDonTras(d: LineaFacturacion[], t: LineaFacturacion[], cuando: string) {
   const fd = famsDe(d), ft = famsDe(t)
-  const tFam = (ls: LineaFacturacion[], fs: Familia[]) => Object.fromEntries(fs.map(f => [f, num(tDe(ls.filter(l => l.familia === f)), 1) + ' t']))
+  const tFam = (ls: LineaFacturacion[], fs: Familia[]) => Object.fromEntries(fs.map(f => [f, num(tDe(ls.filter(l => l.familia === f)), 1) + ' ' + U.value]))
   return [
-    { label: `Donaciones ${cuando}`, value: num(tDe(d), 1) + ' t', accent: '#8B5CF6', icon: 'package', meta: `${docsDe(d)} documentos`, detail: fd.length ? detalle(tFam(d, fd), undefined, fd) : undefined },
+    { label: `Donaciones ${cuando}`, value: num(tDe(d), 1) + ' ' + U.value, accent: '#8B5CF6', icon: 'package', meta: `${docsDe(d)} documentos`, detail: fd.length ? detalle(tFam(d, fd), undefined, fd) : undefined },
     { label: `Valor Donado ${cuando}`, value: cop(sumTotal(d)), accent: '#8B5CF6', icon: 'dollar', meta: 'no suma a la venta' },
     { label: `Beneficiarios ${cuando}`, value: String(new Set(d.map(l => l.nit || l.cliente)).size), accent: '#10B981', icon: 'users', meta: 'sin repetir' },
     // Detalle por bodega de destino (planta de Concretos que recibe el material)
-    { label: `Traslados ${cuando}`, value: num(tDe(t), 1) + ' t', accent: '#64748B', icon: 'truck', meta: `${docsDe(t)} documentos`,
-      detail: t.length ? porBodega(t).map(b => `<div class='kpi-detail-row'><span class='kpi-dot' style='background:${b.color}'></span><span class='kpi-det-lbl'>${b.nombre}</span> <strong>${num(b.t, 1)} t</strong></div>`).join('') : (ft.length ? detalle(tFam(t, ft), undefined, ft) : undefined) },
+    { label: `Traslados ${cuando}`, value: num(tDe(t), 1) + ' ' + U.value, accent: '#64748B', icon: 'truck', meta: `${docsDe(t)} documentos`,
+      detail: t.length ? porBodega(t).map(b => `<div class='kpi-detail-row'><span class='kpi-dot' style='background:${b.color}'></span><span class='kpi-det-lbl'>${b.nombre}</span> <strong>${num(b.t, 1)} ${U.value}</strong></div>`).join('') : (ft.length ? detalle(tFam(t, ft), undefined, ft) : undefined) },
   ]
 }
 
@@ -580,9 +599,9 @@ const kpisDia = computed(() => {
   return [
     { label: 'Venta del Día', value: cop(h.venta), accent: '#2563EB', icon: 'dollar', meta: `${h.rem} remisiones`,
       detail: detalle(mapFam(f => cop(hvv[f])), mapFam(f => `(${pct(h.venta ? hvv[f] / h.venta * 100 : 0)})`)) },
-    { label: 'Toneladas del Día', value: num(h.t + trT) + ' t', accent: '#172954', icon: 'package',
-      meta: trT ? `vendidas ${num(h.t)} t · traslados ${num(trT)} t` : 'vendidas, sin traslados',
-      detail: detalle(mapFam(f => num(ht[f] + htr[f]) + ' t'), undefined, famsT.value) },
+    { label: `${T.value.Cant} del Día`, value: num(h.t + trT) + ' ' + U.value, accent: '#172954', icon: 'package',
+      meta: trT ? `${T.value.g('vendidas')} ${num(h.t)} ${U.value} · traslados ${num(trT)} ${U.value}` : `${T.value.g('vendidas')}, sin traslados`,
+      detail: detalle(mapFam(f => num(ht[f] + htr[f]) + ' ' + U.value), undefined, famsT.value) + tApartTxt([...hoyLs.value, ...trHoy]) },
     { label: 'Remisiones del Día', value: String(h.rem), accent: '#8B5CF6', icon: 'list', meta: `${h.clientes} clientes`, detail: detalle(mapFam(f => String(hr[f]))) },
     { label: 'Clientes del Día', value: String(h.clientes), accent: '#10B981', icon: 'users', meta: 'sin repetir', detail: detalle(mapFam(f => String(hc[f]?.size ?? 0))) },
     { label: ayer.value ? `Vs. ${flbl(ayer.value)}` : 'Vs. día anterior', value: varTxt(h.venta, A.value.venta), accent: colorVar(vsAyer.value), icon: 'clock',
@@ -597,7 +616,7 @@ const kpisDia = computed(() => {
 
 // Totales del período: toneladas y valor facturado, normales y sin flete Holcim, donaciones ni traslados
 const kpisTotales = computed(() => {
-  const x = totalesFacturacion(enRango.value)
+  const x = totalesFacturacion(enRango.value), u = U.value
   const fila = (color: string, lbl: string, valor: string) => `<div class='kpi-detail-row'><span class='kpi-dot' style='background:${color}'></span><span class='kpi-det-lbl'>${lbl}</span> <strong>${valor}</strong></div>`
   return [
     // Valor: todo lo facturado y sin flete Holcim ni donaciones (los traslados no tienen valor)
@@ -611,14 +630,14 @@ const kpisTotales = computed(() => {
       detail: fila('#172954', 'Total', cop(x.valorTotal)) + fila(COL.Fletes, 'Flete Holcim', x.fleteHolcim ? '− ' + cop(x.fleteHolcim) : 'no hay') +
         fila('#64748B', 'Traslados', '− $ 0') + fila('#8B5CF6', 'Donaciones', '− ' + cop(x.valorDonado)) },
     // Toneladas: todo lo que salió y solo lo vendido (el flete no tiene toneladas)
-    { label: 'Toneladas Totales', value: num(x.tTotal, 0) + ' t', accent: '#172954', icon: 'truck', meta: 'con traslados y donaciones',
-      detail: fila('#2563EB', 'Vendidas', num(x.tVendidas, 0) + ' t') +
-        (x.tFleteHolcim ? fila(COL.Fletes, 'Flete Holcim', num(x.tFleteHolcim, 0) + ' t <span class="kpi-det-pct">(en vendidas)</span>') : '') +
-        fila('#64748B', 'Traslados', num(x.tTraslados, 0) + ' t') + fila('#8B5CF6', 'Donadas', num(x.tDonadas, 1) + ' t') },
-    { label: 'Toneladas Netas', value: num(x.tNeta, 0) + ' t', accent: '#0F766E', icon: 'package', meta: 'sin flete, traslados ni donaciones',
-      detail: fila('#172954', 'Total', num(x.tTotal, 0) + ' t') +
-        (x.tFleteHolcim ? fila(COL.Fletes, 'Flete Holcim', '− ' + num(x.tFleteHolcim, 0) + ' t') : '') +
-        fila('#64748B', 'Traslados', '− ' + num(x.tTraslados, 0) + ' t') + fila('#8B5CF6', 'Donadas', '− ' + num(x.tDonadas, 1) + ' t') },
+    { label: `${T.value.Cant} ${T.value.g('Totales')}`, value: num(x.tTotal, 0) + ' ' + u, accent: '#172954', icon: 'truck', meta: 'con traslados y donaciones',
+      detail: fila('#2563EB', T.value.g('Vendidas'), num(x.tVendidas, 0) + ' ' + u) +
+        (x.tFleteHolcim ? fila(COL.Fletes, 'Flete Holcim', num(x.tFleteHolcim, 0) + ` ${u} <span class="kpi-det-pct">(en ${T.value.g('vendidas')})</span>`) : '') +
+        fila('#64748B', 'Traslados', num(x.tTraslados, 0) + ' ' + u) + fila('#8B5CF6', T.value.g('Donadas'), num(x.tDonadas, 1) + ' ' + u) + tApartTxt(enRango.value) },
+    { label: `${T.value.Cant} ${T.value.g('Netas')}`, value: num(x.tNeta, 0) + ' ' + u, accent: '#0F766E', icon: 'package', meta: 'sin flete, traslados ni donaciones',
+      detail: fila('#172954', 'Total', num(x.tTotal, 0) + ' ' + u) +
+        (x.tFleteHolcim ? fila(COL.Fletes, 'Flete Holcim', '− ' + num(x.tFleteHolcim, 0) + ' ' + u) : '') +
+        fila('#64748B', 'Traslados', '− ' + num(x.tTraslados, 0) + ' ' + u) + fila('#8B5CF6', T.value.g('Donadas'), '− ' + num(x.tDonadas, 1) + ' ' + u) },
   ]
 })
 
@@ -627,11 +646,11 @@ const kpisMes = computed(() => {
   const cierre = proyeccion.value
   return [
     { label: `Venta del ${Per.value}`, value: cop(m.venta), accent: '#2563EB', icon: 'dollar', meta: esMes.value ? `1 al ${cd.value}` : `${DIAS_OP.value} días`, detail: detalle(mapFam(f => cop(mv.value[f]))) },
-    { label: 'Toneladas Despachadas', value: num(m.t + m.tr, 0) + ' t', accent: '#172954', icon: 'package',
-      meta: m.tr ? `vendidas ${num(m.t, 0)} t · traslados ${num(m.tr, 0)} t` : 'vendidas, sin traslados',
-      detail: detalle(mapFam(f => num(mt.value[f] + porFam(tras.value, 't')[f], 0) + ' t'), undefined, famsT.value) },
+    { label: `${T.value.Cant} ${T.value.g('Despachadas')}`, value: num(m.t + m.tr, 0) + ' ' + U.value, accent: '#172954', icon: 'package',
+      meta: m.tr ? `${T.value.g('vendidas')} ${num(m.t, 0)} ${U.value} · traslados ${num(m.tr, 0)} ${U.value}` : `${T.value.g('vendidas')}, sin traslados`,
+      detail: detalle(mapFam(f => num(mt.value[f] + porFam(tras.value, 't')[f], 0) + ' ' + U.value), undefined, famsT.value) + tApartTxt([...ventas.value, ...tras.value]) },
     { label: 'Remisiones', value: num(m.rem, 0), accent: '#8B5CF6', icon: 'list', meta: `${num(m.lineas, 0)} líneas`, detail: detalle(mapFam(f => num(mr.value[f], 0))) },
-    { label: 'Precio Promedio por t', value: p ? cop(p) : '—', accent: '#172954', icon: 'target', meta: 'venta ÷ t', detail: detalle(mapFam(f => { const x = precioFam(f); return x ? cop(x) : '—' })) },
+    { label: `Precio Promedio por ${U.value}`, value: p ? cop(p) : '—', accent: '#172954', icon: 'target', meta: `venta ÷ ${U.value}`, detail: detalle(mapFam(f => { const x = precioFam(f); return x ? cop(x) : '—' })) },
     { label: 'Clientes Activos', value: String(m.clientes), accent: '#10B981', icon: 'users', meta: 'sin repetir', detail: detalle(mapFam(f => String(cliFam.value[f]?.size ?? 0))) },
     { label: 'Venta Promedio Diaria', value: cop(ritmo.value), accent: '#64748B', icon: 'activity', meta: `${DIAS_OP.value} días con venta`, detail: detalle(mapFam(f => cop(promFam.value[f]))) },
     cierre
@@ -656,19 +675,25 @@ const gruposMes = computed(() => {
 })
 
 // ── Toneladas por producto: una fila por producto y unidad registrada (como la tabla de planta) ──
+// Acacías (sin conversión): vendido, traslados y despachado van en la unidad de cada fila (m³ o t, tal como se registró)
+// y hay un total por unidad (totU): los m³ nunca se suman con las t
 function tablaToneladas(v: LineaFacturacion[], t: LineaFacturacion[]) {
-  const g = new Map<string, { clave: string; prod: string; u: string; reg: number; vend: number; tr: number; factor: number; fam: Familia }>()
+  const g = new Map<string, { clave: string; prod: string; u: string; reg: number; vend: number; tr: number; m3: number; factor: number; fam: Familia }>()
   for (const [l, esTr] of [...v.map(l => [l, false] as const), ...t.map(l => [l, true] as const)]) {
     if (!esT(l)) continue
-    const u = l.factor !== 1 ? 'm³' : 't'
+    const u = CONV.value ? (l.factor !== 1 ? 'm³' : 't') : l.unidad
+    const q = CONV.value ? l.toneladas : l.cantidad
     const clave = `${l.producto}|${u}`
-    const o = g.get(clave) ?? { clave, prod: l.producto, u, reg: 0, vend: 0, tr: 0, factor: l.factor, fam: l.familia }
-    if (esTr) o.tr += l.toneladas
-    else { o.reg += l.cantidad; o.vend += l.toneladas }
+    const o = g.get(clave) ?? { clave, prod: l.producto, u, reg: 0, vend: 0, tr: 0, m3: 0, factor: l.factor, fam: l.familia }
+    if (esTr) o.tr += q
+    else { o.reg += l.cantidad; o.vend += q }
+    // m³ despachados: lo registrado en m³ tal cual; lo registrado en t, pasado a m³ con la densidad del material (t ÷ densidad)
+    if (l.factorMaterial) o.m3 += l.toneladas / l.factorMaterial
     g.set(clave, o)
   }
   const filas = [...g.values()].sort((a, b) => Number(a.u !== 'm³') - Number(b.u !== 'm³') || (b.vend + b.tr) - (a.vend + a.tr))
-  return { filas, tv: filas.reduce((a, o) => a + o.vend, 0), tt: filas.reduce((a, o) => a + o.tr, 0) }
+  const totU = (['m³', 't'] as const).map(u => { const x = filas.filter(o => o.u === u); return { u, n: x.length, tv: x.reduce((a, o) => a + o.vend, 0), tt: x.reduce((a, o) => a + o.tr, 0) } }).filter(o => o.n)
+  return { filas, totU, tv: filas.reduce((a, o) => a + o.vend, 0), tt: filas.reduce((a, o) => a + o.tr, 0), m3: filas.reduce((a, o) => a + o.m3, 0) }
 }
 const tonHoy = computed(() => tablaToneladas(hoyLs.value, tras.value.filter(l => l.fecha === hoy.value)))
 const tonPer = computed(() => tablaToneladas(ventas.value, tras.value))
@@ -691,12 +716,13 @@ const totalCols = computed(() => colsDe(mv.value))
 const famsPorVenta = computed(() => [...fams.value].sort((a, b) => mv.value[b] - mv.value[a]))
 
 // ── Materiales (precio por t; los fletes van por servicio) ──
-interface Mat { prod: string; fam: Familia; und: 't' | 'servicio'; cant: number; venta: number; lineas: number; codigos: Set<string>; pu: Record<string, number[]>; vu: Record<string, number>; qu: Record<string, number> }
+interface Mat { prod: string; fam: Familia; /** 't' = material (cantidad en la unidad de reporte U) */ und: 't' | 'servicio'; cant: number; venta: number; lineas: number; codigos: Set<string>; pu: Record<string, number[]>; vu: Record<string, number>; qu: Record<string, number> }
 const matMap = computed(() => {
   const m = new Map<string, Mat>()
   for (const l of ventas.value) {
     const o = m.get(l.producto) ?? { prod: l.producto, fam: l.familia, und: esT(l) ? 't' : 'servicio', cant: 0, venta: 0, lineas: 0, codigos: new Set(), pu: {}, vu: {}, qu: {} }
-    const k = esT(l) ? 't' : 'servicio', q = esT(l) ? l.toneladas : l.cantidad
+    // Precio por unidad: /t en Cuncía; en Acacías por la unidad de la línea (/m³, o /t si se registró en t), sin convertir
+    const k = !esT(l) ? 'servicio' : CONV.value ? 't' : l.unidad, q = !esT(l) ? l.cantidad : CONV.value ? l.toneladas : l.cantidad
     o.cant += esT(l) ? l.toneladas : 0; o.venta += l.total; o.lineas++; o.codigos.add(l.item)
     ;(o.pu[k] ??= []).push(q ? l.total / q : 0); o.vu[k] = (o.vu[k] ?? 0) + l.total; o.qu[k] = (o.qu[k] ?? 0) + q
     m.set(l.producto, o)
@@ -762,12 +788,17 @@ const dq = computed(() => {
     texto: 'El mismo material se registra con códigos distintos (mayúsculas, espacios o unidad). En el informe se agruparon por la descripción. <b>Acción:</b> unificar el código en el sistema.',
     tabla: { cols: ['Material', 'Códigos usados', 'Líneas', 'Venta'], mono: 1, filas: varCod.map(o => ({ celdas: [titulo(o.prod), [...o.codigos].sort().join(', '), String(o.lineas), cop(o.venta)] })) } })
   const m4 = [...new Set(v.filter(l => /\bM4\b/.test(l.descripcion)).map(l => l.descripcion))].sort()
-  if (m4.length) out.push({ nivel: 'medio', titulo: 'Unidad «M4» en la descripción', texto: 'Se convierte a toneladas igual que M3. <b>Acción:</b> corregir la descripción en el sistema.',
-    tabla: { cols: ['Material', 'Líneas', 'Toneladas'], filas: m4.map(d => { const x = v.filter(l => l.descripcion === d); return { celdas: [titulo(d), String(x.length), num(tDe(x)) + ' t'] } }) } })
+  if (m4.length) out.push({ nivel: 'medio', titulo: 'Unidad «M4» en la descripción', texto: (CONV.value ? 'Se convierte a toneladas igual que M3.' : 'Se toma en m³, igual que M3.') + ' <b>Acción:</b> corregir la descripción en el sistema.',
+    tabla: { cols: ['Material', 'Líneas', T.value.Cant], filas: m4.map(d => { const x = v.filter(l => l.descripcion === d); return { celdas: [titulo(d), String(x.length), num(tDe(x)) + ' ' + U.value] } }) } })
   const sinU = [...new Set(v.filter(l => l.registrado === 'sin unidad').map(l => l.producto))].sort()
   if (sinU.length) out.push({ nivel: 'medio', titulo: `${sinU.length} ${sinU.length === 1 ? 'material' : 'materiales'} sin unidad en la descripción`,
-    texto: (nativoT.value ? 'Se toman como toneladas, sin conversión. ' : 'Se registran por volumen y se pasan a toneladas (× factor del material). ') + '<b>Acción:</b> agregar la unidad a la descripción en el sistema.',
-    tabla: { cols: ['Material', 'Líneas', 'Toneladas'], filas: sinU.map(p => { const x = v.filter(l => l.producto === p && l.registrado === 'sin unidad'); return { celdas: [titulo(p), String(x.length), num(tDe(x)) + ' t'] } }) } })
+    texto: (nativoT.value ? 'Se toman como toneladas, sin conversión. ' : CONV.value ? 'Se registran por volumen y se pasan a toneladas (× factor del material). ' : 'Se toman en m³ (la sucursal vende por volumen), sin conversión. ') + '<b>Acción:</b> agregar la unidad a la descripción en el sistema.',
+    tabla: { cols: ['Material', 'Líneas', 'Cantidad'], filas: sinU.map(p => { const x = v.filter(l => l.producto === p && l.registrado === 'sin unidad'); return { celdas: [titulo(p), String(x.length), num(x.reduce((a, l) => a + l.cantidad, 0)) + ' ' + (x[0]?.unidad || U.value)] } }) } })
+  // Acacías: líneas registradas en toneladas; no se convierten ni se suman a los m³
+  const enT = enTAparte([...v, ...tras.value, ...don.value], U.value)
+  if (enT.length) out.push({ nivel: 'medio', titulo: `${enT.length} ${enT.length === 1 ? 'línea registrada' : 'líneas registradas'} en toneladas`,
+    texto: 'Acacías reporta el despacho como viene, sin densidades: estas líneas quedan en toneladas, en su propia fila y total, y no se suman a los m³. <b>Acción:</b> confirmar la unidad en el sistema.',
+    tabla: { cols: ['Material', 'Líneas', 'Cantidad'], filas: [...new Set(enT.map(l => l.producto))].map(p => { const x = enT.filter(l => l.producto === p); return { celdas: [titulo(p), String(x.length), num(x.reduce((a, l) => a + l.cantidad, 0)) + ' t'] } }) } })
   const conv = v.filter(l => esT(l) && l.factor !== 1)
   if (conv.length) {
     const g = new Map<string, { n: number; reg: number; t: number; f: number }>()
@@ -784,7 +815,7 @@ const dq = computed(() => {
   if (fams.value.includes('Fletes')) {
     const fl = v.filter(l => !esT(l))
     out.push({ nivel: 'info', titulo: 'Fletes incluidos en la venta',
-      texto: `${cop(mv.value.Fletes)} (${pct(M.value.venta ? mv.value.Fletes / M.value.venta * 100 : 0)} de la venta) corresponden a fletes (${num(fl.reduce((a, l) => a + l.cantidad, 0))} t transportadas) y no a material; no suman en las toneladas vendidas.` })
+      texto: `${cop(mv.value.Fletes)} (${pct(M.value.venta ? mv.value.Fletes / M.value.venta * 100 : 0)} de la venta) corresponden a fletes (${num(fl.reduce((a, l) => a + l.cantidad, 0))} t transportadas) y no a material; no suman en ${T.value.art} ${T.value.cant} ${T.value.g('vendidas')}.` })
   }
   return out
 })
@@ -795,7 +826,8 @@ const analisis = computed(() => {
   const famLider = [...fams.value].sort((a, b) => mv.value[b] - mv.value[a])[0]
   const matLider = materiales.value[0]
   const top5 = clientes.value.slice(0, 5), conc5 = m.venta ? top5.reduce((a, x) => a + x.venta, 0) / m.venta * 100 : 0
-  const vol = m.tr ? `${num(m.t, 0)} t de material vendido y ${num(m.t + m.tr, 0)} t despachadas contando ${num(m.tr, 0)} t de traslados` : `${num(m.t, 0)} t de material despachado`
+  const u = U.value
+  const vol = m.tr ? `${num(m.t, 0)} ${u} de material vendido y ${num(m.t + m.tr, 0)} ${u} ${T.value.g('despachadas')} contando ${num(m.tr, 0)} ${u} de traslados` : `${num(m.t, 0)} ${u} de material despachado`
   return `Al corte del <strong>${CORTE_LBL.value}</strong> la planta <strong>${PLANTA.value}</strong> lleva una venta de <strong>${cop(m.venta)}</strong> ` +
     `en <strong>${num(m.rem, 0)} remisiones</strong> a ${m.clientes} clientes, con ${vol}. ` +
     `El día ${flbl(hoy.value)} se vendieron <strong>${cop(h.venta)}</strong> en ${h.rem} remisiones, ` +
@@ -824,7 +856,7 @@ const conclusiones = computed(() => {
     ] },
     { titulo: 'Materiales', items: [
       famsPorVenta.value.map(f => `${f} ${pct(m.venta ? mv.value[f] / m.venta * 100 : 0)}`).join(' · ') + ' de la venta.',
-      ...(matLider ? [`${titulo(matLider.prod)} es el material con más venta: ${cop(matLider.venta)} (${matLider.und === 'servicio' ? 'servicio' : num(matLider.cant) + ' t'}).`] : []),
+      ...(matLider ? [`${titulo(matLider.prod)} es el material con más venta: ${cop(matLider.venta)} (${matLider.und === 'servicio' ? 'servicio' : num(matLider.cant) + ' ' + U.value}).`] : []),
       ...(dispersos ? [`${dispersos} ${dispersos === 1 ? 'material tiene' : 'materiales tienen'} precios con diferencias de 2 veces o más entre la venta más barata y la más cara.`] : []),
     ] },
     { titulo: 'Clientes', items: [

@@ -8,6 +8,12 @@
  * - Toneladas despachadas: vendidas + traslados de inventario.
  * - Precio promedio por t: venta de material (sin fletes) ÷ toneladas vendidas.
  * - Remisión: documento (NUMERO DOC) distinto.
+ *
+ * Unidad (unidadDespacho): el campo `toneladas` es la cantidad de reporte de la planta.
+ * - Cuncía: toneladas (lo registrado en m³ se pasó a t con la densidad del material).
+ * - Acacías: m³ tal como vienen de Novasoft, sin densidades. Lo registrado en t no entra en `toneladas`
+ *   (queda en `cantidad` con unidad 't') y se muestra aparte (enTAparte): nunca se suma a los m³.
+ * Los cálculos son los mismos; cambian las etiquetas (textosUnidad).
  */
 import { COLOR_PLANTA } from './useGraficasConcreto'
 import type { Familia, LineaFacturacion } from '../types/facturacion'
@@ -20,6 +26,30 @@ export const COLOR_FAMILIA: Record<Familia, string> = {
 export const COLOR_TIPO = { venta: '#3B82F6', traslado: '#94A3B8', donacion: '#10B981' } as const
 export const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
 const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']
+
+export type UnidadDespacho = 't' | 'm³'
+/** Unidad de reporte del despacho: Cuncía en toneladas (convierte con densidad); Acacías en m³, como viene */
+export const unidadDespacho = (planta: string): UnidadDespacho => (planta === 'acacias' ? 'm³' : 't')
+/** Textos de la cantidad según la unidad, con concordancia («toneladas vendidas» / «m³ vendidos») */
+export function textosUnidad(u: UnidadDespacho) {
+  const t = u === 't'
+  return {
+    u,
+    /** «Toneladas» / «m³» (al inicio de un título) */
+    Cant: t ? 'Toneladas' : 'm³',
+    /** «toneladas» / «m³» */
+    cant: t ? 'toneladas' : 'm³',
+    /** Concordancia: g('vendidas') → «vendidas» (t) o «vendidos» (m³) */
+    g: (s: string) => (t ? s : s.replace(/as$/, 'os').replace(/As$/, 'Os')),
+    /** «las» / «los» */
+    art: t ? 'las' : 'los',
+    /** «por tonelada» / «por m³» */
+    porU: t ? 'por tonelada' : 'por m³',
+  }
+}
+/** Planta sin conversión (m³): líneas de material registradas en t, que van aparte y no se suman a los m³ */
+export const enTAparte = (ls: LineaFacturacion[], u: UnidadDespacho) =>
+  (u === 'm³' ? ls.filter(l => l.unidad === 't' && l.familia !== 'Fletes') : [])
 
 export const esVenta = (l: LineaFacturacion) => l.tipo === 'venta'
 export const esMaterial = (l: LineaFacturacion) => l.familia !== 'Fletes'
@@ -123,20 +153,28 @@ export function porMaterial(ls: LineaFacturacion[]): FilaMaterial[] {
 
 export interface FilaToneladas {
   producto: string; registrado: string; cantidad: number; factor: string
+  /** Unidad de las cantidades de la fila: la de reporte de la planta, o 't' en una fila aparte de una planta en m³ */
+  unidad: UnidadDespacho
   tVendidas: number; tTraslados: number; tDonadas: number; tDespachadas: number
 }
-/** Toneladas por producto: cómo se registró, el factor aplicado y el total despachado (venta + traslados) */
-export function toneladasPorProducto(ls: LineaFacturacion[]): FilaToneladas[] {
+/**
+ * Cantidad despachada por producto: cómo se registró, el factor aplicado y el total despachado (venta + traslados).
+ * Planta en m³ (sin conversión): lo registrado en t de un producto va en su propia fila (unidad 't'), con su cantidad tal cual.
+ */
+export function toneladasPorProducto(ls: LineaFacturacion[], u: UnidadDespacho = 't'): FilaToneladas[] {
   const g = new Map<string, LineaFacturacion[]>()
-  for (const l of ls.filter(esMaterial)) g.set(l.producto, [...(g.get(l.producto) ?? []), l])
-  return [...g.entries()].map(([producto, x]) => {
+  const aparte = new Set(enTAparte(ls, u))
+  for (const l of ls.filter(esMaterial)) { const k = `${l.producto}|${aparte.has(l) ? 't' : u}`; g.set(k, [...(g.get(k) ?? []), l]) }
+  return [...g.entries()].map(([k, x]) => {
+    const producto = x[0].producto, unidad = k.split('|')[1] as UnidadDespacho
+    const q = (l: LineaFacturacion) => (aparte.has(l) ? l.cantidad : l.toneladas)
     const unidades = [...new Set(x.map(l => l.registrado))]
     const factores = [...new Set(x.filter(l => l.factor !== 1).map(l => l.factor))]
-    const tV = suma(x.filter(esVenta), l => l.toneladas), tT = suma(x.filter(l => l.tipo === 'traslado'), l => l.toneladas)
+    const tV = suma(x.filter(esVenta), q), tT = suma(x.filter(l => l.tipo === 'traslado'), q)
     return {
-      producto, registrado: unidades.join(' y '), cantidad: suma(x, l => l.cantidad),
+      producto, unidad, registrado: unidades.join(' y '), cantidad: suma(x, l => l.cantidad),
       factor: factores.length ? factores.map(f => `× ${f.toLocaleString('es-CO')}`).join(', ') : '—',
-      tVendidas: tV, tTraslados: tT, tDonadas: suma(x.filter(l => l.tipo === 'donacion'), l => l.toneladas), tDespachadas: tV + tT,
+      tVendidas: tV, tTraslados: tT, tDonadas: suma(x.filter(l => l.tipo === 'donacion'), q), tDespachadas: tV + tT,
     }
   }).sort((a, b) => b.tDespachadas - a.tDespachadas)
 }
@@ -244,8 +282,12 @@ export function cierreEstimado(dias: FilaDia[], corte: string): { valor: number;
 
 export interface AvisoCalidad { nivel: 'alto' | 'medio' | 'bajo'; titulo: string; texto: string }
 /** Hallazgos de calidad del dato (factores por defecto, precios dispersos, ventas sin valor o sin cliente) */
-export function calidad(ls: LineaFacturacion[], fmtT: (n: number) => string, fmtCop: (n: number) => string): AvisoCalidad[] {
+export function calidad(ls: LineaFacturacion[], fmtT: (n: number) => string, fmtCop: (n: number) => string, u: UnidadDespacho = 't'): AvisoCalidad[] {
   const out: AvisoCalidad[] = []
+  // Planta en m³ (sin conversión): lo registrado en t se muestra aparte, no se suma a los m³
+  const enT = enTAparte(ls, u)
+  if (enT.length) out.push({ nivel: 'medio', titulo: `${enT.length} ${enT.length === 1 ? 'línea registrada' : 'líneas registradas'} en toneladas`,
+    texto: `${[...new Set(enT.map(l => nombreMaterial(l.producto)))].join(', ')}: ${fmtT(suma(enT, l => l.cantidad))} t. Aquí no se convierte con densidad: se muestran aparte y no se suman a los m³.` })
   const sinFactor = ls.filter(l => !l.factorPropio)
   if (sinFactor.length) {
     const prods = [...new Set(sinFactor.map(l => nombreMaterial(l.producto)))]
@@ -254,7 +296,7 @@ export function calidad(ls: LineaFacturacion[], fmtT: (n: number) => string, fmt
   }
   for (const m of porMaterial(ls)) {
     if (m.minT && m.maxT && m.maxT / m.minT >= 1.5) out.push({ nivel: 'bajo', titulo: `Precio disperso en ${nombreMaterial(m.producto)}`,
-      texto: `El precio por tonelada va de ${fmtCop(m.minT)} a ${fmtCop(m.maxT)} (${(m.maxT / m.minT).toLocaleString('es-CO', { maximumFractionDigits: 1 })} veces). Revisar listas de precio o unidades registradas.` })
+      texto: `El precio ${textosUnidad(u).porU} va de ${fmtCop(m.minT)} a ${fmtCop(m.maxT)} (${(m.maxT / m.minT).toLocaleString('es-CO', { maximumFractionDigits: 1 })} veces). Revisar listas de precio o unidades registradas.` })
   }
   const sinValor = ls.filter(l => esVenta(l) && l.total <= 0)
   if (sinValor.length) out.push({ nivel: 'alto', titulo: `${sinValor.length} líneas de venta sin valor`,

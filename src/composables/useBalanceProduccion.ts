@@ -4,6 +4,8 @@
  *
  * Unidad común: m³. Cada línea facturada se pasa a m³ equivalentes con el factor de su material
  * (m³ = toneladas ÷ factor t/m³), así no se inventa un factor promedio para la producción.
+ * En Acacías (sin conversión) lo despachado ya viene en m³: factorMaterial = 1 y se cruza tal cual; lo que
+ * registre en t trae factorMaterial = 0 y queda fuera del cruce (no se inventa una densidad).
  * La producción no dice qué material salió de cada línea: el cruce es por fecha (día/semana/mes), no por material.
  *
  * Solo se cruzan días cerrados en las dos fuentes: desde que la facturación está completa (ver
