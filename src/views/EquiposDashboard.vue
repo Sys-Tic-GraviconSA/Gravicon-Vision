@@ -189,6 +189,7 @@
 
     <div class="charts-grid cols-1" style="margin-top:22px">
       <ChartCard v-if="isConcretos || isCuncia" title="Costo Total por Tipo de Vehículo" :description="`Costo mensual de mantenimiento por tipo de vehículo del área (Planta / Maquinaria); el tooltip muestra su costo por m³ ${isConcretos ? '(sin maquila)' : 'producido'}`" :option="tipoVehiculoLineaOpt" :height="420" tall clickable @chart-click="(p:any)=>onRankingClick('Tipo Vehículo', { name: p?.seriesName })" />
+      <ChartCard v-if="isConcretos || isCuncia" title="Tipos de Vehículo — Esfuerzo vs. Costo por Orden" description="Cada punto es un tipo de vehículo (tamaño = nº de órdenes). Eje horizontal: horas promedio por orden; eje vertical: costo promedio por orden (servicios + insumos). Las líneas punteadas son el promedio de los tipos" :option="tiposDispersionOpt" :height="600" tall alto-completo clickable @chart-click="(p:any)=>onRankingClick('Tipo Vehículo', p)" />
       <ChartCard v-if="isConcretos" title="Ranking Top 10 — Costos de Mantenimiento por Tipo de Vehículo" description="Top 10 tipos de vehículo con mayor costo acumulado" :option="tipoVehiculoGenOpt" :expand-option="tipoVehiculoGenExpandOpt" :height="500" tall clickable @chart-click="(p:any)=>onRankingClick('Tipo Vehículo', p)" />
       <ChartCard title="Ranking Top 10 — Costos de Mantenimiento por Placa" description="Top 10 placas con mayor costo acumulado" :option="vehiculoGenOpt" :expand-option="vehiculoGenExpandOpt" :height="500" tall clickable @chart-click="onPlacaClick" />
       <ChartCard v-if="isConcretos || isCuncia" title="Comportamiento Mensual — Top 4 Placas con Mayor Costo" description="Las 4 placas de mayor costo de mantenimiento en cada mes (al ampliar, top 10)" :option="placaLineaOpt" :expand-option="placaLineaExpandOpt" :height="420" tall clickable @chart-click="(p:any)=>onPlacaClick({ name: p?.seriesName })" />
@@ -362,6 +363,9 @@
     </div>
     <div class="charts-grid cols-1" style="margin-top:22px">
       <ChartCard title="Ranking Top 10 — Costos Externos por Proveedor" description="Top 10 proveedores externos con mayor costo" :option="extProveedorOpt" :expand-option="extProveedorExpandOpt" :height="500" tall clickable @chart-click="(p:any)=>onRankingClick('PROVEEDOR', p, 'ext')" />
+    </div>
+    <div class="charts-grid cols-1" style="margin-top:22px">
+      <ChartCard title="Proveedores Externos — Esfuerzo vs. Costo por Orden" description="Cada punto es un proveedor externo (tamaño = nº de órdenes). Eje horizontal: horas promedio por orden; eje vertical: costo promedio por orden (servicios + insumos). Las líneas punteadas son el promedio de los proveedores" :option="proveedoresDispersionOpt" :height="600" tall alto-completo clickable @chart-click="(p:any)=>onRankingClick('PROVEEDOR', p, 'ext')" />
     </div>
 
       <div class="charts-grid cols-2" style="margin-bottom:22px">
@@ -1224,6 +1228,7 @@
 
       <div class="charts-grid cols-1" style="margin-top:22px">
         <ChartCard v-if="isConcretos || isCuncia" title="Costo Total por Tipo de Vehículo" :description="`Costo mensual de mantenimiento por tipo de vehículo del área (Planta / Maquinaria); el tooltip muestra su costo por m³ ${isConcretos ? '(sin maquila)' : 'producido'}`" :option="tipoVehiculoLineaOpt" :height="420" tall clickable @chart-click="(p:any)=>onRankingClick('Tipo Vehículo', { name: p?.seriesName })" />
+        <ChartCard v-if="isConcretos || isCuncia" title="Tipos de Vehículo — Esfuerzo vs. Costo por Orden" description="Cada punto es un tipo de vehículo (tamaño = nº de órdenes). Eje horizontal: horas promedio por orden; eje vertical: costo promedio por orden (servicios + insumos). Las líneas punteadas son el promedio de los tipos" :option="tiposDispersionOpt" :height="600" tall alto-completo clickable @chart-click="(p:any)=>onRankingClick('Tipo Vehículo', p)" />
         <ChartCard v-if="isConcretos" title="Ranking Top 10 — Costos de Mantenimiento por Tipo de Vehículo" description="Top 10 tipos de vehículo con mayor costo acumulado" :option="tipoVehiculoGenOpt" :expand-option="tipoVehiculoGenExpandOpt" :height="500" tall clickable @chart-click="(p:any)=>onRankingClick('Tipo Vehículo', p)" />
         <ChartCard title="Ranking Top 10 — Costos de Mantenimiento por Placa" description="Top 10 placas con mayor costo acumulado" :option="vehiculoGenOpt" :expand-option="vehiculoGenExpandOpt" :height="500" tall clickable @chart-click="onPlacaClick" />
         <ChartCard v-if="isConcretos || isCuncia" title="Comportamiento Mensual — Top 4 Placas con Mayor Costo" description="Las 4 placas de mayor costo de mantenimiento en cada mes (al ampliar, top 10)" :option="placaLineaOpt" :expand-option="placaLineaExpandOpt" :height="420" tall clickable @chart-click="(p:any)=>onPlacaClick({ name: p?.seriesName })" />
@@ -1381,6 +1386,9 @@
       </div>
       <div class="charts-grid cols-1" style="margin-top:22px">
         <ChartCard title="Ranking Top 10 — Costos Externos por Proveedor" description="Top 10 proveedores externos con mayor costo" :option="extProveedorOpt" :expand-option="extProveedorExpandOpt" :height="500" tall clickable @chart-click="(p:any)=>onRankingClick('PROVEEDOR', p, 'ext')" />
+      </div>
+      <div class="charts-grid cols-1" style="margin-top:22px">
+        <ChartCard title="Proveedores Externos — Esfuerzo vs. Costo por Orden" description="Cada punto es un proveedor externo (tamaño = nº de órdenes). Eje horizontal: horas promedio por orden; eje vertical: costo promedio por orden (servicios + insumos). Las líneas punteadas son el promedio de los proveedores" :option="proveedoresDispersionOpt" :height="600" tall alto-completo clickable @chart-click="(p:any)=>onRankingClick('PROVEEDOR', p, 'ext')" />
       </div>
 
       <div class="charts-grid cols-2" style="margin-bottom:22px">
@@ -6307,7 +6315,9 @@ const motivosNoEjecucionIntOpt = computed(() => markRaw(buildCountPieOpt(motivos
  * Las líneas punteadas (promedio del equipo) parten la gráfica en cuadrantes: abajo a la izquierda,
  * menos horas y menos costo por trabajo (más eficiente); arriba a la derecha, más horas y más costo.
  */
-function buildPersonalDispersionOpt(items: { label: string; n: number; horas: number; costo: number }[], equipo = items) {
+interface TextosDispersion { entidad: string; trabajos: string; costo: string; promedio: string }
+const TEXTOS_PERSONAL: TextosDispersion = { entidad: 'Trabajador', trabajos: 'Participaciones', costo: 'Costo', promedio: 'equipo' }
+function buildPersonalDispersionOpt(items: { label: string; n: number; horas: number; costo: number }[], equipo = items, textos: TextosDispersion = TEXTOS_PERSONAL) {
   const isLight = theme.value === 'light'
   // Por colaborador: participaciones, horas y costo totales, y sus promedios por trabajo (los dos ejes)
   const pts = items.filter(e => e.n > 0).map(e => ({ label: e.label, n: e.n, ht: e.horas, ct: e.costo, h: e.horas / e.n, c: e.costo / e.n }))
@@ -6355,12 +6365,12 @@ function buildPersonalDispersionOpt(items: { label: string; n: number; horas: nu
         const gris = (t: string) => ` <span style="color:#94a3b8">(${t})</span>`
         return `<b>${d.label}</b><br/><span style="color:${q.color}">●</span> ${q.txt}` +
           `<table style="margin-top:4px;font-size:12px">` +
-          fila('Trabajador', d.label) +
-          fila('Participaciones', d.n.toLocaleString('es-CO')) +
+          fila(textos.entidad, d.label) +
+          fila(textos.trabajos, d.n.toLocaleString('es-CO')) +
           fila('Horas totales', horasTxt(d.ht)) +
-          fila('Costo total', money(d.ct)) +
-          fila('Horas por trabajo', horasTxt(d.h), gris(`equipo ${horasTxt(avgH)}`)) +
-          fila('Costo por trabajo', money(d.c), gris(`equipo ${money(avgC)}`)) +
+          fila(`${textos.costo} total`, money(d.ct)) +
+          fila('Horas por trabajo', horasTxt(d.h), gris(`${textos.promedio} ${horasTxt(avgH)}`)) +
+          fila(`${textos.costo} por trabajo`, money(d.c), gris(`${textos.promedio} ${money(avgC)}`)) +
           `</table>`
       },
     },
@@ -6422,6 +6432,32 @@ const filasAmbasAreasSinColab = computed(() => {
   const enRango = otPlantaAmbasAreas.value.filter(r => { const c = otCloseSerial(r); return c !== 0 && c >= since && c < until })
   return applyOtMultiFilters(enRango, false).filter(isInterno)
 })
+/**
+ * Misma dispersión «Esfuerzo vs. Costo por Trabajo» agrupando las OT por otra cosa (proveedor, tipo de vehículo):
+ * horas = duración estimada de cada OT; costo = servicios + insumos de la OT; n = número de OT.
+ */
+function rankingDispersion(rows: Record<string, unknown>[], claveDe: (r: Record<string, unknown>) => string) {
+  const m = new Map<string, { label: string; n: number; horas: number; costo: number }>()
+  for (const r of rows) {
+    const label = claveDe(r)
+    if (!label) continue
+    const e = m.get(label) ?? { label, n: 0, horas: 0, costo: 0 }
+    e.n++
+    e.horas += Number(r['Duración (horas)']) || 0
+    e.costo += (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0)
+    m.set(label, e)
+  }
+  return [...m.values()].sort((a, b) => b.n - a.n)
+}
+const TEXTOS_PROVEEDOR: TextosDispersion = { entidad: 'Proveedor', trabajos: 'Órdenes', costo: 'Costo', promedio: 'prom.' }
+const TEXTOS_TIPO: TextosDispersion = { entidad: 'Tipo de vehículo', trabajos: 'Órdenes', costo: 'Costo', promedio: 'prom.' }
+/** Proveedores externos: una burbuja por proveedor (mismo nombre del ranking «Costos Externos por Proveedor») */
+const proveedoresDispersionOpt = computed(() => buildPersonalDispersionOpt(rankingDispersion(extRows.value, r => toTitleCase(String(r['PROVEEDOR'] ?? '').trim())), undefined, TEXTOS_PROVEEDOR))
+/** Tipos de vehículo del área (en Maquinaria sin los tipos «PLANTA», como «Costo Total por Tipo de Vehículo») */
+const tiposDispersionOpt = computed(() => buildPersonalDispersionOpt(rankingDispersion(dataFilteredNoAcpm.value, r => {
+  const t = tipoVehiculoCorto(r)
+  return tipoTab.value === 'maquinaria' && t.includes('PLANTA') ? '' : t
+}), undefined, TEXTOS_TIPO))
 const personalDispersionGerOpt = computed(() => { const todos = computePersonalRanking(filasAmbasAreasSinColab.value); return buildPersonalDispersionOpt(soloElegidos(todos), todos) })
 const solicitantesIntOpt = computed(() => markRaw(buildCountBarColorOpt(solicitantesIntRanking.value, 'Órdenes')))
 const responsablesCierreIntOpt = computed(() => markRaw(buildCountPieOpt(responsablesCierreIntRanking.value, false)))
