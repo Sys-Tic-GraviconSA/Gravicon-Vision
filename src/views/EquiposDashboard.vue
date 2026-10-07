@@ -186,10 +186,10 @@
     </div>
 
     <div class="charts-grid cols-1" style="margin-top:22px">
-      <ChartCard v-if="isConcretos" title="Costo Total por Tipo de Vehículo" description="Costo mensual de mantenimiento por tipo de vehículo del área (Planta / Maquinaria); el tooltip muestra su costo por m³ (sin maquila)" :option="tipoVehiculoLineaOpt" :height="420" tall clickable @chart-click="(p:any)=>onRankingClick('Tipo Vehículo', { name: p?.seriesName })" />
+      <ChartCard v-if="isConcretos || isCuncia" title="Costo Total por Tipo de Vehículo" :description="`Costo mensual de mantenimiento por tipo de vehículo del área (Planta / Maquinaria); el tooltip muestra su costo por m³ ${isConcretos ? '(sin maquila)' : 'producido'}`" :option="tipoVehiculoLineaOpt" :height="420" tall clickable @chart-click="(p:any)=>onRankingClick('Tipo Vehículo', { name: p?.seriesName })" />
       <ChartCard v-if="isConcretos" title="Ranking Top 10 — Costos de Mantenimiento por Tipo de Vehículo" description="Top 10 tipos de vehículo con mayor costo acumulado" :option="tipoVehiculoGenOpt" :expand-option="tipoVehiculoGenExpandOpt" :height="500" tall clickable @chart-click="(p:any)=>onRankingClick('Tipo Vehículo', p)" />
       <ChartCard title="Ranking Top 10 — Costos de Mantenimiento por Placa" description="Top 10 placas con mayor costo acumulado" :option="vehiculoGenOpt" :expand-option="vehiculoGenExpandOpt" :height="500" tall clickable @chart-click="onPlacaClick" />
-      <ChartCard v-if="isConcretos" title="Comportamiento Mensual — Top 4 Placas con Mayor Costo" description="Las 4 placas de mayor costo de mantenimiento en cada mes (al ampliar, top 10)" :option="placaLineaOpt" :expand-option="placaLineaExpandOpt" :height="420" tall clickable @chart-click="(p:any)=>onPlacaClick({ name: p?.seriesName })" />
+      <ChartCard v-if="isConcretos || isCuncia" title="Comportamiento Mensual — Top 4 Placas con Mayor Costo" description="Las 4 placas de mayor costo de mantenimiento en cada mes (al ampliar, top 10)" :option="placaLineaOpt" :expand-option="placaLineaExpandOpt" :height="420" tall clickable @chart-click="(p:any)=>onPlacaClick({ name: p?.seriesName })" />
     </div>
 
       <div class="charts-grid cols-2" style="margin-bottom:22px">
@@ -373,7 +373,7 @@
       <ChartCard title="Órdenes Diarias" description="Abiertas y cerradas con sus costos (Externas)" :option="ordenesDiariasExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fecha', p, 'ext')" />
     </div>
 
-    <div v-if="isConcretos && tipoTab === 'maquinaria'" class="charts-grid cols-1" style="margin-bottom:22px">
+    <div v-if="(isConcretos || isCuncia) && tipoTab === 'maquinaria'" class="charts-grid cols-1" style="margin-bottom:22px">
       <DesempenoFlota :filas="flotaMensual" :visibles="4" :placas="flotaPlacasFiltro" />
     </div>
 
@@ -1194,10 +1194,10 @@
       </div>
 
       <div class="charts-grid cols-1" style="margin-top:22px">
-        <ChartCard v-if="isConcretos" title="Costo Total por Tipo de Vehículo" description="Costo mensual de mantenimiento por tipo de vehículo del área (Planta / Maquinaria); el tooltip muestra su costo por m³ (sin maquila)" :option="tipoVehiculoLineaOpt" :height="420" tall clickable @chart-click="(p:any)=>onRankingClick('Tipo Vehículo', { name: p?.seriesName })" />
+        <ChartCard v-if="isConcretos || isCuncia" title="Costo Total por Tipo de Vehículo" :description="`Costo mensual de mantenimiento por tipo de vehículo del área (Planta / Maquinaria); el tooltip muestra su costo por m³ ${isConcretos ? '(sin maquila)' : 'producido'}`" :option="tipoVehiculoLineaOpt" :height="420" tall clickable @chart-click="(p:any)=>onRankingClick('Tipo Vehículo', { name: p?.seriesName })" />
         <ChartCard v-if="isConcretos" title="Ranking Top 10 — Costos de Mantenimiento por Tipo de Vehículo" description="Top 10 tipos de vehículo con mayor costo acumulado" :option="tipoVehiculoGenOpt" :expand-option="tipoVehiculoGenExpandOpt" :height="500" tall clickable @chart-click="(p:any)=>onRankingClick('Tipo Vehículo', p)" />
         <ChartCard title="Ranking Top 10 — Costos de Mantenimiento por Placa" description="Top 10 placas con mayor costo acumulado" :option="vehiculoGenOpt" :expand-option="vehiculoGenExpandOpt" :height="500" tall clickable @chart-click="onPlacaClick" />
-        <ChartCard v-if="isConcretos" title="Comportamiento Mensual — Top 4 Placas con Mayor Costo" description="Las 4 placas de mayor costo de mantenimiento en cada mes (al ampliar, top 10)" :option="placaLineaOpt" :expand-option="placaLineaExpandOpt" :height="420" tall clickable @chart-click="(p:any)=>onPlacaClick({ name: p?.seriesName })" />
+        <ChartCard v-if="isConcretos || isCuncia" title="Comportamiento Mensual — Top 4 Placas con Mayor Costo" description="Las 4 placas de mayor costo de mantenimiento en cada mes (al ampliar, top 10)" :option="placaLineaOpt" :expand-option="placaLineaExpandOpt" :height="420" tall clickable @chart-click="(p:any)=>onPlacaClick({ name: p?.seriesName })" />
       </div>
 
       <div class="charts-grid cols-2" style="margin-bottom:22px">
@@ -1357,7 +1357,7 @@
       <div class="charts-grid cols-1" style="margin-bottom:22px">
         <ChartCard title="Órdenes Diarias" description="Abiertas y cerradas con sus costos (Externas)" :option="ordenesDiariasExtOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fecha', p, 'ext')" />
       </div>
-        <div v-if="isConcretos && tipoTab === 'maquinaria'" class="charts-grid cols-1" style="margin-bottom:22px">
+        <div v-if="(isConcretos || isCuncia) && tipoTab === 'maquinaria'" class="charts-grid cols-1" style="margin-bottom:22px">
         <DesempenoFlota :filas="flotaMensual" :visibles="4" :placas="flotaPlacasFiltro" />
       </div>
     </template>
@@ -1838,6 +1838,7 @@ const plantaLabel = computed(() => {
   return 'Cuncia'
 })
 const isAcacias = computed(() => props.planta?.toLowerCase() === 'acacias')
+const isCuncia = computed(() => props.planta?.toLowerCase() === 'cuncia')
 const isConcretos = computed(() => props.planta?.toLowerCase() === 'concretos')
 
 /** Meta de costo de mantenimiento por m³ — por planta: Concretos $22.000, Agregados (Cuncía/Acacías) $3.000. */
@@ -4035,11 +4036,12 @@ const prodFiltered = computed(() => {
 const filteredData = computed(() => {
   const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
   const until = fechaFin.value ? dateToSerial(fechaFin.value) + 1 : Infinity
-  if (since === -Infinity && until === Infinity) return allData.value
   return allData.value.filter(r => {
     const c = otCloseSerial(r)
-    // Con filtro de fechas activo se acota estrictamente por FECHA DE CIERRE: las OT
-    // abiertas (sin cierre) no pertenecen a ningún período y quedan fuera.
+    // Costos y cerradas van SIEMPRE por FECHA DE CIERRE, también con «Todas» las fechas: las OT sin
+    // cierre no pertenecen a ningún período y quedan fuera. Así el Costo Total General cuadra con las
+    // gráficas mensuales (antes, sin filtro, sumaba también las OT sin cierre). Las abiertas se cuentan
+    // aparte, por fecha de registro.
     if (c === 0) return false
     return c >= since && c < until
   })
@@ -5555,7 +5557,8 @@ const dispPorPlaca = computed(() => {
 })
 
 /**
- * Desempeño mensual por placa (solo Concretos), para el mapa de calor de la flota. Une cuatro fuentes
+ * Desempeño mensual por placa (Concretos y Cuncía), para el mapa de calor de la flota. En Cuncía no hay
+ * producción por vehículo ni hoja de combustible: quedan disponibilidad, taller y mantenimiento. Une cuatro fuentes
  * dentro del rango filtrado, por mes:
  * - Producción (remisiones): viajes y m³, con la misma regla de `m3PorPlaca` (mixer = concreto; autobomba = bombeo).
  * - Disponibilidad: promedio del score diario y días con «¿Vehículo en taller?».
@@ -5563,7 +5566,7 @@ const dispPorPlaca = computed(() => {
  * - Combustible: valor, galones y horómetro válido de los tanqueos.
  * Lo que no tiene registro queda en null («sin dato»); nunca se rellena con 0.
  */
-/** El informe de OT suma la página de la flota solo en Concretos · Maquinaria y si hay datos */
+/** El informe de OT suma la página de la flota en Concretos y Cuncía · Maquinaria, si hay datos */
 /**
  * Mapa de calor de la flota: si arriba se filtró por placa o tipo de vehículo, muestra exactamente las placas
  * que quedan en las OT filtradas; sin esos filtros, null (el mapa toma el Top 4 de mayor costo total).
@@ -5574,10 +5577,10 @@ const flotaPlacasFiltro = computed<string[] | null>(() => {
   if (!porPlaca && !porTipo) return null
   return [...new Set(dataFilteredNoAcpm.value.map(r => normPlaca(r['Placa del Vehículo'])).filter(Boolean))]
 })
-const repConFlota = computed(() => isConcretos.value && tipoTab.value === 'maquinaria' && flotaMensual.value.length > 0)
+const repConFlota = computed(() => (isConcretos.value || isCuncia.value) && tipoTab.value === 'maquinaria' && flotaMensual.value.length > 0)
 const repPaginas = computed(() => (repConFlota.value ? 4 : 3))
 const flotaMensual = computed<FilaFlota[]>(() => {
-  if (!isConcretos.value) return []
+  if (!isConcretos.value && !isCuncia.value) return []
   const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
   const until = fechaFin.value ? dateToSerial(fechaFin.value) + 1 : Infinity
   const enRango = (v: number) => v >= since && v < until
@@ -5597,8 +5600,9 @@ const flotaMensual = computed<FilaFlota[]>(() => {
   }
   const tipo = (placa: string, t: unknown) => { const s = String(t ?? '').trim(); if (s && !tipos.has(placa)) tipos.set(placa, s.toUpperCase()) }
 
-  // Producción: un viaje por remisión del mixer; en autobombas, una por bombeo
-  for (const r of prodFiltered.value as unknown as Record<string, unknown>[]) {
+  // Producción: un viaje por remisión del mixer; en autobombas, una por bombeo. Solo Concretos:
+  // en Cuncía la producción es por línea de planta, no por vehículo
+  for (const r of (isConcretos.value ? prodFiltered.value : []) as unknown as Record<string, unknown>[]) {
     const f = Number(r['Fecha'])
     if (!f) continue
     const mes = mesDe(f)
@@ -5608,7 +5612,8 @@ const flotaMensual = computed<FilaFlota[]>(() => {
       e.viajes++; e.m3 += Number(r['Cant. Concreto']) || Number(r['concreto_cantidad']) || 0; e.prod = true
       productoras.add(mixer); tipo(mixer, 'MIXER')
     }
-    if (esServicioBombeo(r['Servicio'] ?? r['servicio_nombre']) && !esBombaArgos(r['Bomba'])) {
+    // Bombas externas (Argos) o alquiladas («ALPHA ALQUILADO») no son placas propias: no entran al mapa
+    if (esServicioBombeo(r['Servicio'] ?? r['servicio_nombre']) && !esBombaArgos(r['Bomba']) && !/ALQUILAD/i.test(String(r['Bomba'] ?? ''))) {
       const bomba = normPlaca(extraerPlacaEquipo(String(r['Bomba'] ?? '')))
       if (bomba) {
         const e = get(bomba, mes)
@@ -5619,7 +5624,7 @@ const flotaMensual = computed<FilaFlota[]>(() => {
   }
 
   // Disponibilidad (mismo score que la pestaña Disponibilidad) y días en taller
-  const placasDisp = disp.data?.planta === 'concretos' ? (disp.data?.placas ?? []) : []
+  const placasDisp = disp.data?.planta === (isConcretos.value ? 'concretos' : 'cuncia') ? (disp.data?.placas ?? []) : []
   for (const r of placasDisp as Record<string, unknown>[]) {
     const f = Number(r['Fecha'])
     if (!f || !enRango(f)) continue
@@ -5648,7 +5653,7 @@ const flotaMensual = computed<FilaFlota[]>(() => {
   }
 
   // Combustible (solo vales con fecha); horómetro con el mismo filtro de la pestaña Combustible
-  for (const r of (disp.data?.combustible ?? []) as Record<string, unknown>[]) {
+  for (const r of (isConcretos.value ? disp.data?.combustible ?? [] : []) as Record<string, unknown>[]) {
     const f = Number(r['Fecha'])
     if (!f || !enRango(f)) continue
     const placa = normPlaca(r['Placa'])
@@ -5662,9 +5667,13 @@ const flotaMensual = computed<FilaFlota[]>(() => {
   }
 
   const div = (a: number | null, b: number | null) => (a != null && b ? a / b : null)
+  // Cuncía: solo la flota que se inspecciona; en las OT hay «placas» que no son vehículos
+  // (OTROS, MAQUINARIA ALQUILADA, medidas de malla…)
+  const flotaInspeccionada = new Set((placasDisp as Record<string, unknown>[]).map(r => normPlaca(r['Placa_Texto'] ?? r['Placa'] ?? r['Placa del Vehículo'])).filter(Boolean))
   const out: FilaFlota[] = []
   for (const [k, e] of acc) {
     const [placa, mes] = k.split('|')
+    if (isCuncia.value && !flotaInspeccionada.has(placa)) continue
     const productora = productoras.has(placa)
     const m3 = productora ? e.m3 : null
     const comb = e.combN ? e.comb : null
@@ -5757,7 +5766,7 @@ function buildCostoMensualLineasOpt(keyOf: (r: Record<string, unknown>) => strin
           return `<span style="color:${p.color}">●</span> ${p.seriesName}: <b>${money(v)}</b>` + (conM3 && e.m3 > 0 ? ` <span style="color:#94a3b8">· ${m3Txt(v / e.m3)}</span>` : '')
         })
         return `<b>${e.label}</b><br/>` + lines.join('<br/>') +
-          (conM3 ? `<br/><span style="color:#94a3b8;font-size:10px">Producción propia del mes: ${Math.round(e.m3).toLocaleString('es-CO')} m³ (sin maquila)</span>` : '')
+          (conM3 ? `<br/><span style="color:#94a3b8;font-size:10px">${isConcretos.value ? 'Producción propia del mes' : 'Producción del mes'}: ${Math.round(e.m3).toLocaleString('es-CO')} m³${isConcretos.value ? ' (sin maquila)' : ''}</span>` : '')
       },
     },
     legend: {
@@ -5802,6 +5811,8 @@ function buildTopPlacasMesOpt(n: number) {
     const pl = String(r['Placa del Vehículo'] ?? '').trim()
     const d = parseRowDate(otCloseSerial(r))
     if (!pl || !d) continue
+    // Cuncía: «Maquinaria Alquilada» no es una placa (agrupa el alquiler); no compite con los vehículos
+    if (isCuncia.value && /ALQUILAD/i.test(pl)) continue
     const c = (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0)
     const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
     let e = meses.get(key)
