@@ -511,6 +511,16 @@ export async function verifyPassword(email: string, password: string): Promise<b
 }
 
 /**
+ * Abre una sesión nueva con la contraseña recién puesta. Supabase cierra todas las sesiones del usuario
+ * al cambiarle la contraseña; con estos tokens el navegador sigue conectado en vez de volver al login.
+ */
+export async function nuevaSesion(email: string, password: string): Promise<{ access_token: string; refresh_token: string } | null> {
+  const { data, error } = await createAuthOnlyClient().auth.signInWithPassword({ email, password })
+  if (error || !data.session) return null
+  return { access_token: data.session.access_token, refresh_token: data.session.refresh_token }
+}
+
+/**
  * Sanitiza un string eliminando caracteres HTML peligrosos.
  * @param val - Valor a sanitizar.
  * @returns String limpio o vacío.

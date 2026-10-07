@@ -398,9 +398,12 @@ async function cambiarPassword() {
       body: JSON.stringify({ currentPassword: pwForm.current, newPassword: pwForm.next }),
     })
     if (!res.ok) { pwError.value = await apiError(res, 'No se pudo cambiar la contraseña.'); return }
+    const { session } = await res.json() as { session?: { access_token: string; refresh_token: string } | null }
     Object.assign(pwForm, { current: '', next: '', confirm: '' })
     pwMsg.value = 'Contraseña actualizada'
-    await authStore.loadProfile(true)
+    // Supabase cierra las sesiones al cambiar la contraseña: se sigue con la sesión nueva que abrió el servidor
+    if (session) await authStore.aplicarSesion(session)
+    else await authStore.loadProfile(true)
     if (authStore.isSuperAdmin && !usuarios.value.length) cargarUsuarios()
     setTimeout(() => (pwMsg.value = ''), 3000)
   } catch {
