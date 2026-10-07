@@ -1,5 +1,5 @@
 <template>
-  <div class="chart-card" :class="{ tall, loading: !hasData && !pendingOption }">
+  <div class="chart-card" :class="{ tall, 'alto-completo': altoCompleto, loading: !hasData && !pendingOption }">
     <div class="chart-header" v-if="title || description || (!hideActions && hasData)">
       <div class="chart-header-text">
         <h3 v-if="title" class="chart-title">{{ title }}</h3>
@@ -64,7 +64,7 @@
 import { ref, shallowRef, computed, watch, onBeforeUnmount } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { BarChart, LineChart, PieChart, RadarChart, GaugeChart } from 'echarts/charts'
+import { BarChart, LineChart, PieChart, RadarChart, GaugeChart, ScatterChart } from 'echarts/charts'
 import {
   GridComponent, TooltipComponent, TitleComponent,
   LegendComponent, DataZoomComponent, RadarComponent,
@@ -77,7 +77,7 @@ import { useTheme } from '../../composables/useTheme'
 
 // Registro manual de los componentes ECharts necesarios (tree-shaking)
 use([
-  CanvasRenderer, BarChart, LineChart, PieChart, RadarChart, GaugeChart,
+  CanvasRenderer, BarChart, LineChart, PieChart, RadarChart, GaugeChart, ScatterChart,
   GridComponent, TooltipComponent, TitleComponent, LegendComponent,
   DataZoomComponent, RadarComponent,
   MarkLineComponent, MarkAreaComponent, MarkPointComponent, GraphicComponent, LabelLayout,
@@ -90,6 +90,8 @@ const props = withDefaults(defineProps<{
   description?: string
   height?: number
   tall?: boolean
+  /** Sin tope de alto (65 % de la pantalla): la gráfica usa el alto completo de `height` */
+  altoCompleto?: boolean
   clickable?: boolean
   hideActions?: boolean
 }>(), { tall: false, clickable: false, hideActions: false })
@@ -291,6 +293,9 @@ onBeforeUnmount(() => {
 }
 .chart-card.tall .chart {
   max-height: 65vh;
+}
+.chart-card.alto-completo .chart {
+  max-height: none;
 }
 
 @media (max-width: 768px) {

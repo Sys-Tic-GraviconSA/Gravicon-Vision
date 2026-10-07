@@ -79,15 +79,20 @@ watch(() => [props.from, props.to], ([f, t]) => {
 })
 
 // Atajos de rango relativos a hoy
-type PresetId = 'mes' | 'mesAnt' | '30d' | 'todo'
+type PresetId = 'mes' | 'mesAnt' | 'mesAnt2' | 'mesAnt3' | '30d' | 'todo'
 const presets: { id: PresetId; label: string }[] = [
-  { id: 'mes', label: 'Este mes' }, { id: 'mesAnt', label: 'Mes anterior' }, { id: '30d', label: 'Últimos 30 días' }, { id: 'todo', label: 'Todo' },
+  { id: 'mes', label: 'Este mes' }, { id: 'mesAnt', label: 'Mes anterior' },
+  { id: 'mesAnt2', label: '2 meses anteriores' }, { id: 'mesAnt3', label: '3 meses anteriores' },
+  { id: '30d', label: 'Últimos 30 días' }, { id: 'todo', label: 'Todo' },
 ]
 const isoLocal = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 function rangoPreset(id: PresetId): [string | null, string | null] {
   const hoy = new Date()
   if (id === 'mes') return [isoLocal(new Date(hoy.getFullYear(), hoy.getMonth(), 1)), isoLocal(hoy)]
   if (id === 'mesAnt') return [isoLocal(new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)), isoLocal(new Date(hoy.getFullYear(), hoy.getMonth(), 0))]
+  // Meses completos anteriores al actual: en octubre, «2 meses» = agosto y septiembre; «3 meses» = julio a septiembre
+  if (id === 'mesAnt2') return [isoLocal(new Date(hoy.getFullYear(), hoy.getMonth() - 2, 1)), isoLocal(new Date(hoy.getFullYear(), hoy.getMonth(), 0))]
+  if (id === 'mesAnt3') return [isoLocal(new Date(hoy.getFullYear(), hoy.getMonth() - 3, 1)), isoLocal(new Date(hoy.getFullYear(), hoy.getMonth(), 0))]
   if (id === '30d') { const d = new Date(hoy); d.setDate(d.getDate() - 29); return [isoLocal(d), isoLocal(hoy)] }
   return [null, null]
 }

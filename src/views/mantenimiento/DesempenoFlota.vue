@@ -4,7 +4,7 @@
       <div class="flota-head-text">
         <h3 class="flota-titulo">Desempeño Mensual de la Flota — Top {{ placasSel.length }} {{ placasSel.length === 1 ? 'Vehículo' : 'Vehículos' }} con Mayor Costo</h3>
         <p class="flota-sub">
-          <template v-if="vista === 'calor'">Ordenados por costo total. Cada mes se compara con los demás meses del mismo vehículo; en costos y días en taller, más alto es peor.</template>
+          <template v-if="vista === 'calor'">Ordenados por costo total. Cada mes se compara con los demás meses del mismo vehículo; en costos, más alto es peor; en disponibilidad, producción y días operativos, más alto es mejor.</template>
           <template v-else>Una línea por vehículo, de mayor a menor costo total; los huecos son meses sin dato.</template>
         </p>
       </div>
@@ -28,7 +28,7 @@
         <thead>
           <tr>
             <th class="hm-fija hm-esq">Vehículo / variable</th>
-            <th v-for="m in meses" :key="m" class="hm-mes" :class="{ foco: hover?.mes === m }">{{ etiquetaMes(m) }}</th>
+            <th v-for="m in meses" :key="m" class="hm-mes">{{ etiquetaMes(m) }}</th>
           </tr>
         </thead>
         <TransitionGroup name="hm-mov">
@@ -53,11 +53,11 @@
               </th>
             </tr>
             <template v-if="!cerrados.has(p)">
-              <tr v-for="v in varsDe(p)" :key="v.key" :class="{ foco: hover?.placa === p && hover?.var === v.key }">
+              <tr v-for="v in varsSel" :key="v.key">
                 <th class="hm-fija hm-var">{{ v.label }}</th>
                 <td
                   v-for="c in celdas(p, v)" :key="c.mes"
-                  class="hm-celda" :class="{ nulo: c.valor == null, plano: c.valor != null && c.malo == null, colfoco: hover?.mes === c.mes }"
+                  class="hm-celda" :class="{ nulo: c.valor == null, plano: c.valor != null && c.malo == null }"
                   :style="c.estilo"
                   tabindex="0"
                   @mouseenter="mostrarTip($event, p, v, c)" @focus="mostrarTip($event, p, v, c)" @click="mostrarTip($event, p, v, c)"
@@ -124,6 +124,7 @@ const VARIABLES: Variable[] = [
   { key: 'totalM3', label: 'Costo total/m³', fmt: cop, mejor: 'bajo' },
   { key: 'mantM3', label: 'Mantenimiento/m³', fmt: cop, mejor: 'bajo' },
   { key: 'combM3', label: 'Combustible/m³', fmt: cop, mejor: 'bajo' },
+  { key: 'operativos', label: 'Días operativos', fmt: v => fmtN(v, 1) + (v === 1 ? ' día' : ' días'), mejor: 'alto' },
   { key: 'taller', label: 'Días en taller', fmt: v => fmtN(v, 0) + (v === 1 ? ' día' : ' días'), mejor: 'bajo' },
   { key: 'viajes', label: 'Viajes', fmt: v => fmtN(v, 0), mejor: 'alto' },
   { key: 'mant', label: 'Costo mantenimiento', fmt: cop, mejor: 'bajo' },
@@ -133,7 +134,7 @@ const VARIABLES: Variable[] = [
   { key: 'hrGal', label: 'Horas por galón', fmt: v => fmtN(v, 2) + ' h/gal', mejor: 'alto' },
   { key: 'galHr', label: 'Galones por hora', fmt: v => fmtN(v, 2) + ' gal/h', mejor: 'bajo' },
 ]
-const POR_DEFECTO: VariableFlota[] = ['m3', 'disp', 'total', 'totalM3', 'mantM3', 'combM3', 'taller', 'viajes']
+const POR_DEFECTO: VariableFlota[] = ['m3', 'disp', 'total', 'mant', 'comb', 'totalM3', 'mantM3', 'combM3', 'operativos', 'viajes']
 const etiquetaMes = (k: string) => `${MESES_CORTOS[Number(k.slice(5, 7)) - 1]} ${k.slice(2, 4)}`
 const etiquetaMesLarga = (k: string) => `${MESES_CORTOS[Number(k.slice(5, 7)) - 1]} ${k.slice(0, 4)}`
 
@@ -181,12 +182,12 @@ function promedio(p: string, k: VariableFlota): number | null {
 }
 
 // ---------------------------------------------------------------- Resumen del período por vehículo
-interface Resumen { total: number | null; m3: number | null; costoM3: number | null; disp: number | null; taller: number | null }
+interface Resumen { total: number | null; m3: number | null; costoM3: number | null; disp: number | null; operativos: number | null }
 const resumen = computed(() => {
   const acc = new Map<string, Resumen>()
   for (const p of indiceDatos.value.keys()) {
     const total = suma(p, 'total'), m3 = suma(p, 'm3')
-    acc.set(p, { total, m3, costoM3: total != null && m3 ? total / m3 : null, disp: promedio(p, 'disp'), taller: suma(p, 'taller') })
+    acc.set(p, { total, m3, costoM3: total != null && m3 ? total / m3 : null, disp: promedio(p, 'disp'), operativos: suma(p, 'operativos') })
   }
   return acc
 })
@@ -202,17 +203,13 @@ const placasSel = computed(() => (props.placas
   ? placasOrden.value.filter(p => props.placas!.includes(p))
   : placasOrden.value.filter(p => (resumen.value.get(p)?.total ?? 0) > 0).slice(0, props.visibles ?? 4)))
 
-const varsSel = computed(() => VARIABLES.filter(v => POR_DEFECTO.includes(v.key)))
+const varsSel = computed(() => POR_DEFECTO.map(k => VARIABLES.find(v => v.key === k)!))
 const varLinea = ref<VariableFlota>('totalM3')
 const vista = ref<'calor' | 'lineas'>('calor')
 
 const cerrados = reactive(new Set<string>())
 function alternar(p: string) { if (cerrados.has(p)) cerrados.delete(p); else cerrados.add(p) }
 
-/** Variables con al menos un dato en el período para ese vehículo: las filas vacías no se muestran */
-function varsDe(p: string) {
-  return varsSel.value.filter(v => meses.value.some(m => val(p, m, v.key) != null))
-}
 function resumenItems(p: string) {
   const r = resumen.value.get(p)
   if (!r) return []
@@ -220,7 +217,7 @@ function resumenItems(p: string) {
   if (r.costoM3 != null) out.push({ label: 'Costo/m³', valor: cop(r.costoM3) })
   if (r.m3) out.push({ label: 'Producción', valor: fmtN(r.m3, 0) + ' m³' })
   if (r.disp != null) out.push({ label: 'Disp. prom.', valor: fmtN(r.disp, 1) + ' %' })
-  if (r.taller) out.push({ label: 'Taller', valor: fmtN(r.taller, 0) + (r.taller === 1 ? ' día' : ' días') })
+  if (r.operativos != null) out.push({ label: 'Operativo', valor: fmtN(r.operativos, 1) + (r.operativos === 1 ? ' día' : ' días') })
   return out
 }
 
@@ -240,12 +237,10 @@ function celdas(p: string, v: Variable): Celda[] {
   })
 }
 
-const hover = ref<{ placa: string; var: VariableFlota; mes: string } | null>(null)
 interface Tip { x: number; y: number; abajo: boolean; placa: string; mes: string; variable: string; valor: string; lineas: { txt: string; clase?: string }[] }
 const tip = ref<Tip | null>(null)
-function salir() { tip.value = null; hover.value = null }
+function salir() { tip.value = null }
 function mostrarTip(ev: Event, p: string, v: Variable, c: Celda) {
-  hover.value = { placa: p, var: v.key, mes: c.mes }
   const el = ev.currentTarget as HTMLElement
   const caja = el.closest('.hm-scroll') as HTMLElement
   const r = el.getBoundingClientRect(), rc = caja.getBoundingClientRect()
@@ -321,7 +316,7 @@ const hallazgos = computed(() => {
   if (!ps.length || !meses.value.length) return out
   const r0 = resumen.value.get(ps[0])
   if (r0?.total) {
-    out.push(`Más crítico (mayor costo total): <b>${ps[0]}</b> con ${cop(r0.total)}${r0.costoM3 != null ? ` · ${cop(r0.costoM3)}/m³` : ''}${r0.disp != null ? ` · disp. ${fmtN(r0.disp, 1)} %` : ''}${r0.taller ? ` · ${fmtN(r0.taller, 0)} días en taller` : ''}.`)
+    out.push(`Más crítico (mayor costo total): <b>${ps[0]}</b> con ${cop(r0.total)}${r0.costoM3 != null ? ` · ${cop(r0.costoM3)}/m³` : ''}${r0.disp != null ? ` · disp. ${fmtN(r0.disp, 1)} %` : ''}${r0.operativos != null ? ` · ${fmtN(r0.operativos, 1)} días operativos` : ''}.`)
   }
   // Mes con mayor costo total por m³ de los vehículos elegidos
   let peor: { m: string; r: number } | null = null
@@ -331,8 +326,9 @@ const hallazgos = computed(() => {
     if (m3 && (!peor || t / m3 > peor.r)) peor = { m, r: t / m3 }
   }
   if (peor) out.push(`Mes con mayor costo total por m³: <b>${etiquetaMesLarga(peor.m)}</b> (${cop(peor.r)}/m³ en los vehículos elegidos).`)
-  const taller = ps.map(p => ({ p, d: resumen.value.get(p)?.taller ?? 0 })).sort((a, b) => b.d - a.d)[0]
-  if (taller?.d) out.push(`Más días en taller: <b>${taller.p}</b> con ${fmtN(taller.d, 0)} ${taller.d === 1 ? 'día' : 'días'} en el período.`)
+  // Menos días operativos entre los vehículos visibles
+  const op = ps.map(p => ({ p, d: resumen.value.get(p)?.operativos })).filter((x): x is { p: string; d: number } => x.d != null).sort((a, b) => a.d - b.d)[0]
+  if (op) out.push(`Menos días operativos: <b>${op.p}</b> con ${fmtN(op.d, 1)} ${op.d === 1 ? 'día' : 'días'} en el período.`)
   const vars = vista.value === 'calor' ? varsSel.value : VARIABLES.filter(v => v.key === varLinea.value)
   const incompletos = ps.map(p => ({ p, n: vars.reduce((a, v) => a + meses.value.filter(m => val(p, m, v.key) == null).length, 0) }))
     .filter(x => x.n > 0).sort((a, b) => b.n - a.n)
@@ -356,7 +352,6 @@ const hallazgos = computed(() => {
   position: relative; backdrop-filter: blur(8px);
   transition: box-shadow var(--transition-base), border-color var(--transition-base);
 }
-.flota:not(.informe):hover { box-shadow: var(--shadow-glass); border-color: var(--card-border-hover); }
 .flota.oscuro { --hm-nulo: rgba(255, 255, 255, 0.04); --hm-plano: rgba(148, 163, 184, 0.22); }
 
 /* Encabezado como ChartCard */
@@ -383,9 +378,8 @@ const hallazgos = computed(() => {
 .hm-esq { font-size: 10.5px; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: .06em; }
 .hm-mes {
   padding: 4px 8px 8px; font-size: 10.5px; font-weight: 700; color: var(--text-tertiary); text-align: right;
-  text-transform: uppercase; letter-spacing: .06em; border-bottom: 2px solid transparent; transition: color .15s, border-color .15s;
+  text-transform: uppercase; letter-spacing: .06em;
 }
-.hm-mes.foco { color: var(--accent); border-bottom-color: var(--accent); }
 
 /* Encabezado de cada vehículo */
 .hm-grupo { cursor: default; }
@@ -408,24 +402,26 @@ tbody:first-of-type .hm-grupo > th, tbody:first-of-type .hm-grupo > td { border-
 }
 .hm-chip b { color: var(--text-primary); font-weight: 700; }
 
-.hm-var { padding-left: 34px; font-size: 12px; font-weight: 400; color: var(--text-secondary); transition: color .15s; }
-tr.foco .hm-var { color: var(--accent); font-weight: 700; }
+.hm-var { padding-left: 34px; font-size: 12px; font-weight: 400; color: var(--text-secondary); }
 
 /* Celdas: altas, valores completos, cifras alineadas */
 .hm-celda {
   height: 38px; padding: 6px 8px; border-radius: 7px; text-align: right; cursor: default;
   font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .01em;
-  transition: background-color .45s ease, color .45s ease, box-shadow .15s ease;
+  transition: background-color .6s ease, color .6s ease;
 }
-.hm-celda:hover, .hm-celda:focus-visible { box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 4px currentColor; position: relative; z-index: 1; outline: none; }
-.hm-celda.colfoco:not(:hover):not(.nulo) { box-shadow: inset 0 0 0 1.5px rgba(37, 99, 235, .45); }
+.hm-celda:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .hm-celda.nulo { background: transparent; box-shadow: inset 0 0 0 1px var(--card-border); color: var(--text-tertiary); font-weight: 400; text-align: center; opacity: .8; }
 .hm-celda.plano { background: var(--hm-plano); color: var(--text-primary); }
 
 /* Plegar / desplegar con animación */
-.hm-mov-move { transition: transform .45s ease; }
-.hm-mov-enter-active, .hm-mov-leave-active { transition: opacity .3s ease; }
+.hm-mov-move { transition: transform .6s cubic-bezier(.22, 1, .36, 1); }
+.hm-mov-enter-active, .hm-mov-leave-active { transition: opacity .5s ease; }
 .hm-mov-enter-from, .hm-mov-leave-to { opacity: 0; }
+/* Entrada suave de la grilla al cargar o al cambiar de vista */
+.hm-scroll { animation: hm-aparecer .6s cubic-bezier(.22, 1, .36, 1) both; }
+@keyframes hm-aparecer { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .hm-scroll { animation: none; } .hm-celda { transition: none; } }
 
 /* Indicador del dato */
 .hm-tip {
@@ -440,7 +436,7 @@ tr.foco .hm-var { color: var(--accent); font-weight: 700; }
 .hm-tip-val { font-size: 18px; font-weight: 900; margin: 0 0 4px; font-variant-numeric: tabular-nums; }
 .hm-tip-lin { color: var(--text-secondary); font-size: 11.5px; }
 .hm-tip-lin.ok { color: #10B981; font-weight: 700; } .hm-tip-lin.mal { color: #EF4444; font-weight: 700; }
-.hm-tip-enter-active, .hm-tip-leave-active { transition: opacity .12s ease; }
+.hm-tip-enter-active, .hm-tip-leave-active { transition: opacity .2s ease; }
 .hm-tip-enter-from, .hm-tip-leave-to { opacity: 0; }
 
 .flota-leyenda { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; font-size: 11.5px; color: var(--text-secondary); }
@@ -460,7 +456,6 @@ tr.foco .hm-var { color: var(--accent); font-weight: 700; }
 .informe .hm { font-size: 12px; border-spacing: 3px; }
 .informe .hm-var { padding-left: 24px; }
 .informe .hm-celda { height: 36px; padding: 5px 7px; font-size: 12px; }
-.informe .hm-celda:hover { box-shadow: none; }
 .informe .hm-flecha { display: none; }
 .informe .flota-leyenda, .informe .flota-hallazgos { font-size: 11.5px; }
 

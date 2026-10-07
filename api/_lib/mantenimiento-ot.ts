@@ -104,6 +104,19 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
     const precio = priceKey ? (Number(r[priceKey]) || 0) : 0
     personalInternoMap.set(id, { nombre, cargo, precio })
   }
+  // Técnicos de otras plantas: en las OT de Concretos trabaja personal de Cuncía (taller Cuncía) cuyo ID
+  // solo está en el maestro de Cuncía. Si el ID no está en el maestro propio, se busca en los de las otras plantas.
+  const otrosMaestros = ['maestro_concretos', 'maestro_cuncia', 'maestro_acacias'].filter(k => k !== maestroKey)
+  const otrosPersonal = await Promise.allSettled(otrosMaestros.map(k => getSheetData(k, 'GRAVICON_INTERNO_OT', forceRefresh)))
+  for (const res of otrosPersonal) {
+    if (res.status !== 'fulfilled') continue
+    for (const r of res.value.rows) {
+      const id = String(r['Id_Registro'] ?? '').trim()
+      const nombre = String(r['Nombre_Proveedor'] ?? '').trim()
+      if (!id || !nombre || personalInternoMap.get(id)?.nombre) continue
+      personalInternoMap.set(id, { nombre, cargo: String(r['CARGO'] ?? '').trim(), precio: 0 })
+    }
+  }
 
   const placaMap = new Map<string, string>()
   const vehiculoDescMap = new Map<string, string>()
@@ -217,7 +230,7 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
       if (s.descripcion) obsParts.push(s.descripcion)
     }
 
-    const ids = String(ot['Personal_Intervención'] ?? '').split(',').map(s => s.trim()).filter(Boolean)
+    const ids = String(ot['Personal_Intervención'] ?? '').split(',').map(s => s.trim()).filter(id => id && !/^no encontrado$/i.test(id))
 
     const personalInvolucrado: { id: string; nombre: string; cargo: string; precio: number; costo: number }[] = []
     const costoServicios = Number(ot['Precio_Servicio']) || 0
@@ -227,7 +240,8 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
       const info = personalInternoMap.get(id)
       personalInvolucrado.push({
         id,
-        nombre: info?.nombre ?? '',
+        // Nombre desde el maestro GRAVICON_INTERNO_OT; si el ID no está allí, se muestra el ID tal cual
+        nombre: info?.nombre || id,
         cargo: info?.cargo ?? '',
         precio: info?.precio ?? 0,
         costo: costoPorPersona,

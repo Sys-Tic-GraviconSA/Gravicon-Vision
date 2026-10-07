@@ -44,6 +44,8 @@
                 <MultiSelect v-if="isConcretos" v-model="selectedPlacas" :options="placasDisponibles" label="Placa" icon="filter" />
                 <MultiSelect v-if="subTab === 'disponibilidad'" v-model="selectedProveedoresDisponibilidad" :options="proveedoresDisponibilidadDisponibles" label="Proveedor" icon="user" />
                 <MultiSelect v-else v-model="selectedProveedores" :options="proveedoresDisponibles" label="Proveedor" icon="user" />
+                <MultiSelect v-if="subTab !== 'disponibilidad'" v-model="selectedColaboradores" :options="colaboradoresDisponibles" label="Personal" icon="user" />
+                <MultiSelect v-if="subTab !== 'disponibilidad'" v-model="selectedSistemas" :options="sistemasDisponibles" label="Sistema" icon="filter" />
                 <MultiSelect v-model="selectedEstados" :options="estadosDisponibles" label="Estado" icon="filter" />
               </template>
             </div>
@@ -201,8 +203,10 @@
         <ChartCard title="Jornada" description="Distribución de órdenes por jornada (Día / Noche)" :option="jornadaOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Jornada', p)" />
         <ChartCard title="Responsables de Cierre con Más Órdenes" description="Quienes más cierran órdenes de trabajo" :option="responsablesCierreOpt" :expand-option="responsablesCierreExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Responsable Cierre', p)" />
         <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesOpt" :expand-option="solicitantesExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Solicitante', p)" />
-        <ChartCard title="Personal de Intervención (Interno)" description="Técnicos de Gravicon con más intervenciones" :option="personalInternoOpt" :expand-option="personalInternoExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Personal', p)" />
         <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasOpt" :expand-option="sistemasExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Sistema', p)" />
+      </div>
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
+        <ChartCard title="Personal de Intervención (Interno) — Esfuerzo vs. Costo por Trabajo" description="Cada punto es un colaborador (tamaño = nº de trabajos), con su propio color. Eje horizontal: eficiencia de esfuerzo (horas promedio por trabajo); eje vertical: eficiencia financiera (costo de servicios promedio por trabajo). Las líneas punteadas son el promedio del equipo" :option="personalDispersionGenOpt" :height="720" tall alto-completo clickable @chart-click="(p:any)=>onRankingClick('Personal', p)" />
       </div>
 
     <div class="charts-grid cols-1" style="margin-bottom:22px">
@@ -282,9 +286,12 @@
         <ChartCard title="Jornada" description="Distribución de órdenes internas por jornada (Día / Noche)" :option="jornadaIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Jornada', p, 'int')" />
         <ChartCard title="Responsables de Cierre con Más Órdenes" description="Quienes más cierran órdenes de trabajo" :option="responsablesCierreIntOpt" :expand-option="responsablesCierreIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Responsable Cierre', p, 'int')" />
         <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesIntOpt" :expand-option="solicitantesIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Solicitante', p, 'int')" />
-        <ChartCard title="Personal de Intervención (Interno)" description="Técnicos de Gravicon con más intervenciones" :option="personalIntOpt" :expand-option="personalIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Personal', p, 'int')" />
         <ChartCard title="Sistemas con Más Intervención" description="Top 10 sistemas, según las sub-órdenes de cada OT" :option="sistemasIntOpt" :expand-option="sistemasIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Sistema', p, 'int')" />
       </div>
+
+     <div class="charts-grid cols-1" style="margin-bottom:22px">
+      <ChartCard title="Personal de Intervención (Interno) — Esfuerzo vs. Costo por Trabajo" description="Cada punto es un colaborador (tamaño = nº de trabajos), con su propio color. Eje horizontal: eficiencia de esfuerzo (horas promedio por trabajo); eje vertical: eficiencia financiera (costo de servicios promedio por trabajo). Las líneas punteadas son el promedio del equipo" :option="personalDispersionOpt" :height="720" tall alto-completo clickable @chart-click="(p:any)=>onRankingClick('Personal', p, 'int')" />
+    </div>
 
      <div class="charts-grid cols-1" style="margin-bottom:22px">
       <ChartCard title="Órdenes Diarias" description="Abiertas y cerradas con sus costos (Internas)" :option="ordenesDiariasIntOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Fecha', p, 'int')" />
@@ -1060,7 +1067,29 @@
         </div>
 
         <!-- ============================================== -->
-        <!-- PÁGINA 4: DESEMPEÑO DE LA FLOTA (Concretos · Maquinaria) -->
+        <!-- PÁGINA: EFICIENCIA DEL PERSONAL INTERNO (dispersión) -->
+        <!-- ============================================== -->
+        <div v-if="repConPersonal" class="report-page">
+          <div class="report-salto-superior"></div>
+          <div class="report-section-block">
+            <h3 class="report-block-title"><span class="title-bar"></span>Personal de Intervención (Interno) — Esfuerzo vs. Costo por Trabajo</h3>
+            <p class="section-note" style="margin:0 0 8px;font-size:11px;color:var(--text-secondary)">
+              Cada punto es un colaborador (tamaño = nº de trabajos). Eje horizontal: horas promedio por trabajo (eficiencia de esfuerzo);
+              eje vertical: costo de servicios promedio por trabajo (eficiencia financiera). Las líneas punteadas son el promedio del equipo:
+              abajo a la izquierda, menos horas y menos costo; arriba a la derecha, a revisar.
+            </p>
+            <div class="data-card" style="padding: 8px 10px;">
+              <ChartCard title="" :option="repPersonalDispersionOpt" :height="560" alto-completo hide-actions />
+            </div>
+          </div>
+          <footer class="report-footer">
+            <span>Informe de Órdenes de Trabajo — Gravicon</span>
+            <span>Documento Oficial<span class="fp-num"> | Página 4 de {{ repPaginas }}</span></span>
+          </footer>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- PÁGINA: DESEMPEÑO DE LA FLOTA (Concretos y Cuncía · Maquinaria) -->
         <!-- ============================================== -->
         <div v-if="repConFlota" class="report-page">
           <div class="report-salto-superior"></div>
@@ -1072,7 +1101,7 @@
           </div>
           <footer class="report-footer">
             <span>Informe de Órdenes de Trabajo — Gravicon</span>
-            <span>Documento Oficial<span class="fp-num"> | Página 4 de {{ repPaginas }}</span></span>
+            <span>Documento Oficial<span class="fp-num"> | Página {{ repConPersonal ? 5 : 4 }} de {{ repPaginas }}</span></span>
           </footer>
         </div>
 
@@ -1200,8 +1229,10 @@
         <ChartCard v-if="isConcretos || isCuncia" title="Comportamiento Mensual — Top 4 Placas con Mayor Costo" description="Las 4 placas de mayor costo de mantenimiento en cada mes (al ampliar, top 10)" :option="placaLineaOpt" :expand-option="placaLineaExpandOpt" :height="420" tall clickable @chart-click="(p:any)=>onPlacaClick({ name: p?.seriesName })" />
       </div>
 
-      <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Personal de Intervención (Interno)" description="Técnicos de Gravicon con más intervenciones" :option="personalInternoOpt" :expand-option="personalInternoExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Personal', p)" />
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
+        <ChartCard title="Personal de Intervención (Interno) — Esfuerzo vs. Costo por Trabajo" description="Cada punto es un colaborador (tamaño = nº de trabajos), con su propio color. Eje horizontal: eficiencia de esfuerzo (horas promedio por trabajo); eje vertical: eficiencia financiera (costo de servicios promedio por trabajo). Las líneas punteadas son el promedio del equipo" :option="personalDispersionGenOpt" :height="720" tall alto-completo clickable @chart-click="(p:any)=>onRankingClick('Personal', p)" />
+      </div>
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
         <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesOpt" :expand-option="solicitantesExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Solicitante', p)" />
       </div>
 
@@ -1273,9 +1304,12 @@
         <ChartCard title="Ranking Top 10 — Costos Internos por Placa" description="Top 10 placas internas con mayor costo" :option="vehiculoIntOpt" :expand-option="vehiculoIntExpandOpt" :height="500" tall clickable @chart-click="(p:any)=>onPlacaClick(p, 'int')" />
       </div>
 
-      <div class="charts-grid cols-2" style="margin-bottom:22px">
-        <ChartCard title="Personal de Intervención (Interno)" description="Técnicos de Gravicon con más intervenciones" :option="personalIntOpt" :expand-option="personalIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Personal', p, 'int')" />
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
         <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesIntOpt" :expand-option="solicitantesIntExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Solicitante', p, 'int')" />
+      </div>
+
+      <div class="charts-grid cols-1" style="margin-bottom:22px">
+        <ChartCard title="Personal de Intervención (Interno) — Esfuerzo vs. Costo por Trabajo" description="Cada punto es un colaborador (tamaño = nº de trabajos), con su propio color. Eje horizontal: eficiencia de esfuerzo (horas promedio por trabajo); eje vertical: eficiencia financiera (costo de servicios promedio por trabajo). Las líneas punteadas son el promedio del equipo" :option="personalDispersionOpt" :height="720" tall alto-completo clickable @chart-click="(p:any)=>onRankingClick('Personal', p, 'int')" />
       </div>
 
       <div class="charts-grid cols-1" style="margin-bottom:22px">
@@ -2257,9 +2291,9 @@ function computeSistemasRanking(rows: Record<string, unknown>[], limit = Infinit
     const subs = r['_subOrdenes']
     if (!Array.isArray(subs)) continue
     for (const s of subs) {
-      const raw = String(s?.sistemaTexto || s?.sistema || '').trim()
-      if (!raw) continue
-      const label = toTitleCase(raw)
+      const label = sistemaDe(s)
+      if (!label) continue
+      if (hayFiltroSistemas.value && !selectedSistemas.value.has(label)) continue
       map.set(label, (map.get(label) || 0) + 1)
     }
   }
@@ -2299,22 +2333,28 @@ const motivosNoEjecucionRanking = computed(() => rankBy(dataFilteredMain.value.f
  * Personal de intervención: participaciones + horas (Duración_Estimada) + costo total.
  * Costo = Costo servicios + Costos Insumos.
  */
+/** Clave de un colaborador: el mismo nombre con distintas mayúsculas, tildes o espacios es la misma persona
+ *  (en los maestros hay personas registradas con varios IDs y el nombre escrito distinto). */
+function clavePersona(nombre: string): string {
+  return nombre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/\s+/g, ' ').trim()
+}
 function computePersonalRanking(rows: Record<string, unknown>[], limit = Infinity): { label: string; n: number; horas: number; costo: number }[] {
-  const map = new Map<string, { n: number; horas: number; costo: number }>()
+  const map = new Map<string, { label: string; n: number; horas: number; costo: number }>()
   for (const r of rows) {
     const horas = Number(r['Duración (horas)']) || 0
 
     const personalDetalles = r['_personalDetalles']
     if (Array.isArray(personalDetalles) && personalDetalles.length > 0) {
-      const nPersonas = personalDetalles.length
+      // El costo de servicios de cada técnico (p.costo) ya viene repartido desde el servidor
       for (const p of personalDetalles) {
         const label = String(p.nombre || '').trim()
         if (!label) continue
-        const e = map.get(label) || { n: 0, horas: 0, costo: 0 }
+        const e = map.get(clavePersona(label)) || { label, n: 0, horas: 0, costo: 0 }
         e.n++
-        e.horas += nPersonas > 0 ? horas / nPersonas : horas
+        // Horas: la duración completa de la OT para cada técnico; solo el costo de servicios se reparte
+        e.horas += horas
         e.costo += Number(p.costo) || 0
-        map.set(label, e)
+        map.set(clavePersona(label), e)
       }
     } else {
       const raw = String(r['Personal'] ?? '').trim()
@@ -2323,17 +2363,16 @@ function computePersonalRanking(rows: Record<string, unknown>[], limit = Infinit
       const costoTotal = Number(r['Costo servicios']) || 0
       const nPersonas = personas.length || 1
       for (const label of personas) {
-        const e = map.get(label) || { n: 0, horas: 0, costo: 0 }
+        const e = map.get(clavePersona(label)) || { label, n: 0, horas: 0, costo: 0 }
         e.n++
-        e.horas += horas / nPersonas
+        e.horas += horas
         e.costo += costoTotal / nPersonas
-        map.set(label, e)
+        map.set(clavePersona(label), e)
       }
     }
   }
-  return [...map.entries()].map(([label, e]) => ({ label, ...e })).sort((a, b) => b.n - a.n).slice(0, limit)
+  return [...map.values()].sort((a, b) => b.n - a.n).slice(0, limit)
 }
-const personalInternoRanking = computed(() => computePersonalRanking(dataFilteredMain.value.filter(isInterno), 10))
 
 interface AlmacenItem { referencia: string; descripcion: string; und: string; solicitudes: number; cantidadTotal: number }
 
@@ -2926,6 +2965,10 @@ const selectedProveedores = ref<Set<string>>(new Set())
 const selectedProveedoresDisponibilidad = ref<Set<string>>(new Set())
 const selectedEstados = ref<Set<string>>(new Set())
 const selectedPersonalInterno = ref<Set<string>>(new Set())
+/** Colaboradores de Gravicon (Personal_Intervención de las OT, con el nombre del maestro) */
+const selectedColaboradores = ref<Set<string>>(new Set())
+/** Sistemas a intervenir (sub-órdenes de cada OT) */
+const selectedSistemas = ref<Set<string>>(new Set())
 
 /**
  * Reduce un valor de fecha a su serial de Excel SOLO CON LA FECHA (sin hora). Acepta:
@@ -3240,21 +3283,22 @@ const repJornadaExtOpt = computed(() => buildJornadaPieOpt('costoExt', 'nExt'))
 
 /** Personal interno de intervención: costo servicios y duración estimada. */
 const repPersonalInterno = computed(() => {
-  const map = new Map<string, { n: number; costoServ: number; horas: number }>()
+  const map = new Map<string, { label: string; n: number; costoServ: number; horas: number }>()
   for (const r of repRows.value.filter(isInterno)) {
     const horas = Number(r['Duración (horas)']) || 0
 
     const personalDetalles = r['_personalDetalles']
     if (Array.isArray(personalDetalles) && personalDetalles.length > 0) {
-      const nPersonas = personalDetalles.length
+      // El costo de servicios de cada técnico (p.costo) ya viene repartido desde el servidor
       for (const p of personalDetalles) {
         const label = String(p.nombre || '').trim()
         if (!label) continue
-        const e = map.get(label) || { n: 0, costoServ: 0, horas: 0 }
+        const e = map.get(clavePersona(label)) || { label, n: 0, costoServ: 0, horas: 0 }
         e.n++
-        e.horas += nPersonas > 0 ? horas / nPersonas : horas
+        // Horas: la duración completa de la OT para cada técnico; solo el costo de servicios se reparte
+        e.horas += horas
         e.costoServ += Number(p.costo) || 0
-        map.set(label, e)
+        map.set(clavePersona(label), e)
       }
     } else {
       const raw = String(r['Personal'] ?? '').trim()
@@ -3263,15 +3307,15 @@ const repPersonalInterno = computed(() => {
       const costoServ = Number(r['Costo servicios']) || 0
       const nPersonas = personas.length || 1
       for (const label of personas) {
-        const e = map.get(label) || { n: 0, costoServ: 0, horas: 0 }
+        const e = map.get(clavePersona(label)) || { label, n: 0, costoServ: 0, horas: 0 }
         e.n++
-        e.horas += horas / nPersonas
+        e.horas += horas
         e.costoServ += costoServ / nPersonas
-        map.set(label, e)
+        map.set(clavePersona(label), e)
       }
     }
   }
-  return [...map.entries()].map(([label, e]) => ({ label, ...e })).sort((a, b) => b.costoServ - a.costoServ).slice(0, 10)
+  return [...map.values()].sort((a, b) => b.costoServ - a.costoServ).slice(0, 10)
 })
 
 /** Distribución del mantenimiento correctivo / preventivo (Clase de Mantenimiento). */
@@ -3696,6 +3740,8 @@ async function loadData(forceRefresh = false, resetFilters = true) {
   const prevProveedoresDisponibilidad = new Set(selectedProveedoresDisponibilidad.value)
   const prevEstados = new Set(selectedEstados.value)
   const prevPersonal = new Set(selectedPersonalInterno.value)
+  const prevColaboradores = new Set(selectedColaboradores.value)
+  const prevSistemas = new Set(selectedSistemas.value)
   const prevTipoCompra = new Set(selectedTipoCompra.value)
   const prevCentroCosto = new Set(selectedCentroCosto.value)
   const prevProceso = new Set(selectedProceso.value)
@@ -3710,6 +3756,8 @@ async function loadData(forceRefresh = false, resetFilters = true) {
     selectedLineas.value = new Set()
     selectedEstados.value = new Set()
     selectedPersonalInterno.value = new Set()
+    selectedColaboradores.value = new Set()
+    selectedSistemas.value = new Set()
     selectedTipoCompra.value = new Set()
     selectedCentroCosto.value = new Set()
     selectedProceso.value = new Set()
@@ -3740,6 +3788,8 @@ async function loadData(forceRefresh = false, resetFilters = true) {
     selectedProveedoresDisponibilidad.value = new Set(proveedoresDisponibilidadDisponibles.value)
     selectedEstados.value = new Set(estadosDisponibles.value)
     selectedPersonalInterno.value = new Set(personalInternoOptions)
+    selectedColaboradores.value = new Set(colaboradoresDisponibles.value)
+    selectedSistemas.value = new Set(sistemasDisponibles.value)
     selectedTipoCompra.value = new Set(tipoCompraDisponibles.value)
     selectedCentroCosto.value = new Set(centroCostoDisponibles.value)
     selectedProceso.value = new Set(procesoDisponibles.value)
@@ -3762,6 +3812,10 @@ async function loadData(forceRefresh = false, resetFilters = true) {
     else selectedEstados.value = new Set(estadosDisponibles.value)
     if (prevPersonal.size) selectedPersonalInterno.value = new Set([...prevPersonal].filter(v => personalInternoOptions.includes(v)))
     else selectedPersonalInterno.value = new Set(personalInternoOptions)
+    if (prevColaboradores.size) selectedColaboradores.value = new Set([...prevColaboradores].filter(v => colaboradoresDisponibles.value.includes(v)))
+    else selectedColaboradores.value = new Set(colaboradoresDisponibles.value)
+    if (prevSistemas.size) selectedSistemas.value = new Set([...prevSistemas].filter(v => sistemasDisponibles.value.includes(v)))
+    else selectedSistemas.value = new Set(sistemasDisponibles.value)
     // TipoCompra/CentroCosto/Proceso solo existen en almacen, conserva si había filtro
     if (prevTipoCompra.size) selectedTipoCompra.value = new Set([...prevTipoCompra].filter(v => tipoCompraDisponibles.value.includes(v)))
     if (prevCentroCosto.size) selectedCentroCosto.value = new Set([...prevCentroCosto].filter(v => centroCostoDisponibles.value.includes(v)))
@@ -3787,6 +3841,8 @@ watch(tipoTab, () => {
     selectedLineas.value = new Set(lineasDisponibles.value)
     selectedEstados.value = new Set(estadosDisponibles.value)
     selectedPersonalInterno.value = new Set(personalInternoOptions)
+    selectedColaboradores.value = new Set(colaboradoresDisponibles.value)
+    selectedSistemas.value = new Set(sistemasDisponibles.value)
     selectedTipoCompra.value = new Set(tipoCompraDisponibles.value)
     selectedCentroCosto.value = new Set(centroCostoDisponibles.value)
     selectedProceso.value = new Set(procesoDisponibles.value)
@@ -4155,6 +4211,37 @@ const estadosDisponibles = computed(() => {
 
 const personalInternoOptions = ['Todos', 'Interno', 'Externo']
 
+/** Colaboradores que aparecen en Personal_Intervención de las OT del área (nombre traducido con el maestro) */
+const colaboradoresDisponibles = computed(() => {
+  const m = new Map<string, string>()
+  for (const r of allData.value) {
+    for (const p of (r['_personalDetalles'] as { nombre?: string }[] | undefined) ?? []) {
+      const n = String(p?.nombre ?? '').trim()
+      if (n && !m.has(clavePersona(n))) m.set(clavePersona(n), n)
+    }
+  }
+  return [...m.values()].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
+})
+/** Sistema de una sub-orden tal como se muestra (mismo texto del ranking «Sistemas con Más Intervención») */
+function sistemaDe(s: { sistema?: string; sistemaTexto?: string } | undefined): string {
+  const raw = String(s?.sistemaTexto || s?.sistema || '').trim()
+  return raw ? toTitleCase(raw) : ''
+}
+/** Sistemas que aparecen en las sub-órdenes de las OT del área */
+const sistemasDisponibles = computed(() => {
+  const set = new Set<string>()
+  for (const r of allData.value) {
+    for (const sub of (r['_subOrdenes'] as { sistema?: string; sistemaTexto?: string }[] | undefined) ?? []) {
+      const n = sistemaDe(sub)
+      if (n) set.add(n)
+    }
+  }
+  return [...set].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
+})
+const hayFiltroSistemas = computed(() => selectedSistemas.value.size > 0 && selectedSistemas.value.size !== sistemasDisponibles.value.length)
+const hayFiltroColaboradores = computed(() => selectedColaboradores.value.size > 0 && selectedColaboradores.value.size !== colaboradoresDisponibles.value.length)
+const clavesColaboradores = computed(() => new Set([...selectedColaboradores.value].map(clavePersona)))
+
 const hasActiveFilters = computed(() => {
   if (fechaInicio.value || fechaFin.value) return true
   if (subTab.value === 'inspeccion' && filtrosLlantasActivos.value) return true
@@ -4164,6 +4251,8 @@ const hasActiveFilters = computed(() => {
   if (selectedProveedores.value.size > 0 && selectedProveedores.value.size !== proveedoresDisponibles.value.length) return true
   if (selectedEstados.value.size > 0 && selectedEstados.value.size !== estadosDisponibles.value.length) return true
   if (selectedPersonalInterno.value.size > 0 && selectedPersonalInterno.value.size < personalInternoOptions.length) return true
+  if (hayFiltroColaboradores.value) return true
+  if (hayFiltroSistemas.value) return true
   if (selectedTipoCompra.value.size > 0 && selectedTipoCompra.value.size !== tipoCompraDisponibles.value.length) return true
   if (selectedCentroCosto.value.size > 0 && selectedCentroCosto.value.size !== centroCostoDisponibles.value.length) return true
   if (selectedProceso.value.size > 0 && selectedProceso.value.size !== procesoDisponibles.value.length) return true
@@ -4172,14 +4261,16 @@ const hasActiveFilters = computed(() => {
 
 /** Aplica los filtros de multiselección (vehículo/placa/proveedor/línea/estado/personal)
  *  a un conjunto ya acotado por fecha. Devuelve el mismo arreglo si no hay filtros activos. */
-function applyOtMultiFilters(base: Record<string, unknown>[]): Record<string, unknown>[] {
+function applyOtMultiFilters(base: Record<string, unknown>[], conColaboradores = true): Record<string, unknown>[] {
   const hasVehiculoFilter = selectedVehiculos.value.size > 0 && selectedVehiculos.value.size !== vehiculosDisponibles.value.length
   const hasPlacaFilter = selectedPlacas.value.size > 0 && selectedPlacas.value.size !== placasDisponibles.value.length
   const hasProveedorFilter = selectedProveedores.value.size > 0 && selectedProveedores.value.size !== proveedoresDisponibles.value.length
   const hasLineaFilter = selectedLineas.value.size > 0 && selectedLineas.value.size !== lineasDisponibles.value.length
   const hasEstadoFilter = selectedEstados.value.size > 0 && selectedEstados.value.size !== estadosDisponibles.value.length
   const hasPersonalFilter = selectedPersonalInterno.value.size > 0 && selectedPersonalInterno.value.size < personalInternoOptions.length
-  if (!hasVehiculoFilter && !hasPlacaFilter && !hasProveedorFilter && !hasLineaFilter && !hasEstadoFilter && !hasPersonalFilter) return base
+  const hasColabFilter = conColaboradores && hayFiltroColaboradores.value
+  const hasSistemaFilter = hayFiltroSistemas.value
+  if (!hasVehiculoFilter && !hasPlacaFilter && !hasProveedorFilter && !hasLineaFilter && !hasEstadoFilter && !hasPersonalFilter && !hasColabFilter && !hasSistemaFilter) return base
   return base.filter(r => {
     if (hasVehiculoFilter) {
       const vehiculoVal = isConcretos.value
@@ -4196,11 +4287,24 @@ function applyOtMultiFilters(base: Record<string, unknown>[]): Record<string, un
       if (selectedPersonalInterno.value.has('Interno') && !esInt) return false
       if (selectedPersonalInterno.value.has('Externo') && esInt) return false
     }
+    // Personal: quedan las OT en las que participó alguno de los colaboradores elegidos
+    if (hasColabFilter) {
+      const personas = (r['_personalDetalles'] as { nombre?: string }[] | undefined) ?? []
+      if (!personas.some(p => clavesColaboradores.value.has(clavePersona(String(p?.nombre ?? ''))))) return false
+    }
+    // Sistema: quedan las OT con al menos una sub-orden de los sistemas elegidos
+    if (hasSistemaFilter) {
+      const subs = (r['_subOrdenes'] as { sistema?: string; sistemaTexto?: string }[] | undefined) ?? []
+      if (!subs.some(sub => selectedSistemas.value.has(sistemaDe(sub)))) return false
+    }
     return true
   })
 }
 
 const dataFilteredMain = computed(() => applyOtMultiFilters(filteredData.value))
+/** Mismas OT pero sin el filtro «Personal»: base de la dispersión (sus promedios son los del equipo completo) */
+const filasSinColab = computed(() => applyOtMultiFilters(filteredData.value, false))
+const intRowsSinColab = computed(() => filasSinColab.value.filter(isInterno))
 
 /** Proveedores activos para la pestaña Disponibilidad — usa su propia selección
  *  (selectedProveedoresDisponibilidad), no la de OT: son proveedores distintos
@@ -4242,6 +4346,8 @@ function onClearFilters() {
   selectedProveedoresDisponibilidad.value = new Set(proveedoresDisponibilidadDisponibles.value)
   selectedEstados.value = new Set(estadosDisponibles.value)
   selectedPersonalInterno.value = new Set(personalInternoOptions)
+  selectedColaboradores.value = new Set(colaboradoresDisponibles.value)
+  selectedSistemas.value = new Set(sistemasDisponibles.value)
   selectedTipoCompra.value = new Set(tipoCompraDisponibles.value)
   selectedCentroCosto.value = new Set(centroCostoDisponibles.value)
   selectedProceso.value = new Set(procesoDisponibles.value)
@@ -5290,7 +5396,6 @@ const fuenteNovedadIntRanking = computed(() => rankBy(intRows.value, 'Fuente_Nov
 const tiposTrabajoIntRanking = computed(() => rankBy(intRows.value, 'Tipo Trabajo', 10))
 const claseMantenimientoIntRanking = computed(() => rankBy(intRows.value, 'Clase Mantenimiento', 10))
 const motivosNoEjecucionIntRanking = computed(() => rankBy(intRows.value.filter(r => String(r['Motivo No Ejecución'] ?? '').trim()), 'Motivo No Ejecución', 10))
-const personalIntRanking = computed(() => computePersonalRanking(intRows.value, 10))
 const solicitantesIntRanking = computed(() => rankBy(intRows.value, 'Solicitante', 10))
 const responsablesCierreIntRanking = computed(() => rankByMultiValue(intRows.value, 'Responsable Cierre', 10))
 const jornadaIntRanking = computed(() => rankBy(intRows.value, 'Jornada', 6))
@@ -5561,7 +5666,7 @@ const dispPorPlaca = computed(() => {
  * producción por vehículo ni hoja de combustible: quedan disponibilidad, taller y mantenimiento. Une cuatro fuentes
  * dentro del rango filtrado, por mes:
  * - Producción (remisiones): viajes y m³, con la misma regla de `m3PorPlaca` (mixer = concreto; autobomba = bombeo).
- * - Disponibilidad: promedio del score diario y días con «¿Vehículo en taller?».
+ * - Disponibilidad: promedio del score diario, días operativos (suma del score diario) y días en taller.
  * - Mantenimiento: costo de servicios + insumos por fecha de cierre.
  * - Combustible: valor, galones y horómetro válido de los tanqueos.
  * Lo que no tiene registro queda en null («sin dato»); nunca se rellena con 0.
@@ -5578,7 +5683,12 @@ const flotaPlacasFiltro = computed<string[] | null>(() => {
   return [...new Set(dataFilteredNoAcpm.value.map(r => normPlaca(r['Placa del Vehículo'])).filter(Boolean))]
 })
 const repConFlota = computed(() => (isConcretos.value || isCuncia.value) && tipoTab.value === 'maquinaria' && flotaMensual.value.length > 0)
-const repPaginas = computed(() => (repConFlota.value ? 4 : 3))
+/** Página de eficiencia del personal interno: si en el período del informe hay OT internas con personal */
+const repPersonalItems = computed(() => computePersonalRanking(repRows.value.filter(isInterno)))
+const repConPersonal = computed(() => repPersonalItems.value.length > 0)
+// Sin animación en el informe: el PDF se captura enseguida y una animación en curso saldría a medio dibujar
+const repPersonalDispersionOpt = computed(() => markRaw({ ...buildPersonalDispersionOpt(repPersonalItems.value), animation: false }))
+const repPaginas = computed(() => 3 + (repConPersonal.value ? 1 : 0) + (repConFlota.value ? 1 : 0))
 const flotaMensual = computed<FilaFlota[]>(() => {
   if (!isConcretos.value && !isCuncia.value) return []
   const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
@@ -5587,6 +5697,8 @@ const flotaMensual = computed<FilaFlota[]>(() => {
   const mesDe = (serial: number) => serialToDate(serial).toISOString().slice(0, 7)
   interface Acc {
     viajes: number; m3: number; prod: boolean; dispSum: number; dispN: number; taller: Set<string>
+    /** Score de disponibilidad por día (varias inspecciones el mismo día se promedian) */
+    porDia: Map<string, { s: number; n: number }>
     mant: number; comb: number; gal: number; combN: number; horas: number; galHoras: number
   }
   const acc = new Map<string, Acc>()
@@ -5595,7 +5707,7 @@ const flotaMensual = computed<FilaFlota[]>(() => {
   const get = (placa: string, mes: string) => {
     const k = `${placa}|${mes}`
     let e = acc.get(k)
-    if (!e) { e = { viajes: 0, m3: 0, prod: false, dispSum: 0, dispN: 0, taller: new Set(), mant: 0, comb: 0, gal: 0, combN: 0, horas: 0, galHoras: 0 }; acc.set(k, e) }
+    if (!e) { e = { viajes: 0, m3: 0, prod: false, dispSum: 0, dispN: 0, taller: new Set(), porDia: new Map(), mant: 0, comb: 0, gal: 0, combN: 0, horas: 0, galHoras: 0 }; acc.set(k, e) }
     return e
   }
   const tipo = (placa: string, t: unknown) => { const s = String(t ?? '').trim(); if (s && !tipos.has(placa)) tipos.set(placa, s.toUpperCase()) }
@@ -5638,8 +5750,14 @@ const flotaMensual = computed<FilaFlota[]>(() => {
       : !isNaN(revAm) && !isNaN(revPm) ? (revAm + revPm) / 2
         : !isNaN(revAm) ? revAm : !isNaN(revPm) ? revPm : NaN
     if (!isNaN(score)) { e.dispSum += score; e.dispN++ }
+    // Día en taller = mismo criterio de la pestaña Disponibilidad («En Taller (No Op.)»): la inspección
+    // marca «¿Vehículo en taller?» o la disponibilidad del día es menor al 10 % (no operativo).
+    // Se cuenta una vez por día aunque ese día haya varias inspecciones.
     const t = String(r['¿Vehiculo en Taller?'] ?? r['Vehiculo_en_Taller'] ?? '').toUpperCase()
-    if (t === 'TRUE' || t === 'Y' || t === 'SÍ' || t === 'SI') e.taller.add(String(Math.floor(f)))
+    const marcado = t === 'TRUE' || t === 'Y' || t === 'SÍ' || t === 'SI'
+    const noOperativo = !isNaN(score) && score < 0.1
+    if (marcado || noOperativo) e.taller.add(String(Math.floor(f)))
+    if (!isNaN(score)) { const dk = String(Math.floor(f)); const dd = e.porDia.get(dk) ?? { s: 0, n: 0 }; dd.s += score; dd.n++; e.porDia.set(dk, dd) }
     tipo(placa, r['Tipo de Vehiculos'] ?? r['Tipo Vehículo'])
   }
 
@@ -5685,6 +5803,9 @@ const flotaMensual = computed<FilaFlota[]>(() => {
         m3,
         disp: e.dispN ? (e.dispSum / e.dispN) * 100 : null,
         taller: e.dispN || e.taller.size ? e.taller.size : null,
+        // Días operativos = suma del score diario (igual que «Días disponible» de la pestaña Disponibilidad):
+        // un día al 100 % suma 1, un día a medias (solo AM o PM) suma 0,5
+        operativos: e.porDia.size ? [...e.porDia.values()].reduce((a, d) => a + d.s / d.n, 0) : null,
         mant: e.mant,
         mantM3: div(e.mant, m3),
         comb,
@@ -6012,7 +6133,13 @@ const rankingDetailRows = computed(() => {
       if (!Array.isArray(subs)) return false
       return subs.some(s => String(s?.sistemaTexto || s?.sistema || '').trim().toLowerCase() === val)
     }
-    if (field === 'Personal' || field === 'Responsable Cierre') {
+    if (field === 'Personal') {
+      // Misma persona aunque el nombre venga escrito distinto (mayúsculas, tildes, espacios)
+      const raw = String(r[field] ?? '').trim()
+      if (!raw) return false
+      return raw.split(',').map(x => clavePersona(x)).includes(clavePersona(val))
+    }
+    if (field === 'Responsable Cierre') {
       const raw = String(r[field] ?? '').trim()
       if (!raw) return false
       return raw.split(',').map(s => s.trim().toLowerCase()).includes(val)
@@ -6147,42 +6274,7 @@ const claseMantenimientoOpt = computed(() => markRaw(buildCountPieOpt(claseMante
 const motivosNoEjecucionOpt = computed(() => markRaw(buildCountPieOpt(motivosNoEjecucionRanking.value, false)))
 const jornadaOpt = computed(() => markRaw(buildCountPieOpt(jornadaRanking.value, false)))
 
-function buildPersonalOption(items: { label: string; n: number; horas: number; costo: number }[]) {
-  const labels = items.map(e => e.label)
-  const data = items.map((e, i) => ({ value: e.n, horas: e.horas, costo: e.costo, itemStyle: { color: palette[i % palette.length] } }))
-  const valueTexts = items.map(e => e.n.toLocaleString('es-CO'))
-  const layout = hBarLayout(labels, hBarValueSpace(valueTexts, 34), viewportW.value)
-  return markRaw({
-    color: palette,
-    tooltip: {
-      trigger: 'axis' as const,
-      formatter: (params: any) => {
-        const p = Array.isArray(params) ? params[0] : params
-        const idx = p?.dataIndex ?? 0
-        const item = items[idx]
-        if (!item) return ''
-        return `<b>${item.label}</b><br/>` +
-          `Participaciones: <b>${item.n}</b><br/>` +
-          `Horas reales: <b>${Math.round(item.horas)} h</b><br/>` +
-          `Precio servicios: <b>$${Math.round(item.costo).toLocaleString('es-CO')}</b>`
-      },
-    },
-    grid: hBarGrid(layout.labelSpace, layout.valueSpace),
-    xAxis: { type: 'value' as const, axisLabel: { show: false }, splitLine: { show: false } },
-    yAxis: { type: 'category' as const, data: labels, axisLabel: hBarAxisLabel(layout.labelSpace) },
-    series: [{
-      name: 'Participaciones',
-      type: 'bar',
-      data,
-      barWidth: '65%',
-      label: { show: true, position: 'right' as const, fontWeight: 600 as const, fontSize: 11, color: chartTextColor.value },
-      itemStyle: { borderRadius: [0, 4, 4, 0] as [number, number, number, number] },
-    }],
-  })
-}
 
-const personalInternoOpt = computed(() => buildPersonalOption(personalInternoRanking.value))
-const personalInternoExpandOpt = computed(() => buildPersonalOption(computePersonalRanking(dataFilteredMain.value.filter(isInterno))))
 
 const almacenSolicitudesOpt = computed(() => markRaw(buildPieOpt(almacenSolicitudesRanking.value, 'Productos Más Solicitados (Frecuencia)', 0, false)))
 const almacenSolicitantesOpt = computed(() => markRaw(buildCountBarColorOpt(almacenSolicitantesRanking.value, 'Solicitudes')))
@@ -6197,8 +6289,95 @@ const fuenteNovedadIntOpt = computed(() => markRaw(buildCountPieOpt(fuenteNoveda
 const tiposTrabajoIntOpt = computed(() => markRaw(buildCountPieOpt(tiposTrabajoIntRanking.value, false)))
 const claseMantenimientoIntOpt = computed(() => markRaw(buildCountPieOpt(claseMantenimientoIntRanking.value, false)))
 const motivosNoEjecucionIntOpt = computed(() => markRaw(buildCountPieOpt(motivosNoEjecucionIntRanking.value, false)))
-const personalIntOpt = computed(() => buildPersonalOption(personalIntRanking.value))
-const personalIntExpandOpt = computed(() => buildPersonalOption(computePersonalRanking(intRows.value)))
+
+/**
+ * Dispersión del personal interno: un punto por colaborador.
+ * - X: eficiencia de esfuerzo = horas promedio por trabajo (duración completa de cada OT en la que participó).
+ * - Y: eficiencia financiera = costo de servicios promedio por trabajo (el de cada OT, repartido entre sus técnicos).
+ * Las líneas punteadas (promedio del equipo) parten la gráfica en cuadrantes: abajo a la izquierda,
+ * menos horas y menos costo por trabajo (más eficiente); arriba a la derecha, más horas y más costo.
+ */
+function buildPersonalDispersionOpt(items: { label: string; n: number; horas: number; costo: number }[], equipo = items) {
+  const isLight = theme.value === 'light'
+  // Por colaborador: participaciones, horas y costo totales, y sus promedios por trabajo (los dos ejes)
+  const pts = items.filter(e => e.n > 0).map(e => ({ label: e.label, n: e.n, ht: e.horas, ct: e.costo, h: e.horas / e.n, c: e.costo / e.n }))
+  // Promedios del EQUIPO completo (aunque el filtro «Personal» muestre solo algunos colaboradores)
+  const ref = equipo.filter(e => e.n > 0).map(e => ({ h: e.horas / e.n, c: e.costo / e.n }))
+  const avgH = ref.length ? ref.reduce((a, p) => a + p.h, 0) / ref.length : 0
+  const avgC = ref.length ? ref.reduce((a, p) => a + p.c, 0) / ref.length : 0
+  const maxN = Math.max(1, ...pts.map(p => p.n))
+  const cuadrante = (p: { h: number; c: number }) =>
+    p.h <= avgH && p.c <= avgC ? { txt: 'Menos horas y menos costo (más eficiente)', color: '#10B981' }
+      : p.h > avgH && p.c > avgC ? { txt: 'Más horas y más costo (a revisar)', color: '#EF4444' }
+        : p.h <= avgH ? { txt: 'Pocas horas pero costoso', color: '#F59E0B' }
+          : { txt: 'Muchas horas pero económico', color: '#3B82F6' }
+  // Un color por colaborador: la paleta de la app y, si hay más personas, tonos repartidos en el círculo
+  const colorColaborador = (i: number) => (i < palette.length ? palette[i] : `hsl(${Math.round((i * 137.5) % 360)}, 62%, 50%)`)
+  const money = (v: number) => '$ ' + Math.round(v).toLocaleString('es-CO')
+  const horasTxt = (v: number) => v.toLocaleString('es-CO', { maximumFractionDigits: 1 }) + ' h'
+  const ejeColor = isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.06)'
+  return markRaw({
+    backgroundColor: 'transparent',
+    textStyle: { fontFamily: 'Lato, sans-serif' },
+    // Animaciones suaves al cargar y al cambiar filtros
+    animationDuration: 700, animationEasing: 'cubicOut' as const, animationDurationUpdate: 600, animationEasingUpdate: 'cubicInOut' as const,
+    tooltip: {
+      trigger: 'item' as const,
+      formatter: (p: any) => {
+        const d = pts[p.dataIndex]
+        if (!d) return ''
+        const q = cuadrante(d)
+        const fila = (k: string, v: string, extra = '') => `<tr><td style="color:#94a3b8;padding-right:14px">${k}</td><td style="text-align:right"><b>${v}</b>${extra}</td></tr>`
+        const gris = (t: string) => ` <span style="color:#94a3b8">(${t})</span>`
+        return `<b>${d.label}</b><br/><span style="color:${q.color}">●</span> ${q.txt}` +
+          `<table style="margin-top:4px;font-size:12px">` +
+          fila('Trabajador', d.label) +
+          fila('Participaciones', d.n.toLocaleString('es-CO')) +
+          fila('Horas totales', horasTxt(d.ht)) +
+          fila('Costo total', money(d.ct)) +
+          fila('Horas por trabajo', horasTxt(d.h), gris(`equipo ${horasTxt(avgH)}`)) +
+          fila('Costo por trabajo', money(d.c), gris(`equipo ${money(avgC)}`)) +
+          `</table>`
+      },
+    },
+    grid: { left: 20, right: 110, bottom: 40, top: 30, containLabel: true },
+    xAxis: {
+      type: 'value' as const, name: 'Eficiencia de esfuerzo — horas por trabajo', nameLocation: 'middle' as const, nameGap: 28, scale: true,
+      nameTextStyle: { color: chartTextColor.value, fontWeight: 700 as const, fontSize: 11 },
+      axisLabel: { color: chartTextColor.value, fontSize: 10, formatter: (v: number) => `${v} h` },
+      splitLine: { lineStyle: { color: ejeColor, type: 'dashed' as const } },
+    },
+    yAxis: {
+      type: 'value' as const, name: 'Eficiencia financiera — costo por trabajo', nameLocation: 'middle' as const, nameGap: 78, scale: true,
+      nameTextStyle: { color: chartTextColor.value, fontWeight: 700 as const, fontSize: 11 },
+      axisLabel: { color: chartTextColor.value, fontSize: 10, formatter: (v: number) => money(v) },
+      splitLine: { lineStyle: { color: ejeColor, type: 'dashed' as const } },
+    },
+    series: [{
+      type: 'scatter' as const,
+      // Tamaño del punto según el número de trabajos
+      symbolSize: (_v: any, p: any) => 10 + 20 * Math.sqrt((pts[p.dataIndex]?.n ?? 0) / maxN),
+      data: pts.map((p, i) => ({ value: [Math.round(p.h * 10) / 10, Math.round(p.c)], name: p.label, itemStyle: { color: colorColaborador(i), opacity: 0.9, borderColor: isLight ? '#fff' : 'rgba(255,255,255,.6)', borderWidth: 1 } })),
+      label: { show: true, position: 'right' as const, formatter: (p: any) => String(p.name).split(' ').slice(0, 2).join(' '), fontSize: 10, fontWeight: 700 as const, color: chartTextColor.value },
+      labelLayout: { hideOverlap: true },
+      emphasis: { scale: false, label: { show: true } },
+      markLine: {
+        silent: true, symbol: 'none',
+        lineStyle: { type: 'dashed' as const, color: isLight ? '#94a3b8' : '#64748b', width: 1.5 },
+        label: { color: chartTextColor.value, fontSize: 10, fontWeight: 700 as const },
+        data: [
+          { xAxis: Math.round(avgH * 10) / 10, label: { formatter: `Prom. ${horasTxt(avgH)}` } },
+          { yAxis: Math.round(avgC), label: { formatter: `Prom. ${money(avgC)}`, position: 'insideEndTop' as const } },
+        ],
+      },
+    }],
+  })
+}
+/** Con el filtro «Personal» activo, solo los colaboradores elegidos (no sus compañeros de las mismas OT) */
+const soloElegidos = (items: { label: string; n: number; horas: number; costo: number }[]) =>
+  hayFiltroColaboradores.value ? items.filter(e => clavesColaboradores.value.has(clavePersona(e.label))) : items
+const personalDispersionOpt = computed(() => { const todos = computePersonalRanking(intRowsSinColab.value); return buildPersonalDispersionOpt(soloElegidos(todos), todos) })
+const personalDispersionGenOpt = computed(() => { const todos = computePersonalRanking(filasSinColab.value.filter(isInterno)); return buildPersonalDispersionOpt(soloElegidos(todos), todos) })
 const solicitantesIntOpt = computed(() => markRaw(buildCountBarColorOpt(solicitantesIntRanking.value, 'Órdenes')))
 const responsablesCierreIntOpt = computed(() => markRaw(buildCountPieOpt(responsablesCierreIntRanking.value, false)))
 const jornadaIntOpt = computed(() => markRaw(buildCountPieOpt(jornadaIntRanking.value, false)))
