@@ -6306,11 +6306,25 @@ function buildPersonalDispersionOpt(items: { label: string; n: number; horas: nu
   const avgH = ref.length ? ref.reduce((a, p) => a + p.h, 0) / ref.length : 0
   const avgC = ref.length ? ref.reduce((a, p) => a + p.c, 0) / ref.length : 0
   const maxN = Math.max(1, ...pts.map(p => p.n))
+  // Cuadrantes según el promedio del equipo: rápido = menos horas por trabajo; barato = menos costo por trabajo
+  const Q = {
+    ideal: { txt: 'Ideal · rápido y barato', color: '#10B981' },
+    costoso: { txt: 'Rápido pero costoso', color: '#F59E0B' },
+    lento: { txt: 'Lento pero barato', color: '#3B82F6' },
+    cuidado: { txt: 'Cuidado · lento y costoso', color: '#EF4444' },
+  }
   const cuadrante = (p: { h: number; c: number }) =>
-    p.h <= avgH && p.c <= avgC ? { txt: 'Menos horas y menos costo (más eficiente)', color: '#10B981' }
-      : p.h > avgH && p.c > avgC ? { txt: 'Más horas y más costo (a revisar)', color: '#EF4444' }
-        : p.h <= avgH ? { txt: 'Pocas horas pero costoso', color: '#F59E0B' }
-          : { txt: 'Muchas horas pero económico', color: '#3B82F6' }
+    p.h <= avgH && p.c <= avgC ? Q.ideal : p.h > avgH && p.c > avgC ? Q.cuidado : p.h <= avgH ? Q.costoso : Q.lento
+  // Ejes desde 0 hasta un poco más del mayor valor, para que los cuatro cuadrantes se vean completos
+  const redondear = (v: number) => { if (v <= 0) return 1; const e = 10 ** Math.floor(Math.log10(v)); return Math.ceil(v / e * 2) / 2 * e }
+  const xMax = redondear(Math.max(avgH, ...pts.map(p => p.h)) * 1.12)
+  const yMax = redondear(Math.max(avgC, ...pts.map(p => p.c)) * 1.12)
+  const tinte = (hex: string) => `${hex}${isLight ? '14' : '24'}`
+  const zona = (q: { txt: string; color: string }, desde: [number, number], hasta: [number, number], pos: string) => [
+    { name: q.txt, xAxis: desde[0], yAxis: desde[1], itemStyle: { color: tinte(q.color) },
+      label: { show: true, position: pos, color: q.color, fontSize: 12, fontWeight: 700 as const, fontFamily: 'Lato, sans-serif', distance: 10 } },
+    { xAxis: hasta[0], yAxis: hasta[1] },
+  ]
   // Un color por colaborador: la paleta de la app y, si hay más personas, tonos repartidos en el círculo
   const colorColaborador = (i: number) => (i < palette.length ? palette[i] : `hsl(${Math.round((i * 137.5) % 360)}, 62%, 50%)`)
   const money = (v: number) => '$ ' + Math.round(v).toLocaleString('es-CO')
@@ -6342,13 +6356,13 @@ function buildPersonalDispersionOpt(items: { label: string; n: number; horas: nu
     },
     grid: { left: 20, right: 110, bottom: 40, top: 30, containLabel: true },
     xAxis: {
-      type: 'value' as const, name: 'Eficiencia de esfuerzo — horas por trabajo', nameLocation: 'middle' as const, nameGap: 28, scale: true,
+      type: 'value' as const, name: 'Eficiencia de esfuerzo — horas por trabajo', nameLocation: 'middle' as const, nameGap: 28, min: 0, max: xMax,
       nameTextStyle: { color: chartTextColor.value, fontWeight: 700 as const, fontSize: 11 },
       axisLabel: { color: chartTextColor.value, fontSize: 10, formatter: (v: number) => `${v} h` },
       splitLine: { lineStyle: { color: ejeColor, type: 'dashed' as const } },
     },
     yAxis: {
-      type: 'value' as const, name: 'Eficiencia financiera — costo por trabajo', nameLocation: 'middle' as const, nameGap: 78, scale: true,
+      type: 'value' as const, name: 'Eficiencia financiera — costo por trabajo', nameLocation: 'middle' as const, nameGap: 78, min: 0, max: yMax,
       nameTextStyle: { color: chartTextColor.value, fontWeight: 700 as const, fontSize: 11 },
       axisLabel: { color: chartTextColor.value, fontSize: 10, formatter: (v: number) => money(v) },
       splitLine: { lineStyle: { color: ejeColor, type: 'dashed' as const } },
@@ -6361,6 +6375,16 @@ function buildPersonalDispersionOpt(items: { label: string; n: number; horas: nu
       label: { show: true, position: 'right' as const, formatter: (p: any) => String(p.name).split(' ').slice(0, 2).join(' '), fontSize: 10, fontWeight: 700 as const, color: chartTextColor.value },
       labelLayout: { hideOverlap: true },
       emphasis: { scale: false, label: { show: true } },
+      // Los cuatro cuadrantes con fondo suave y su nombre
+      markArea: {
+        silent: true,
+        data: [
+          zona(Q.ideal, [0, 0], [avgH, avgC], 'insideBottomLeft'),
+          zona(Q.costoso, [0, avgC], [avgH, yMax], 'insideTopLeft'),
+          zona(Q.lento, [avgH, 0], [xMax, avgC], 'insideBottomRight'),
+          zona(Q.cuidado, [avgH, avgC], [xMax, yMax], 'insideTopRight'),
+        ] as any,
+      },
       markLine: {
         silent: true, symbol: 'none',
         lineStyle: { type: 'dashed' as const, color: isLight ? '#94a3b8' : '#64748b', width: 1.5 },
