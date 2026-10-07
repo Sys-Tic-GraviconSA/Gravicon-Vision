@@ -18,6 +18,7 @@ import {
   getUserPerms,
   audit,
   verifyPassword,
+  nuevaSesion,
   isBanned,
   isSuperAdmin,
   getUserRole,
@@ -426,7 +427,9 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
       })
       if (error) throw error
       await audit(req, 'password.change', user.email)
-      res.json({ ok: true })
+      // El cambio cierra todas las sesiones del usuario: se abre una nueva para no sacarlo al login
+      const session = await nuevaSesion(user.email, next)
+      res.json({ ok: true, session })
     } catch (err) {
       console.error('[me-password]', err)
       res.status(500).json({ error: 'No se pudo cambiar la contraseña.' })

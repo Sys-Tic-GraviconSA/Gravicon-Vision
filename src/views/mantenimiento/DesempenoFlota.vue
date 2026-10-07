@@ -116,14 +116,14 @@ const { base, leyenda, ejeX, chartTextColor, isLight } = useEstiloGraficas()
 
 // ---------------------------------------------------------------- Variables (valores siempre completos)
 interface Variable { key: VariableFlota; label: string; fmt: (v: number) => string; mejor: 'alto' | 'bajo' }
-// El orden de esta lista es el orden de las filas de cada vehículo: primero los costos
+// El orden de esta lista es el orden de las filas de cada vehículo: operación primero, luego los costos
 const VARIABLES: Variable[] = [
+  { key: 'm3', label: 'Producción m³', fmt: v => fmtN(v, 2) + ' m³', mejor: 'alto' },
+  { key: 'disp', label: 'Disponibilidad %', fmt: v => fmtN(v, 1) + ' %', mejor: 'alto' },
   { key: 'total', label: 'Costo total', fmt: cop, mejor: 'bajo' },
   { key: 'totalM3', label: 'Costo total/m³', fmt: cop, mejor: 'bajo' },
   { key: 'mantM3', label: 'Mantenimiento/m³', fmt: cop, mejor: 'bajo' },
   { key: 'combM3', label: 'Combustible/m³', fmt: cop, mejor: 'bajo' },
-  { key: 'disp', label: 'Disponibilidad %', fmt: v => fmtN(v, 1) + ' %', mejor: 'alto' },
-  { key: 'm3', label: 'Producción m³', fmt: v => fmtN(v, 2) + ' m³', mejor: 'alto' },
   { key: 'taller', label: 'Días en taller', fmt: v => fmtN(v, 0) + (v === 1 ? ' día' : ' días'), mejor: 'bajo' },
   { key: 'viajes', label: 'Viajes', fmt: v => fmtN(v, 0), mejor: 'alto' },
   { key: 'mant', label: 'Costo mantenimiento', fmt: cop, mejor: 'bajo' },
@@ -133,7 +133,7 @@ const VARIABLES: Variable[] = [
   { key: 'hrGal', label: 'Horas por galón', fmt: v => fmtN(v, 2) + ' h/gal', mejor: 'alto' },
   { key: 'galHr', label: 'Galones por hora', fmt: v => fmtN(v, 2) + ' gal/h', mejor: 'bajo' },
 ]
-const POR_DEFECTO: VariableFlota[] = ['total', 'totalM3', 'mantM3', 'combM3', 'disp', 'm3', 'taller', 'viajes']
+const POR_DEFECTO: VariableFlota[] = ['m3', 'disp', 'total', 'totalM3', 'mantM3', 'combM3', 'taller', 'viajes']
 const etiquetaMes = (k: string) => `${MESES_CORTOS[Number(k.slice(5, 7)) - 1]} ${k.slice(2, 4)}`
 const etiquetaMesLarga = (k: string) => `${MESES_CORTOS[Number(k.slice(5, 7)) - 1]} ${k.slice(0, 4)}`
 

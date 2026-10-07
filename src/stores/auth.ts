@@ -142,23 +142,42 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
 
-  /** Cierre de sesión con limpieza garantizada del estado local */
-  async function signOut() {
-    try {
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
-    } catch (e) {
-      console.error('[auth] signOut error:', e)
-    } finally {
-      session.value = null
-      user.value = null
-      profile.value = null
-      profilePromise = null
-      // Borra los datos guardados en este navegador: copia local (IndexedDB) y caché HTTP de la API
-      await borrarCacheLocal()
-      try { await fetch('/api/salir', { method: 'POST' }) } catch { /* sin red: la copia local ya se borró */ }
-    }
+  /** Reemplaza la sesión por la que entrega el servidor tras cambiar la contraseña (la anterior queda revocada). */
+  async function aplicarSesion(tokens: { access_token: string; refresh_token: string }) {
+    const { data, error } = await supabase.auth.setSession(tokens)
+    if (error || !data.session) throw error ?? new Error('Sesión no válida')
+    session.value = data.session
+    user.value = data.session.user
+    await loadProfile(true)
   }
+
+  /** Espera una promesa como máximo `ms`; si tarda más, sigue sin ella (nunca rechaza) */
+  function conLimite(p: Promise<unknown>, ms: number): Promise<void> {
+    return Promise.race([p.then(() => undefined, () => undefined), new Promise<void>(r => setTimeout(r, ms))])
+  }
+
+  /**
+   * Cierre de sesión con limpieza garantizada del estado local. Ningún paso puede dejar la pantalla
+   * pegada: cada uno tiene un tiempo máximo (aviso a Supabase, copia local y caché del navegador).
+   */
+  async function signOut() {
+    // 1) Revocar la sesión en Supabase (con red lenta o el candado de auth ocupado puede no responder)
+    const revocar = supabase.auth.signOut().then(({ error }) => { if (error) throw error })
+      .catch(e => console.error('[auth] signOut error:', e))
+    await conLimite(revocar, 3000)
+    // Si no alcanzó a responder, se borra igual la sesión guardada en este navegador
+    try {
+      for (const k of Object.keys(localStorage)) if (k.startsWith('sb-') && k.endsWith('-auth-token')) localStorage.removeItem(k)
+    } catch { /* almacenamiento no disponible */ }
+    session.value = null
+    user.value = null
+    profile.value = null
+    profilePromise = null
+    // 2) Copia local (IndexedDB) y 3) caché HTTP de la API (Clear-Site-Data puede tardar varios segundos en Chrome)
+    await conLimite(borrarCacheLocal(), 1500)
+    await conLimite(fetch('/api/salir', { method: 'POST', keepalive: true }), 1500)
+  }
+
 
   /** Registra en el servidor que el usuario vio la guía de inicio (terminada u omitida). */
   async function marcarTourVisto(version: number): Promise<void> {
@@ -179,6 +198,6 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     user, session, loading, isAuthenticated, userEmail, accessToken,
     profile, role, isSuperAdmin, mustChangePassword, canView, loadProfile, marcarTourVisto,
-    initialize, signIn, signOut,
+    initialize, signIn, signOut, aplicarSesion,
   }
 })
