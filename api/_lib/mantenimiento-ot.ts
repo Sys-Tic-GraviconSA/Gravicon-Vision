@@ -104,18 +104,15 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
     const precio = priceKey ? (Number(r[priceKey]) || 0) : 0
     personalInternoMap.set(id, { nombre, cargo, precio })
   }
-  // Técnicos de otras plantas: en las OT de Concretos trabaja personal de Cuncía (taller Cuncía) cuyo ID
-  // solo está en el maestro de Cuncía. Si el ID no está en el maestro propio, se busca en los de las otras plantas.
-  const otrosMaestros = ['maestro_concretos', 'maestro_cuncia', 'maestro_acacias'].filter(k => k !== maestroKey)
-  const otrosPersonal = await Promise.allSettled(otrosMaestros.map(k => getSheetData(k, 'GRAVICON_INTERNO_OT', forceRefresh)))
-  for (const res of otrosPersonal) {
-    if (res.status !== 'fulfilled') continue
-    for (const r of res.value.rows) {
-      const id = String(r['Id_Registro'] ?? '').trim()
-      const nombre = String(r['Nombre_Proveedor'] ?? '').trim()
-      if (!id || !nombre || personalInternoMap.get(id)?.nombre) continue
-      personalInternoMap.set(id, { nombre, cargo: String(r['CARGO'] ?? '').trim(), precio: 0 })
-    }
+  /** «RUBEN FAJARDO - GRAVICON INTERNO» → «RUBEN FAJARDO» */
+  const limpiarNombre = (n: string) => n.replace(/\s*-\s*GRAVICON INTERNO\s*$/i, '').trim()
+  /**
+   * Nombre del técnico SOLO desde el maestro GRAVICON_INTERNO_OT de la propia planta (pedido del usuario:
+   * en Concretos, solo el maestro de Concretos; nada de otras plantas). Si el ID no está, no se muestra.
+   */
+  const nombreDe = (id: string): { nombre: string; cargo: string; precio: number } | undefined => {
+    const propio = personalInternoMap.get(id)
+    return propio?.nombre ? { ...propio, nombre: limpiarNombre(propio.nombre) } : undefined
   }
 
   const placaMap = new Map<string, string>()
@@ -237,13 +234,14 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
     const costoPorPersona = ids.length > 0 ? costoServicios / ids.length : costoServicios
 
     for (const id of ids) {
-      const info = personalInternoMap.get(id)
+      const info = nombreDe(id)
+      // Solo personal del maestro de esta planta; el que no está allí no se muestra
+      if (!info) continue
       personalInvolucrado.push({
         id,
-        // Nombre desde el maestro GRAVICON_INTERNO_OT; si el ID no está allí, se muestra el ID tal cual
-        nombre: info?.nombre || id,
-        cargo: info?.cargo ?? '',
-        precio: info?.precio ?? 0,
+        nombre: info.nombre,
+        cargo: info.cargo,
+        precio: info.precio,
         costo: costoPorPersona,
       })
     }
