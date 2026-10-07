@@ -1057,6 +1057,10 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart, LineChart, PieChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, TitleComponent, LegendComponent, MarkLineComponent } from 'echarts/components'
 import { LabelLayout } from 'echarts/features'
+/** Nombre de persona con la primera letra de cada palabra en mayúscula («RUBEN FAJARDO» → «Ruben Fajardo») */
+function nombrePropio(v: unknown): string {
+  return String(v ?? '').trim().toLowerCase().split(/\s+/).filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+}
 
 echarts.use([CanvasRenderer, BarChart, LineChart, PieChart, GridComponent, TooltipComponent, TitleComponent, LegendComponent, MarkLineComponent, LabelLayout])
 
@@ -1330,7 +1334,7 @@ function _getInspectionDetailsRaw(r: Record<string, unknown>) {
   const esAlquilado = rawTipo.startsWith('ALQUILA') || rawTipo.includes('ALQUILER') || prov.includes('ALQUILA')
   const baseTipo = rawTipo.replace(/^ALQUILADAS?\s*[-–:]\s*/i, '').replace(/^ALQUILER\s*[-–:]\s*/i, '').trim() || 'MAQUINARIA'
   const loc = String(r['Localizacion'] ?? r['Localización'] ?? r['Ubicación'] ?? r['Area de Trabajo'] ?? 'Planta').trim()
-  const supervisor = String(r['Supervisor_Texto'] ?? r['Supervisor'] ?? r['SUPERVISOR'] ?? r['Responsable'] ?? '—')
+  const supervisor = nombrePropio(r['Supervisor_Texto'] ?? r['Supervisor'] ?? r['SUPERVISOR'] ?? r['Responsable'] ?? '—') || '—'
 
   const revAm = Number(r['Rev_AM'] ?? r['rev_am'] ?? NaN)
   const revPm = Number(r['Rev_PM'] ?? r['rev_pm'] ?? NaN)
@@ -1998,7 +2002,7 @@ const tareasAbiertas = computed(() => {
     const idPlaca = String(t['Placa'] ?? '').trim()
     const placa = rawPlaca || placaLookupMap.value.get(idPlaca) || placaLookupMap.value.get(rawPlaca) || (idPlaca ? idPlaca : '—')
 
-    const responsable = String(t['Nombre_Responsable'] ?? t['Nombre Responsable'] ?? t['Responsable_Texto'] ?? t['Responsable'] ?? '—').trim()
+    const responsable = nombrePropio(t['Nombre_Responsable'] ?? t['Nombre Responsable'] ?? t['Responsable_Texto'] ?? t['Responsable'] ?? '—') || '—'
     const actividad = String(t['Actividad'] ?? '—')
     const observaciones = String(t['observaciones'] ?? '—')
     const dias = Math.max(1, Math.floor((nowUtc - fechaMs) / 86400000))
@@ -2073,7 +2077,7 @@ const cumplimientoSupervisorPrevio1 = computed(() => {
     if (!fechaReg) continue
     if (getDateKey(fechaReg) !== targetIso) continue
 
-    const responsable = String(t['Nombre_Responsable'] ?? t['Nombre Responsable'] ?? t['Responsable_Texto'] ?? t['Responsable'] ?? 'Sin asignar').trim()
+    const responsable = nombrePropio(t['Nombre_Responsable'] ?? t['Nombre Responsable'] ?? t['Responsable_Texto'] ?? t['Responsable'] ?? 'Sin asignar') || 'Sin asignar'
     if (!responsable || responsable === '—') continue
 
     const estado = String(t['Estado_Tarea'] ?? '').trim()
@@ -2117,7 +2121,7 @@ const cumplimientoSupervisorPrevio2 = computed(() => {
     if (!fechaReg) continue
     if (getDateKey(fechaReg) !== targetIso) continue
 
-    const responsable = String(t['Nombre_Responsable'] ?? t['Nombre Responsable'] ?? t['Responsable_Texto'] ?? t['Responsable'] ?? 'Sin asignar').trim()
+    const responsable = nombrePropio(t['Nombre_Responsable'] ?? t['Nombre Responsable'] ?? t['Responsable_Texto'] ?? t['Responsable'] ?? 'Sin asignar') || 'Sin asignar'
     if (!responsable || responsable === '—') continue
 
     const estado = String(t['Estado_Tarea'] ?? '').trim()
@@ -3625,7 +3629,7 @@ const diaDetailNovedades = computed<DiaNovedad[]>(() => {
       estado: String(t['Estado_Tarea'] ?? '—').trim(),
       actividad: String(t['Actividad'] ?? '—').trim(),
       observaciones: String(t['observaciones'] ?? '').trim(),
-      responsable: String(t['Nombre_Responsable'] ?? t['Responsable_Texto'] ?? t['Responsable'] ?? '—').trim(),
+      responsable: nombrePropio(t['Nombre_Responsable'] ?? t['Responsable_Texto'] ?? t['Responsable'] ?? '—') || '—',
     })
   }
   return result

@@ -290,6 +290,10 @@ import KpiCard from '../../components/dashboard/KpiCard.vue'
 import ChartCard from '../../components/dashboard/ChartCard.vue'
 import DataTable from '../../components/dashboard/DataTable.vue'
 import { useTheme } from '../../composables/useTheme'
+/** Nombre de persona con la primera letra de cada palabra en mayúscula («RUBEN FAJARDO» → «Ruben Fajardo») */
+function nombrePropio(v: unknown): string {
+  return String(v ?? '').trim().toLowerCase().split(/\s+/).filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+}
 
 const props = defineProps<{
   data: Record<string, unknown>[]
@@ -410,7 +414,7 @@ const allTareas = computed(() => {
     const placa = rawPlaca || placaLookupMap.value.get(idPlaca) || placaLookupMap.value.get(rawPlaca) || (idPlaca ? idPlaca : '—')
 
     const tipo = String(t['Tipo de Vehiculos'] ?? t['Tipo'] ?? '—').trim()
-    const responsable = String(t['Nombre_Responsable'] ?? t['Nombre Responsable'] ?? t['Responsable_Texto'] ?? t['Responsable'] ?? '—').trim()
+    const responsable = nombrePropio(t['Nombre_Responsable'] ?? t['Nombre Responsable'] ?? t['Responsable_Texto'] ?? t['Responsable'] ?? '—') || '—'
     const actividad = String(t['Actividad'] ?? '—')
     const observaciones = String(t['observaciones'] ?? '—')
     const dias = getDias(fechaReg)

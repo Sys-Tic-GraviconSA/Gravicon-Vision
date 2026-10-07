@@ -264,7 +264,10 @@ export async function buildMantenimientoOtRows(otKey: string, maestroKey: string
       'Solicitante': solicitantesMap.get(String(ot['Solicitante'] ?? '').trim()) || '',
       'Fuente_Novedad': String(ot['Fuente_Novedad'] ?? ''),
       'PROVEEDOR_ID': String(ot['Responsable_Proveedor'] ?? '').trim(),
-      'PROVEEDOR': proveedoresMap.get(String(ot['Responsable_Proveedor'] ?? '').trim()) || String(ot['Responsable_Proveedor'] ?? ''),
+      // Si en el proveedor quedó el ID de un técnico interno (p. ej. «PER-INT-001»), la OT la hizo personal
+      // interno: se muestra como GRAVICON INTERNO (mismo nombre del proveedor interno de Concretos)
+      'PROVEEDOR': proveedoresMap.get(String(ot['Responsable_Proveedor'] ?? '').trim())
+        || (/^PER-INT-/i.test(String(ot['Responsable_Proveedor'] ?? '').trim()) ? 'GRAVICON INTERNO' : String(ot['Responsable_Proveedor'] ?? '')),
       'Jornada': String(ot['Jornada'] ?? ''),
       'Personal': personalInvolucrado.map(p => p.nombre).filter(Boolean).join(', '),
       'Duración (horas)': typeof ot['Duración_Estimada'] === 'number' ? Math.round(ot['Duración_Estimada'] * 24 * 100) / 100 : null,

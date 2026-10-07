@@ -1230,7 +1230,7 @@
       </div>
 
       <div class="charts-grid cols-1" style="margin-bottom:22px">
-        <ChartCard title="Personal de Intervención (Interno) — Esfuerzo vs. Costo por Trabajo" description="Cada punto es un colaborador (tamaño = nº de trabajos), con su propio color. Eje horizontal: eficiencia de esfuerzo (horas promedio por trabajo); eje vertical: eficiencia financiera (costo de servicios promedio por trabajo). Las líneas punteadas son el promedio del equipo" :option="personalDispersionGenOpt" :height="720" tall alto-completo clickable @chart-click="(p:any)=>onRankingClick('Personal', p)" />
+        <ChartCard title="Personal de Intervención (Interno) — Esfuerzo vs. Costo por Trabajo · Planta y Maquinaria" description="Cada punto es un colaborador (tamaño = nº de trabajos), con su propio color. Eje horizontal: eficiencia de esfuerzo (horas promedio por trabajo); eje vertical: eficiencia financiera (costo de servicios promedio por trabajo). Las líneas punteadas son el promedio del equipo" :option="personalDispersionGerOpt" :height="720" tall alto-completo clickable @chart-click="(p:any)=>onRankingClick('Personal', p, 'ambas')" />
       </div>
       <div class="charts-grid cols-1" style="margin-bottom:22px">
         <ChartCard title="Solicitantes con Más Órdenes" description="Quienes más solicitan órdenes de trabajo" :option="solicitantesOpt" :expand-option="solicitantesExpandOpt" :height="300" clickable @chart-click="(p:any)=>onRankingClick('Solicitante', p)" />
@@ -1309,7 +1309,7 @@
       </div>
 
       <div class="charts-grid cols-1" style="margin-bottom:22px">
-        <ChartCard title="Personal de Intervención (Interno) — Esfuerzo vs. Costo por Trabajo" description="Cada punto es un colaborador (tamaño = nº de trabajos), con su propio color. Eje horizontal: eficiencia de esfuerzo (horas promedio por trabajo); eje vertical: eficiencia financiera (costo de servicios promedio por trabajo). Las líneas punteadas son el promedio del equipo" :option="personalDispersionOpt" :height="720" tall alto-completo clickable @chart-click="(p:any)=>onRankingClick('Personal', p, 'int')" />
+        <ChartCard title="Personal de Intervención (Interno) — Esfuerzo vs. Costo por Trabajo · Planta y Maquinaria" description="Cada punto es un colaborador (tamaño = nº de trabajos), con su propio color. Eje horizontal: eficiencia de esfuerzo (horas promedio por trabajo); eje vertical: eficiencia financiera (costo de servicios promedio por trabajo). Las líneas punteadas son el promedio del equipo" :option="personalDispersionGerOpt" :height="720" tall alto-completo clickable @chart-click="(p:any)=>onRankingClick('Personal', p, 'ambas')" />
       </div>
 
       <div class="charts-grid cols-1" style="margin-bottom:22px">
@@ -2349,7 +2349,7 @@ function computePersonalRanking(rows: Record<string, unknown>[], limit = Infinit
       for (const p of personalDetalles) {
         const label = String(p.nombre || '').trim()
         if (!label) continue
-        const e = map.get(clavePersona(label)) || { label, n: 0, horas: 0, costo: 0 }
+        const e = map.get(clavePersona(label)) || { label: toTitleCase(label), n: 0, horas: 0, costo: 0 }
         e.n++
         // Horas: la duración completa de la OT para cada técnico; solo el costo de servicios se reparte
         e.horas += horas
@@ -2363,7 +2363,7 @@ function computePersonalRanking(rows: Record<string, unknown>[], limit = Infinit
       const costoTotal = Number(r['Costo servicios']) || 0
       const nPersonas = personas.length || 1
       for (const label of personas) {
-        const e = map.get(clavePersona(label)) || { label, n: 0, horas: 0, costo: 0 }
+        const e = map.get(clavePersona(label)) || { label: toTitleCase(label), n: 0, horas: 0, costo: 0 }
         e.n++
         e.horas += horas
         e.costo += costoTotal / nPersonas
@@ -3293,7 +3293,7 @@ const repPersonalInterno = computed(() => {
       for (const p of personalDetalles) {
         const label = String(p.nombre || '').trim()
         if (!label) continue
-        const e = map.get(clavePersona(label)) || { label, n: 0, costoServ: 0, horas: 0 }
+        const e = map.get(clavePersona(label)) || { label: toTitleCase(label), n: 0, costoServ: 0, horas: 0 }
         e.n++
         // Horas: la duración completa de la OT para cada técnico; solo el costo de servicios se reparte
         e.horas += horas
@@ -3307,7 +3307,7 @@ const repPersonalInterno = computed(() => {
       const costoServ = Number(r['Costo servicios']) || 0
       const nPersonas = personas.length || 1
       for (const label of personas) {
-        const e = map.get(clavePersona(label)) || { label, n: 0, costoServ: 0, horas: 0 }
+        const e = map.get(clavePersona(label)) || { label: toTitleCase(label), n: 0, costoServ: 0, horas: 0 }
         e.n++
         e.horas += horas
         e.costoServ += costoServ / nPersonas
@@ -3879,20 +3879,23 @@ const cleanedData = computed(() => {
   })
 })
 
+/** OT de la planta (y localización, si aplica) sin separar Planta / Maquinaria */
+const otPlantaAmbasAreas = computed(() => cleanedData.value.filter(r => {
+  const p = String(r['PLANTA'] ?? '').trim().toUpperCase()
+  if (isConcretos.value) {
+    if (p !== 'CONCRETOS' && p !== '') return false
+  } else {
+    if (!(isAcacias.value ? p === 'ACACIAS' : (p === 'CUNCIA' || p === 'CUNCA'))) return false
+  }
+  if (isConcretos.value && props.localizacion) {
+    const loc = String(r['Localización'] ?? '').trim().toUpperCase()
+    if (loc !== props.localizacion.toUpperCase()) return false
+  }
+  return true
+}))
+
 const allData = computed(() => {
-  const base = cleanedData.value.filter(r => {
-    const p = String(r['PLANTA'] ?? '').trim().toUpperCase()
-    if (isConcretos.value) {
-      if (p !== 'CONCRETOS' && p !== '') return false
-    } else {
-      if (!(isAcacias.value ? p === 'ACACIAS' : (p === 'CUNCIA' || p === 'CUNCA'))) return false
-    }
-    if (isConcretos.value && props.localizacion) {
-      const loc = String(r['Localización'] ?? '').trim().toUpperCase()
-      if (loc !== props.localizacion.toUpperCase()) return false
-    }
-    return true
-  })
+  const base = otPlantaAmbasAreas.value
   // Disponibilidad (sub-pestaña bajo Planta/Maquinaria): en Concretos usa toda la flota;
   // en Agregados (Cuncía/Acacías) solo se hace seguimiento a MAQUINARIA, no a planta fija.
   if (subTab.value === 'disponibilidad') {
@@ -4217,7 +4220,7 @@ const colaboradoresDisponibles = computed(() => {
   for (const r of allData.value) {
     for (const p of (r['_personalDetalles'] as { nombre?: string }[] | undefined) ?? []) {
       const n = String(p?.nombre ?? '').trim()
-      if (n && !m.has(clavePersona(n))) m.set(clavePersona(n), n)
+      if (n && !m.has(clavePersona(n))) m.set(clavePersona(n), toTitleCase(n))
     }
   }
   return [...m.values()].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
@@ -4356,12 +4359,19 @@ function onClearFilters() {
 
 function isInterno(r: Record<string, unknown>): boolean {
   const id = String(r['PROVEEDOR_ID'] ?? '').trim().toUpperCase()
+  if (isConcretos.value) {
+    // Concretos: el único proveedor interno es PROV-001 (GRAVICON INTERNO); allí PROV-002 es un proveedor
+    // externo (AGRO INVERSIONES TORNILLOS Y RACORES). Si en el proveedor quedó el ID de un técnico interno
+    // (p. ej. «PER-INT-001», Ruben Fajardo, en ~207 OT), la OT la hizo personal interno: cuenta como interna.
+    if (id === 'PROV-001' || id.startsWith('PER-INT-')) return true
+    return String(r['PROVEEDOR'] ?? '').trim().toUpperCase().includes('GRAVICON INTERNO')
+  }
   const expected = tipoTab.value === 'maquinaria' ? 'PROV-002' : 'PROV-001'
   if (id === expected) return true
   // Fallback por nombre de proveedor (datos históricos / desalineación de ID)
   const prov = String(r['PROVEEDOR'] ?? '').trim().toUpperCase()
   if (prov.includes('GRAVICON INTERNO') || prov.includes('MANTENIMIENTO MAQUINARIA')) return true
-  // Cualquier ID interno conocido cuenta como interno aunque el tab no coincida (robusto para Concretos)
+  // Cualquier ID interno conocido cuenta como interno aunque el tab no coincida
   if (id === 'PROV-001' || id === 'PROV-002') return true
   return false
 }
@@ -6109,7 +6119,7 @@ function closeMesDetail() { showMesDetail.value = false }
 // — Detalle genérico por ranking al clicar en cualquier gráfica (mismo estilo que Costos por Placa)
 const selectedRankingField = ref<string | null>(null)
 const selectedRankingValue = ref<string | null>(null)
-const selectedRankingScope = ref<'general'|'int'|'ext'>('general')
+const selectedRankingScope = ref<'general'|'int'|'ext'|'ambas'>('general')
 const showRankingDetail = ref(false)
 function fechaToDiariasLabel(serial: number): string {
   if (!serial) return ''
@@ -6126,7 +6136,7 @@ const rankingDetailRows = computed(() => {
   // fecha, o el clic en una barra puede no coincidir con lo que la barra muestra.
   const base = field === 'Fecha'
     ? (scope === 'int' ? partitionRegistro.value.int : scope === 'ext' ? partitionRegistro.value.ext : dataFilteredByRegistro.value)
-    : (scope === 'int' ? intRows.value : scope === 'ext' ? extRows.value : dataFilteredNoAcpm.value)
+    : (scope === 'ambas' ? filasAmbasAreasSinColab.value : scope === 'int' ? intRows.value : scope === 'ext' ? extRows.value : dataFilteredNoAcpm.value)
   return base.filter(r => {
     if (field === 'Sistema') {
       const subs = r['_subOrdenes'] as any[]
@@ -6168,7 +6178,7 @@ const rankingDetailTableRows = computed<Record<string, unknown>[]>(() => ranking
   ...r as Record<string, unknown>,
   _ot: r,
 })))
-function onRankingClick(field: string, params: any, scope: 'general'|'int'|'ext' = 'general') {
+function onRankingClick(field: string, params: any, scope: 'general'|'int'|'ext'|'ambas' = 'general') {
   const p = Array.isArray(params) ? params[0] : params
   const raw = p?.name ?? p?.data?.name ?? p?.axisValue ?? ''
   const val = String(raw ?? '').trim()
@@ -6402,6 +6412,17 @@ const soloElegidos = (items: { label: string; n: number; horas: number; costo: n
   hayFiltroColaboradores.value ? items.filter(e => clavesColaboradores.value.has(clavePersona(e.label))) : items
 const personalDispersionOpt = computed(() => { const todos = computePersonalRanking(intRowsSinColab.value); return buildPersonalDispersionOpt(soloElegidos(todos), todos) })
 const personalDispersionGenOpt = computed(() => { const todos = computePersonalRanking(filasSinColab.value.filter(isInterno)); return buildPersonalDispersionOpt(soloElegidos(todos), todos) })
+/**
+ * Gerencial: dispersión combinada de Planta y Maquinaria (todo el personal interno de la planta), igual en
+ * las dos pestañas. Mismo filtro de fechas por cierre y los demás filtros de arriba (salvo «Personal»).
+ */
+const filasAmbasAreasSinColab = computed(() => {
+  const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
+  const until = fechaFin.value ? dateToSerial(fechaFin.value) + 1 : Infinity
+  const enRango = otPlantaAmbasAreas.value.filter(r => { const c = otCloseSerial(r); return c !== 0 && c >= since && c < until })
+  return applyOtMultiFilters(enRango, false).filter(isInterno)
+})
+const personalDispersionGerOpt = computed(() => { const todos = computePersonalRanking(filasAmbasAreasSinColab.value); return buildPersonalDispersionOpt(soloElegidos(todos), todos) })
 const solicitantesIntOpt = computed(() => markRaw(buildCountBarColorOpt(solicitantesIntRanking.value, 'Órdenes')))
 const responsablesCierreIntOpt = computed(() => markRaw(buildCountPieOpt(responsablesCierreIntRanking.value, false)))
 const jornadaIntOpt = computed(() => markRaw(buildCountPieOpt(jornadaIntRanking.value, false)))
