@@ -368,11 +368,13 @@ a {
   .sticky-top .page-header .filter-group.filter-group {
     grid-column: 1; grid-row: 1 / span 2; align-self: center; justify-self: stretch;
     display: flex; flex-wrap: wrap; justify-content: flex-start; align-items: center; gap: 6px 6px;
-    position: static; min-width: 0; width: auto; overflow: visible; margin: 0; padding: 0;
+    /* La etiqueta «Filtros» va en su propia columna: los chips que bajan de fila quedan alineados con los de arriba */
+    position: relative; min-width: 0; width: auto; overflow: visible; margin: 0; padding: 0 0 0 64px;
     border: none; border-radius: 0; background: none; box-shadow: none;
   }
   .sticky-top .page-header .filter-group.filter-group::before {
-    content: 'Filtros'; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-tertiary); margin-right: 4px;
+    content: 'Filtros'; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-tertiary);
+    position: absolute; left: 0; top: 0; height: 32px; display: flex; align-items: center;
   }
   .sticky-top .page-header .filter-group.filter-group > * { flex: 0 0 auto; }
   /* «Actualizar» arriba y «Limpiar» debajo; sin filtros activos «Limpiar» no ocupa lugar y «Actualizar» queda centrado */
