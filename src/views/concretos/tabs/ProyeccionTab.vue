@@ -153,28 +153,32 @@
         <div class="report-salto-superior"></div>
         <div class="report-section-block">
           <h3 class="report-block-title"><span class="title-bar"></span>Clientes proyectados por planta — {{ mesLbl }}</h3>
-          <p class="section-note">Cumplimiento de cada cliente frente a su meta; en rojo los que no han despachado. «Calle» agrupa los clientes sin proyección.</p>
+          <p class="section-note">Cumplimiento de cada cliente frente a su meta; en rojo los que no han despachado. «Calle» agrupa los clientes sin proyección.
+            Condición: contado o crédito según sus remisiones del mes (si aún no despacha, las del año); si tiene las dos, la que más pesa y su %.</p>
           <div class="data-card"><div class="table-wrap"><table>
-            <thead><tr><th>Planta</th><th>Cliente</th><th>Obra</th><th class="r">Meta m³</th><th class="r">Ejecutado m³</th><th class="r">Cumplimiento</th><th class="r">Faltante</th></tr></thead>
+            <thead><tr><th>Planta</th><th>Cliente</th><th>Obra</th><th>Condición</th><th class="r">Meta m³</th><th class="r">Ejecutado m³</th><th class="r">Cumplimiento</th><th class="r">Faltante</th></tr></thead>
             <tbody>
               <template v-for="p in plantas" :key="p">
                 <tr v-for="(c, i) in P[p].clientes" :key="p + i" :class="{ alerta: c.real === 0 && c.meta > 0 }">
                   <td v-if="i === 0" class="grp bold accent-text" :rowspan="P[p].clientes.length + (P[p].calle ? 2 : 1)">{{ p }}</td>
                   <td class="bold">{{ titulo(c.cliente) }}</td><td class="muted">{{ titulo(c.obra) }}</td>
+                  <td><span v-if="condCli.get(norm(c.cliente))" class="cond-pill" :style="{ '--c': COLOR_CONDICION(condCli.get(norm(c.cliente))!.principal) }"
+                    :title="condCli.get(norm(c.cliente))!.partes.map(x => `${x.condicion}: ${fmtN(x.m3)} m³ (${pct(x.pct)})`).join(' · ')">{{ textoCond(condCli.get(norm(c.cliente))!) }}</span>
+                    <span v-else class="muted">—</span></td>
                   <td class="r">{{ fmtN(c.meta, 0) }}</td><td class="r bold">{{ fmtN(c.real) }}</td>
                   <td class="r"><span class="pill" :class="c.meta ? semClase(c.real / c.meta * 100 / avance * 100) : 'p-gris'">{{ c.meta ? pct(c.real / c.meta * 100) : '—' }}</span></td>
                   <td class="r">{{ fmtN(Math.max(c.meta - c.real, 0)) }}</td>
                 </tr>
                 <tr v-if="P[p].calle" class="calle">
                   <td v-if="!P[p].clientes.length" class="grp bold accent-text" rowspan="2">{{ p }}</td>
-                  <td class="bold">Calle</td><td class="muted">{{ P[p].calleDet.length }} clientes sin proyección</td>
+                  <td class="bold">Calle</td><td class="muted">{{ P[p].calleDet.length }} clientes sin proyección</td><td></td>
                   <td class="r">{{ fmtN(P[p].calle.meta, 0) }}</td><td class="r bold">{{ fmtN(P[p].calle.real) }}</td>
                   <td class="r"><span class="pill" :class="P[p].calle.meta ? semClase(P[p].calle.real / P[p].calle.meta * 100 / avance * 100) : 'p-gris'">{{ P[p].calle.meta ? pct(P[p].calle.real / P[p].calle.meta * 100) : '—' }}</span></td>
                   <td class="r">{{ fmtN(Math.max(P[p].calle.meta - P[p].calle.real, 0)) }}</td>
                 </tr>
                 <tr class="subtotal">
                   <td v-if="!P[p].clientes.length && !P[p].calle" class="grp bold accent-text">{{ p }}</td>
-                  <td colspan="2">Subtotal {{ p }}</td><td class="r">{{ fmtN(P[p].meta, 0) }}</td><td class="r">{{ fmtN(P[p].real) }}</td>
+                  <td colspan="3">Subtotal {{ p }}</td><td class="r">{{ fmtN(P[p].meta, 0) }}</td><td class="r">{{ fmtN(P[p].real) }}</td>
                   <td class="r">{{ pct(P[p].cump) }}</td><td class="r">{{ fmtN(P[p].falta) }}</td>
                 </tr>
               </template>
@@ -286,7 +290,7 @@ import { BarChart, LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent, MarkLineComponent } from 'echarts/components'
 import { LabelLayout } from 'echarts/features'
 import { useTemaInforme, capturandoPdf } from '../../../composables/useTemaInforme'
-import { COLOR_PLANTA } from '../../../composables/useGraficasConcreto'
+import { COLOR_PLANTA, COLOR_CONDICION, condicionPorCliente, condicionCorta, type CondicionCliente } from '../../../composables/useGraficasConcreto'
 
 // En tema oscuro las gráficas se ven con colores para fondo oscuro; el PDF siempre sale en papel blanco
 const { tema, oscuro } = useTemaInforme()
@@ -432,6 +436,11 @@ const T = computed(() => {
   const meta = s('meta'), real = s('real'), falta = s('falta')
   return { meta, real, esperado: s('esperado'), desv: s('desv'), falta, cump: meta ? real / meta * 100 : 0, diario: habRest.value ? falta / habRest.value : 0 }
 })
+// Contado o crédito de cada cliente según sus remisiones del mes al corte (o de todo lo cargado si aún no despacha)
+const condCli = computed(() => condicionPorCliente(props.rows, norm, mesIso.value, corteIso.value))
+function textoCond(c: CondicionCliente): string {
+  return c.mixta ? `${condicionCorta(c.principal)} ${pct(c.partes[0].pct, 0)} + ${c.partes.slice(1).map(x => condicionCorta(x.condicion)).join(', ')}` : condicionCorta(c.principal)
+}
 const nCli = computed(() => plantas.value.reduce((a, p) => a + P.value[p].clientes.length, 0))
 const nCon = computed(() => plantas.value.reduce((a, p) => a + P.value[p].conDesp, 0))
 

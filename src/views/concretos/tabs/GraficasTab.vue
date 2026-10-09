@@ -16,6 +16,13 @@
         <KpiCard v-for="k in kpis" :key="k.label" :label="k.label" :value="k.value" :icon="k.icon" :accent="k.accent" :trend="k.trend" :detail="k.detail" />
       </div>
 
+      <!-- Contado / crédito: venta de concreto por condición comercial, con el desglose por planta -->
+      <h3 class="section-title"><span class="title-bar"></span>Condición comercial</h3>
+      <p class="section-sub">Venta de concreto antes de IVA de contado y a crédito, por planta.<template v-if="remSinCondicion"> {{ fmtN(remSinCondicion, 0) }} remisiones no traen la condición comercial.</template></p>
+      <div class="kpi-row">
+        <KpiCard v-for="k in kpisCondicion" :key="k.label" :label="k.label" :value="k.value" :icon="k.icon" :accent="k.accent" :trend="k.trend" :detail="k.detail" />
+      </div>
+
       <h3 class="section-title"><span class="title-bar"></span>Tendencia de despacho — por {{ granNombre }}</h3>
       <p v-if="periodos.length > ventana" class="section-sub">
         Se muestran {{ ventana }} de {{ periodos.length }} {{ granPlural }}; desliza la barra inferior para ver las anteriores.
@@ -76,6 +83,49 @@
           </table>
         </div>
       </div>
+
+      <template v-if="condiciones.length">
+        <h3 class="section-title"><span class="title-bar"></span>Contado y crédito</h3>
+        <div class="charts-grid cols-2">
+          <ChartCard :title="`Contado vs. Crédito por ${granNombre === 'día' ? 'Día' : granNombre === 'semana' ? 'Semana' : 'Mes'}`" :description="`m³ de concreto por ${granNombre} según la condición comercial (barras lado a lado); venta y plantas en el tooltip`" :option="optCondPeriodo" :height="340" />
+          <ChartCard title="Contado vs. Crédito por Planta" description="Venta de concreto antes de IVA por planta y condición comercial; al lado, el % de la venta de la planta" :option="optCondPlanta" :height="340" />
+        </div>
+        <div class="gt-card">
+          <h4 class="gt-card-title">Contado y Crédito por Planta <span class="gt-card-note">— concreto sin agregados; % = parte de la venta de la planta</span></h4>
+          <div class="gt-table-wrap">
+            <table class="gt-table">
+              <thead>
+                <tr>
+                  <th rowspan="2">Planta</th>
+                  <th v-for="c in condiciones" :key="c" colspan="3" class="c grp-cond" :style="{ color: COLOR_CONDICION(c) }">{{ c }}</th>
+                </tr>
+                <tr>
+                  <template v-for="c in condiciones" :key="c"><th class="r">m³</th><th class="r">Venta</th><th class="r">%</th></template>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="f in condPorPlanta" :key="f.planta">
+                  <td><span class="dot" :style="{ background: color(f.planta) }"></span>{{ f.planta }}</td>
+                  <template v-for="c in condiciones" :key="c">
+                    <td class="r strong">{{ f.cond[c] ? fmtN(f.cond[c].m3) : '—' }}</td>
+                    <td class="r">{{ f.cond[c] ? cop(f.cond[c].venta) : '—' }}</td>
+                    <td class="r muted">{{ f.cond[c] && f.venta ? pct(f.cond[c].venta / f.venta * 100) : '—' }}</td>
+                  </template>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td>Total</td>
+                  <template v-for="c in condAct" :key="c.condicion">
+                    <td class="r strong">{{ fmtN(c.m3) }}</td><td class="r">{{ cop(c.venta) }}</td>
+                    <td class="r">{{ pct(condVentaTotal ? c.venta / condVentaTotal * 100 : 0) }}</td>
+                  </template>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </template>
 
       <template v-if="rsAgr.length">
         <h3 class="section-title"><span class="title-bar"></span>Agregados (arena y grava)</h3>
@@ -166,6 +216,7 @@ import { esAgregado } from '../../../utils/agregadosConcreto'
 import {
   MESES_CORTOS, ORDEN_PLANTAS, COLOR_PLANTA, PALETA, COLOR_EXTRA, AZUL, FONT,
   fmtN, cop, copCorto, pct, num, nombrePlanta, titulo, punto, m3Lbl, vacio, emphasis, useEstiloGraficas,
+  condicionComercial, resumirCondicion, COLOR_CONDICION, SIN_CONDICION, condicionCorta,
 } from '../../../composables/useGraficasConcreto'
 import { use } from 'echarts/core'
 import { LabelLayout } from 'echarts/features'
@@ -207,7 +258,7 @@ function resistencia(mezcla: string): string {
 interface Rem {
   iso: string; planta: string; cliente: string; comercial: string; mezcla: string
   m3: number; totalConc: number; servicio: boolean; servM3: number; subtotal: number; agregado: boolean
-  mixer: string; conductor: string; bomba: string; operario: string
+  mixer: string; conductor: string; bomba: string; operario: string; condicion: string
 }
 const todas = computed<Rem[]>(() => props.rows
   .filter(r => typeof r['Fecha'] === 'number' && r['Fecha'])
@@ -231,6 +282,7 @@ const todas = computed<Rem[]>(() => props.rows
       // Bomba y operario vienen de order_detail (se cruzan por remisión en el store)
       bomba: String(r['Bomba'] ?? '').trim().toUpperCase(),
       operario: titulo(String(r['Operario'] ?? '').trim()),
+      condicion: condicionComercial(r['Condición Comercial']),
     }
   }))
 
@@ -406,6 +458,43 @@ const kpis = computed(() => {
     { label: '% con Bombeo', value: pct(bomb), icon: 'zap', accent: '#06B6D4', trend: tendencia(variacion(bomb, p.m3 ? p.bombM3 / p.m3 * 100 : 0)),
       detail: detalle(x => `${pct(x.m3 ? x.bombM3 / x.m3 * 100 : 0)} <span style='color:var(--text-tertiary);font-size:10px'>${fmtN(x.bombM3)} m³</span>`) },
   ]
+})
+
+// Condición comercial del período (solo concreto): una tarjeta por condición con su venta y el desglose por planta;
+// la flecha compara la venta con la misma condición en el período anterior
+const condAct = computed(() => {
+  const v = ventanaKpi.value
+  return resumirCondicion(rs.value.filter(r => r.iso >= v.desde && r.iso <= v.hasta).map(r => ({ ...r, venta: r.subtotal })))
+})
+const condAnt = computed(() => {
+  const v = ventanaKpi.value
+  return resumirCondicion(rsPrev.value.filter(r => r.iso >= v.pDesde && r.iso <= v.pHasta).map(r => ({ ...r, venta: r.subtotal })))
+})
+const remSinCondicion = computed(() => condAct.value.find(c => c.condicion === SIN_CONDICION)?.rem ?? 0)
+const condiciones = computed(() => condAct.value.map(c => c.condicion))
+const condVentaTotal = computed(() => condAct.value.reduce((a, c) => a + c.venta, 0))
+// Tabla por planta: m³ y venta de cada condición
+const condPorPlanta = computed(() => plantasTodas.value.filter(p => condAct.value.some(c => c.porPlanta.has(p))).map(p => {
+  const cond: Record<string, { m3: number; venta: number }> = {}
+  let venta = 0
+  for (const c of condAct.value) { const x = c.porPlanta.get(p); if (x) { cond[c.condicion] = x; venta += x.venta } }
+  return { planta: p, cond, venta }
+}))
+const kpisCondicion = computed(() => {
+  const ventaTotal = condAct.value.reduce((a, c) => a + c.venta, 0)
+  const gris = (t: string) => `<span style='color:var(--text-tertiary);font-size:10px'>${t}</span>`
+  return condAct.value.map(c => {
+    const prev = condAnt.value.find(x => x.condicion === c.condicion)
+    return {
+      label: c.condicion, value: cop(c.venta), icon: c.condicion === SIN_CONDICION ? 'alert-circle' : /^contado/i.test(c.condicion) ? 'dollar' : 'clock',
+      accent: COLOR_CONDICION(c.condicion), trend: tendencia(variacion(c.venta, prev?.venta ?? 0)),
+      detail: plantasTodas.value.filter(p => c.porPlanta.has(p)).map(p => {
+        const x = c.porPlanta.get(p)!
+        return `<div class='kpi-detail-row'><span class='kpi-dot' style='background:${color(p)}'></span><span class='kpi-label-int' style='color:${color(p)}'>${p}</span> ` +
+          `<strong>${copCorto(x.venta)}</strong> ${gris(`${fmtN(x.m3)} m³`)}</div>`
+      }).join('') + `<div class='kpi-detail-row' style='color:var(--text-tertiary);font-size:10px'>${pct(ventaTotal ? c.venta / ventaTotal * 100 : 0)} de la venta · ${fmtN(c.m3)} m³</div>`,
+    }
+  })
 })
 
 // Remisiones con pedido y tiempos de viaje (order_detail) para Producción del día y las tablas de operación
@@ -665,6 +754,72 @@ const optBombeo = computed(() => {
     }, true),
     legend: leyenda([{ name: 'Con bombeo', itemStyle: { color: AZUL } }, { name: 'Sin bombeo', itemStyle: { color: sinC } }]),
   }, r.length > 0)
+})
+
+// Contado vs. crédito por período: barras lado a lado por condición (m³); venta y plantas en el tooltip
+const condPeriodos = computed(() => {
+  const map = new Map<string, { k: string; cond: Record<string, { m3: number; venta: number; porPlanta: Record<string, number> }> }>()
+  for (const r of rs.value) {
+    const k = clavePeriodo(r.iso)
+    let e = map.get(k); if (!e) map.set(k, (e = { k, cond: {} }))
+    const c = (e.cond[r.condicion] ??= { m3: 0, venta: 0, porPlanta: {} })
+    c.m3 += r.m3; c.venta += r.subtotal; c.porPlanta[r.planta] = (c.porPlanta[r.planta] ?? 0) + r.m3
+  }
+  return [...map.values()].sort((a, b) => a.k.localeCompare(b.k))
+})
+const optCondPeriodo = computed(() => {
+  const per = condPeriodos.value, cs = condiciones.value
+  const z = zoom(per.length)
+  return vacio({
+    ...base(),
+    tooltip: {
+      trigger: 'axis' as const, axisPointer: { type: 'shadow' as const },
+      formatter: (params: any[]) => {
+        const x = per[params[0].dataIndex]
+        const tot = cs.reduce((a, c) => a + (x.cond[c]?.m3 ?? 0), 0)
+        return `<b>${etiquetaPeriodo(x.k)}</b><br/>` + cs.filter(c => x.cond[c]).map(c => {
+          const v = x.cond[c]
+          const pls = Object.entries(v.porPlanta).sort((a, b) => b[1] - a[1]).map(([p, m]) => `${p} ${fmtN(m)}`).join(' · ')
+          return `${punto(COLOR_CONDICION(c))} ${c}: <b>${fmtN(v.m3)} m³</b> (${pct(tot ? v.m3 / tot * 100 : 0)}) · ${cop(v.venta)}<br/><span style="color:#94a3b8;font-size:10px;padding-left:14px">${pls}</span>`
+        }).join('<br/>')
+      },
+    },
+    legend: leyenda(cs.map(c => ({ name: c, itemStyle: { color: COLOR_CONDICION(c) } }))),
+    dataZoom: z.dataZoom,
+    grid: { left: 12, right: 20, bottom: z.gridBottom, top: 40, containLabel: true },
+    xAxis: ejeX(per.map(x => etiquetaPeriodo(x.k))),
+    yAxis: ejeY(),
+    series: cs.map(c => ({
+      name: c, type: 'bar' as const, barMaxWidth: 26, barGap: '12%', emphasis,
+      data: per.map(x => +(x.cond[c]?.m3 ?? 0).toFixed(1)),
+      itemStyle: { color: COLOR_CONDICION(c), borderRadius: [4, 4, 0, 0] as any },
+      label: { ...labelPill.value, position: 'top' as const, distance: 3, fontSize: 10, padding: [1, 4] as [number, number], formatter: (v: any) => (v.value ? m3Lbl(v.value) : '') },
+      labelLayout: { hideOverlap: true },
+    })),
+  }, per.length > 0 && cs.length > 0)
+})
+// Contado vs. crédito por planta: venta de cada condición lado a lado (barras horizontales sin apilar)
+const optCondPlanta = computed(() => {
+  const filas = condPorPlanta.value, cs = condiciones.value
+  const txt = (c: string, i: number) => { const f = filas[i], v = f.cond[c]; return v ? `${copCorto(v.venta)} · ${pct(f.venta ? v.venta / f.venta * 100 : 0, 0)}` : '' }
+  const textos = cs.flatMap(c => filas.map((_, i) => txt(c, i)))
+  return vacio({
+    ...barrasH(filas.map(f => f.planta), cs.map(c => ({
+      name: c, type: 'bar', barMaxWidth: 18, barGap: '15%', emphasis,
+      data: filas.map(f => Math.round(f.cond[c]?.venta ?? 0)),
+      itemStyle: { color: COLOR_CONDICION(c), borderRadius: [0, 4, 4, 0] },
+      label: { ...labelPill.value, position: 'right', formatter: (x: any) => (x.value ? txt(c, x.dataIndex) : '') },
+    })), textos, {
+      trigger: 'axis', axisPointer: { type: 'shadow' },
+      formatter: (params: any[]) => {
+        const f = filas[params[0].dataIndex]
+        return `<b>${f.planta}</b><br/>` + cs.filter(c => f.cond[c]).map(c =>
+          `${punto(COLOR_CONDICION(c))} ${condicionCorta(c)}: <b>${cop(f.cond[c].venta)}</b> (${pct(f.venta ? f.cond[c].venta / f.venta * 100 : 0)}) · ${fmtN(f.cond[c].m3)} m³`).join('<br/>') +
+          `<br/>${punto(tinta.value)} Total: <b>${cop(f.venta)}</b>`
+      },
+    }, true),
+    legend: leyenda(cs.map(c => ({ name: c, itemStyle: { color: COLOR_CONDICION(c) } }))),
+  }, filas.length > 0 && cs.length > 0)
 })
 
 // Rankings: una barra por categoría (sin apilar) con el color de la planta donde más pesa;
@@ -975,6 +1130,8 @@ const optOperariosTodos = computed(() => opcionRanking(rankOperarios.value, 'Ser
   text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px;
   color: var(--text-tertiary); padding: 8px 10px; border-bottom: 1px solid var(--card-border); white-space: nowrap;
 }
+.gt-table th.c { text-align: center; }
+.gt-table th.grp-cond { border-bottom: 2px solid currentColor; font-weight: 700; }
 .gt-table td { padding: 10px; color: var(--text-secondary); border-bottom: 1px solid var(--card-border); white-space: nowrap; }
 .gt-table tbody tr:hover td { background: var(--card-bg-hover); }
 .gt-table tfoot td { color: var(--text-primary); font-weight: 700; border-bottom: none; }

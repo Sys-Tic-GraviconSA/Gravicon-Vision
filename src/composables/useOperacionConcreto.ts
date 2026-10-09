@@ -14,12 +14,14 @@
  */
 import { serialToDate } from '../utils/dates'
 import { esAgregado } from '../utils/agregadosConcreto'
-import { fmtN, cop, copCorto, nombrePlanta, titulo, ordenarPlantas } from './useGraficasConcreto'
+import { fmtN, cop, copCorto, pct, nombrePlanta, titulo, ordenarPlantas, condicionComercial, ordenCondicion, COLOR_CONDICION } from './useGraficasConcreto'
 
 export interface RemOp {
   iso: string; planta: string; cliente: string; obra: string; comercial: string; pedido: string; remision: string
   m3: number; totalConc: number; servicio: boolean; servM3: number; servTotal: number; subtotal: number; agregado: boolean
   mixer: string; conductor: string; bomba: string; operario: string
+  /** Contado, Crédito a 30 días… */
+  condicion: string
   /** Minutos del día (null si no está registrado) */
   t: { prog: number | null; ic: number | null; fc: number | null; sp: number | null; llo: number | null; so: number | null; llp: number | null }
 }
@@ -50,6 +52,7 @@ export function normalizarRemisiones(rows: Record<string, unknown>[]): RemOp[] {
       conductor: titulo(String(r['Conductor'] ?? '').trim()),
       bomba: String(r['Bomba'] ?? '').trim().toUpperCase(),
       operario: titulo(String(r['Operario'] ?? '').trim()),
+      condicion: condicionComercial(r['Condición Comercial']),
       t: {
         prog: minutos(r['Hora Programada']), ic: minutos(r['Inicio Cargue']), fc: minutos(r['Fin Cargue']), sp: minutos(r['Salida Planta']),
         llo: minutos(r['Llegada Obra']), so: minutos(r['Salida Obra']), llp: minutos(r['Llegada Planta']),
@@ -74,11 +77,15 @@ export function duracion(min: number | null): string {
 }
 
 // ---------------------------------------------------------------- Despacho del día
-interface Dia { m3: number; venta: number; rem: number; bombM3: number; bombServ: number }
-const delDia = (x: RemOp[]): Dia => ({
-  m3: x.reduce((a, r) => a + r.m3, 0), venta: x.reduce((a, r) => a + r.subtotal, 0), rem: x.length,
-  bombM3: x.filter(r => r.servicio).reduce((a, r) => a + r.servM3, 0), bombServ: x.filter(r => r.servicio).length,
-})
+interface Dia { m3: number; venta: number; rem: number; bombM3: number; bombServ: number; porCond: Record<string, { m3: number; venta: number }> }
+const delDia = (x: RemOp[]): Dia => {
+  const porCond: Dia['porCond'] = {}
+  for (const r of x) { const c = (porCond[r.condicion] ??= { m3: 0, venta: 0 }); c.m3 += r.m3; c.venta += r.subtotal }
+  return {
+    m3: x.reduce((a, r) => a + r.m3, 0), venta: x.reduce((a, r) => a + r.subtotal, 0), rem: x.length,
+    bombM3: x.filter(r => r.servicio).reduce((a, r) => a + r.servM3, 0), bombServ: x.filter(r => r.servicio).length, porCond,
+  }
+}
 export interface DespachoDia { iso: string; antes: string; hoy: Dia; ayer: Dia; porPlanta: { planta: string; hoy: Dia; ayer: Dia }[] }
 /** Último día con despacho de concreto entre `desde` y `hasta`, frente al día anterior con despacho */
 export function despachoDelDia(rs: RemOp[], hasta: string, desde = '', plantas: string[] = []): DespachoDia {
@@ -113,6 +120,14 @@ export function kpisDelDia(d: DespachoDia, color: (p: string) => string) {
     tarjeta('Facturado del Día', 'dollar', '#2563EB', x => x.venta, copCorto),
     tarjeta('Remisiones del Día', 'list', '#8B5CF6', x => x.rem, v => fmtN(v, 0), x => `${fmtN(x.rem ? x.m3 / x.rem : 0)} m³/rem.`),
     tarjeta('Bombeo del Día', 'zap', '#06B6D4', x => x.bombM3, m3, x => `${fmtN(x.bombServ, 0)} serv.`),
+    // Una tarjeta por condición comercial del día (contado, crédito…): venta y m³ por planta
+    ...[...new Set([...Object.keys(d.hoy.porCond), ...Object.keys(d.ayer.porCond)])].sort(ordenCondicion).map(c => {
+      const v = (x: Dia) => x.porCond[c] ?? { m3: 0, venta: 0 }
+      const t = tarjeta(`${c} del Día`, /^contado/i.test(c) ? 'dollar' : /cr[ée]dito/i.test(c) ? 'clock' : 'alert-circle', COLOR_CONDICION(c),
+        x => v(x).venta, copCorto, x => `${fmtN(v(x).m3)} m³`)
+      t.detail += `<div class='kpi-detail-row' style='color:var(--text-tertiary);font-size:10px'>${pct(d.hoy.venta ? v(d.hoy).venta / d.hoy.venta * 100 : 0)} de lo facturado · ${fmtN(v(d.hoy).m3)} m³</div>`
+      return t
+    }),
   ]
 }
 

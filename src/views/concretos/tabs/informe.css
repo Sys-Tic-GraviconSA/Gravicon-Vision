@@ -215,3 +215,12 @@ ul.res li::before { content: "■"; position: absolute; left: 0; top: 4px; color
 [data-theme="dark"] .report-paper:not(.pdf-capturing) .dq-head { color: #e2e8f0; }
 [data-theme="dark"] .report-paper:not(.pdf-capturing) .dq-txt { color: #a3b1c6; }
 /* Gráficas: en oscuro se dibujan con colores para fondo oscuro (useTemaInforme); sin panel claro detrás */
+
+/* Condición comercial: encabezado agrupado y celdas con m³ y venta */
+th.cond-grp { text-align: center !important; border-bottom: 2px solid currentColor; }
+.tabla-cond td { line-height: 1.25; }
+.tabla-cond .sub { font-size: 9px; }
+.cond-pill {
+  display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; white-space: nowrap;
+  color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent);
+}

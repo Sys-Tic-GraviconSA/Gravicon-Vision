@@ -79,6 +79,39 @@
           </div>
         </div>
 
+        <!-- Contado / crédito: venta por condición comercial, con el desglose por planta -->
+        <div v-if="kpisCondicion.length" class="report-section-block">
+          <h3 class="report-block-title"><span class="title-bar"></span>Condición comercial — {{ mesLbl }}</h3>
+          <div class="kpi-row compact-kpi">
+            <KpiCard v-for="k in kpisCondicion" :key="k.label" :label="k.label" :value="k.value" :accent="k.accent" :icon="k.icon" :meta="k.meta" :detail="k.detail" />
+          </div>
+          <div class="data-card"><div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th rowspan="2">Planta</th><th v-for="c in condicionesMes" :key="c" colspan="3" class="cond-grp" :style="{ color: COLOR_CONDICION(c) }">{{ c }}</th></tr>
+                <tr><template v-for="c in condicionesMes" :key="c"><th class="r">m³</th><th class="r">Venta sin IVA</th><th class="r">%</th></template></tr>
+              </thead>
+              <tbody>
+                <tr v-for="p in plantas" :key="p">
+                  <td class="bold accent-text">{{ p }}</td>
+                  <template v-for="c in condicionesMes" :key="c">
+                    <td class="r bold">{{ condCelda(c, p) ? fmtN(condCelda(c, p)!.m3) : '—' }}</td>
+                    <td class="r">{{ condCelda(c, p) ? cop(condCelda(c, p)!.venta) : '—' }}</td>
+                    <td class="r muted">{{ condCelda(c, p) && P[p].venta ? pct(condCelda(c, p)!.venta / P[p].venta * 100) : '—' }}</td>
+                  </template>
+                </tr>
+                <tr class="table-total-row">
+                  <td class="bold">TOTAL</td>
+                  <template v-for="c in condMes" :key="c.condicion">
+                    <td class="r bold">{{ fmtN(c.m3) }}</td><td class="r">{{ cop(c.venta) }}</td><td class="r">{{ pct(M.venta ? c.venta / M.venta * 100 : 0) }}</td>
+                  </template>
+                </tr>
+              </tbody>
+            </table>
+          </div></div>
+          <p class="section-note">% = parte de la venta sin IVA de cada planta (o del total en la última fila).<template v-if="remSinCondicion"> {{ fmtN(remSinCondicion, 0) }} remisiones no traen la condición comercial.</template></p>
+        </div>
+
         <footer class="report-footer">
           <span>Informe Comercial de Ventas de Concreto — Gravicon</span>
           <span>Documento Oficial<span class="fp-num"> | Página 1 de 4</span></span>
@@ -119,6 +152,50 @@
                   <td class="r bold">{{ fmtN(M.m3) }}</td><td class="r">{{ M.rem }}</td><td class="r">{{ M.clientes }}</td>
                   <td class="r bold">{{ cop(M.venta) }}</td><td class="r">{{ cop(M.venta / M.m3) }}</td>
                   <td class="r">{{ fmtN(M.m3) }}</td><td class="r">{{ cop(M.venta) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div></div>
+        </div>
+        <div v-if="condicionesMes.length" class="report-section-block">
+          <h3 class="report-block-title"><span class="title-bar"></span>Contado y crédito por día — {{ mesLbl }}</h3>
+          <div ref="chCondRef" class="echart" style="height: 260px"></div>
+          <p class="section-note">Cada celda: m³ de concreto y, debajo, la venta sin IVA de esa planta y condición comercial.</p>
+          <div class="data-card"><div class="table-wrap">
+            <table class="tabla-cond">
+              <thead>
+                <tr>
+                  <th rowspan="2">Día</th>
+                  <th v-for="p in plantas" :key="p" :colspan="condicionesMes.length" class="cond-grp">{{ p }}</th>
+                  <th :colspan="condicionesMes.length * 2" class="cond-grp">Total</th>
+                </tr>
+                <tr>
+                  <template v-for="p in plantas" :key="p"><th v-for="c in condicionesMes" :key="c" class="r" :style="{ color: COLOR_CONDICION(c) }">{{ condicionCorta(c) }}</th></template>
+                  <template v-for="c in condicionesMes" :key="c"><th class="r" :style="{ color: COLOR_CONDICION(c) }">{{ condicionCorta(c) }} m³</th><th class="r" :style="{ color: COLOR_CONDICION(c) }">{{ condicionCorta(c) }} $</th></template>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="d in condDiario" :key="d.iso" :class="{ hoy: d.iso === hoyIso }">
+                  <td class="bold accent-text">{{ fechaCorta(d.iso) }}</td>
+                  <template v-for="p in plantas" :key="p">
+                    <td v-for="c in condicionesMes" :key="c" class="r">
+                      <template v-if="d.cond[c]?.porPlanta[p]"><span class="bold">{{ fmtN(d.cond[c].porPlanta[p].m3) }}</span><br /><span class="muted sub">{{ cop(d.cond[c].porPlanta[p].venta) }}</span></template>
+                      <span v-else class="muted">—</span>
+                    </td>
+                  </template>
+                  <template v-for="c in condicionesMes" :key="c">
+                    <td class="r bold">{{ d.cond[c] ? fmtN(d.cond[c].m3) : '—' }}</td><td class="r">{{ d.cond[c] ? cop(d.cond[c].venta) : '—' }}</td>
+                  </template>
+                </tr>
+                <tr class="table-total-row">
+                  <td class="bold">TOTAL</td>
+                  <template v-for="p in plantas" :key="p">
+                    <td v-for="c in condicionesMes" :key="c" class="r">
+                      <template v-if="condCelda(c, p)"><span class="bold">{{ fmtN(condCelda(c, p)!.m3) }}</span><br /><span class="sub">{{ cop(condCelda(c, p)!.venta) }}</span></template>
+                      <span v-else>—</span>
+                    </td>
+                  </template>
+                  <template v-for="c in condMes" :key="c.condicion"><td class="r bold">{{ fmtN(c.m3) }}</td><td class="r">{{ cop(c.venta) }}</td></template>
                 </tr>
               </tbody>
             </table>
@@ -432,7 +509,7 @@ import { BarChart, LineChart, PieChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, TitleComponent, LegendComponent } from 'echarts/components'
 import { LabelLayout } from 'echarts/features'
 import { useTemaInforme, capturandoPdf } from '../../../composables/useTemaInforme'
-import { COLOR_PLANTA } from '../../../composables/useGraficasConcreto'
+import { COLOR_PLANTA, condicionComercial, resumirCondicion, COLOR_CONDICION, SIN_CONDICION, condicionCorta } from '../../../composables/useGraficasConcreto'
 
 // En tema oscuro las gráficas se ven con colores para fondo oscuro; el PDF siempre sale en papel blanco
 const { tema, oscuro } = useTemaInforme()
@@ -490,7 +567,7 @@ function color(p: string): string {
 interface Rem {
   iso: string; planta: string; cliente: string; proyecto: string; comercial: string; mezcla: string
   m3: number; precio: number; lista: number; totalConc: number
-  servicio: string; servM3: number; servPrecio: number; servTotal: number; subtotal: number; agregado: boolean
+  servicio: string; servM3: number; servPrecio: number; servTotal: number; subtotal: number; agregado: boolean; condicion: string
 }
 const todas = computed<Rem[]>(() => props.rows
   .filter(r => typeof r['Fecha'] === 'number' && r['Fecha'])
@@ -513,6 +590,7 @@ const todas = computed<Rem[]>(() => props.rows
       servTotal: num(r['Total Servicio']),
       subtotal: num(r['Subtotal']),
       agregado: RE_AGREGADO.test(mezcla),
+      condicion: condicionComercial(r['Condición Comercial']),
     }
   }))
 
@@ -681,8 +759,16 @@ const kpisDia = computed<KpiDef[]>(() => {
     { label: 'Vs. Promedio Diario', value: vsProm === null ? '—' : pct(vsProm, 1, true), accent: verdeRojo(vsProm), icon: 'target',
       meta: `prom. ${fmtN(M.value.ritmo)} m³`, detail: detalle(p => varTxt(hp(p).m3, P.value[p].ritmo)) },
     { label: esMes.value ? 'Acumulado Mes' : 'Acumulado Período', value: fmtN(M.value.m3) + ' m³', accent: '#172954', icon: 'chart-bar', meta: diasLbl.value, detail: detalle(p => fmtN(P.value[p].m3)) },
+    // Contado y crédito del día: venta por planta y % de lo facturado
+    ...condHoy.value.map(c => ({
+      label: `${c.condicion} del Día`, value: cop(c.venta), accent: COLOR_CONDICION(c.condicion),
+      icon: /^contado/i.test(c.condicion) ? 'dollar' : /cr[ée]dito/i.test(c.condicion) ? 'clock' : 'alert-circle',
+      meta: `${pct(h.venta ? c.venta / h.venta * 100 : 0)} · ${fmtN(c.m3)} m³`,
+      detail: detalle(p => cop(c.porPlanta.get(p)?.venta ?? 0), p => `(${fmtN(c.porPlanta.get(p)?.m3 ?? 0)} m³)`),
+    })),
   ]
 })
+const condHoy = computed(() => resumirCondicion(todas.value.filter(r => r.iso === hoyIso.value).map(r => ({ ...r, venta: r.subtotal }))))
 
 const kpisMes = computed<KpiDef[]>(() => {
   const m = M.value, pp = P.value
@@ -702,6 +788,29 @@ const kpisMes = computed<KpiDef[]>(() => {
       detail: detalle(p => pct(pp[p].m3 ? pp[p].servM3 / pp[p].m3 * 100 : 0), p => `(${cop(pp[p].servTotal)})`) },
   ]
 })
+
+// Condición comercial del período: una tarjeta por condición (venta sin IVA, m³ y desglose por planta)
+const condMes = computed(() => resumirCondicion(delMes.value.map(r => ({ ...r, venta: r.subtotal }))))
+const remSinCondicion = computed(() => condMes.value.find(c => c.condicion === SIN_CONDICION)?.rem ?? 0)
+const condicionesMes = computed(() => condMes.value.map(c => c.condicion))
+const condCelda = (c: string, p: string) => condMes.value.find(x => x.condicion === c)?.porPlanta.get(p) ?? null
+// Por día: m³ y venta de cada condición, en total y por planta
+const condDiario = computed(() => {
+  const map = new Map<string, { iso: string; cond: Record<string, { m3: number; venta: number; porPlanta: Record<string, { m3: number; venta: number }> }> }>()
+  for (const r of delMes.value) {
+    let e = map.get(r.iso); if (!e) map.set(r.iso, (e = { iso: r.iso, cond: {} }))
+    const c = (e.cond[r.condicion] ??= { m3: 0, venta: 0, porPlanta: {} })
+    const p = (c.porPlanta[r.planta] ??= { m3: 0, venta: 0 })
+    c.m3 += r.m3; c.venta += r.subtotal; p.m3 += r.m3; p.venta += r.subtotal
+  }
+  return [...map.values()].sort((a, b) => a.iso.localeCompare(b.iso))
+})
+const kpisCondicion = computed<KpiDef[]>(() => condMes.value.map(c => ({
+  label: c.condicion, value: cop(c.venta), accent: COLOR_CONDICION(c.condicion),
+  icon: c.condicion === SIN_CONDICION ? 'alert-circle' : /^contado/i.test(c.condicion) ? 'dollar' : 'clock',
+  meta: `${pct(M.value.venta ? c.venta / M.value.venta * 100 : 0)} · ${fmtN(c.m3)} m³`,
+  detail: detalle(p => cop(c.porPlanta.get(p)?.venta ?? 0)),
+})))
 
 // ---------------------------------------------------------------- Tablas
 const diario = computed(() => {
@@ -892,6 +1001,7 @@ const chPlantasRef = ref<HTMLElement | null>(null)
 const chDonaRef = ref<HTMLElement | null>(null)
 const chComercialRef = ref<HTMLElement | null>(null)
 const chMensualRef = ref<HTMLElement | null>(null)
+const chCondRef = ref<HTMLElement | null>(null)
 const paperRef = ref<HTMLElement | null>(null)
 const charts = new Map<string, echarts.ECharts>()
 
@@ -984,6 +1094,23 @@ function renderCharts() {
           { name: 'Total', type: 'bar', stack: 't', data: cs.map(() => 0), tooltip: { show: false },
             label: { show: true, position: 'right', formatter: (x: any) => fmtN(cs[x.dataIndex].m3), color: CP, fontSize: 10, fontWeight: 'bold' } },
         ],
+      }), true)
+    }
+    // Contado vs. crédito por día: barras lado a lado (sin apilar), m³ por condición
+    const cd = getChart('condicion', chCondRef.value)
+    if (cd) {
+      const dias = condDiario.value, cs = condicionesMes.value
+      cd.setOption(tema({ ...base,
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
+          formatter: (params: any[]) => { const d = dias[params[0].dataIndex]
+            return `<b>${fechaCorta(d.iso)}</b><br/>` + cs.filter(c => d.cond[c]).map(c => `<span style="color:${COLOR_CONDICION(c)}">●</span> ${c}: <b>${fmtN(d.cond[c].m3)} m³</b> · ${cop(d.cond[c].venta)}`).join('<br/>') } },
+        legend: { ...leyenda, data: cs },
+        grid: { top: 32, bottom: 24, left: 44, right: 8 },
+        xAxis: { type: 'category', data: dias.map(x => x.iso.slice(8, 10) + '/' + x.iso.slice(5, 7)), axisTick: { show: false }, axisLabel: { fontSize: 9, color: CP, fontWeight: 'bold' } },
+        yAxis: ejeY,
+        series: cs.map(c => ({ name: c, type: 'bar', barMaxWidth: 18, barGap: '10%', data: dias.map(x => +(x.cond[c]?.m3 ?? 0).toFixed(1)),
+          itemStyle: { color: COLOR_CONDICION(c), borderRadius: [2, 2, 0, 0] },
+          label: { show: true, position: 'top', formatter: (x: any) => (x.value ? fmtN(x.value, 0) : ''), color: CP, fontSize: 8, fontWeight: 'bold' } })),
       }), true)
     }
     // 5. Histórico mensual + cierre estimado

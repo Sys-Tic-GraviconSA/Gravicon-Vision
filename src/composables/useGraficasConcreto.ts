@@ -7,6 +7,7 @@ import { computed, markRaw } from 'vue'
 import { useTheme } from './useTheme'
 import { useViewportWidth } from './useViewportWidth'
 import { hBarLayout, hBarAxisLabel, hBarGrid, hBarValueSpace } from '../utils/chartLayout'
+import { serialToDate } from '../utils/dates'
 
 // ---------------------------------------------------------------- Constantes y formatos
 export const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
@@ -44,6 +45,82 @@ export function titulo(s: string): string { return s.toLowerCase().replace(/(^|\
 export function ordenarPlantas(ps: Iterable<string>): string[] {
   return [...ps].sort((a, b) => (ORDEN_PLANTAS.indexOf(a) + 99) % 99 - (ORDEN_PLANTAS.indexOf(b) + 99) % 99 || a.localeCompare(b))
 }
+
+// ---------------------------------------------------------------- Condición comercial
+/** Remisiones cargadas antes de que order_price trajera la condición comercial */
+export const SIN_CONDICION = 'Sin dato'
+/** «Contado», «Crédito a 30 días»…; vacío = «Sin dato» */
+export function condicionComercial(v: unknown): string {
+  return String(v ?? '').trim().replace(/\s+/g, ' ').replace(/\bdias\b/gi, 'días') || SIN_CONDICION
+}
+/** Contado primero, luego los créditos de menor a mayor plazo y al final «Sin dato» */
+export function ordenCondicion(a: string, b: string): number {
+  const peso = (c: string) => (c === SIN_CONDICION ? 3 : /^contado/i.test(c) ? 0 : /cr[ée]dito/i.test(c) ? 1 : 2)
+  return peso(a) - peso(b) || a.localeCompare(b, 'es', { numeric: true })
+}
+/** Contado verde; crédito ámbar → rojo según el plazo; «Sin dato» gris */
+export function COLOR_CONDICION(c: string): string {
+  if (c === SIN_CONDICION) return '#94A3B8'
+  if (/^contado/i.test(c)) return '#10B981'
+  if (/cr[ée]dito/i.test(c)) { const dias = Number(c.match(/\d+/)?.[0] ?? 30); return dias <= 30 ? '#F59E0B' : dias <= 60 ? '#F97316' : '#EF4444' }
+  return '#8B5CF6'
+}
+/** «Crédito a 30 días» → «Crédito 30 d» (columnas angostas) */
+export const condicionCorta = (c: string) => c.replace(/cr[ée]dito a (\d+) d[ií]as/i, 'Crédito $1 d')
+
+export interface CondicionCliente {
+  /** Condición con más m³ */
+  principal: string
+  /** m³ por condición, de mayor a menor */
+  partes: { condicion: string; m3: number; pct: number }[]
+  mixta: boolean
+}
+/**
+ * Condición comercial de cada cliente según sus remisiones (clave = `clave(cliente)`).
+ * Usa las remisiones del rango [desde, hasta]; si el cliente no tiene ninguna allí, toma todas las que tenga.
+ */
+export function condicionPorCliente(rows: Record<string, unknown>[], clave: (cliente: unknown) => string, desde = '', hasta = ''): Map<string, CondicionCliente> {
+  const enRango = new Map<string, Map<string, number>>(), todas = new Map<string, Map<string, number>>()
+  const sumar = (m: Map<string, Map<string, number>>, k: string, c: string, v: number) => {
+    let x = m.get(k); if (!x) m.set(k, (x = new Map()))
+    x.set(c, (x.get(c) ?? 0) + v)
+  }
+  for (const r of rows) {
+    const f = r['Fecha']
+    if (typeof f !== 'number' || !f) continue
+    const k = clave(r['Cliente']), c = condicionComercial(r['Condición Comercial'])
+    if (!k || c === SIN_CONDICION) continue
+    const v = num(r['Cant. Concreto']) || 1e-6
+    sumar(todas, k, c, v)
+    const iso = serialToDate(f).toISOString().slice(0, 10)
+    if ((!desde || iso >= desde) && (!hasta || iso <= hasta)) sumar(enRango, k, c, v)
+  }
+  const out = new Map<string, CondicionCliente>()
+  for (const [k, base] of todas) {
+    const m = enRango.get(k) ?? base
+    const tot = [...m.values()].reduce((a, v) => a + v, 0)
+    const partes = [...m.entries()].map(([condicion, m3]) => ({ condicion, m3, pct: tot ? m3 / tot * 100 : 0 }))
+      .sort((a, b) => b.m3 - a.m3 || ordenCondicion(a.condicion, b.condicion))
+    out.set(k, { principal: partes[0].condicion, partes, mixta: partes.length > 1 })
+  }
+  return out
+}
+
+export interface ResumenCondicion { condicion: string; m3: number; venta: number; rem: number; porPlanta: Map<string, { m3: number; venta: number; rem: number }> }
+/** m³, venta y remisiones por condición comercial, con el desglose por planta */
+export function resumirCondicion(rs: { condicion: string; planta: string; m3: number; venta: number }[]): ResumenCondicion[] {
+  const map = new Map<string, ResumenCondicion>()
+  for (const r of rs) {
+    let e = map.get(r.condicion)
+    if (!e) map.set(r.condicion, (e = { condicion: r.condicion, m3: 0, venta: 0, rem: 0, porPlanta: new Map() }))
+    e.m3 += r.m3; e.venta += r.venta; e.rem++
+    const p = e.porPlanta.get(r.planta) ?? { m3: 0, venta: 0, rem: 0 }
+    p.m3 += r.m3; p.venta += r.venta; p.rem++
+    e.porPlanta.set(r.planta, p)
+  }
+  return [...map.values()].sort((a, b) => ordenCondicion(a.condicion, b.condicion))
+}
+
 export const punto = (c: string) => `<span style="color:${c}">●</span>`
 export const m3Lbl = (v: number) => fmtN(v, 0)
 export const vacio = (o: Record<string, unknown>, hay: boolean) => (hay ? markRaw(o) : null)
