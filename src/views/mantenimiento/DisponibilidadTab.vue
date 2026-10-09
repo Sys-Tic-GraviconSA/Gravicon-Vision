@@ -1075,6 +1075,12 @@ const props = defineProps<{
   /** Proveedores seleccionados en la barra de filtros del contenedor. null/vacío = sin filtro
    *  (todos seleccionados). Se aplica igual que en la pestaña Órdenes de Trabajo. */
   proveedorFiltro?: string[] | null
+  /** Concretos: filtros de la barra del contenedor tomados de las propias inspecciones.
+   *  null/vacío = sin filtro. Tipo sin el prefijo «ALQUILADAS -», placa (Placa_Texto) y
+   *  planta (sede según la Localizacion). Se aplican en Gráficas y en el Informe. */
+  tiposFiltro?: string[] | null
+  placasFiltro?: string[] | null
+  sedesFiltro?: string[] | null
 }>()
 
 const { theme } = useTheme()
@@ -1213,6 +1219,17 @@ function sedeConcretos(loc: string): string | null {
   if (n.includes('ACACIA') || n.includes('ACACÍA')) return 'Planta Acacías'
   return null
 }
+/** Etiqueta de planta para el filtro «Planta» de Concretos (misma regla que el contenedor). */
+function sedeFiltroConcretos(r: Record<string, unknown>): string {
+  return sedeConcretos(String(r['Localizacion'] ?? r['Localización'] ?? '')) ?? 'Otras ubicaciones'
+}
+/** Concretos: la placa cuenta como flota solo si se resolvió con el maestro (trae «Área de Trabajo»);
+ *  se descartan las filas sin placa y los IDs sin traducir (p. ej. «fc0c2978»). */
+function placaValidaFlota(r: Record<string, unknown>, placa: string): boolean {
+  if (!placa) return false
+  if (!isConcretosPlanta.value) return true
+  return String(r['Área de Trabajo'] ?? r['Area de Trabajo'] ?? '').trim() !== ''
+}
 
 // Filas activas: inspecciones de disponibilidad del store filtradas por rango de fechas
 const activePlacasRows = computed(() => {
@@ -1251,6 +1268,23 @@ const activePlacasRows = computed(() => {
     rows = rows.filter(r =>
       want.has(String(r['Proveedor_Texto'] ?? r['Proveedor'] ?? r['PROVEEDOR'] ?? '').trim().toUpperCase())
     )
+  }
+
+  // Concretos: Vehículos (tipo), Placa y Planta de la barra de filtros — en Gráficas y en el Informe
+  if (isConcretosPlanta.value) {
+    const aSet = (v?: string[] | null) => (v && v.length ? new Set(v.map(s => String(s).trim().toUpperCase())) : null)
+    const tipos = aSet(props.tiposFiltro)
+    const placas = aSet(props.placasFiltro)
+    const sedes = aSet(props.sedesFiltro)
+    if (tipos || placas || sedes) {
+      rows = rows.filter(r => {
+        const info = getInspectionDetails(r)
+        if (tipos && !tipos.has(info.baseTipo)) return false
+        if (placas && !placas.has(info.placa.toUpperCase())) return false
+        if (sedes && !sedes.has(sedeFiltroConcretos(r).toUpperCase())) return false
+        return true
+      })
+    }
   }
 
   const desde = props.fechaInicio || ''
@@ -1419,11 +1453,16 @@ const informeKpis = computed(() => {
   let noOpCount = 0
   let inspectedCount = 0
 
+  // Concretos: flota propia y alquilada = placas distintas de TODO el rango (no solo del día de corte),
+  // solo con placas resueltas con el maestro
+  const propiasPeriodo = new Set<string>()
+  const alquiladasPeriodo = new Set<string>()
   for (const r of records) {
     const info = getInspectionDetails(r)
     if (info.placa) {
       vehiculosSet.add(info.placa)
     }
+    if (placaValidaFlota(r, info.placa)) (info.esAlquilado ? alquiladasPeriodo : propiasPeriodo).add(info.placa)
 
     const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
     if (!d) continue
@@ -1446,9 +1485,9 @@ const informeKpis = computed(() => {
     else noOpCount++
   }
 
-  const flotaTotal = vehiculosSet.size || records.length
-  const alquilados = alquiladosSet.size
-  const flotaPropia = Math.max(flotaTotal - alquilados, 1)
+  const flotaTotal = isConcretosPlanta.value ? propiasPeriodo.size + alquiladasPeriodo.size : (vehiculosSet.size || records.length)
+  const alquilados = isConcretosPlanta.value ? alquiladasPeriodo.size : alquiladosSet.size
+  const flotaPropia = isConcretosPlanta.value ? propiasPeriodo.size : Math.max(flotaTotal - alquilados, 1)
 
   const operativosFormatted = parcialCount > 0
     ? (opCount + (parcialCount * 0.5)).toFixed(1).replace('.0', '').replace('.', ',')
@@ -3154,6 +3193,9 @@ function renderAllCharts() {
 
 watch([effectiveCorteIso, () => dispStore.data], () => { nextTick(renderAllCharts) }, { deep: true })
 watch(dispView, () => { nextTick(renderAllCharts) })
+// Las gráficas del Informe se dibujan con setOption: redibujar al cambiar los filtros (proveedor, fechas,
+// área, tipo, placa, planta), que llegan todos a través de activePlacasRows
+watch(activePlacasRows, () => { nextTick(renderAllCharts) })
 onMounted(() => { nextTick(renderAllCharts) })
 
 const generandoPdf = ref(false)
@@ -3346,11 +3388,16 @@ const kpis = computed(() => {
   let noOpCount = 0
   let inspectedCount = 0
 
+  // Concretos: flota propia y alquilada = placas distintas de TODO el rango (no solo del día de corte),
+  // solo con placas resueltas con el maestro
+  const propiasPeriodo = new Set<string>()
+  const alquiladasPeriodo = new Set<string>()
   for (const r of records) {
     const info = getInspectionDetails(r)
     if (info.placa) {
       vehiculosSet.add(info.placa)
     }
+    if (placaValidaFlota(r, info.placa)) (info.esAlquilado ? alquiladasPeriodo : propiasPeriodo).add(info.placa)
 
     const d = parseSerialDate(r['Fecha'] ?? r['FECHA'])
     if (!d) continue
@@ -3373,9 +3420,9 @@ const kpis = computed(() => {
     else noOpCount++
   }
 
-  const flotaTotal = vehiculosSet.size || records.length
-  const alquilados = alquiladosSet.size
-  const flotaPropia = Math.max(flotaTotal - alquilados, 1)
+  const flotaTotal = isConcretosPlanta.value ? propiasPeriodo.size + alquiladasPeriodo.size : (vehiculosSet.size || records.length)
+  const alquilados = isConcretosPlanta.value ? alquiladasPeriodo.size : alquiladosSet.size
+  const flotaPropia = isConcretosPlanta.value ? propiasPeriodo.size : Math.max(flotaTotal - alquilados, 1)
 
   const operativosFormatted = parcialCount > 0
     ? (opCount + (parcialCount * 0.5)).toFixed(1).replace('.0', '').replace('.', ',')
