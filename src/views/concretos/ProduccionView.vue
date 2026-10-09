@@ -27,6 +27,7 @@
               <MultiSelect v-model="selectedPlants" :options="plants" label="Plantas" icon="filter" />
               <MultiSelect v-model="selectedComerciales" :options="comerciales" label="Comercial" icon="user" />
               <MultiSelect v-model="selectedClientes" :options="clientes" label="Cliente" icon="user" searchable />
+              <MultiSelect v-model="selectedCondiciones" :options="condiciones" label="Condición" icon="filter" />
             </div>
             <!-- «Limpiar» en la misma fila que «Actualizar» -->
             <button class="clear-filters" :class="{ oculto: !hayFiltros }" :tabindex="hayFiltros ? 0 : -1" :aria-hidden="!hayFiltros" title="Quitar filtros" @click="limpiarFiltros">
@@ -119,11 +120,13 @@ const rowsEnFechas = computed(() => {
   return rows.value.filter(r => typeof r['Fecha'] === 'number' && (r['Fecha'] as number) >= d && (r['Fecha'] as number) <= h)
 })
 /** Filas en el rango de fechas que pasan los filtros de la URL, menos el indicado (`salvo`) */
-function filasPara(salvo: 'planta' | 'comercial' | 'cliente') {
+function filasPara(salvo: 'planta' | 'comercial' | 'cliente' | 'condicion') {
   const p = salvo === 'planta' ? null : marcadosUrl('planta')
   const c = salvo === 'comercial' ? null : marcadosUrl('comercial')
   const k = salvo === 'cliente' ? null : marcadosUrl('cliente')
-  return rowsEnFechas.value.filter(r => (!p || p.has(String(r['Planta'] ?? ''))) && (!c || c.has(comercialDe(r))) && (!k || k.has(clienteDe(r))))
+  const f = salvo === 'condicion' ? null : marcadosUrl('condicion')
+  return rowsEnFechas.value.filter(r => (!p || p.has(String(r['Planta'] ?? ''))) && (!c || c.has(comercialDe(r)))
+    && (!k || k.has(clienteDe(r))) && (!f || f.has(condicionDe(r))))
 }
 
 const plants = computed(() => {
@@ -143,6 +146,17 @@ const comerciales = computed(() => {
   return [...set].sort((a, b) => (a === SIN_COMERCIAL ? 1 : b === SIN_COMERCIAL ? -1 : a.localeCompare(b)))
 })
 
+// Condición comercial (Contado, Crédito a 30 días…): las remisiones cargadas antes de que existiera la columna van aparte
+const SIN_CONDICION = 'Sin dato'
+function condicionDe(r: Record<string, unknown>): string {
+  return String(r['Condición Comercial'] ?? '').trim().replace(/\bdias\b/gi, 'días') || SIN_CONDICION
+}
+const condiciones = computed(() => {
+  const set = new Set<string>()
+  for (const r of filasPara('condicion')) set.add(condicionDe(r))
+  return [...set].sort((a, b) => (a === SIN_CONDICION ? 1 : b === SIN_CONDICION ? -1 : a.localeCompare(b, 'es', { numeric: true })))
+})
+
 // Filtros guardados en la URL: sobreviven a recargar y se pueden compartir con un enlace
 const fechaInicio = useQueryDate('desde')
 const fechaFin = useQueryDate('hasta')
@@ -156,8 +170,8 @@ const normCliente = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, '')
 const clientes = computed(() => {
   const porNorm = new Map<string, string>()
   for (const r of filasPara('cliente')) { const c = clienteDe(r); if (!porNorm.has(normCliente(c))) porNorm.set(normCliente(c), c) }
-  // Los proyectados sin despacho solo se ofrecen si no hay filtro de planta ni de comercial
-  if (!marcadosUrl('planta') && !marcadosUrl('comercial')) for (const r of (clientesStore.allRows ?? []) as Record<string, unknown>[]) {
+  // Los proyectados sin despacho solo se ofrecen si no hay filtro de planta, comercial ni condición
+  if (!marcadosUrl('planta') && !marcadosUrl('comercial') && !marcadosUrl('condicion')) for (const r of (clientesStore.allRows ?? []) as Record<string, unknown>[]) {
     const c = String(r.nombre_cliente ?? '').trim()
     const k = normCliente(c)
     // «CLIENTE / CALLE» es la fila genérica de clientes de calle, no un cliente real
@@ -166,6 +180,7 @@ const clientes = computed(() => {
   return [...porNorm.values()].sort((a, b) => a.localeCompare(b))
 })
 const selectedClientes = useQuerySet('cliente', () => clientes.value)
+const selectedCondiciones = useQuerySet('condicion', () => condiciones.value)
 
 // Rango de fechas de los datos: es el rango por defecto cuando la URL no trae fechas
 const rangoDatos = computed(() => {
@@ -184,37 +199,42 @@ const pasa = (sel: Set<string> | null, v: string) => !sel || sel.has(v)
 const filtroPlanta = (r: Record<string, unknown>) => pasa(marcadosUrl('planta'), String(r['Planta'] ?? ''))
 const filtroComercial = (r: Record<string, unknown>) => pasa(marcadosUrl('comercial'), comercialDe(r))
 const filtroCliente = (r: Record<string, unknown>) => pasa(marcadosUrl('cliente'), clienteDe(r))
+const filtroCondicion = (r: Record<string, unknown>) => pasa(marcadosUrl('condicion'), condicionDe(r))
+const filtrosLista = (r: Record<string, unknown>) => filtroPlanta(r) && filtroComercial(r) && filtroCliente(r) && filtroCondicion(r)
 
 const filteredRows = computed(() => {
   const since = fechaEfectivaInicio.value ? dateToSerial(fechaEfectivaInicio.value) : -Infinity
   const until = fechaEfectivaFin.value ? dateToSerial(fechaEfectivaFin.value) : Infinity
   return rows.value.filter(r => {
     const v = r['Fecha']
-    return typeof v === 'number' && v >= since && v <= until && filtroPlanta(r) && filtroComercial(r) && filtroCliente(r)
+    return typeof v === 'number' && v >= since && v <= until && filtrosLista(r)
   })
 })
 
 const hayFiltros = computed(() => !!(fechaInicio.value || fechaFin.value)
   || !esTodo(selectedPlants.value, plants.value)
   || !esTodo(selectedComerciales.value, comerciales.value)
-  || !esTodo(selectedClientes.value, clientes.value))
+  || !esTodo(selectedClientes.value, clientes.value)
+  || !esTodo(selectedCondiciones.value, condiciones.value))
 function limpiarFiltros() {
   fechaInicio.value = ''
   fechaFin.value = ''
   selectedPlants.value = new Set(plants.value)
   selectedComerciales.value = new Set(comerciales.value)
   selectedClientes.value = new Set(clientes.value)
+  selectedCondiciones.value = new Set(condiciones.value)
 }
 
-// Los informes usan planta + comercial + cliente; la fecha fin es su corte
+// Los informes usan planta + comercial + cliente + condición; la fecha fin es su corte
 const plantFilteredSheetData = computed(() => {
   const d = store.data
   if (!d) return null
-  const filtered = rows.value.filter(r => filtroPlanta(r) && filtroComercial(r) && filtroCliente(r))
+  const filtered = rows.value.filter(filtrosLista)
   return { headers: d.headers, rows: filtered, total: filtered.length }
 })
 
-// Viajes cancelados o reubicados con los mismos filtros de planta, comercial y cliente (las tablas filtran las fechas)
+// Viajes cancelados o reubicados con los mismos filtros de planta, comercial y cliente (las tablas filtran las fechas);
+// order_detail no trae condición comercial, así que ese filtro no aplica a los cancelados
 const canceladosFiltrados = computed(() => store.cancelados.filter(r => filtroPlanta(r) && filtroComercial(r) && filtroCliente(r)))
 
 // Plantas marcadas en el filtro (null = todas); las metas de proyección no vienen en order_price y se filtran aparte

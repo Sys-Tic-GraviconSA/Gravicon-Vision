@@ -27,6 +27,7 @@
       <h3 class="section-title"><span class="title-bar"></span>Clientes proyectados</h3>
       <p class="section-sub">
         Semáforo según el cumplimiento frente al avance del mes: verde ≥ 90% del ritmo, ámbar ≥ 70%, rojo por debajo. «Calle» agrupa los clientes sin proyección.
+        Los clientes a crédito llevan su plazo junto a la cifra (los demás son de contado); la condición sale de sus remisiones del mes o, si aún no despachan, de las del año.
       </p>
       <div class="charts-grid cols-2">
         <ChartCard title="Estado de los Clientes Proyectados" description="Cuántos clientes van cumplidos, al ritmo, atrasados o sin despacho" :option="optSemaforo" :height="340" />
@@ -62,7 +63,7 @@ import { serialToDate } from '../../../utils/dates'
 import { esAgregado } from '../../../utils/agregadosConcreto'
 import {
   MESES, MESES_CORTOS, COLOR_PLANTA, COLOR_EXTRA, AZUL, fmtN, pct, num, nombrePlanta, titulo, ordenarPlantas,
-  punto, m3Lbl, vacio, emphasis, useEstiloGraficas,
+  punto, m3Lbl, vacio, emphasis, useEstiloGraficas, COLOR_CONDICION, condicionPorCliente, condicionCorta, type CondicionCliente,
 } from '../../../composables/useGraficasConcreto'
 import { use } from 'echarts/core'
 import { ScatterChart } from 'echarts/charts'
@@ -149,13 +150,13 @@ const habRest = computed(() => { let n = 0; for (let d = dia.value + 1; d <= ult
 const filasMes = computed(() => proyecciones.value.filter(r => r.mes === mesSel.value))
 const plantas = computed(() => ordenarPlantas(new Set(filasMes.value.filter(r => r.tipo === 'Proyectado').map(r => r.planta))))
 
-interface Cli { planta: string; cliente: string; obra: string; meta: number; real: number; cump: number; esperado: number; desv: number }
+interface Cli { planta: string; cliente: string; obra: string; meta: number; real: number; cump: number; esperado: number; desv: number; cond: CondicionCliente | null }
 function resumenPlanta(p: string, filas: Proy[], av: number) {
   const proy = filas.filter(r => r.planta === p && r.tipo === 'Proyectado')
   const meta = proy.reduce((a, r) => a + r.meta, 0), real = proy.reduce((a, r) => a + r.real, 0)
   const esperado = meta * av / 100, falta = Math.max(meta - real, 0)
   const clientes: Cli[] = proy.filter(r => !esCalle(r)).map(r => ({
-    planta: p, cliente: titulo(r.cliente), obra: titulo(r.obra), meta: r.meta, real: r.real,
+    planta: p, cliente: titulo(r.cliente), obra: titulo(r.obra), meta: r.meta, real: r.real, cond: condCli.value.get(norm(r.cliente)) ?? null,
     cump: r.meta ? r.real / r.meta * 100 : 0, esperado: r.meta * av / 100, desv: r.real - r.meta * av / 100,
   }))
   const calleProy = proy.filter(esCalle).reduce((a, r) => a + r.real, 0)
@@ -395,6 +396,19 @@ const optOrigen = computed(() => {
   }, lista.length > 0)
 })
 
+// Contado o crédito de cada cliente según sus remisiones del mes (o de todo lo cargado si aún no despacha)
+const condCli = computed(() => {
+  const ult = `${mesSel.value}-${String(ultDia.value).padStart(2, '0')}`
+  return condicionPorCliente(props.rows, norm, `${mesSel.value}-01`, ult)
+})
+// Los de contado (la gran mayoría) van sin marca; a crédito o mixtos llevan el plazo
+function marcaCond(c: Cli): string {
+  if (!c.cond || (!c.cond.mixta && /^contado/i.test(c.cond.principal))) return ''
+  return ' · ' + c.cond.partes.filter(x => !/^contado/i.test(x.condicion)).map(x => condicionCorta(x.condicion)).join(', ') + (c.cond.mixta ? ' (mixto)' : '')
+}
+function tipCond(c: Cli): string {
+  return c.cond ? `<br/>Condición: ${c.cond.partes.map(x => `${punto(COLOR_CONDICION(x.condicion))} ${x.condicion} ${pct(x.pct, 0)}`).join(' · ')}` : ''
+}
 function nombreCliente(c: Cli): string { return c.obra && norm(c.obra) !== norm(c.cliente) ? `${c.cliente} (${c.obra})` : c.cliente }
 function opcionClientes(lista: Cli[]) {
   const av = avance.value
@@ -402,11 +416,11 @@ function opcionClientes(lista: Cli[]) {
     { name: 'Meta', type: 'bar', barWidth: '70%', barGap: '-100%', data: lista.map(c => Math.round(c.meta)), itemStyle: { color: gris.value, borderRadius: [0, 4, 4, 0] } },
     { name: 'Ejecutado', type: 'bar', barWidth: '70%', barGap: '-100%', z: 3,
       data: lista.map(c => ({ value: +c.real.toFixed(1), itemStyle: { color: semaforo(c.cump, av), borderRadius: [0, 4, 4, 0] } })),
-      label: { ...labelPill.value, position: 'right', formatter: (x: any) => { const c = lista[x.dataIndex]; return `${m3Lbl(c.real)} / ${m3Lbl(c.meta)} · ${pct(c.cump, 0)}` } } },
-  ], lista.map(c => `${m3Lbl(c.real)} / ${m3Lbl(c.meta)} · ${pct(c.cump, 0)}`), {
+      label: { ...labelPill.value, position: 'right', formatter: (x: any) => { const c = lista[x.dataIndex]; return `${m3Lbl(c.real)} / ${m3Lbl(c.meta)} · ${pct(c.cump, 0)}${marcaCond(c)}` } } },
+  ], lista.map(c => `${m3Lbl(c.real)} / ${m3Lbl(c.meta)} · ${pct(c.cump, 0)}${marcaCond(c)}`), {
     trigger: 'axis', axisPointer: { type: 'shadow' },
     formatter: (params: any[]) => { const c = lista[params[0].dataIndex]
-      return `<b>${c.cliente}</b><br/><span style="color:#94a3b8">${c.obra} · ${c.planta}</span><br/>` +
+      return `<b>${c.cliente}</b><br/><span style="color:#94a3b8">${c.obra} · ${c.planta}</span>${tipCond(c)}<br/>` +
         `${punto(gris.value)} Meta: <b>${fmtN(c.meta, 0)} m³</b><br/>${punto(semaforo(c.cump, av))} Ejecutado: <b>${fmtN(c.real)} m³</b> (${pct(c.cump)})<br/>` +
         `${punto(tinta.value)} Esperado a la fecha: <b>${fmtN(c.esperado, 0)} m³</b> · desviación ${sg(c.desv)} m³<br/>${punto(ROJO)} Faltan: <b>${fmtN(Math.max(c.meta - c.real, 0))} m³</b>` },
   }, false), lista.length > 0)
@@ -427,11 +441,11 @@ const optDesviacion = computed(() => {
   return vacio(barrasH(lista.map(nombreCliente), [{
     name: 'Desviación', type: 'bar', barWidth: '60%',
     data: lista.map(c => ({ value: +c.desv.toFixed(1), itemStyle: { color: c.desv >= 0 ? VERDE : ROJO, borderRadius: c.desv >= 0 ? [0, 4, 4, 0] : [4, 0, 0, 4] } })),
-    label: { ...labelPill.value, position: 'right', formatter: (x: any) => `${sg(x.value)} m³` },
-  }], lista.map(c => `${sg(c.desv)} m³`), {
+    label: { ...labelPill.value, position: 'right', formatter: (x: any) => `${sg(x.value)} m³${marcaCond(lista[x.dataIndex])}` },
+  }], lista.map(c => `${sg(c.desv)} m³${marcaCond(c)}`), {
     trigger: 'axis', axisPointer: { type: 'shadow' },
     formatter: (params: any[]) => { const c = lista[params[0].dataIndex]
-      return `<b>${c.cliente}</b><br/><span style="color:#94a3b8">${c.obra} · ${c.planta}</span><br/>` +
+      return `<b>${c.cliente}</b><br/><span style="color:#94a3b8">${c.obra} · ${c.planta}</span>${tipCond(c)}<br/>` +
         `${punto(c.desv >= 0 ? VERDE : ROJO)} Desviación: <b>${sg(c.desv)} m³</b><br/>Ejecutado ${fmtN(c.real)} m³ · esperado ${fmtN(c.esperado, 0)} m³ · meta ${fmtN(c.meta, 0)} m³` },
   }, false), lista.length > 0)
 })

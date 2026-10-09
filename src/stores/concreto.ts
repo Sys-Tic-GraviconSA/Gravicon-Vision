@@ -31,6 +31,7 @@ function mapRow(r: any): Record<string, unknown> {
     'Proyecto': r.proyecto,
     'Frente': r.frente,
     'Comercial': r.comercial,
+    'Condición Comercial': r.condicion_comercial,
     'Mixer': r.mixer,
     'Conductor': r.conductor,
     'Precinto': r.precinto,
@@ -58,6 +59,12 @@ function mapRow(r: any): Record<string, unknown> {
     'Lista Recargo': r.recargo_lista,
     '% Recargo': r.recargo_pct,
     'Total Recargo': r.recargo_total,
+    'Otros': r.otros_concepto,
+    'Cant. Otros': r.otros_cantidad,
+    'Precio Otros': r.otros_precio,
+    'Lista Otros': r.otros_lista,
+    '% Otros': r.otros_pct,
+    'Total Otros': r.otros_total,
     'Subtotal': Number(r.subtotal) || 0,
     'Impuestos': r.impuestos,
   }
@@ -66,12 +73,13 @@ function mapRow(r: any): Record<string, unknown> {
 /** Cabeceras fijas que definen el orden de columnas en la tabla de concreto */
 const HEADERS = [
   'Fecha', 'Planta', 'Remisión', 'Facturado', 'Código',
-  'Cliente', 'Proyecto', 'Frente', 'Comercial', 'Elemento',
+  'Cliente', 'Proyecto', 'Frente', 'Comercial', 'Condición Comercial', 'Elemento',
   'Mixer', 'Conductor', 'Precinto', 'Mezcla',
   'Cant. Concreto', 'Precio Concreto', 'Lista Concreto', '% Concreto', 'Total Concreto',
   'Servicio', 'Cant. Servicio', 'Precio Servicio', 'Lista Servicio', '% Servicio', 'Total Servicio',
   'Aditivo', 'Cant. Aditivo', 'Precio Aditivo', 'Lista Aditivo', '% Aditivo', 'Total Aditivo',
   'Recargo', 'Cant. Recargo', 'Precio Recargo', 'Lista Recargo', '% Recargo', 'Total Recargo',
+  'Otros', 'Cant. Otros', 'Precio Otros', 'Lista Otros', '% Otros', 'Total Otros',
   'Subtotal', 'Impuestos',
 ]
 

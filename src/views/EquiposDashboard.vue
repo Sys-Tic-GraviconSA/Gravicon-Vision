@@ -38,6 +38,13 @@
                 <MultiSelect v-model="selectedMarcasLlantas" :options="opcLlantas.marcas" label="Marca" icon="filter" />
               </template>
               <!-- Filtros de órdenes: solo en secciones con órdenes (no en Llantas, Tareas ni Combustible) -->
+              <!-- Disponibilidad de Concretos: Planta, Vehículos y Placa salen de las inspecciones (no de las OT) -->
+              <template v-else-if="esAreaOT && subTab === 'disponibilidad' && isConcretos">
+                <MultiSelect v-model="selectedSedesDisp" :options="opcDisp.sedes" label="Planta" icon="filter" />
+                <MultiSelect v-model="selectedTiposDisp" :options="opcDisp.tipos" label="Vehículos" icon="filter" />
+                <MultiSelect v-model="selectedPlacasDisp" :options="opcDisp.placas" label="Placa" icon="filter" />
+                <MultiSelect v-model="selectedProveedoresDisponibilidad" :options="proveedoresDisponibilidadDisponibles" label="Proveedor" icon="user" />
+              </template>
               <template v-else-if="esAreaOT">
                 <MultiSelect v-model="selectedLineas" :options="lineasDisponibles" :label="isConcretos ? 'Planta' : 'Línea'" icon="filter" />
                 <MultiSelect v-model="selectedVehiculos" :options="vehiculosDisponibles" label="Vehículos" icon="filter" />
@@ -46,7 +53,7 @@
                 <MultiSelect v-else v-model="selectedProveedores" :options="proveedoresDisponibles" label="Proveedor" icon="user" />
                 <MultiSelect v-if="subTab !== 'disponibilidad'" v-model="selectedColaboradores" :options="colaboradoresDisponibles" label="Personal" icon="user" />
                 <MultiSelect v-if="subTab !== 'disponibilidad'" v-model="selectedSistemas" :options="sistemasDisponibles" label="Sistema" icon="filter" />
-                <MultiSelect v-model="selectedEstados" :options="estadosDisponibles" label="Estado" icon="filter" />
+                <MultiSelect v-if="subTab !== 'disponibilidad'" v-model="selectedEstados" :options="estadosDisponibles" label="Estado" icon="filter" />
               </template>
             </div>
             <!-- «Limpiar» en la misma fila que «Actualizar» -->
@@ -102,6 +109,9 @@
           :fecha-fin="fechaFin"
           :area-filtro="tipoTab === 'maquinaria' ? 'maquinaria' : 'planta'"
           :proveedor-filtro="provFiltroDisponibilidad"
+          :tipos-filtro="filtroDisp(selectedTiposDisp, opcDisp.tipos)"
+          :placas-filtro="filtroDisp(selectedPlacasDisp, opcDisp.placas)"
+          :sedes-filtro="filtroDisp(selectedSedesDisp, opcDisp.sedes)"
         />
       </template>
 
@@ -189,7 +199,7 @@
 
     <div class="charts-grid cols-1" style="margin-top:22px">
       <ChartCard v-if="isConcretos || isCuncia" title="Costo Total por Tipo de Vehículo" :description="`Costo mensual de mantenimiento por tipo de vehículo del área (Planta / Maquinaria); el tooltip muestra su costo por m³ ${isConcretos ? '(sin maquila)' : 'producido'}`" :option="tipoVehiculoLineaOpt" :height="420" tall clickable @chart-click="(p:any)=>onRankingClick('Tipo Vehículo', { name: p?.seriesName })" />
-      <ChartCard v-if="isConcretos || isCuncia" title="Tipos de Vehículo — Esfuerzo vs. Costo por Orden" description="Cada punto es un tipo de vehículo (tamaño = nº de órdenes). Eje horizontal: horas promedio por orden; eje vertical: costo promedio por orden (servicios + insumos). Las líneas punteadas son el promedio de los tipos" :option="tiposDispersionOpt" :height="600" tall alto-completo clickable @chart-click="(p:any)=>onRankingClick('Tipo Vehículo', p)" />
+      <ChartCard v-if="isCuncia" title="Tipos de Vehículo — Esfuerzo vs. Costo por Orden" description="Cada punto es un tipo de vehículo (tamaño = nº de órdenes). Eje horizontal: horas promedio por orden; eje vertical: costo promedio por orden (servicios + insumos). Las líneas punteadas son el promedio de los tipos" :option="tiposDispersionOpt" :height="600" tall alto-completo clickable @chart-click="(p:any)=>onRankingClick('Tipo Vehículo', p)" />
       <ChartCard v-if="isConcretos" title="Ranking Top 10 — Costos de Mantenimiento por Tipo de Vehículo" description="Top 10 tipos de vehículo con mayor costo acumulado" :option="tipoVehiculoGenOpt" :expand-option="tipoVehiculoGenExpandOpt" :height="500" tall clickable @chart-click="(p:any)=>onRankingClick('Tipo Vehículo', p)" />
       <ChartCard title="Ranking Top 10 — Costos de Mantenimiento por Placa" description="Top 10 placas con mayor costo acumulado" :option="vehiculoGenOpt" :expand-option="vehiculoGenExpandOpt" :height="500" tall clickable @chart-click="onPlacaClick" />
       <ChartCard v-if="isConcretos || isCuncia" title="Comportamiento Mensual — Top 4 Placas con Mayor Costo" description="Las 4 placas de mayor costo de mantenimiento en cada mes (al ampliar, top 10)" :option="placaLineaOpt" :expand-option="placaLineaExpandOpt" :height="420" tall clickable @chart-click="(p:any)=>onPlacaClick({ name: p?.seriesName })" />
@@ -1228,7 +1238,7 @@
 
       <div class="charts-grid cols-1" style="margin-top:22px">
         <ChartCard v-if="isConcretos || isCuncia" title="Costo Total por Tipo de Vehículo" :description="`Costo mensual de mantenimiento por tipo de vehículo del área (Planta / Maquinaria); el tooltip muestra su costo por m³ ${isConcretos ? '(sin maquila)' : 'producido'}`" :option="tipoVehiculoLineaOpt" :height="420" tall clickable @chart-click="(p:any)=>onRankingClick('Tipo Vehículo', { name: p?.seriesName })" />
-        <ChartCard v-if="isConcretos || isCuncia" title="Tipos de Vehículo — Esfuerzo vs. Costo por Orden" description="Cada punto es un tipo de vehículo (tamaño = nº de órdenes). Eje horizontal: horas promedio por orden; eje vertical: costo promedio por orden (servicios + insumos). Las líneas punteadas son el promedio de los tipos" :option="tiposDispersionOpt" :height="600" tall alto-completo clickable @chart-click="(p:any)=>onRankingClick('Tipo Vehículo', p)" />
+        <ChartCard v-if="isCuncia" title="Tipos de Vehículo — Esfuerzo vs. Costo por Orden" description="Cada punto es un tipo de vehículo (tamaño = nº de órdenes). Eje horizontal: horas promedio por orden; eje vertical: costo promedio por orden (servicios + insumos). Las líneas punteadas son el promedio de los tipos" :option="tiposDispersionOpt" :height="600" tall alto-completo clickable @chart-click="(p:any)=>onRankingClick('Tipo Vehículo', p)" />
         <ChartCard v-if="isConcretos" title="Ranking Top 10 — Costos de Mantenimiento por Tipo de Vehículo" description="Top 10 tipos de vehículo con mayor costo acumulado" :option="tipoVehiculoGenOpt" :expand-option="tipoVehiculoGenExpandOpt" :height="500" tall clickable @chart-click="(p:any)=>onRankingClick('Tipo Vehículo', p)" />
         <ChartCard title="Ranking Top 10 — Costos de Mantenimiento por Placa" description="Top 10 placas con mayor costo acumulado" :option="vehiculoGenOpt" :expand-option="vehiculoGenExpandOpt" :height="500" tall clickable @chart-click="onPlacaClick" />
         <ChartCard v-if="isConcretos || isCuncia" title="Comportamiento Mensual — Top 4 Placas con Mayor Costo" description="Las 4 placas de mayor costo de mantenimiento en cada mes (al ampliar, top 10)" :option="placaLineaOpt" :expand-option="placaLineaExpandOpt" :height="420" tall clickable @chart-click="(p:any)=>onPlacaClick({ name: p?.seriesName })" />
@@ -2149,7 +2159,15 @@ function estadoClass(e: string): string {
 }
 
 const ordenesMostradas = computed(() => {
-  let arr = [...dataFilteredMain.value]
+  // Lista de OT: las CERRADAS en el rango (fecha de cierre) y las REGISTRADAS en el rango (fecha de registro),
+  // así aparecen también las OT abiertas, que no tienen fecha de cierre (y sus solicitudes de almacén)
+  const vistos = new Set<unknown>()
+  let arr = [...dataFilteredMain.value, ...dataFilteredByRegistro.value].filter(r => {
+    const k = r['_rowKey'] || r
+    if (vistos.has(k)) return false
+    vistos.add(k)
+    return true
+  })
   const q = otFilter.value.toLowerCase().trim()
   if (q) {
     arr = arr.filter(r =>
@@ -2346,10 +2364,36 @@ const motivosNoEjecucionRanking = computed(() => rankBy(dataFilteredMain.value.f
 function clavePersona(nombre: string): string {
   return nombre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/\s+/g, ' ').trim()
 }
-function computePersonalRanking(rows: Record<string, unknown>[], limit = Infinity): { label: string; n: number; horas: number; costo: number }[] {
-  const map = new Map<string, { label: string; n: number; horas: number; costo: number }>()
+/** n = trabajos; horas = suma de la duración estimada, solo de las OT que la tienen (nHoras de ellas);
+ *  dias = días distintos con OT; diasHoras = días con OT que tienen duración. */
+type ItemDispersion = { label: string; n: number; horas: number; costo: number; nHoras?: number; dias?: number; diasHoras?: number }
+/** Duración estimada de la OT; null si no la tiene (no cuenta como 0 en los promedios de horas). */
+function duracionOT(r: Record<string, unknown>): number | null {
+  const v = r['Duración (horas)']
+  if (v == null || v === '') return null
+  const n = Number(v)
+  return Number.isFinite(n) ? n : null
+}
+type AcumDispersion = { label: string; n: number; horas: number; costo: number; nHoras: number; diasSet: Set<number>; diasHorasSet: Set<number> }
+const nuevoAcum = (label: string): AcumDispersion => ({ label, n: 0, horas: 0, costo: 0, nHoras: 0, diasSet: new Set(), diasHorasSet: new Set() })
+/** Suma una OT al acumulado: el trabajo cuenta siempre; las horas solo si la OT tiene duración estimada. */
+function sumarOT(e: AcumDispersion, dur: number | null, dia: number, costo: number) {
+  e.n++
+  e.costo += costo
+  if (dia > 0) e.diasSet.add(dia)
+  if (dur != null) {
+    e.horas += dur
+    e.nHoras++
+    if (dia > 0) e.diasHorasSet.add(dia)
+  }
+}
+const cerrarAcum = ({ diasSet, diasHorasSet, ...e }: AcumDispersion): ItemDispersion => ({ ...e, dias: diasSet.size, diasHoras: diasHorasSet.size })
+function computePersonalRanking(rows: Record<string, unknown>[], limit = Infinity): ItemDispersion[] {
+  const map = new Map<string, AcumDispersion>()
   for (const r of rows) {
-    const horas = Number(r['Duración (horas)']) || 0
+    const dur = duracionOT(r)
+    // Día de la OT (fecha de cierre, sin hora): base de «OT / día» y «Horas / día» de cada técnico
+    const dia = otCloseSerial(r)
 
     const personalDetalles = r['_personalDetalles']
     if (Array.isArray(personalDetalles) && personalDetalles.length > 0) {
@@ -2357,11 +2401,9 @@ function computePersonalRanking(rows: Record<string, unknown>[], limit = Infinit
       for (const p of personalDetalles) {
         const label = String(p.nombre || '').trim()
         if (!label) continue
-        const e = map.get(clavePersona(label)) || { label: toTitleCase(label), n: 0, horas: 0, costo: 0 }
-        e.n++
+        const e = map.get(clavePersona(label)) || nuevoAcum(toTitleCase(label))
         // Horas: la duración completa de la OT para cada técnico; solo el costo de servicios se reparte
-        e.horas += horas
-        e.costo += Number(p.costo) || 0
+        sumarOT(e, dur, dia, Number(p.costo) || 0)
         map.set(clavePersona(label), e)
       }
     } else {
@@ -2371,15 +2413,13 @@ function computePersonalRanking(rows: Record<string, unknown>[], limit = Infinit
       const costoTotal = Number(r['Costo servicios']) || 0
       const nPersonas = personas.length || 1
       for (const label of personas) {
-        const e = map.get(clavePersona(label)) || { label: toTitleCase(label), n: 0, horas: 0, costo: 0 }
-        e.n++
-        e.horas += horas
-        e.costo += costoTotal / nPersonas
+        const e = map.get(clavePersona(label)) || nuevoAcum(toTitleCase(label))
+        sumarOT(e, dur, dia, costoTotal / nPersonas)
         map.set(clavePersona(label), e)
       }
     }
   }
-  return [...map.values()].sort((a, b) => b.n - a.n).slice(0, limit)
+  return [...map.values()].map(cerrarAcum).sort((a, b) => b.n - a.n).slice(0, limit)
 }
 
 interface AlmacenItem { referencia: string; descripcion: string; und: string; solicitudes: number; cantidadTotal: number }
@@ -2388,10 +2428,31 @@ interface AlmacenItem { referencia: string; descripcion: string; und: string; so
  * Solo respeta el filtro de fechas (no vehículos/proveedor, que pertenecen a la vista de OT).
  * `solicitudes` = número de pedidos (ID_OT_SOLPED) distintos que incluyen el producto. */
 const MAX_CANTIDAD = 1000
+/**
+ * Base de la pestaña Almacén: TODAS las OT del área (abiertas o cerradas), cada una solo con sus solicitudes
+ * SOPLED cuya fecha de registro cae en el filtro de fechas de arriba. No depende de la fecha de cierre de la
+ * OT: las solicitudes de almacén suelen ser de OT todavía abiertas.
+ */
+const datosAlmacen = computed(() => {
+  const since = fechaInicio.value ? dateToSerial(fechaInicio.value) : -Infinity
+  const until = fechaFin.value ? dateToSerial(fechaFin.value) + 1 : Infinity
+  const sinFiltro = since === -Infinity && until === Infinity
+  const out: Record<string, unknown>[] = []
+  for (const r of allData.value) {
+    const sops = r['_sopled']
+    if (!Array.isArray(sops) || !sops.length) continue
+    const enRango = sinFiltro ? sops : sops.filter(sop => {
+      const f = otDateOnlySerial(sop?.fecha)
+      return f > 0 && f >= since && f < until
+    })
+    if (enRango.length) out.push(enRango === sops ? r : { ...r, _sopled: enRango })
+  }
+  return out
+})
 const almacenItems = computed(() => {
   const map = new Map<string, AlmacenItem>()
   const seen = new Map<string, Set<string>>()
-  for (const r of filteredData.value) {
+  for (const r of datosAlmacen.value) {
     const sops = r['_sopled']
     if (!Array.isArray(sops)) continue
     for (const sop of sops) {
@@ -2425,7 +2486,7 @@ const almacenItems = computed(() => {
  * Solo se muestran columnas propias del SOPLED (sin datos de la OT ni proveedor). */
 const sopledDetailRows = computed(() => {
   const rows: Record<string, unknown>[] = []
-  for (const r of filteredData.value) {
+  for (const r of datosAlmacen.value) {
     const sops = r['_sopled']
     if (!Array.isArray(sops)) continue
     for (const sop of sops) {
@@ -2460,7 +2521,7 @@ const sopledDetailRows = computed(() => {
 /** Total de ítems sub-SOPLED sin aplanar (evita cargar filas de más). */
 const sopledTotalItems = computed(() => {
   let n = 0
-  for (const r of filteredData.value) {
+  for (const r of datosAlmacen.value) {
     const sops = r['_sopled']
     if (!Array.isArray(sops)) continue
     for (const sop of sops) n += (sop?._subSopled?.length ?? 0)
@@ -2658,7 +2719,7 @@ const almacenCantidadOpt = computed(() => {
 /** Valor por centro de costo (participación porcentual del costo de insumos en el almacén). */
 const almacenCentroCostoValor = computed(() => {
   const map = new Map<string, number>()
-  for (const r of filteredData.value) {
+  for (const r of datosAlmacen.value) {
     const costoOt = Number(r['Costos Insumos']) || 0
     const sops = r['_sopled']
     if (!Array.isArray(sops)) continue
@@ -2718,7 +2779,7 @@ const almacenCentroCostoPieOpt = computed(() => markRaw(buildPieOpt(almacenCentr
 /** Conteo de solicitudes por Tipo de Compra (para KPIs). key = tipoCompra. */
 const almacenTipoCompra = computed(() => {
   const map = new Map<string, number>()
-  for (const r of filteredData.value) {
+  for (const r of datosAlmacen.value) {
     const sops = r['_sopled']
     if (!Array.isArray(sops)) continue
     for (const sop of sops) {
@@ -2749,7 +2810,7 @@ const almacenApruebaRanking = computed(() => rankBy(sopledDetailRows.value, 'Apr
 /** Motivos de no salida (solo ítems que registran un motivo). */
 const almacenMotivosNoSalidaRanking = computed(() => {
   const map = new Map<string, number>()
-  for (const r of filteredData.value) {
+  for (const r of datosAlmacen.value) {
     const sops = r['_sopled']
     if (!Array.isArray(sops)) continue
     for (const sop of sops) {
@@ -2778,7 +2839,7 @@ const almacenLocalizacionRanking = computed(() => {
 /** Solicitudes por día (etiquetas + serie) para la gráfica de líneas diaria. */
 const almacenDiario = computed(() => {
   const map = new Map<string, number>()
-  for (const r of filteredData.value) {
+  for (const r of datosAlmacen.value) {
     const sops = r['_sopled']
     if (!Array.isArray(sops)) continue
     for (const sop of sops) {
@@ -2971,6 +3032,10 @@ const selectedProveedores = ref<Set<string>>(new Set())
 /** Proveedores seleccionados en la pestaña Disponibilidad — estado propio, no comparte
  *  selección con el filtro de Proveedor de OT porque son universos de nombres distintos. */
 const selectedProveedoresDisponibilidad = ref<Set<string>>(new Set())
+/** Disponibilidad de Concretos: Planta (sede), Vehículos (tipo) y Placa tomados de las inspecciones */
+const selectedSedesDisp = ref<Set<string>>(new Set())
+const selectedTiposDisp = ref<Set<string>>(new Set())
+const selectedPlacasDisp = ref<Set<string>>(new Set())
 const selectedEstados = ref<Set<string>>(new Set())
 const selectedPersonalInterno = ref<Set<string>>(new Set())
 /** Colaboradores de Gravicon (Personal_Intervención de las OT, con el nombre del maestro) */
@@ -3746,6 +3811,9 @@ async function loadData(forceRefresh = false, resetFilters = true) {
   const prevPlacas = new Set(selectedPlacas.value)
   const prevProveedores = new Set(selectedProveedores.value)
   const prevProveedoresDisponibilidad = new Set(selectedProveedoresDisponibilidad.value)
+  const prevSedesDisp = new Set(selectedSedesDisp.value)
+  const prevTiposDisp = new Set(selectedTiposDisp.value)
+  const prevPlacasDisp = new Set(selectedPlacasDisp.value)
   const prevEstados = new Set(selectedEstados.value)
   const prevPersonal = new Set(selectedPersonalInterno.value)
   const prevColaboradores = new Set(selectedColaboradores.value)
@@ -3761,6 +3829,9 @@ async function loadData(forceRefresh = false, resetFilters = true) {
     selectedPlacas.value = new Set()
     selectedProveedores.value = new Set()
     selectedProveedoresDisponibilidad.value = new Set()
+    selectedSedesDisp.value = new Set()
+    selectedTiposDisp.value = new Set()
+    selectedPlacasDisp.value = new Set()
     selectedLineas.value = new Set()
     selectedEstados.value = new Set()
     selectedPersonalInterno.value = new Set()
@@ -3793,7 +3864,7 @@ async function loadData(forceRefresh = false, resetFilters = true) {
     selectedVehiculos.value = new Set(vehiculosDisponibles.value)
     selectedPlacas.value = new Set(placasDisponibles.value)
     selectedProveedores.value = new Set(proveedoresDisponibles.value)
-    selectedProveedoresDisponibilidad.value = new Set(proveedoresDisponibilidadDisponibles.value)
+    reiniciarFiltrosDisp()
     selectedEstados.value = new Set(estadosDisponibles.value)
     selectedPersonalInterno.value = new Set(personalInternoOptions)
     selectedColaboradores.value = new Set(colaboradoresDisponibles.value)
@@ -3816,6 +3887,10 @@ async function loadData(forceRefresh = false, resetFilters = true) {
     else selectedProveedores.value = new Set(proveedoresDisponibles.value)
     if (prevProveedoresDisponibilidad.size) selectedProveedoresDisponibilidad.value = new Set([...prevProveedoresDisponibilidad].filter(v => proveedoresDisponibilidadDisponibles.value.includes(v)))
     else selectedProveedoresDisponibilidad.value = new Set(proveedoresDisponibilidadDisponibles.value)
+    const conservar = (prev: Set<string>, opciones: string[]) => (prev.size ? new Set([...prev].filter(v => opciones.includes(v))) : new Set(opciones))
+    selectedSedesDisp.value = conservar(prevSedesDisp, opcDisp.value.sedes)
+    selectedTiposDisp.value = conservar(prevTiposDisp, opcDisp.value.tipos)
+    selectedPlacasDisp.value = conservar(prevPlacasDisp, opcDisp.value.placas)
     if (prevEstados.size) selectedEstados.value = new Set([...prevEstados].filter(v => estadosDisponibles.value.includes(v)))
     else selectedEstados.value = new Set(estadosDisponibles.value)
     if (prevPersonal.size) selectedPersonalInterno.value = new Set([...prevPersonal].filter(v => personalInternoOptions.includes(v)))
@@ -3845,7 +3920,7 @@ watch(tipoTab, () => {
     selectedVehiculos.value = new Set(vehiculosDisponibles.value)
     selectedPlacas.value = new Set(placasDisponibles.value)
     selectedProveedores.value = new Set(proveedoresDisponibles.value)
-    selectedProveedoresDisponibilidad.value = new Set(proveedoresDisponibilidadDisponibles.value)
+    reiniciarFiltrosDisp()
     selectedLineas.value = new Set(lineasDisponibles.value)
     selectedEstados.value = new Set(estadosDisponibles.value)
     selectedPersonalInterno.value = new Set(personalInternoOptions)
@@ -4211,6 +4286,46 @@ const proveedoresDisponibilidadDisponibles = computed(() => {
   return [...map].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
 })
 
+/** Sede de una inspección de Concretos (misma regla que DisponibilidadTab: las 3 plantas del informe). */
+function sedeDispConcretos(loc: string): string {
+  const n = (loc || '').toUpperCase()
+  if (n.includes('VILLA')) return 'Planta Villavicencio'
+  if (n.includes('RESTREPO')) return 'Planta Restrepo'
+  if (n.includes('ACACIA') || n.includes('ACACÍA')) return 'Planta Acacías'
+  return 'Otras ubicaciones'
+}
+/** Opciones de Planta / Vehículos / Placa de la sub-pestaña Disponibilidad (Concretos), desde la hoja
+ *  «Reporte Placa Disponibilidad». Solo placas resueltas con el maestro (con «Área de Trabajo»). */
+const opcDisp = computed(() => {
+  const sedes = new Set<string>(); const tipos = new Set<string>(); const placas = new Set<string>()
+  const filas = isConcretos.value && disp.data?.planta === 'concretos' ? (disp.data?.placas ?? []) : []
+  for (const r of filas) {
+    sedes.add(sedeDispConcretos(String(r['Localizacion'] ?? r['Localización'] ?? '')))
+    const tipo = String(r['Tipo de Vehiculos'] ?? '').trim().toUpperCase()
+      .replace(/^ALQUILADAS?\s*[-–:]\s*/i, '').replace(/^ALQUILER\s*[-–:]\s*/i, '').trim()
+    if (tipo) tipos.add(tipo)
+    const placa = String(r['Placa_Texto'] ?? r['Placa'] ?? '').trim()
+    if (placa && String(r['Área de Trabajo'] ?? '').trim()) placas.add(placa.toUpperCase())
+  }
+  const orden = (a: string, b: string) => a.localeCompare(b, 'es', { sensitivity: 'base' })
+  return { sedes: [...sedes].sort(orden), tipos: [...tipos].sort(orden), placas: [...placas].sort(orden) }
+})
+/** Selección → prop del filtro: null si están todas (o ninguna) seleccionadas */
+function filtroDisp(sel: Set<string>, opciones: string[]): string[] | null {
+  return sel.size > 0 && sel.size !== opciones.length ? [...sel] : null
+}
+const hayFiltrosDisp = computed(() =>
+  !!(provFiltroDisponibilidad.value
+    || filtroDisp(selectedSedesDisp.value, opcDisp.value.sedes)
+    || filtroDisp(selectedTiposDisp.value, opcDisp.value.tipos)
+    || filtroDisp(selectedPlacasDisp.value, opcDisp.value.placas)))
+function reiniciarFiltrosDisp() {
+  selectedProveedoresDisponibilidad.value = new Set(proveedoresDisponibilidadDisponibles.value)
+  selectedSedesDisp.value = new Set(opcDisp.value.sedes)
+  selectedTiposDisp.value = new Set(opcDisp.value.tipos)
+  selectedPlacasDisp.value = new Set(opcDisp.value.placas)
+}
+
 const estadosDisponibles = computed(() => {
   const map = new Set<string>()
   for (const r of allData.value) {
@@ -4256,6 +4371,8 @@ const clavesColaboradores = computed(() => new Set([...selectedColaboradores.val
 const hasActiveFilters = computed(() => {
   if (fechaInicio.value || fechaFin.value) return true
   if (subTab.value === 'inspeccion' && filtrosLlantasActivos.value) return true
+  // Disponibilidad: proveedor (todas las plantas) y Planta/Vehículos/Placa de las inspecciones (Concretos)
+  if (subTab.value === 'disponibilidad' && hayFiltrosDisp.value) return true
   if (selectedLineas.value.size > 0 && selectedLineas.value.size !== lineasDisponibles.value.length) return true
   if (selectedVehiculos.value.size > 0 && selectedVehiculos.value.size !== vehiculosDisponibles.value.length) return true
   if (selectedPlacas.value.size > 0 && selectedPlacas.value.size !== placasDisponibles.value.length) return true
@@ -4354,7 +4471,7 @@ function onClearFilters() {
   selectedVehiculos.value = new Set(vehiculosDisponibles.value)
   selectedPlacas.value = new Set(placasDisponibles.value)
   selectedProveedores.value = new Set(proveedoresDisponibles.value)
-  selectedProveedoresDisponibilidad.value = new Set(proveedoresDisponibilidadDisponibles.value)
+  reiniciarFiltrosDisp()
   selectedEstados.value = new Set(estadosDisponibles.value)
   selectedPersonalInterno.value = new Set(personalInternoOptions)
   selectedColaboradores.value = new Set(colaboradoresDisponibles.value)
@@ -5541,6 +5658,17 @@ function buildBarOpt(data: Record<string, unknown>[], groupBy: 'Tipo de Vehícul
     fontWeight: 600 as const,
     color: '#fff',
   }
+  // Concretos, por tipo de vehículo: datos de esfuerzo por orden (antes en la dispersión «Tipos de Vehículo»)
+  const esfuerzoTipo = groupBy === 'Tipo Vehículo' && isConcretos.value
+    ? rankingDispersion(data, r => { const t = tipoVehiculoCorto(r); return tipoTab.value === 'maquinaria' && t.includes('PLANTA') ? '' : t })
+    : []
+  const esfuerzoPorTipo = new Map(esfuerzoTipo.map(e => [e.label, e]))
+  // Promedios de los tipos (cada tipo pesa igual), como las líneas punteadas de la dispersión
+  const conOrdenes = esfuerzoTipo.filter(e => e.n > 0)
+  // Horas por orden: solo con las OT que tienen duración estimada
+  const conDuracion = conOrdenes.filter(e => (e.nHoras ?? 0) > 0)
+  const promHorasOrden = conDuracion.length ? conDuracion.reduce((a, e) => a + e.horas / (e.nHoras ?? 1), 0) / conDuracion.length : 0
+  const promCostoOrden = conOrdenes.length ? conOrdenes.reduce((a, e) => a + e.costo / e.n, 0) / conOrdenes.length : 0
   const layout = hBarLayout(labels, 56, viewportW.value)
   return {
     color: [palette[1], '#EF4444'],
@@ -5565,6 +5693,24 @@ function buildBarOpt(data: Record<string, unknown>[], groupBy: 'Tipo de Vehícul
           if (dp != null) {
             const dCol = dp >= 85 ? '#10B981' : dp >= 60 ? '#F59E0B' : '#EF4444'
             extra += `<br/><span style="color:${dCol}">\u25CF</span> Disponibilidad: <b>${dp}%</b> <span style="color:#94a3b8;font-size:10px">(prom. del per\u00EDodo)</span>`
+          }
+        }
+        const ef = esfuerzoPorTipo.get(nombre)
+        if (ef && ef.n > 0) {
+          const horasTxt = (v: number) => v.toLocaleString('es-CO', { maximumFractionDigits: 1 }) + ' h'
+          const gris = (t: string) => ` <span style="color:#94a3b8;font-size:10px">(${t})</span>`
+          const dias = ef.dias ?? 0
+          const nHoras = ef.nHoras ?? 0
+          const diasHoras = ef.diasHoras ?? 0
+          extra += `<br/><span style="color:#8B5CF6">\u25CF</span> \u00D3rdenes: <b>${ef.n.toLocaleString('es-CO')}</b>` +
+            `<br/><span style="color:#8B5CF6">\u25CF</span> Horas totales: <b>${horasTxt(ef.horas)}</b>` +
+            (nHoras > 0
+              ? `<br/><span style="color:#8B5CF6">\u25CF</span> Horas por orden: <b>${horasTxt(ef.horas / nHoras)}</b>${gris(`prom. ${horasTxt(promHorasOrden)}${nHoras < ef.n ? ` \u00B7 ${nHoras.toLocaleString('es-CO')} de ${ef.n.toLocaleString('es-CO')} con duraci\u00F3n` : ''}`)}`
+              : `<br/><span style="color:#94a3b8">\u25CF Horas por orden: sin duraci\u00F3n estimada</span>`) +
+            `<br/><span style="color:#8B5CF6">\u25CF</span> Costo por orden: <b>${$$(ef.costo / ef.n)}</b>${gris(`prom. ${$$(promCostoOrden)}`)}`
+          if (dias > 0) {
+            extra += `<br/><span style="color:#0EA5E9">\u25CF</span> OT promedio por d\u00EDa: <b>${(ef.n / dias).toLocaleString('es-CO', { maximumFractionDigits: 1 })}</b>${gris(`${dias.toLocaleString('es-CO')} ${dias === 1 ? 'd\u00EDa' : 'd\u00EDas'} con OT`)}` +
+              (diasHoras > 0 ? `<br/><span style="color:#0EA5E9">\u25CF</span> Horas promedio por d\u00EDa: <b>${horasTxt(ef.horas / diasHoras)}</b>${diasHoras < dias ? gris(`${diasHoras.toLocaleString('es-CO')} ${diasHoras === 1 ? 'd\u00EDa' : 'd\u00EDas'} con duraci\u00F3n`) : ''}` : '')
           }
         }
         return `<b>${nombre}</b><br/>` +
@@ -6317,12 +6463,18 @@ const motivosNoEjecucionIntOpt = computed(() => markRaw(buildCountPieOpt(motivos
  */
 interface TextosDispersion { entidad: string; trabajos: string; costo: string; promedio: string }
 const TEXTOS_PERSONAL: TextosDispersion = { entidad: 'Trabajador', trabajos: 'Participaciones', costo: 'Costo', promedio: 'equipo' }
-function buildPersonalDispersionOpt(items: { label: string; n: number; horas: number; costo: number }[], equipo = items, textos: TextosDispersion = TEXTOS_PERSONAL) {
+function buildPersonalDispersionOpt(items: ItemDispersion[], equipo = items, textos: TextosDispersion = TEXTOS_PERSONAL) {
   const isLight = theme.value === 'light'
   // Por colaborador: participaciones, horas y costo totales, y sus promedios por trabajo (los dos ejes)
-  const pts = items.filter(e => e.n > 0).map(e => ({ label: e.label, n: e.n, ht: e.horas, ct: e.costo, h: e.horas / e.n, c: e.costo / e.n }))
-  // Promedios del EQUIPO completo (aunque el filtro «Personal» muestre solo algunos colaboradores)
-  const ref = equipo.filter(e => e.n > 0).map(e => ({ h: e.horas / e.n, c: e.costo / e.n }))
+  // Horas por trabajo: solo con las OT que tienen duración estimada (nHoras); quien no tenga ninguna no se ubica en el eje
+  const conHoras = (e: ItemDispersion) => e.n > 0 && (e.nHoras ?? 0) > 0
+  const pts = items.filter(conHoras).map(e => ({
+    label: e.label, n: e.n, ht: e.horas, ct: e.costo, nHoras: e.nHoras ?? 0,
+    h: e.horas / (e.nHoras ?? 1), c: e.costo / e.n, dias: e.dias ?? 0, diasHoras: e.diasHoras ?? 0,
+  }))
+  // Promedios del EQUIPO completo (aunque el filtro «Personal» muestre solo algunos colaboradores):
+  // promedio de los promedios de cada persona, cada una con lo que hizo
+  const ref = equipo.filter(conHoras).map(e => ({ h: e.horas / (e.nHoras ?? 1), c: e.costo / e.n }))
   const avgH = ref.length ? ref.reduce((a, p) => a + p.h, 0) / ref.length : 0
   const avgC = ref.length ? ref.reduce((a, p) => a + p.c, 0) / ref.length : 0
   const maxN = Math.max(1, ...pts.map(p => p.n))
@@ -6370,7 +6522,13 @@ function buildPersonalDispersionOpt(items: { label: string; n: number; horas: nu
           fila('Horas totales', horasTxt(d.ht)) +
           fila(`${textos.costo} total`, money(d.ct)) +
           fila('Horas por trabajo', horasTxt(d.h), gris(`${textos.promedio} ${horasTxt(avgH)}`)) +
+          (d.nHoras < d.n ? fila('Con duración estimada', `${d.nHoras.toLocaleString('es-CO')} de ${d.n.toLocaleString('es-CO')}`) : '') +
           fila(`${textos.costo} por trabajo`, money(d.c), gris(`${textos.promedio} ${money(avgC)}`)) +
+          // Solo Concretos: promedios por día con OT (días distintos de cierre de la entidad)
+          (isConcretos.value && d.dias > 0
+            ? fila('OT promedio por día', (d.n / d.dias).toLocaleString('es-CO', { maximumFractionDigits: 1 }), gris(`${d.dias.toLocaleString('es-CO')} ${d.dias === 1 ? 'día' : 'días'} con OT`)) +
+              (d.diasHoras > 0 ? fila('Horas promedio por día', horasTxt(d.ht / d.diasHoras), d.diasHoras < d.dias ? gris(`${d.diasHoras.toLocaleString('es-CO')} ${d.diasHoras === 1 ? 'día' : 'días'} con duración`) : '') : '')
+            : '') +
           `</table>`
       },
     },
@@ -6418,7 +6576,7 @@ function buildPersonalDispersionOpt(items: { label: string; n: number; horas: nu
   })
 }
 /** Con el filtro «Personal» activo, solo los colaboradores elegidos (no sus compañeros de las mismas OT) */
-const soloElegidos = (items: { label: string; n: number; horas: number; costo: number }[]) =>
+const soloElegidos = (items: ItemDispersion[]) =>
   hayFiltroColaboradores.value ? items.filter(e => clavesColaboradores.value.has(clavePersona(e.label))) : items
 const personalDispersionOpt = computed(() => { const todos = computePersonalRanking(intRowsSinColab.value); return buildPersonalDispersionOpt(soloElegidos(todos), todos) })
 const personalDispersionGenOpt = computed(() => { const todos = computePersonalRanking(filasSinColab.value.filter(isInterno)); return buildPersonalDispersionOpt(soloElegidos(todos), todos) })
@@ -6437,17 +6595,15 @@ const filasAmbasAreasSinColab = computed(() => {
  * horas = duración estimada de cada OT; costo = servicios + insumos de la OT; n = número de OT.
  */
 function rankingDispersion(rows: Record<string, unknown>[], claveDe: (r: Record<string, unknown>) => string) {
-  const m = new Map<string, { label: string; n: number; horas: number; costo: number }>()
+  const m = new Map<string, AcumDispersion>()
   for (const r of rows) {
     const label = claveDe(r)
     if (!label) continue
-    const e = m.get(label) ?? { label, n: 0, horas: 0, costo: 0 }
-    e.n++
-    e.horas += Number(r['Duración (horas)']) || 0
-    e.costo += (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0)
+    const e = m.get(label) ?? nuevoAcum(label)
+    sumarOT(e, duracionOT(r), otCloseSerial(r), (Number(r['Costo servicios']) || 0) + (Number(r['Costos Insumos']) || 0))
     m.set(label, e)
   }
-  return [...m.values()].sort((a, b) => b.n - a.n)
+  return [...m.values()].map(cerrarAcum).sort((a, b) => b.n - a.n)
 }
 const TEXTOS_PROVEEDOR: TextosDispersion = { entidad: 'Proveedor', trabajos: 'Órdenes', costo: 'Costo', promedio: 'prom.' }
 const TEXTOS_TIPO: TextosDispersion = { entidad: 'Tipo de vehículo', trabajos: 'Órdenes', costo: 'Costo', promedio: 'prom.' }
