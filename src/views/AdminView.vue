@@ -355,9 +355,9 @@ const grupos: Grupo[] = [
   ] },
   { id: 'comercial', label: 'Comercial', vistas: [
     { key: 'comercial', label: 'Acceso general' },
-    { key: 'comercial/leads', label: 'Leads' },
-    { key: 'comercial/f227', label: 'F227' },
-    { key: 'comercial/embudo', label: 'Embudo' },
+    { key: 'comercial/embudo', label: 'Embudo Comercial' },
+    { key: 'comercial/embudo/leads', label: 'Embudo · Leads' },
+    { key: 'comercial/embudo/f227', label: 'Embudo · F227' },
   ] },
   { id: 'clientes', label: 'Clientes', vistas: [
     { key: 'clientes', label: 'Acceso general' },

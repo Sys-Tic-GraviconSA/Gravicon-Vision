@@ -1,5 +1,5 @@
 <template>
-  <!-- Va dentro de PlantaLayout (/comercial), que pone el nombre y las pestañas Leads · F227 · Embudo -->
+  <!-- Va dentro de PlantaLayout (/comercial), que pone el nombre del módulo -->
   <div class="comercial-view">
     <SkeletonLoader v-if="store.loading && !store.data" variant="dashboard" :kpis="4" :charts="3" label="Cargando datos comerciales…" />
     <div v-else-if="store.error && !store.data" class="page-state error">
@@ -14,7 +14,7 @@
           <div class="header-actions">
             <div class="filter-group">
               <FilterBar :data="[]" :showProvider="false" :from="fechaInicio" :to="fechaFin" @dateRangeFilter="onDateRangeFilter" />
-              <MultiSelect v-if="modulo !== 'f227'" v-model="selNegocios" :options="negocios" label="Negocio" icon="filter" />
+              <MultiSelect v-if="seccion !== 'f227'" v-model="selNegocios" :options="negocios" label="Negocio" icon="filter" />
               <MultiSelect v-model="selPlantas" :options="plantas" label="Planta" icon="filter" />
               <MultiSelect v-model="selAsesores" :options="asesores" label="Asesor" icon="user" />
             </div>
@@ -30,37 +30,44 @@
         </header>
       </div>
 
-      <LeadsTab v-if="modulo === 'leads'" :leads="leadsFiltrados" :descartados="modelo.descartados" :atipicas="modelo.atipicas" />
-      <F227Tab v-else-if="modulo === 'f227'" :ofertas="f227Filtradas" :total="modelo.f227.length" />
-      <EmbudoTab v-else :clientes="embudo" :indice="modelo.indice" :avisos="store.data.avisos" :hay-f227="modelo.f227.length > 0" />
+      <!-- Subpestañas: /comercial/embudo/leads y /comercial/embudo/f227 (cada una con sus indicadores y su embudo) -->
+      <RouteTabs variant="sub" :items="secciones" :activo="seccion" aria-label="Sección" />
+      <RouterView v-slot="{ Component }">
+        <Transition name="vista" mode="out-in">
+          <component :is="Component" v-bind="propsHija" />
+        </Transition>
+      </RouterView>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
 /**
- * ComercialView.vue — Módulo Comercial (/comercial/leads | f227 | embudo).
+ * ComercialView.vue — Embudo Comercial (/comercial/embudo/leads | f227).
  * Carga leads, F227 y compras (useComercialStore), aplica los filtros (en la URL, igual que Concretos) y
- * pasa a cada pestaña sus datos ya filtrados:
+ * pasa a la subpestaña sus registros filtrados y su embudo por cliente (misma medición de eficiencia en las dos):
  * - Fechas: fecha de solicitud (o de envío de la oferta si falta).
  * - Negocio: Concretos, Agregados, Dual (leads de concreto y agregados) — no aplica a F227, que es solo concreto.
  * - Planta y asesor (representante comercial).
- * El embudo agrupa por cliente los leads filtrados y busca sus F227 y compras sin filtrar.
+ * El embudo agrupa por cliente los registros filtrados y busca sus compras (y, en Leads, sus F227) sin filtrar.
  */
 import { computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import RouteTabs from '../../components/ui/RouteTabs.vue'
 import SkeletonLoader from '../../components/ui/SkeletonLoader.vue'
 import FilterBar from '../../components/dashboard/FilterBar.vue'
 import MultiSelect from '../../components/ui/MultiSelect.vue'
 import { useQueryDate, useQuerySet } from '../../composables/useQueryState'
 import { useComercialStore } from '../../stores'
 import { construirLeads, construirF227, construirEmbudo, indexarCompras, NEGOCIOS, type Lead, type OfertaF227 } from '../../composables/useComercial'
-import LeadsTab from './LeadsTab.vue'
-import F227Tab from './F227Tab.vue'
-import EmbudoTab from './EmbudoTab.vue'
+import { SECCIONES_COMERCIAL } from '../../config/plantas'
 
-const props = defineProps<{ modulo: 'leads' | 'f227' | 'embudo' }>()
-const TITULOS = { leads: 'Cotizaciones (Leads)', f227: 'Ofertas F227', embudo: 'Embudo Comercial' }
-const titulo = computed(() => TITULOS[props.modulo])
+const route = useRoute()
+// Subpestaña activa por el nombre de la ruta: comercial-embudo-leads → leads
+const seccion = computed(() => (String(route.name ?? '').replace('comercial-embudo-', '') === 'f227' ? 'f227' : 'leads'))
+const secciones = computed(() => SECCIONES_COMERCIAL.map(s => ({ id: s.id, label: s.label, to: { name: `comercial-embudo-${s.id}`, query: route.query } })))
+const TITULOS = { leads: 'Embudo de Leads', f227: 'Embudo F227' }
+const titulo = computed(() => TITULOS[seccion.value])
 
 const store = useComercialStore()
 onMounted(() => store.fetchData())
@@ -72,7 +79,7 @@ const modelo = computed(() => {
 })
 
 // ── Filtros (en la URL) ──
-const registros = computed<(Lead | OfertaF227)[]>(() => (props.modulo === 'f227' ? modelo.value.f227 : modelo.value.leads))
+const registros = computed<(Lead | OfertaF227)[]>(() => (seccion.value === 'f227' ? modelo.value.f227 : modelo.value.leads))
 const ordenar = (xs: Iterable<string>) => [...new Set(xs)].sort((a, b) => a.localeCompare(b, 'es'))
 const negocios = computed(() => NEGOCIOS.filter(n => modelo.value.leads.some(l => l.negocio === n)))
 const plantas = computed(() => ordenar(registros.value.map(r => r.planta)))
@@ -96,7 +103,18 @@ const filtroComun = (r: Lead | OfertaF227) => enFechas(r.fecha) && pasa(selPlant
 
 const leadsFiltrados = computed(() => modelo.value.leads.filter(l => filtroComun(l) && pasa(selNegocios.value, l.negocio)))
 const f227Filtradas = computed(() => modelo.value.f227.filter(filtroComun))
-const embudo = computed(() => (modelo.value.indice ? construirEmbudo(leadsFiltrados.value, modelo.value.f227, modelo.value.indice) : []))
+// Embudo por cliente de la subpestaña: en Leads se buscan también sus ofertas F227
+const embudo = computed(() => {
+  const idx = modelo.value.indice
+  if (!idx) return []
+  return seccion.value === 'f227' ? construirEmbudo(f227Filtradas.value, null, idx) : construirEmbudo(leadsFiltrados.value, modelo.value.f227, idx)
+})
+const propsHija = computed(() => {
+  const comun = { clientes: embudo.value, indice: modelo.value.indice, avisos: store.data?.avisos ?? [] }
+  return seccion.value === 'f227'
+    ? { ...comun, ofertas: f227Filtradas.value, total: modelo.value.f227.length }
+    : { ...comun, leads: leadsFiltrados.value, descartados: modelo.value.descartados, atipicas: modelo.value.atipicas, hayF227: modelo.value.f227.length > 0 }
+})
 
 const esTodo = (sel: Set<string>, opciones: string[]) => sel.size === 0 || sel.size === opciones.length
 const hayFiltros = computed(() => !!(fechaInicio.value || fechaFin.value) || !esTodo(selNegocios.value, negocios.value)

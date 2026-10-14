@@ -105,6 +105,10 @@ export interface OfertaF227 {
   id: string
   consecutivo: string
   cliente: string
+  /** = cliente (campo común con Lead para el embudo) */
+  empresa: string
+  /** Siempre Concretos: el F227 es la oferta formal de concreto */
+  negocio: Negocio
   obra: string
   nit: string
   nits: string[]
@@ -124,9 +128,13 @@ export interface OfertaF227 {
   distancia: number
   m3: number
   valor: number
+  enviada: boolean
   aprobada: boolean
   lineas: LineaCotizada[]
 }
+
+/** Lo que el embudo necesita de un registro: una cotización (Lead) o una oferta F227 */
+export type RegistroEmbudo = Pick<Lead, 'id' | 'empresa' | 'nit' | 'nits' | 'nombreKey' | 'negocio' | 'asesor' | 'planta' | 'fecha' | 'valor' | 'm3' | 'enviada' | 'aprobada'>
 
 function agrupar<T extends Record<string, unknown>>(filas: T[]): Map<string, T[]> {
   const m = new Map<string, T[]>()
@@ -197,14 +205,14 @@ export function construirF227(d: DatosComercial): OfertaF227[] {
     const aprobada = !!aprobacion || (/aprob/i.test(estado) && !/no\s*aprob|rechaz/i.test(estado))
     const cliente = txt(r.nombre_del_cliente) || txt(r.name) || 'Sin nombre'
     return {
-      id, consecutivo: txt(r.consecutivo) || txt(r.consecutivo_manual), cliente, obra: txt(r.obra_del_cliente),
+      id, consecutivo: txt(r.consecutivo) || txt(r.consecutivo_manual), cliente, empresa: cliente, negocio: 'Concretos', obra: txt(r.obra_del_cliente),
       nit: txt(r.nit_o_cedula), nits: clavesNit(r.nit_o_cedula), nombreKey: normNombre(cliente),
       planta: nombrePlantaLead(r.planta_de_concreto), asesor: txt(r.representante_nombre) || SIN_ASESOR,
       canal: txt(r.canal_cliente) || 'Sin dato', segmento: txt(r.segmento_del_cliente) || 'Sin dato', bombeo: txt(r.bombeo) || 'Sin dato',
       formaPago: txt(r.forma_de_pago) || 'Sin dato', estado: estado || (aprobada ? 'Aprobada' : 'Sin estado'),
       motivo: txt(r.observaciones_motivo_no_aprobacion),
       solicitud, envio, aprobacion, fecha: solicitud || envio,
-      distancia: num(r.distancia_km), m3: m3De(lineas), valor: lineas.reduce((a, l) => a + l.subtotal, 0), aprobada, lineas,
+      distancia: num(r.distancia_km), m3: m3De(lineas), valor: lineas.reduce((a, l) => a + l.subtotal, 0), enviada: !!envio, aprobada, lineas,
     }
   })
 }
@@ -278,7 +286,8 @@ export interface ClienteEmbudo {
   asesor: string
   planta: string
   primeraSolicitud: string
-  cotizaciones: number
+  /** Cotizaciones u ofertas F227 del cliente */
+  registros: number
   valorCotizado: number
   m3Cotizado: number
   enviada: boolean
@@ -302,17 +311,18 @@ const masFrecuente = (xs: string[]) => {
 }
 
 /**
- * Agrupa las cotizaciones por cliente (NIT o, sin NIT, nombre) y marca cada etapa del embudo.
- * `f227` se cruza por NIT o nombre con el cliente; las compras, por el negocio cotizado.
+ * Agrupa los registros (cotizaciones u ofertas F227) por cliente (NIT o, sin NIT, nombre) y marca cada etapa
+ * del embudo. Con `f227` (embudo de leads) se busca además si el cliente tiene oferta F227, por NIT o nombre.
+ * Las compras se cruzan según el negocio cotizado.
  */
-export function construirEmbudo(leads: Lead[], f227: OfertaF227[], idx: IndiceCompras): ClienteEmbudo[] {
-  const grupos = new Map<string, Lead[]>()
-  for (const l of leads) {
+export function construirEmbudo(registros: RegistroEmbudo[], f227: OfertaF227[] | null, idx: IndiceCompras): ClienteEmbudo[] {
+  const grupos = new Map<string, RegistroEmbudo[]>()
+  for (const l of registros) {
     const k = l.nits[0] ?? (l.nombreKey ? `N:${l.nombreKey}` : `L:${l.id}`)
     const g = grupos.get(k); if (g) g.push(l); else grupos.set(k, [l])
   }
   const f227PorClave = new Map<string, OfertaF227[]>()
-  for (const o of f227) for (const k of [...o.nits, o.nombreKey ? `N:${o.nombreKey}` : '']) {
+  for (const o of f227 ?? []) for (const k of [...o.nits, o.nombreKey ? `N:${o.nombreKey}` : '']) {
     if (!k) continue
     const g = f227PorClave.get(k); if (g) g.push(o); else f227PorClave.set(k, [o])
   }
@@ -352,7 +362,7 @@ export function construirEmbudo(leads: Lead[], f227: OfertaF227[], idx: IndiceCo
       asesor: masFrecuente(ls.map(l => l.asesor)),
       planta: masFrecuente(ls.map(l => l.planta)),
       primeraSolicitud,
-      cotizaciones: ls.length,
+      registros: ls.length,
       valorCotizado: ls.reduce((a, l) => a + l.valor, 0),
       m3Cotizado: ls.reduce((a, l) => a + l.m3, 0),
       enviada: ls.some(l => l.enviada),

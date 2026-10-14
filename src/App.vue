@@ -319,7 +319,7 @@ const showUserMenu = ref(false)
 function toggleUserMenu() { showUserMenu.value = !showUserMenu.value }
 function closeUserMenu() { showUserMenu.value = false }
 
-function toggle(key: 'agr' | 'concreto') {
+function toggle(key: SeccionId) {
   openMenus[key] = !openMenus[key]
 }
 

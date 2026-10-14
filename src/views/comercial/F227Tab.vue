@@ -8,6 +8,8 @@
         <KpiCard v-for="k in kpis" :key="k.label" v-bind="k" />
       </div>
 
+      <EmbudoSeccion :clientes="clientes" :indice="indice" :avisos="avisos" plural="ofertas F227" />
+
       <h3 class="section-title"><span class="title-bar"></span>Evolución</h3>
       <div class="charts-grid cols-2">
         <ChartCard title="Ofertas vs. Aprobadas por Mes" description="Encima, la tasa de aprobación del mes" :option="optMesCantidad" :height="320" />
@@ -37,8 +39,9 @@
 
 <script setup lang="ts">
 /**
- * F227Tab.vue — Indicadores de las ofertas formales de concreto (m_dulo_f227): volumen, aprobación,
- * valor y m³, tiempos de respuesta, estado, segmento, canal, bombeo y motivos de no aprobación.
+ * F227Tab.vue — Subpestaña F227 del Embudo Comercial: indicadores de las ofertas formales de concreto (m_dulo_f227)
+ * — volumen, aprobación, valor y m³, tiempos de respuesta, estado, segmento, canal, bombeo y motivos de no
+ * aprobación — y su embudo hasta la compra (mismo embudo que Leads).
  */
 import { computed } from 'vue'
 import KpiCard from '../../components/dashboard/KpiCard.vue'
@@ -46,10 +49,18 @@ import ChartCard from '../../components/dashboard/ChartCard.vue'
 import DataTable from '../../components/dashboard/DataTable.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import { fmtN, pct, PALETA } from '../../composables/useGraficasConcreto'
-import { diasRespuesta, mediana, millones, tasa, type OfertaF227 } from '../../composables/useComercial'
+import { diasRespuesta, mediana, millones, tasa, type ClienteEmbudo, type IndiceCompras, type OfertaF227 } from '../../composables/useComercial'
 import { useGraficasComercial, AZUL, VERDE, MORADO, AMBAR } from './useGraficasComercial'
+import EmbudoSeccion from './EmbudoSeccion.vue'
 
-const props = defineProps<{ ofertas: OfertaF227[]; total: number }>()
+const props = defineProps<{
+  ofertas: OfertaF227[]
+  total: number
+  /** Embudo por cliente de estas ofertas */
+  clientes: ClienteEmbudo[]
+  indice: IndiceCompras | null
+  avisos: string[]
+}>()
 const g = useGraficasComercial()
 
 const contar = <T,>(xs: T[], f: (x: T) => boolean) => xs.reduce((a, x) => a + (f(x) ? 1 : 0), 0)

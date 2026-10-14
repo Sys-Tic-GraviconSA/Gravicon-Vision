@@ -6,6 +6,8 @@
         <KpiCard v-for="k in kpis" :key="k.label" v-bind="k" />
       </div>
 
+      <EmbudoSeccion :clientes="clientes" :indice="indice" :avisos="avisos" plural="cotizaciones" etapa-f227 :hay-f227="hayF227" por-negocio />
+
       <h3 class="section-title"><span class="title-bar"></span>Evolución</h3>
       <p class="section-sub">Por mes de solicitud (o de envío de la oferta si falta). Tasa de aprobación = aprobadas ÷ cotizaciones del mes.</p>
       <div class="charts-grid cols-2">
@@ -39,8 +41,8 @@
 
 <script setup lang="ts">
 /**
- * LeadsTab.vue — Indicadores de las cotizaciones (posibles_clientes_leads): volumen, aprobación, valor,
- * tiempos de respuesta y productos/precios de concreto, por mes, negocio, asesor y planta.
+ * LeadsTab.vue — Subpestaña Leads del Embudo Comercial: indicadores de las cotizaciones (posibles_clientes_leads)
+ * — volumen, aprobación, valor, tiempos de respuesta, productos y precios de concreto — y su embudo hasta la compra.
  */
 import { computed } from 'vue'
 import KpiCard from '../../components/dashboard/KpiCard.vue'
@@ -48,10 +50,20 @@ import ChartCard from '../../components/dashboard/ChartCard.vue'
 import DataTable from '../../components/dashboard/DataTable.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import { fmtN, pct } from '../../composables/useGraficasConcreto'
-import { COLOR_NEGOCIO, NEGOCIOS, diasRespuesta, mediana, millones, tasa, type Lead } from '../../composables/useComercial'
+import { COLOR_NEGOCIO, NEGOCIOS, diasRespuesta, mediana, millones, tasa, type ClienteEmbudo, type IndiceCompras, type Lead } from '../../composables/useComercial'
 import { useGraficasComercial, AZUL, VERDE, MORADO, AMBAR } from './useGraficasComercial'
+import EmbudoSeccion from './EmbudoSeccion.vue'
 
-const props = defineProps<{ leads: Lead[]; descartados: number; atipicas: number }>()
+const props = defineProps<{
+  leads: Lead[]
+  descartados: number
+  atipicas: number
+  /** Embudo por cliente de estas cotizaciones */
+  clientes: ClienteEmbudo[]
+  indice: IndiceCompras | null
+  avisos: string[]
+  hayF227: boolean
+}>()
 const TOP = 10
 const g = useGraficasComercial()
 

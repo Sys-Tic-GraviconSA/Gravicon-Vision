@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw, type RouteLocationNormalized } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { EMPRESAS_PROGRAMACION, PLANTAS, PLANTAS_AGREGADOS, SECCIONES_CONCRETOS, VISTAS_CONCRETOS, VISTAS_FACTURACION, VISTAS_PRODUCCION_AGREGADOS, type PlantaId } from '../config/plantas'
+import { EMPRESAS_PROGRAMACION, PLANTAS, PLANTAS_AGREGADOS, SECCIONES_COMERCIAL, SECCIONES_CONCRETOS, VISTAS_CONCRETOS, VISTAS_FACTURACION, VISTAS_PRODUCCION_AGREGADOS, type PlantaId } from '../config/plantas'
 import { clavesMantenimiento, estadosMantenimiento, leerEstado, segmentos } from '../composables/useRutaMantenimiento'
 
 /**
@@ -15,7 +15,7 @@ import { clavesMantenimiento, estadosMantenimiento, leerEstado, segmentos } from
  *   /concretos
  *     /produccion/planta | proyeccion / graficas | informe
  *     /mantenimiento/:area/:seccion/:vista
- *   /comercial/leads | f227 | embudo                (cotizaciones de Agregados y Concretos, ofertas F227 y embudo hasta la compra)
+ *   /comercial/embudo/leads | f227                 (indicadores y embudo hasta la compra de las cotizaciones y de las ofertas F227)
  *   /clientes
  *   /configuracion
  *
@@ -217,14 +217,23 @@ const routes: RouteRecordRaw[] = [
     props: { planta: 'comercial' },
     meta: { requiresAuth: true },
     children: [
-      { path: '', name: 'comercial', redirect: () => primeraPermitida('comercial', PLANTAS.comercial.modulos.map(m => m.id)) },
-      ...PLANTAS.comercial.modulos.map(m => ({
-        path: m.id,
-        name: `comercial-${m.id}`,
+      { path: '', name: 'comercial', redirect: () => primeraPermitida('comercial', ['embudo']) },
+      {
+        path: 'embudo',
         component: () => import('../views/comercial/ComercialView.vue'),
-        props: { modulo: m.id },
-        meta: { titulo: `Comercial · ${m.label}` },
-      })),
+        children: [
+          {
+            path: '', name: 'comercial-embudo',
+            redirect: () => primeraVista(SECCIONES_COMERCIAL.map(s => [`comercial/embudo/${s.id}`, `comercial-embudo-${s.id}`] as [string, string])),
+          },
+          ...SECCIONES_COMERCIAL.map(s => ({
+            path: s.id,
+            name: `comercial-embudo-${s.id}`,
+            component: s.id === 'leads' ? () => import('../views/comercial/LeadsTab.vue') : () => import('../views/comercial/F227Tab.vue'),
+            meta: { titulo: `Comercial · ${s.label}` },
+          })),
+        ],
+      },
     ],
   },
 
