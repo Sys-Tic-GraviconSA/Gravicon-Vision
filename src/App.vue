@@ -64,6 +64,8 @@
             >
               <!-- Agregados: acopio (pila de material) con su banda transportadora -->
               <svg v-if="sec.id === 'agr'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"/><path d="M3.5 20c1.3-5.4 4.6-9.5 8.5-9.5s7.2 4.1 8.5 9.5"/><path d="M8.5 16.5h.01"/><path d="M12 15h.01"/><path d="M15.5 17h.01"/><path d="M2.5 3.5 12 7"/></svg>
+              <!-- Comercial: embudo (posible cliente → oferta → compra) -->
+              <svg v-else-if="sec.id === 'comercial'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-7 8.5V19l-4 2v-8.5z"/></svg>
               <!-- Concretos: camión mezclador (mixer) -->
               <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/><path d="M15 18H8"/><path d="M4 18H2v-3h13"/><path d="M15 15V9h3l3 4v5h-2"/><ellipse cx="8" cy="9.5" rx="6" ry="3.4" transform="rotate(14 8 9.5)"/><path d="M5 7l1.5 5.3"/><path d="M9 7.5l1 5"/></svg>
               <span v-if="!collapsed">{{ sec.label }}</span>
@@ -199,15 +201,16 @@ const { theme, toggleTheme } = useTheme()
 const logoSrc = computed(() => theme.value === 'dark' ? '/Logos/logo-blanco.webp' : '/Logos/logo-azul.webp')
 
 const collapsed = ref(false)
-const openMenus = reactive<Record<'agr' | 'concreto', boolean>>({ agr: true, concreto: true })
+type SeccionId = 'agr' | 'concreto' | 'comercial'
+const openMenus = reactive<Record<SeccionId, boolean>>({ agr: true, concreto: true, comercial: true })
 
-// Menú: Agregados (Cuncía, Acacías) y Concretos, cada planta con sus módulos (Producción, Despacho…).
+// Menú: Agregados (Cuncía, Acacías), Concretos y Comercial, cada uno con sus módulos (Producción, Despacho, Leads…).
 // Solo se muestran los módulos permitidos (mismo criterio que las pestañas de PlantaLayout); una planta
 // sin módulos visibles no aparece, y una sección sin plantas tampoco.
-type SeccionId = 'agr' | 'concreto'
 const SECCIONES: { id: SeccionId; label: string; plantas: PlantaId[] }[] = [
   { id: 'agr', label: 'Agregados', plantas: ['cuncia', 'acacias'] },
   { id: 'concreto', label: 'Concretos', plantas: ['concretos'] },
+  { id: 'comercial', label: 'Comercial', plantas: ['comercial'] },
 ]
 /** Planta y módulo de la ruta actual: /cuncia/produccion/… → ['cuncia', 'produccion'] */
 const tramos = computed(() => route.path.split('/').filter(Boolean))

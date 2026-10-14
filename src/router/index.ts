@@ -15,6 +15,7 @@ import { clavesMantenimiento, estadosMantenimiento, leerEstado, segmentos } from
  *   /concretos
  *     /produccion/planta | proyeccion / graficas | informe
  *     /mantenimiento/:area/:seccion/:vista
+ *   /comercial/leads | f227 | embudo                (cotizaciones de Agregados y Concretos, ofertas F227 y embudo hasta la compra)
  *   /clientes
  *   /configuracion
  *
@@ -210,6 +211,23 @@ const routes: RouteRecordRaw[] = [
     ],
   },
 
+  {
+    path: '/comercial',
+    component: PlantaLayout,
+    props: { planta: 'comercial' },
+    meta: { requiresAuth: true },
+    children: [
+      { path: '', name: 'comercial', redirect: () => primeraPermitida('comercial', PLANTAS.comercial.modulos.map(m => m.id)) },
+      ...PLANTAS.comercial.modulos.map(m => ({
+        path: m.id,
+        name: `comercial-${m.id}`,
+        component: () => import('../views/comercial/ComercialView.vue'),
+        props: { modulo: m.id },
+        meta: { titulo: `Comercial · ${m.label}` },
+      })),
+    ],
+  },
+
   { path: '/clientes', name: 'clientes', component: () => import('../views/ClientesView.vue'), meta: { requiresAuth: true, titulo: 'Clientes' } },
   { path: '/configuracion', name: 'configuracion', component: () => import('../views/AdminView.vue'), meta: { requiresAuth: true, titulo: 'Configuración' } },
   { path: '/admin', redirect: { name: 'configuracion' } },
@@ -229,7 +247,7 @@ const router = createRouter({
 })
 
 /** Vistas principales en orden de preferencia para redirigir cuando una está bloqueada. */
-const HOME_CANDIDATES = ['cuncia', 'acacias', 'concretos', 'clientes']
+const HOME_CANDIDATES = ['cuncia', 'acacias', 'concretos', 'comercial', 'clientes']
 
 /** Solo rutas internas: evita redirecciones abiertas tipo //sitio-externo.com */
 const esRutaInterna = (p: string | undefined) => !!p && /^\/(?![/\\])/.test(p)

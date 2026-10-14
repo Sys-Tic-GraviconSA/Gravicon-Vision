@@ -5,13 +5,13 @@
  */
 import type { PlantConfig } from '../views/agregados/ResumenTab.vue'
 
-export type PlantaId = 'cuncia' | 'acacias' | 'concretos'
-export type ModuloId = 'produccion' | 'facturacion' | 'programacion' | 'mantenimiento'
+export type PlantaId = 'cuncia' | 'acacias' | 'concretos' | 'comercial'
+export type ModuloId = 'produccion' | 'facturacion' | 'programacion' | 'mantenimiento' | 'leads' | 'f227' | 'embudo'
 
 export interface Planta {
   id: PlantaId
   nombre: string
-  negocio: 'Agregados' | 'Concretos'
+  negocio: 'Agregados' | 'Concretos' | 'Comercial'
   modulos: { id: ModuloId; label: string }[]
   /** Solo agregados: líneas de producción (columnas de la hoja diaria) */
   produccion?: PlantConfig
@@ -69,6 +69,17 @@ export const PLANTAS: Record<PlantaId, Planta> = {
     modulos: [
       { id: 'produccion', label: 'Producción' },
       { id: 'mantenimiento', label: 'Mantenimiento' },
+    ],
+  },
+  // No es una planta: cotizaciones (leads) de Agregados y Concretos, ofertas F227 y el embudo hasta la compra
+  comercial: {
+    id: 'comercial',
+    nombre: 'Comercial',
+    negocio: 'Comercial',
+    modulos: [
+      { id: 'leads', label: 'Leads' },
+      { id: 'f227', label: 'F227' },
+      { id: 'embudo', label: 'Embudo' },
     ],
   },
 }

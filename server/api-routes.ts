@@ -9,6 +9,7 @@ import { loadDisponibilidadData } from '../api/_lib/disponibilidad.js'
 import { loadCunciaProduccion, loadAcaciasProduccion } from '../api/_lib/produccion.js'
 import { SPREADSHEETS } from '../api/_lib/google.js'
 import { loadFacturacion, compactar, SUCURSALES, type PlantaFacturacion } from '../api/_lib/facturacion.js'
+import { loadComercial } from '../api/_lib/comercial.js'
 import {
   getSupabaseAdmin,
   authenticateRequest,
@@ -348,6 +349,17 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
     }
   })
 
+  /** GET /api/comercial/data - Leads, ofertas F227 y compras de esos clientes (embudo comercial). */
+  router.get('/comercial/data', authenticateRequest, requireView(['comercial']), async (req, res) => {
+    try {
+      const force = req.query.force === 'true'
+      res.json(await conCache('comercial', TTL_SUPABASE_MS, () => loadComercial(force), force))
+    } catch (err) {
+      console.error('[comercial-data]', err)
+      res.status(500).json({ error: 'Error interno del servidor.' })
+    }
+  })
+
   /** GET /api/facturacion-agregados/data?planta=cuncia|acacias&force=true - Facturación Novasoft (Excel en Drive) de una planta */
   router.get('/facturacion-agregados/data',
     authenticateRequest,
@@ -372,7 +384,7 @@ export function createApiRouter(loginLimiter?: RequestHandler) {
     } catch (err) {
       // Sin permisos verificables el frontend bloquea todo salvo Configuración.
       console.error('[me] permisos_vista:', err)
-      perms = { cuncia: false, acacias: false, concretos: false, clientes: false }
+      perms = { cuncia: false, acacias: false, concretos: false, comercial: false, clientes: false }
     }
     res.json({
       email: user.email,

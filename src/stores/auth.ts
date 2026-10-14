@@ -43,7 +43,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isSuperAdmin = computed(() => !!profile.value?.superadmin)
   const mustChangePassword = computed(() => !!profile.value?.mustChangePassword)
   /** Mientras no se verifiquen los permisos se niega todo (fail-closed). */
-  const DENY_ALL = { cuncia: false, acacias: false, concretos: false, clientes: false }
+  const DENY_ALL = { cuncia: false, acacias: false, concretos: false, comercial: false, clientes: false }
 
   /** Carga rol y permisos del usuario autenticado. Reusa la petición en curso. */
   function loadProfile(force = false): Promise<void> {

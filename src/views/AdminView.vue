@@ -353,6 +353,12 @@ const grupos: Grupo[] = [
     { key: 'concretos/produccion/proyeccion/informe', label: 'Proyección Comercial · Informe' },
     ...vistasMantenimiento('concretos', true),
   ] },
+  { id: 'comercial', label: 'Comercial', vistas: [
+    { key: 'comercial', label: 'Acceso general' },
+    { key: 'comercial/leads', label: 'Leads' },
+    { key: 'comercial/f227', label: 'F227' },
+    { key: 'comercial/embudo', label: 'Embudo' },
+  ] },
   { id: 'clientes', label: 'Clientes', vistas: [
     { key: 'clientes', label: 'Acceso general' },
   ] },
