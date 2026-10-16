@@ -68,6 +68,7 @@ import {
 import { use } from 'echarts/core'
 import { ScatterChart } from 'echarts/charts'
 import { LabelLayout } from 'echarts/features'
+import { proyeccionConRemisiones, type FilaProyeccion, type RemisionProyeccion } from '../../../composables/useProyeccionClientes'
 
 // Scatter pinta la raya de «esperado»; LabelLayout separa las etiquetas finales de las líneas
 use([ScatterChart, LabelLayout])
@@ -101,26 +102,33 @@ function semaforo(cump: number, av: number): string { const r = av ? cump / av *
 const clientesStore = useClientesStore()
 onMounted(() => { if (!clientesStore.data && !clientesStore.loading) clientesStore.fetchData() })
 
-interface Proy { mes: string; planta: string; cliente: string; obra: string; tipo: string; meta: number; real: number }
+type Proy = FilaProyeccion
+// Meta de proyecciones_clientes; ejecutado desde las remisiones de Concreto 4.0 (misma fuente que la proyección de planta)
 const proyecciones = computed<Proy[]>(() => {
   const filtro = props.plantasFiltro ? new Set(props.plantasFiltro.map(nombrePlanta)) : null
   const filtroCli = props.clientesFiltro ? new Set(props.clientesFiltro.map(norm)) : null
-  return (clientesStore.allRows as Record<string, unknown>[])
+  const filas = (clientesStore.allRows as Record<string, unknown>[])
     .map(r => ({
       mes: String(r.fecha ?? '').slice(0, 7), planta: nombrePlanta(r.planta), cliente: String(r.nombre_cliente ?? '').trim(),
-      obra: String(r.obra ?? '').trim(), tipo: String(r.tipo ?? ''), meta: num(r.m3_proyectado), real: num(r.cantidad_m3),
+      obra: String(r.obra ?? '').trim(), tipo: String(r.tipo ?? ''), meta: num(r.m3_proyectado), real: 0,
     }))
+    .filter(r => r.mes)
+  // Corte: la fecha final del filtro, si su mes tiene proyección (si no, se muestra el mes más reciente completo)
+  const hasta = props.corte && filas.some(f => f.mes === props.corte!.slice(0, 7)) ? props.corte : undefined
+  return proyeccionConRemisiones(filas, remisiones.value, hasta)
     // Con filtro de clientes se quitan las filas genéricas de calle: no son de ningún cliente elegido
-    .filter(r => r.mes && (!filtro || filtro.has(r.planta)) && (!filtroCli || filtroCli.has(norm(r.cliente))))
+    .filter(r => (!filtro || filtro.has(r.planta)) && (!filtroCli || filtroCli.has(norm(r.cliente))))
 })
 // Fila genérica «CLIENTE / CALLE» dentro de lo proyectado (misma regla del informe)
 const esCalle = (r: Proy) => norm(r.cliente) === 'CLIENTE' && norm(r.obra) === 'CALLE'
 
 // Remisiones de concreto (sin agregados) para el avance diario
-interface Rem { iso: string; planta: string; m3: number }
-const remisiones = computed<Rem[]>(() => props.rows
+const remisiones = computed<RemisionProyeccion[]>(() => props.rows
   .filter(r => typeof r['Fecha'] === 'number' && r['Fecha'] && !esAgregado(r['Mezcla'], r['Cliente'], r['Planta']))
-  .map(r => ({ iso: serialToDate(r['Fecha'] as number).toISOString().slice(0, 10), planta: nombrePlanta(r['Planta']), m3: num(r['Cant. Concreto']) })))
+  .map(r => ({
+    iso: serialToDate(r['Fecha'] as number).toISOString().slice(0, 10), planta: nombrePlanta(r['Planta']),
+    cliente: String(r['Cliente'] ?? '').trim(), obra: String(r['Proyecto'] ?? '').trim(), m3: num(r['Cant. Concreto']),
+  })))
 
 // ---------------------------------------------------------------- Mes y corte
 const mesesDisponibles = computed(() => [...new Set(proyecciones.value.filter(r => r.tipo === 'Proyectado').map(r => r.mes))].sort().reverse())

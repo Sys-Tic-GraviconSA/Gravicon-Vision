@@ -46,7 +46,7 @@
             frente a lo ejecutado al <strong>{{ corteLargo }}</strong>, ritmo esperado según el avance del mes, desviación, faltante y m³
             diarios necesarios para cumplir. Incluye el avance de cada cliente proyectado, el seguimiento día a día, la
             <strong>producción por vehículo</strong> y el control de calidad del dato. La proyección de cada planta es el total de la proyección
-            de sus clientes. Fuente: proyecciones_clientes, proyecciones_planta (despacho diario) y order_price.
+            de sus clientes. Fuente: meta de proyecciones_clientes; ejecutado y despacho diario de las remisiones de Concreto 4.0 (order_price), las mismas de Producción.
           </p>
         </div>
 
@@ -281,7 +281,6 @@ import SkeletonLoader from '../../../components/ui/SkeletonLoader.vue'
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import KpiCard from '../../../components/dashboard/KpiCard.vue'
 import { useClientesStore } from '../../../stores'
-import { useAuthStore } from '../../../stores/auth'
 import { serialToDate } from '../../../utils/dates'
 import { esAgregado } from '../../../utils/agregadosConcreto'
 import * as echarts from 'echarts/core'
@@ -291,6 +290,7 @@ import { GridComponent, TooltipComponent, LegendComponent, MarkLineComponent } f
 import { LabelLayout } from 'echarts/features'
 import { useTemaInforme, capturandoPdf } from '../../../composables/useTemaInforme'
 import { COLOR_PLANTA, COLOR_CONDICION, condicionPorCliente, condicionCorta, type CondicionCliente } from '../../../composables/useGraficasConcreto'
+import { proyeccionConRemisiones, type FilaProyeccion } from '../../../composables/useProyeccionClientes'
 
 // En tema oscuro las gráficas se ven con colores para fondo oscuro; el PDF siempre sale en papel blanco
 const { tema, oscuro } = useTemaInforme()
@@ -299,8 +299,8 @@ echarts.use([CanvasRenderer, BarChart, LineChart, GridComponent, TooltipComponen
 
 /*
  * ProyeccionTab.vue — Informe de Proyección de Clientes (mismo contenido que el PDF/correo diario):
- * meta vs. ejecutado por planta y cliente (proyecciones_clientes), seguimiento diario (proyecciones_planta)
- * y producción por vehículo y conductor (order_price, sin agregados). Descarga un PDF continuo de una sola hoja.
+ * meta por planta y cliente (proyecciones_clientes) vs. ejecutado, seguimiento diario y producción por vehículo y conductor,
+ * todo desde las remisiones de Concreto 4.0 (order_price, sin agregados), las mismas de Producción. Descarga un PDF continuo de una sola hoja.
  */
 const props = defineProps<{
   /** Filas de order_price ya filtradas por planta/comercial (sin filtro de fechas) */
@@ -320,7 +320,6 @@ const MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'S
 const ORDEN_PLANTAS = ['Villavicencio', 'Acacías', 'Restrepo', 'Puerto Concordia']
 // Mismo color por planta en todo el proyecto (gráficas, Mantenimiento, Clientes, Combustible e informes)
 const COLORES: Record<string, string> = COLOR_PLANTA
-const PP_COL: Record<string, string> = { 'Villavicencio': 'villavicencio', 'Acacías': 'acacias', 'Restrepo': 'restrepo', 'Puerto Concordia': 'concordia' }
 const CP = '#172954'
 
 // Valores enteros por defecto (m³, galones, conteos); los porcentajes y razones piden sus decimales
@@ -349,19 +348,13 @@ function ordenar(ps: Iterable<string>) {
 
 // ---------------------------------------------------------------- Carga de proyecciones
 const clientesStore = useClientesStore()
-const ppRows = ref<Record<string, unknown>[]>([])
 const cargando = ref(false)
 const errorCarga = ref<string | null>(null)
+// Solo la meta viene de proyecciones_clientes; lo ejecutado sale de las remisiones (props.rows)
 async function cargar() {
   cargando.value = true; errorCarga.value = null
   try {
-    const token = useAuthStore().accessToken
-    const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {}
-    const [, pp] = await Promise.all([
-      clientesStore.data ? Promise.resolve() : clientesStore.fetchData(),
-      fetch('/api/proyecciones-planta/data', { headers }).then(r => { if (!r.ok) throw new Error(`API ${r.status}`); return r.json() }),
-    ])
-    ppRows.value = pp?.rows ?? []
+    if (!clientesStore.data) await clientesStore.fetchData()
     if (clientesStore.error) errorCarga.value = clientesStore.error
   } catch (e: any) {
     console.error('[proyeccion]', e); errorCarga.value = e.message
@@ -369,15 +362,19 @@ async function cargar() {
 }
 
 // ---------------------------------------------------------------- Normalización
-interface Proy { mes: string; planta: string; cliente: string; obra: string; tipo: string; meta: number; real: number }
+type Proy = FilaProyeccion
+// Meta de proyecciones_clientes; ejecutado desde las remisiones de Concreto 4.0 al corte (misma fuente que la planta)
 const pc = computed<Proy[]>(() => {
   // Mismos filtros globales de planta y cliente que el resto de Producción
   const fPlanta = props.plantasFiltro ? new Set(props.plantasFiltro.map(nombrePlanta)) : null
   const fCli = props.clientesFiltro ? new Set(props.clientesFiltro.map(norm)) : null
-  return (clientesStore.allRows as Record<string, unknown>[]).map(r => ({
+  const filas = (clientesStore.allRows as Record<string, unknown>[]).map(r => ({
     mes: String(r.fecha ?? '').slice(0, 10), planta: nombrePlanta(r.planta), cliente: String(r.nombre_cliente ?? '').trim(),
-    obra: String(r.obra ?? '').trim(), tipo: String(r.tipo ?? ''), meta: num(r.m3_proyectado), real: num(r.cantidad_m3),
-  })).filter(r => (!fPlanta || fPlanta.has(r.planta)) && (!fCli || fCli.has(norm(r.cliente))))
+    obra: String(r.obra ?? '').trim(), tipo: String(r.tipo ?? ''), meta: num(r.m3_proyectado), real: 0,
+  }))
+  const rem = remisiones.value.map(r => ({ iso: r.iso, planta: r.planta, cliente: r.cliente, obra: r.proyecto, m3: r.m3 }))
+  return proyeccionConRemisiones(filas, rem, corteIso.value)
+    .filter(r => (!fPlanta || fPlanta.has(r.planta)) && (!fCli || fCli.has(norm(r.cliente))))
 })
 const esCalle = (r: Proy) => norm(r.cliente) === 'CLIENTE' && norm(r.obra) === 'CALLE'
 
@@ -476,25 +473,19 @@ const kpis = computed<KpiDef[]>(() => {
   ]
 })
 
-// ---------------------------------------------------------------- Seguimiento diario (proyecciones_planta; si no hay, order_price)
+// ---------------------------------------------------------------- Seguimiento diario (remisiones, igual que Producción)
 // La proyección de la planta es el total de la proyección de sus clientes (no se usa proyectado_diario_general)
 const metaDiaria = computed(() => (diasOpMes.value ? T.value.meta / diasOpMes.value : 0))
 const diario = computed(() => {
-  const pp = ppRows.value.filter(r => String(r.fecha ?? '').startsWith(pref.value) && String(r.fecha) <= corteIso.value)
-  // proyecciones_planta trae totales por planta: con filtro de clientes se calcula desde las remisiones filtradas
-  const usarPP = !props.clientesFiltro && pp.some(r => plantas.value.some(p => num(r[PP_COL[p]]) > 0))
   const dias: { iso: string; porPlanta: Record<string, number>; total: number }[] = []
   for (let d = 1; d <= dia.value; d++) {
     const iso = `${pref.value}-${String(d).padStart(2, '0')}`
     const porPlanta: Record<string, number> = {}
-    for (const p of plantas.value) {
-      porPlanta[p] = usarPP ? num(pp.find(r => String(r.fecha).slice(0, 10) === iso)?.[PP_COL[p]])
-        : remMes.value.filter(r => r.iso === iso && r.planta === p).reduce((a, r) => a + r.m3, 0)
-    }
+    for (const p of plantas.value) porPlanta[p] = remMes.value.filter(r => r.iso === iso && r.planta === p).reduce((a, r) => a + r.m3, 0)
     const total = Object.values(porPlanta).reduce((a, v) => a + v, 0)
     if (total > 0 || !esDomingo(d)) dias.push({ iso, porPlanta, total })
   }
-  return { dias, fuente: usarPP ? 'proyecciones_planta' : 'order_price' }
+  return { dias }
 })
 
 // ---------------------------------------------------------------- Histórico del año
