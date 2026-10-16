@@ -5,13 +5,13 @@
  */
 import type { PlantConfig } from '../views/agregados/ResumenTab.vue'
 
-export type PlantaId = 'cuncia' | 'acacias' | 'concretos'
-export type ModuloId = 'produccion' | 'facturacion' | 'programacion' | 'mantenimiento'
+export type PlantaId = 'cuncia' | 'acacias' | 'concretos' | 'comercial'
+export type ModuloId = 'produccion' | 'facturacion' | 'programacion' | 'mantenimiento' | 'embudo'
 
 export interface Planta {
   id: PlantaId
   nombre: string
-  negocio: 'Agregados' | 'Concretos'
+  negocio: 'Agregados' | 'Concretos' | 'Comercial'
   modulos: { id: ModuloId; label: string }[]
   /** Solo agregados: líneas de producción (columnas de la hoja diaria) */
   produccion?: PlantConfig
@@ -71,6 +71,15 @@ export const PLANTAS: Record<PlantaId, Planta> = {
       { id: 'mantenimiento', label: 'Mantenimiento' },
     ],
   },
+  // No es una planta: embudo de las cotizaciones (leads) de Agregados y Concretos y de las ofertas F227 hasta la compra
+  comercial: {
+    id: 'comercial',
+    nombre: 'Comercial',
+    negocio: 'Comercial',
+    modulos: [
+      { id: 'embudo', label: 'Embudo Comercial' },
+    ],
+  },
 }
 
 export const PLANTAS_AGREGADOS = ['cuncia', 'acacias'] as const
@@ -92,6 +101,12 @@ export const SECCIONES_CONCRETOS = [
 export const VISTAS_CONCRETOS = [
   { id: 'graficas', label: 'Gráficas' },
   { id: 'informe', label: 'Informe' },
+] as const
+
+/** Embudo comercial: /comercial/embudo/:seccion — cada sección con sus indicadores y su embudo hasta la compra */
+export const SECCIONES_COMERCIAL = [
+  { id: 'leads', label: 'Leads' },
+  { id: 'f227', label: 'F227' },
 ] as const
 
 /** Facturación de agregados (Novasoft): /:planta/facturacion/:vista */

@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw, type RouteLocationNormalized } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { EMPRESAS_PROGRAMACION, PLANTAS, PLANTAS_AGREGADOS, SECCIONES_CONCRETOS, VISTAS_CONCRETOS, VISTAS_FACTURACION, VISTAS_PRODUCCION_AGREGADOS, type PlantaId } from '../config/plantas'
+import { EMPRESAS_PROGRAMACION, PLANTAS, PLANTAS_AGREGADOS, SECCIONES_COMERCIAL, SECCIONES_CONCRETOS, VISTAS_CONCRETOS, VISTAS_FACTURACION, VISTAS_PRODUCCION_AGREGADOS, type PlantaId } from '../config/plantas'
 import { clavesMantenimiento, estadosMantenimiento, leerEstado, segmentos } from '../composables/useRutaMantenimiento'
 
 /**
@@ -15,6 +15,7 @@ import { clavesMantenimiento, estadosMantenimiento, leerEstado, segmentos } from
  *   /concretos
  *     /produccion/planta | proyeccion / graficas | informe
  *     /mantenimiento/:area/:seccion/:vista
+ *   /comercial/embudo/leads | f227                 (indicadores y embudo hasta la compra de las cotizaciones y de las ofertas F227)
  *   /clientes
  *   /configuracion
  *
@@ -210,6 +211,32 @@ const routes: RouteRecordRaw[] = [
     ],
   },
 
+  {
+    path: '/comercial',
+    component: PlantaLayout,
+    props: { planta: 'comercial' },
+    meta: { requiresAuth: true },
+    children: [
+      { path: '', name: 'comercial', redirect: () => primeraPermitida('comercial', ['embudo']) },
+      {
+        path: 'embudo',
+        component: () => import('../views/comercial/ComercialView.vue'),
+        children: [
+          {
+            path: '', name: 'comercial-embudo',
+            redirect: () => primeraVista(SECCIONES_COMERCIAL.map(s => [`comercial/embudo/${s.id}`, `comercial-embudo-${s.id}`] as [string, string])),
+          },
+          ...SECCIONES_COMERCIAL.map(s => ({
+            path: s.id,
+            name: `comercial-embudo-${s.id}`,
+            component: s.id === 'leads' ? () => import('../views/comercial/LeadsTab.vue') : () => import('../views/comercial/F227Tab.vue'),
+            meta: { titulo: `Comercial · ${s.label}` },
+          })),
+        ],
+      },
+    ],
+  },
+
   { path: '/clientes', name: 'clientes', component: () => import('../views/ClientesView.vue'), meta: { requiresAuth: true, titulo: 'Clientes' } },
   { path: '/configuracion', name: 'configuracion', component: () => import('../views/AdminView.vue'), meta: { requiresAuth: true, titulo: 'Configuración' } },
   { path: '/admin', redirect: { name: 'configuracion' } },
@@ -229,7 +256,7 @@ const router = createRouter({
 })
 
 /** Vistas principales en orden de preferencia para redirigir cuando una está bloqueada. */
-const HOME_CANDIDATES = ['cuncia', 'acacias', 'concretos', 'clientes']
+const HOME_CANDIDATES = ['cuncia', 'acacias', 'concretos', 'comercial', 'clientes']
 
 /** Solo rutas internas: evita redirecciones abiertas tipo //sitio-externo.com */
 const esRutaInterna = (p: string | undefined) => !!p && /^\/(?![/\\])/.test(p)

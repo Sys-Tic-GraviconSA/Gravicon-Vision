@@ -3,6 +3,7 @@ import { ref, computed, shallowRef } from 'vue'
 import { cargarConCache } from './api'
 import type { SheetData } from './concreto'
 import type { DatosFacturacion } from '../types/facturacion'
+import type { DatosComercial } from '../composables/useComercial'
 
 /*
  * Stores de datos del dashboard: Producción, Mantenimiento y Clientes.
@@ -280,4 +281,21 @@ export const useFacturacionStore = defineStore('facturacion', () => {
   }
 
   return { data, loading, error, fetchFacturacion }
+})
+
+/** Store: Comercial — leads, ofertas F227 y compras de esos clientes (embudo) */
+export const useComercialStore = defineStore('comercial', () => {
+  const data = shallowRef<DatosComercial | null>(null)
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+
+  function fetchData(force = false) {
+    return cargarConCache<DatosComercial>({
+      url: `/api/comercial/data${force ? '?force=true' : ''}`, force,
+      hayDatos: () => !!data.value, aplicar: d => { data.value = d }, limpiar: () => { data.value = null },
+      loading, error, etiqueta: 'comercial',
+    })
+  }
+
+  return { data, loading, error, fetchData }
 })
